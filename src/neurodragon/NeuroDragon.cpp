@@ -1,32 +1,32 @@
-#include "mod/MyMod.h"
+#include "neurodragon/NeuroDragon.h"
 
 #include "ll/api/mod/RegisterHelper.h"
 
-namespace my_mod {
+namespace neurodragon {
 
-MyMod& MyMod::getInstance() {
-    static MyMod instance;
+NeuroDragon& NeuroDragon::getInstance() {
+    static NeuroDragon instance;
     return instance;
 }
 
-bool MyMod::load() {
+bool NeuroDragon::load() {
     getSelf().getLogger().debug("Loading...");
     // Code for loading the mod goes here.
     return true;
 }
 
-bool MyMod::enable() {
+bool NeuroDragon::enable() {
     getSelf().getLogger().debug("Enabling...");
     // Code for enabling the mod goes here.
     return true;
 }
 
-bool MyMod::disable() {
+bool NeuroDragon::disable() {
     getSelf().getLogger().debug("Disabling...");
     // Code for disabling the mod goes here.
     return true;
 }
 
-} // namespace my_mod
+} // namespace neurodragon
 
-LL_REGISTER_MOD(my_mod::MyMod, my_mod::MyMod::getInstance());
+LL_REGISTER_MOD(neurodragon::NeuroDragon, neurodragon::NeuroDragon::getInstance());

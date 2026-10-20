@@ -3,9 +3,9 @@ add_rules("mode.debug", "mode.release")
 add_repositories("levimc-repo https://github.com/LiteLDev/xmake-repo.git")
 
 option("target_type")
-    set_default("server")
+    set_default("client")
     set_showmenu(true)
-    set_values("server", "client")
+    set_values("client")
 option_end()
 
 -- add_requires("levilamina x.x.x") for a specific version
@@ -19,7 +19,7 @@ if not has_config("vs_runtime") then
     set_runtimes("MD")
 end
 
-target("my-mod") -- Change this to your mod name.
+target("NeuroDragon") -- Change this to your mod name.
     add_rules("@levibuildscript/linkrule")
     add_rules("@levibuildscript/modpacker")
     if is_plat("windows") then

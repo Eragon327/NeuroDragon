@@ -2,14 +2,14 @@
 
 #include "ll/api/mod/NativeMod.h"
 
-namespace my_mod {
+namespace neurodragon {
 
-class MyMod {
+class NeuroDragon {
 
 public:
-    static MyMod& getInstance();
+    static NeuroDragon& getInstance();
 
-    MyMod() : mSelf(*ll::mod::NativeMod::current()) {}
+    NeuroDragon() : mSelf(*ll::mod::NativeMod::current()) {}
 
     [[nodiscard]] ll::mod::NativeMod& getSelf() const { return mSelf; }
 
@@ -30,4 +30,4 @@ private:
     ll::mod::NativeMod& mSelf;
 };
 
-} // namespace my_mod
+} // namespace neurodragon
