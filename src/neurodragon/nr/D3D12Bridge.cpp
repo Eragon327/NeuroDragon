@@ -106,7 +106,8 @@ struct ColorDump {
     int                                     domain = 0; // 0 linear HDR, 1 encoded, 2 linear LDR
 };
 
-ColorDump gDump;
+ColorDump  gDumps[4];            // up to four resources captured on the SAME frame
+ColorDump* gDumpTarget = &gDumps[0];
 
 float halfToFloat(std::uint16_t h) {
     std::uint32_t const sign = (h & 0x8000u) << 16;
@@ -151,7 +152,7 @@ std::uint8_t toSrgb8(float v) {
 namespace {
 
 void queueDump(void* commandList, void* resource, char const* fileName, int domain) {
-    if (gDump.recorded || !commandList || !resource) {
+    if (gDumpTarget->recorded || !commandList || !resource) {
         return;
     }
     auto* res = static_cast<ID3D12Resource*>(resource);
@@ -185,7 +186,7 @@ void queueDump(void* commandList, void* resource, char const* fileName, int doma
             &bufferDesc,
             D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
-            IID_PPV_ARGS(&gDump.staging)
+            IID_PPV_ARGS(&gDumpTarget->staging)
         ))) {
         device->Release();
         return;
@@ -206,7 +207,7 @@ void queueDump(void* commandList, void* resource, char const* fileName, int doma
     src.SubresourceIndex = 0;
 
     D3D12_TEXTURE_COPY_LOCATION dst{};
-    dst.pResource                             = gDump.staging.Get();
+    dst.pResource                             = gDumpTarget->staging.Get();
     dst.Type                                  = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     dst.PlacedFootprint.Footprint.Format      = desc.Format;
     dst.PlacedFootprint.Footprint.Width       = static_cast<UINT>(desc.Width);
@@ -219,12 +220,12 @@ void queueDump(void* commandList, void* resource, char const* fileName, int doma
     barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
     cmd->ResourceBarrier(1, &barrier);
 
-    gDump.width    = static_cast<std::uint32_t>(desc.Width);
-    gDump.height   = static_cast<std::uint32_t>(desc.Height);
-    gDump.rowPitch = rowPitch;
-    gDump.fileName = fileName ? fileName : "color_dump.bmp";
-    gDump.domain   = domain;
-    gDump.recorded = true;
+    gDumpTarget->width    = static_cast<std::uint32_t>(desc.Width);
+    gDumpTarget->height   = static_cast<std::uint32_t>(desc.Height);
+    gDumpTarget->rowPitch = rowPitch;
+    gDumpTarget->fileName = fileName ? fileName : "color_dump.bmp";
+    gDumpTarget->domain   = domain;
+    gDumpTarget->recorded = true;
 }
 
 } // namespace
@@ -242,12 +243,12 @@ void queueColorDumpLinear(void* commandList, void* color, char const* fileName) 
 }
 
 bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
-    if (!gDump.recorded || !gDump.staging) {
+    if (!gDumpTarget->recorded || !gDumpTarget->staging) {
         return false;
     }
     void* mapped = nullptr;
-    D3D12_RANGE range{0, static_cast<SIZE_T>(gDump.rowPitch) * gDump.height};
-    if (FAILED(gDump.staging->Map(0, &range, &mapped)) || !mapped) {
+    D3D12_RANGE range{0, static_cast<SIZE_T>(gDumpTarget->rowPitch) * gDumpTarget->height};
+    if (FAILED(gDumpTarget->staging->Map(0, &range, &mapped)) || !mapped) {
         return false;
     }
 
@@ -257,7 +258,7 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
     std::uint64_t      values    = 0;
     std::uint64_t      aboveOne  = 0;
     std::uint32_t      nzWords   = 0;
-    std::size_t const  words     = static_cast<std::size_t>(gDump.rowPitch) * gDump.height / 2;
+    std::size_t const  words     = static_cast<std::size_t>(gDumpTarget->rowPitch) * gDumpTarget->height / 2;
     for (std::size_t i = 0; i < words; ++i) {
         if (src[i] != 0) {
             ++nzWords;
@@ -280,15 +281,15 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
         nrLog(
             0,
             "[dump] %s domain=%s max=%.3f mean=%.4f above1=%.2f%%",
-            gDump.fileName.c_str(),
-            gDump.domain == 0 ? "linear" : (gDump.domain == 1 ? "encoded" : "linear-ldr"),
+            gDumpTarget->fileName.c_str(),
+            gDumpTarget->domain == 0 ? "linear" : (gDumpTarget->domain == 1 ? "encoded" : "linear-ldr"),
             peak,
             sum / static_cast<double>(values),
             100.0 * static_cast<double>(aboveOne) / static_cast<double>(values)
         );
     }
-    std::uint32_t const w        = gDump.width;
-    std::uint32_t const h        = gDump.height;
+    std::uint32_t const w        = gDumpTarget->width;
+    std::uint32_t const h        = gDumpTarget->height;
     std::uint32_t const dataSize = w * h * 3u;
     std::uint32_t const fileSize = 54u + dataSize;
 
@@ -309,7 +310,7 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
     out.resize(fileSize);
     for (std::uint32_t y = 0; y < h; ++y) {
         auto const* row = reinterpret_cast<std::uint16_t const*>(
-            reinterpret_cast<std::uint8_t const*>(src) + static_cast<std::size_t>(gDump.rowPitch) * (h - 1 - y)
+            reinterpret_cast<std::uint8_t const*>(src) + static_cast<std::size_t>(gDumpTarget->rowPitch) * (h - 1 - y)
         );
         std::uint8_t* dstRow = reinterpret_cast<std::uint8_t*>(out.data() + 54u + static_cast<std::size_t>(y) * w * 3u);
         for (std::uint32_t x = 0; x < w; ++x) {
@@ -319,13 +320,13 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
             std::uint8_t outR = 0;
             std::uint8_t outG = 0;
             std::uint8_t outB = 0;
-            if (gDump.domain == 0) {
+            if (gDumpTarget->domain == 0) {
                 // Reinhard so highlights stop turning into flat white, then gamma.
                 auto const tone = [](float v) { return v / (1.0f + (v > 0.0f ? v : 0.0f)); };
                 outR = toSrgb8(tone(r));
                 outG = toSrgb8(tone(g));
                 outB = toSrgb8(tone(b));
-            } else if (gDump.domain == 2) {
+            } else if (gDumpTarget->domain == 2) {
                 outR = toSrgb8(r);
                 outG = toSrgb8(g);
                 outB = toSrgb8(b);
@@ -348,10 +349,10 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
             dstRow[x * 3 + 2] = outR;
         }
     }
-    gDump.staging->Unmap(0, nullptr);
+    gDumpTarget->staging->Unmap(0, nullptr);
 
     HANDLE file = ::CreateFileA(
-        gDump.fileName.c_str(),
+        gDumpTarget->fileName.c_str(),
         GENERIC_WRITE,
         0,
         nullptr,
@@ -371,8 +372,46 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
     if (nonZeroWords) {
         *nonZeroWords = nzWords;
     }
-    gDump.recorded = false;
-    gDump.staging.Reset();
+    gDumpTarget->recorded = false;
+    gDumpTarget->staging.Reset();
+    return ok;
+}
+
+// Second slot, so a single frame can dump two resources at once (fed vs base).
+// Comparing dumps from different frames is useless whenever the camera moves.
+void queueColorDump2(void* commandList, void* resource, char const* fileName) {
+    gDumpTarget = &gDumps[1];
+    queueColorDump(commandList, resource, fileName);
+    gDumpTarget = &gDumps[0];
+}
+
+void queueColorDumpEncoded2(void* commandList, void* resource, char const* fileName) {
+    gDumpTarget = &gDumps[1];
+    queueColorDumpEncoded(commandList, resource, fileName);
+    gDumpTarget = &gDumps[0];
+}
+
+// Generic slot form, so every input of the upscaler can be captured on one frame.
+void queueColorDumpN(int slot, void* commandList, void* resource, char const* fileName, int domain) {
+    if (slot < 0 || slot > 3) {
+        return;
+    }
+    gDumpTarget = &gDumps[slot];
+    queueDump(commandList, resource, fileName, domain);
+    gDumpTarget = &gDumps[0];
+}
+
+bool flushColorDump2(float* maxValue, std::uint32_t* nonZeroWords) {
+    return flushColorDumpN(1, maxValue, nonZeroWords);
+}
+
+bool flushColorDumpN(int slot, float* maxValue, std::uint32_t* nonZeroWords) {
+    if (slot < 0 || slot > 3) {
+        return false;
+    }
+    gDumpTarget = &gDumps[slot];
+    bool const ok = flushColorDump(maxValue, nonZeroWords);
+    gDumpTarget = &gDumps[0];
     return ok;
 }
 
@@ -616,11 +655,9 @@ struct NrOverrides {
     float colourStrength   = 1.0f;
     float maxRatio         = 2.0f;
     // Replace=7: our own DLSS SR.
-    int   srPreset         = 0x8000000B; // engine's own value for most tiers
-    float srSharpness      = 0.35f;
-    int   control          = 0;      // Replace=8 + Control=1: engine DLSS -> private texture
-    int   stamp            = 0;      // Stamp=1: red square in our own SR input (visible proof)
     float mvecScale        = -1.0f;  // <0 = 1.0; set 1485 to test normalised vectors
+    int   nrEncode         = -1;     // NrEncode: force the HDR->LDR shader mode the network sees
+                                     // (0 = Reinhard+gamma, 3 = TRP shoulder+sRGB; -1 = per Replace)
     int   resetEveryFrame  = 0;      // NRReset=1: kills temporal history (diagnostic)
     int   srResetEveryFrame = 0;     // SRReset=1: reset *our* DLSS SR history每帧
     int   paramLog          = 0;     // ParamLog=1: log every engine NGX parameter write
@@ -628,6 +665,23 @@ struct NrOverrides {
 };
 NrOverrides gOverrides;
 int         gWindowIndex = -1;
+
+// The resource we most recently handed the engine's own DLSS as "Color", and
+// which domain its pixels are in. Dumped once per measurement window so a frozen
+// picture can be attributed: stale here = our write stopped; fresh here but the
+// engine's Output is stale = the upscaler is the one not updating.
+void* gFedResource = nullptr;
+int   gFedDomain   = 0; // 0 = linear HDR, 1 = display-encoded
+
+// The engine writes "Color" into its parameter object ONCE (docs/D §6.16), so from
+// the first swap onwards the object keeps handing back OUR texture. Compositing
+// onto whatever the object currently says is therefore a feedback loop: every
+// frame would blend into the previous frame's output, and any old content (a
+// previous view, a held item) would stay on screen almost forever. Keep the
+// engine's own resource here and always composite onto that one.
+std::atomic_bool gEngineResetPending{false};
+// Parameter object that currently carries our Color swap, so it can be handed back.
+void* gActiveEngineParams = nullptr;
 
 std::string paramFilePath() {
     wchar_t exe[MAX_PATH]{};
@@ -693,16 +747,10 @@ void parseOverrides(bool verbose = true) {
                 gOverrides.colourStrength = std::stof(value);
             } else if (key == "MaxRatio") {
                 gOverrides.maxRatio = std::stof(value);
-            } else if (key == "DLSSPreset") {
-                gOverrides.srPreset = std::stoi(value, nullptr, 0); // accepts 0x8000000B
-            } else if (key == "Sharpness") {
-                gOverrides.srSharpness = std::stof(value);
-            } else if (key == "Control") {
-                gOverrides.control = std::stoi(value);
-            } else if (key == "Stamp") {
-                gOverrides.stamp = std::stoi(value);
             } else if (key == "MVecScale") {
                 gOverrides.mvecScale = std::stof(value);
+            } else if (key == "NrEncode") {
+                gOverrides.nrEncode = std::stoi(value);
             } else if (key == "NRReset") {
                 gOverrides.resetEveryFrame = std::stoi(value);
             } else if (key == "SRReset") {
@@ -758,12 +806,6 @@ ID3D12DescriptorHeap* gEncodeHeap = nullptr;
 ID3D12Resource*      gEncodedColor = nullptr;
 ID3D12Resource*      gDecodedColor = nullptr;
 // Replace=3 borrows the engine's Color for one frame: pixels are saved here and
-// put back as soon as the engine's DLSS has read them (nrRestoreColor).
-ID3D12Resource*      gColorBackup  = nullptr;
-ID3D12Resource*      gColorBorrowed = nullptr;
-bool                 gColorBackupPending = false;
-unsigned             gColorBackupWidth   = 0;
-unsigned             gColorBackupHeight  = 0;
 UINT                 gEncodeStride = 0;
 bool                 gEncodedIsSrv = false;
 bool                 gDecodedIsSrv = false;
@@ -857,7 +899,7 @@ void main(uint3 id : SV_DispatchThreadID) {
         float3 inp   = max(inputTex.Load(int3(id.xy, 0)).rgb, 1e-4);
         float3 nr    = max(nrTex.Load(int3(id.xy, 0)).rgb, 0.0);
         float3 ratio = clamp(nr / inp, 0.5, 2.0);
-        outC = base * clamp(1.0 + (ratio - 1.0) * transferStrength, 0.25, 4.0);
+        outC = min(base * clamp(1.0 + (ratio - 1.0) * transferStrength, 0.25, 4.0), 64.0);
     } else if (mode == 3) {
         // TRP encode: the producer's linear RGB normalised by its white point.
         float3 c = max(baseTex.Load(int3(id.xy, 0)).rgb, 0.0);
@@ -1007,7 +1049,7 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
     heapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    heapDesc.NumDescriptors = 4;
+    heapDesc.NumDescriptors = 8; // 0-3 encode pass, 4-7 composite/decode pass
     heapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     if (FAILED(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&gEncodeHeap)))) {
         nrLog(1, "[nr] encode 描述符堆失败");
@@ -1039,8 +1081,13 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
 
 // Binds three SRVs (t0, t1, t2) and one UAV (u0) in the single table.
 void writeDescriptors(ID3D12Device* device, ID3D12Resource* s0, ID3D12Resource* s1,
-                      ID3D12Resource* s2, ID3D12Resource* target) {
+                      ID3D12Resource* s2, ID3D12Resource* target, int slotBase) {
+    // Each pass gets its OWN four descriptors: a single heap rewritten twice in one
+    // frame is a race - the GPU executes both dispatches with the descriptors the
+    // CPU wrote LAST, so the encode pass silently wrote into the composite's target
+    // and gEncodedColor never got refreshed after the first frame.
     D3D12_CPU_DESCRIPTOR_HANDLE handle = gEncodeHeap->GetCPUDescriptorHandleForHeapStart();
+    handle.ptr += static_cast<SIZE_T>(slotBase) * gEncodeStride;
     D3D12_SHADER_RESOURCE_VIEW_DESC srv{};
     srv.Format                  = DXGI_FORMAT_R16G16B16A16_FLOAT;
     srv.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -1057,6 +1104,12 @@ void writeDescriptors(ID3D12Device* device, ID3D12Resource* s0, ID3D12Resource* 
     uav.Format        = DXGI_FORMAT_R16G16B16A16_FLOAT;
     uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
     device->CreateUnorderedAccessView(target, nullptr, &uav, handle);
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE gpuTable(int slotBase) {
+    D3D12_GPU_DESCRIPTOR_HANDLE handle = gEncodeHeap->GetGPUDescriptorHandleForHeapStart();
+    handle.ptr += static_cast<UINT64>(slotBase) * gEncodeStride;
+    return handle;
 }
 
 // Root constants shared by every dispatch: dims, mode and the (bit-cast) gain
@@ -1513,16 +1566,6 @@ bool nrCreate(void* commandList, void* colorResource, unsigned width, unsigned h
     gNr.width  = width;
     gNr.height = height;
 
-    // Replace=3 needs somewhere to park the engine's own pixels for one frame.
-    D3D12_RESOURCE_DESC backupDesc = outDesc;
-    backupDesc.Flags               = D3D12_RESOURCE_FLAG_NONE;
-    if (FAILED(device->CreateCommittedResource(
-            &heap, D3D12_HEAP_FLAG_NONE, &backupDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-            IID_PPV_ARGS(&gColorBackup)))) {
-        nrLog(1, "[nr] Color 备份纹理分配失败（Replace=3 不可用）");
-        gColorBackup = nullptr;
-    }
-
     parseOverrides();
     ensureEncoder(device, outDesc);
 
@@ -1786,7 +1829,13 @@ void nrShutdown() {
 
 void* nrOutputResource() { return gNr.output; }
 
+void* nrFedResource() { return gFedResource; }
+
+int nrFedDomain() { return gFedDomain; }
+
 void* nrEncodedColorResource() { return gEncodedColor; }
+
+bool nrParamLogEnabled() { return gOverrides.paramLog != 0; }
 
 bool nrReplaceContinuous() { return gOverrides.replace != 0; }
 namespace {
@@ -1804,190 +1853,6 @@ namespace {
 //
 // NR stays 1:1 at the render resolution (1485x835); the engine's DLSS does the
 // real upscaling to 2560x1440.
-bool feedBackToColor(ID3D12GraphicsCommandList* cmd, ID3D12Resource* engineColor, void* engineParams,
-                     unsigned w, unsigned h) {
-    if (!gNr.output || !engineParams || !gDecodedColor) {
-        return false;
-    }
-    auto*                  source      = static_cast<ID3D12Resource*>(gNr.output);
-    D3D12_RESOURCE_STATES  sourceState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
-    int const              replace     = gOverrides.replace;
-    bool                   decoded     = false;
-    bool                   sourceSampled = false;
-
-    if (replace == 4) {
-        // Raw-domain pass-through: the network sees the engine's linear HDR Color
-        // and writes linear HDR, so its output can be handed to DLSS unchanged -
-        // no encode, no decode, no extra dispatch. The HDR->LDR round trip is what
-        // destroys highlights (a 0.99 display value carries 65 linear; the network
-        // saturates at ~0.95 and the inverse map turns that into 7.5).
-        auto* nrOut = static_cast<ID3D12Resource*>(gNr.output);
-        paramSetPtr(engineParams, "Color", nrOut);
-        static bool logged4 = false;
-        if (!logged4) {
-            logged4 = true;
-            nrLog(0, "[nr] Replace=4：NR 输出（原始线性域）直接交给引擎 DLSS，%ux%u", w, h);
-        }
-        return true;
-    }
-
-    if (replace == 2) {
-        // Swap-mechanism test (docs/D §6.16): give the engine's DLSS a *copy* of
-        // its own Color held in a foreign texture - identical pixels, different
-        // resource identity. If the picture freezes here, NGX refuses foreign
-        // resources and the whole parameter-swap approach is dead.
-        if (!engineColor) {
-            return false;
-        }
-        transition(cmd, engineColor, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-                   D3D12_RESOURCE_STATE_COPY_SOURCE);
-        transition(cmd, gDecodedColor,
-                   gDecodedIsSrv ? D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
-                                 : D3D12_RESOURCE_STATE_COMMON,
-                   D3D12_RESOURCE_STATE_COPY_DEST);
-        D3D12_TEXTURE_COPY_LOCATION dst{};
-        dst.pResource        = gDecodedColor;
-        dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dst.SubresourceIndex = 0;
-        D3D12_TEXTURE_COPY_LOCATION src{};
-        src.pResource        = engineColor;
-        src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        src.SubresourceIndex = 0;
-        D3D12_BOX const region{0, 0, 0, w, h, 1};
-        cmd->CopyTextureRegion(&dst, 0, 0, 0, &src, &region);
-        transition(cmd, gDecodedColor, D3D12_RESOURCE_STATE_COPY_DEST,
-                   D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-        transition(cmd, engineColor, D3D12_RESOURCE_STATE_COPY_SOURCE,
-                   D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-        gDecodedIsSrv = true;
-        decoded       = true;
-    } else if (gEncodePso) {
-        ID3D12Device* device = nullptr;
-        if (SUCCEEDED(source->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device)))
-            && device) {
-            transition(cmd, source, sourceState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-            sourceSampled = true;
-            transition(
-                cmd,
-                gDecodedColor,
-                gDecodedIsSrv ? D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COMMON,
-                D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-            );
-            writeDescriptors(device, source, source, source, gDecodedColor);
-            device->Release();
-
-            ID3D12DescriptorHeap* heaps[1] = {gEncodeHeap};
-            cmd->SetDescriptorHeaps(1, heaps);
-            cmd->SetComputeRootSignature(gEncodeRoot);
-            cmd->SetPipelineState(gEncodePso);
-            cmd->SetComputeRootDescriptorTable(0, gEncodeHeap->GetGPUDescriptorHandleForHeapStart());
-            setPassConstants(cmd, w, h, 1 /* decode */, 1.0f, 1.0f, 1.0f, 2.0f);
-            cmd->Dispatch((w + 7u) / 8u, (h + 7u) / 8u, 1);
-            D3D12_RESOURCE_BARRIER uavBarrier{};
-            uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            uavBarrier.UAV.pResource = gDecodedColor;
-            cmd->ResourceBarrier(1, &uavBarrier);
-            transition(
-                cmd,
-                gDecodedColor,
-                D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
-            );
-            gDecodedIsSrv = true;
-            source        = gDecodedColor;
-            sourceState   = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
-            decoded       = true;
-        }
-    }
-
-    if (!decoded) {
-        static bool warned = false;
-        if (!warned) {
-            warned = true;
-            nrLog(1, "[nr] Replace 但编解码 shader 不可用，跳过替换（画面保持引擎原样）");
-        }
-        return false;
-    }
-
-    if (sourceSampled) {
-        transition(
-            cmd,
-            static_cast<ID3D12Resource*>(gNr.output),
-            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-            D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
-        );
-    }
-    if (replace == 3) {
-        // Borrow the engine's own Color for exactly one frame: DLSS then reads the
-        // texture it was created with (no foreign resource, nothing for NGX to
-        // reject), and nrRestoreColor() hands the engine its pixels back right
-        // after its evaluate.
-        if (!engineColor || !gColorBackup) {
-            return false;
-        }
-        transition(cmd, engineColor, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-                   D3D12_RESOURCE_STATE_COPY_SOURCE);
-        transition(cmd, gColorBackup, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-        D3D12_TEXTURE_COPY_LOCATION bdst{};
-        bdst.pResource        = gColorBackup;
-        bdst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        bdst.SubresourceIndex = 0;
-        D3D12_TEXTURE_COPY_LOCATION bsrc{};
-        bsrc.pResource        = engineColor;
-        bsrc.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        bsrc.SubresourceIndex = 0;
-        D3D12_BOX const region{0, 0, 0, w, h, 1};
-        cmd->CopyTextureRegion(&bdst, 0, 0, 0, &bsrc, &region);
-        transition(cmd, gColorBackup, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
-
-        transition(cmd, gDecodedColor, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-                   D3D12_RESOURCE_STATE_COPY_SOURCE);
-        transition(cmd, engineColor, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
-        D3D12_TEXTURE_COPY_LOCATION wdst{};
-        wdst.pResource        = engineColor;
-        wdst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        wdst.SubresourceIndex = 0;
-        D3D12_TEXTURE_COPY_LOCATION wsrc{};
-        wsrc.pResource        = gDecodedColor;
-        wsrc.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        wsrc.SubresourceIndex = 0;
-        cmd->CopyTextureRegion(&wdst, 0, 0, 0, &wsrc, &region);
-        transition(cmd, gDecodedColor, D3D12_RESOURCE_STATE_COPY_SOURCE,
-                   D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-        transition(cmd, engineColor, D3D12_RESOURCE_STATE_COPY_DEST,
-                   D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-        gColorBorrowed      = engineColor;
-        gColorBackupWidth   = w;
-        gColorBackupHeight  = h;
-        gColorBackupPending = true;
-        static bool borrowLogged = false;
-        if (!borrowLogged) {
-            borrowLogged = true;
-            nrLog(0, "[nr] Replace=3：借出引擎 Color 的 %ux%u 区域，DLSS 读完后立即归还", w, h);
-        }
-        return true;
-    }
-
-    // Point the engine's own parameter object at our texture. It is filled in by
-    // the engine right before EvaluateFeature and rewritten next frame, so the
-    // swap lives exactly one frame and engine resources are never touched.
-    paramSetPtr(engineParams, "Color", gDecodedColor);
-    static bool logged = false;
-    if (!logged) {
-        logged = true;
-        void* readBack = paramGetResource(engineParams, "Color");
-        nrLog(
-            readBack == static_cast<void*>(gDecodedColor) ? 0 : 1,
-            "[nr] 已把引擎 DLSS 的 Color 指向 NR 结果 %p（读回 %p）%ux%u",
-            static_cast<void*>(gDecodedColor),
-            readBack,
-            w,
-            h
-        );
-    }
-    return true;
-}
-
 // Route A / Replace=5 (docs/D §6.16): the network's *relative* change, applied to
 // the engine's original linear HDR Colour. Feeding the network's output straight
 // to DLSS flattens HDR (its output saturates near 1.0, a 0.99 display value is 65
@@ -2043,14 +1908,14 @@ void compositeGain(ID3D12GraphicsCommandList* cmd, ID3D12Resource* color,
         gDecodedIsSrv ? D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COMMON,
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS
     );
-    writeDescriptors(device, color, gEncodedColor, nrTex, gDecodedColor);
+    writeDescriptors(device, color, gEncodedColor, nrTex, gDecodedColor, 4);
     device->Release();
 
     ID3D12DescriptorHeap* heaps[1] = {gEncodeHeap};
     cmd->SetDescriptorHeaps(1, heaps);
     cmd->SetComputeRootSignature(gEncodeRoot);
     cmd->SetPipelineState(gEncodePso);
-    cmd->SetComputeRootDescriptorTable(0, gEncodeHeap->GetGPUDescriptorHandleForHeapStart());
+    cmd->SetComputeRootDescriptorTable(0, gpuTable(4));
     cmd->Dispatch((w + 7u) / 8u, (h + 7u) / 8u, 1);
     D3D12_RESOURCE_BARRIER uavBarrier{};
     uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -2071,6 +1936,8 @@ void compositeGain(ID3D12GraphicsCommandList* cmd, ID3D12Resource* color,
     // DLSS untouched: our own SR consumes the composite instead.
     if (gOverrides.replace != 7) {
         paramSetPtr(engineParams, "Color", gDecodedColor);
+        gFedResource = gDecodedColor;
+        gFedDomain   = 0;
     }
     static bool logged = false;
     if (!logged) {
@@ -2090,492 +1957,7 @@ void compositeGain(ID3D12GraphicsCommandList* cmd, ID3D12Resource* color,
 
 } // namespace
 
-// ---------------------------------------------------------------------------
-// Our own DLSS SR (Replace=7, docs/D §6.16). TRP's structure: the upscaler is a
-// feature *we* create, fed our composited image plus the engine's Depth/MV, and
-// writing into a texture we own. Nothing of the engine's DLSS is re-pointed, so
-// the "NGX keeps reading the resource it was created with" freeze cannot happen.
-// Step 1 only dumps the result - the engine's own DLSS still draws the picture.
-// ---------------------------------------------------------------------------
-namespace {
-
-struct SrState {
-    void*             params   = nullptr;
-    void*             feature  = nullptr;
-    CreateFeatureFn   create   = nullptr;
-    EvaluateFeatureFn evaluate = nullptr;
-    ID3D12Resource*   output   = nullptr;
-    bool              attempted = false;
-    bool              created   = false;
-    bool              loggedShare = false;
-    bool              lastOk      = false;
-    bool              ownsOutput  = false;
-    unsigned          warmupFrames = 0;
-    void*             engineOutput = nullptr; // the engine's real present texture
-    D3D12_RESOURCE_STATES outputState = D3D12_RESOURCE_STATE_COMMON;
-};
-
-SrState gSr;
-
-// The *original* NGX exports, handed over by the probe's hook installer. Our own
-// SR must never call GetProcAddress again: that address is the hooked entry
-// point, so the call would come straight back into our detour
-// (ngxEvaluateDetour -> nrRecord -> srStep -> ngxEvaluateDetour, ,
-// stack overflow 0xC00000FD).
-void* gOriginalCreateFeature   = nullptr;
-void* gOriginalEvaluateFeature = nullptr;
-
-// Pending "put the engine's Output parameter back" for control mode, done by
-// nrRestoreColor() right after the engine's EvaluateFeature.
-void* gControlParams = nullptr;
-
-// Set when a level (re)loads: our SR feature is process-wide and keeps its
-// temporal history, so without an explicit reset the previous world's content
-// stays imprinted and follows the player into the next world.
-std::atomic_bool gSrResetPending{false};
-
-// ---------------------------------------------------------------------------
-// Visible marker: a solid red square in the top-left corner of *our* texture.
-// It must never touch the engine's Color (writing that is what caused the
-// permanent black screen earlier); stamping our own SR input instead makes the
-// marker travel through our DLSS SR to the screen, which proves the chain
-// "our composite -> our SR -> presented" end to end.
-// Copied from a 64x64 upload *buffer*, so no shader and no offline validation.
-// (Upload heaps only accept buffers, not textures - that is why the first
-// attempt failed with "标记纹理分配失败".)
-ID3D12Resource* gStampBuffer = nullptr;
-constexpr unsigned kStampSize = 64;
-constexpr unsigned kStampRowPitch = kStampSize * 8; // RGBA16F
-
-std::uint16_t packHalf(float value) {
-    std::uint32_t bits = 0;
-    std::memcpy(&bits, &value, sizeof(bits));
-    std::uint32_t const sign     = (bits >> 16) & 0x8000u;
-    int const           exponent = static_cast<int>((bits >> 23) & 0xFF) - 127 + 15;
-    std::uint32_t const mantissa = (bits >> 13) & 0x3FFu;
-    if (exponent <= 0) {
-        return static_cast<std::uint16_t>(sign);
-    }
-    if (exponent >= 31) {
-        return static_cast<std::uint16_t>(sign | 0x7C00u);
-    }
-    return static_cast<std::uint16_t>(sign | (static_cast<std::uint32_t>(exponent) << 10) | mantissa);
-}
-
-bool ensureStampBuffer(ID3D12Device* device) {
-    if (gStampBuffer) {
-        return true;
-    }
-    D3D12_RESOURCE_DESC desc{};
-    desc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
-    desc.Width              = static_cast<std::uint64_t>(kStampRowPitch) * kStampSize;
-    desc.Height             = 1;
-    desc.DepthOrArraySize   = 1;
-    desc.MipLevels          = 1;
-    desc.Format             = DXGI_FORMAT_UNKNOWN;
-    desc.SampleDesc         = {1, 0};
-    desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    D3D12_HEAP_PROPERTIES heap{};
-    heap.Type = D3D12_HEAP_TYPE_UPLOAD;
-    if (FAILED(device->CreateCommittedResource(
-            &heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-            IID_PPV_ARGS(&gStampBuffer)))) {
-        gStampBuffer = nullptr;
-        nrLog(2, "[nr] 标记 buffer 分配失败");
-        return false;
-    }
-    void* mapped = nullptr;
-    if (FAILED(gStampBuffer->Map(0, nullptr, &mapped)) || !mapped) {
-        return false;
-    }
-    // Red, opaque: R=1 G=0 B=0 A=1, RGBA16F rows of 512 bytes.
-    auto* texels = static_cast<std::uint16_t*>(mapped);
-    for (unsigned y = 0; y < kStampSize; ++y) {
-        for (unsigned x = 0; x < kStampSize; ++x) {
-            std::uint16_t* t =
-                texels + (static_cast<std::size_t>(y) * kStampRowPitch) / 2 + x * 4;
-            t[0] = packHalf(1.0f);
-            t[1] = packHalf(0.0f);
-            t[2] = packHalf(0.0f);
-            t[3] = packHalf(1.0f);
-        }
-    }
-    gStampBuffer->Unmap(0, nullptr);
-    nrLog(0, "[nr] 标记 buffer 就绪（64x64 红块）");
-    return true;
-}
-
-void stampMarker(ID3D12GraphicsCommandList* cmd, ID3D12Resource* target) {
-    if (!cmd || !target) {
-        return;
-    }
-    ID3D12Device* device = nullptr;
-    if (FAILED(target->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device))) || !device) {
-        return;
-    }
-    bool const ready = ensureStampBuffer(device);
-    device->Release();
-    if (!ready) {
-        return;
-    }
-    transition(cmd, target, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_COPY_DEST);
-    D3D12_TEXTURE_COPY_LOCATION dst{};
-    dst.pResource        = target;
-    dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    dst.SubresourceIndex = 0;
-    D3D12_TEXTURE_COPY_LOCATION src{};
-    src.pResource                        = gStampBuffer;
-    src.Type                             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    src.PlacedFootprint.Offset           = 0;
-    src.PlacedFootprint.Footprint.Format = target->GetDesc().Format;
-    src.PlacedFootprint.Footprint.Width  = kStampSize;
-    src.PlacedFootprint.Footprint.Height = kStampSize;
-    src.PlacedFootprint.Footprint.Depth  = 1;
-    src.PlacedFootprint.Footprint.RowPitch = kStampRowPitch;
-    D3D12_BOX const box{0, 0, 0, kStampSize, kStampSize, 1};
-    cmd->CopyTextureRegion(&dst, 8, 8, 0, &src, &box);
-    transition(cmd, target, D3D12_RESOURCE_STATE_COPY_DEST,
-               D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-}
-
-bool srStep(ID3D12GraphicsCommandList* cmd, ID3D12Resource* color, ID3D12Resource* depth,
-            void* motionVectors, void* engineParams, void* engineOutput, unsigned w, unsigned h) {
-    if (!cmd || !color || !depth || !motionVectors || !engineParams) {
-        return false;
-    }
-    if (!gSr.created) {
-        if (gSr.attempted) {
-            return false;
-        }
-        gSr.attempted = true;
-        HMODULE core  = GetModuleHandleW(L"_nvngx.dll");
-        if (!core) {
-            nrLog(2, "[sr] 找不到 _nvngx.dll");
-            return false;
-        }
-        auto capabilities = reinterpret_cast<GetCapabilitiesFn>(
-            GetProcAddress(core, "NVSDK_NGX_D3D12_GetCapabilityParameters"));
-        auto create     = reinterpret_cast<CreateFeatureFn>(gOriginalCreateFeature);
-        auto evaluate   = reinterpret_cast<EvaluateFeatureFn>(gOriginalEvaluateFeature);
-        if (!capabilities || !create || !evaluate) {
-            nrLog(2, "[sr] 缺 core 导出（caps=%d create=%d eval=%d）", capabilities ? 1 : 0,
-                  create ? 1 : 0, evaluate ? 1 : 0);
-            return false;
-        }
-
-        ID3D12Device* device = nullptr;
-        if (FAILED(color->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device)))
-            || !device) {
-            nrLog(2, "[sr] 取不到 ID3D12Device");
-            return false;
-        }
-        D3D12_RESOURCE_DESC desc = color->GetDesc(); // 2560x1440 RGBA16F, like the engine's
-        desc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        desc.MipLevels           = 1;
-        desc.DepthOrArraySize    = 1;
-        D3D12_HEAP_PROPERTIES heap{};
-        heap.Type = D3D12_HEAP_TYPE_DEFAULT;
-        HRESULT const created = device->CreateCommittedResource(
-            &heap, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-            IID_PPV_ARGS(&gSr.output)
-        );
-        device->Release();
-        if (FAILED(created)) {
-            nrLog(2, "[sr] 输出纹理创建失败 0x%08X", static_cast<unsigned>(created));
-            return false;
-        }
-
-        void* params   = nullptr;
-        int   capsRet = capabilities(&params);
-        if (capsRet != 1 || !params) {
-            nrLog(2, "[sr] GetCapabilityParameters ret=0x%08X params=%p",
-                  static_cast<unsigned>(capsRet), params);
-            return false;
-        }
-        gSr.params = params;
-        paramSetU32(params, "CreationNodeMask", 1);
-        paramSetU32(params, "VisibilityNodeMask", 1);
-        paramSetU32(params, "PerfQualityValue", 1);
-        paramSetU32(params, "Width", w);
-        paramSetU32(params, "Height", h);
-        paramSetU32(params, "OutWidth", static_cast<unsigned>(desc.Width));
-        paramSetU32(params, "OutHeight", desc.Height);
-        paramSetF32(params, "Sharpness", gOverrides.srSharpness);
-        // Mirror the engine's own creation-time contract. These keys are what the
-        // engine sets on its parameter object (logged from its own setup), and the
-        // feature reads several of them at CreateFeature: without
-        // DLSS.Feature.Create.Flags the subrect-aware input path is off, which is
-        // exactly the streaky garbage seen when the SR wrote the screen.
-        for (char const* name : {
-                 "DLSS.Feature.Create.Flags",
-                 "DLSS.Render.Subrect.Dimensions.Width",
-                 "DLSS.Render.Subrect.Dimensions.Height",
-                 "DLSS.Enable.Output.Subrects",
-                 "DLSS.Input.Color.Subrect.Base.X",
-                 "DLSS.Input.Color.Subrect.Base.Y",
-                 "DLSS.Input.Depth.Subrect.Base.X",
-                 "DLSS.Input.Depth.Subrect.Base.Y",
-                 "DLSS.Input.MV.Subrect.Base.X",
-                 "DLSS.Input.MV.Subrect.Base.Y",
-                 "DLSS.Output.Subrect.Base.X",
-                 "DLSS.Output.Subrect.Base.Y",
-                 "AnimatedTextureMask",
-                 "IsParticleMask",
-                 "TransparencyMask",
-                 "TonemapperType",
-                 "RTXValue",
-                 "Position.ViewSpace",
-                 "FrameTimeDeltaInMsec",
-             }) {
-            unsigned const value = paramGetU32(engineParams, name);
-            if (value != 0) {
-                paramSetU32(params, name, value);
-            }
-        }
-        // The two that carry real values even when zero is meaningful.
-        paramSetU32(params, "DLSS.Render.Subrect.Dimensions.Width", w);
-        paramSetU32(params, "DLSS.Render.Subrect.Dimensions.Height", h);
-        paramSetU32(params, "DLSS.Feature.Create.Flags", paramGetU32(engineParams, "DLSS.Feature.Create.Flags"));
-        paramSetU32(params, "MV.Scale.X", paramGetU32(engineParams, "MV.Scale.X"));
-        paramSetU32(params, "MV.Scale.Y", paramGetU32(engineParams, "MV.Scale.Y"));
-        paramSetF32(params, "DLSS.Pre.Exposure", 1.0f);
-        paramSetF32(params, "DLSS.Exposure.Scale", 1.0f);
-        // Preset hints: the engine sets one value per quality tier. All tiers get
-        // the same value so DLSSPreset in nr_params.txt is what actually runs.
-        for (char const* name : {
-                 "DLSS.Hint.Render.Preset.DLAA",
-                 "DLSS.Hint.Render.Preset.Quality",
-                 "DLSS.Hint.Render.Preset.Balanced",
-                 "DLSS.Hint.Render.Preset.Performance",
-                 "DLSS.Hint.Render.Preset.UltraQuality",
-                 "DLSS.Hint.Render.Preset.UltraPerformance",
-             }) {
-            paramSetU32(params, name, static_cast<unsigned>(gOverrides.srPreset));
-        }
-
-        void* handle = nullptr;
-        nrLog(0, "[sr] 自建 SR CreateFeature(1) 开始…");
-        int const ret = create(cmd, 1, params, &handle);
-        nrLog(
-            ret == 1 && handle ? 0 : 2,
-            "[sr] CreateFeature(1) ret=0x%08X handle=%p %ux%u -> %llux%llu preset=%#x sharpness=%.2f",
-            static_cast<unsigned>(ret),
-            handle,
-            w,
-            h,
-            static_cast<unsigned long long>(desc.Width),
-            static_cast<unsigned long long>(desc.Height),
-            static_cast<unsigned>(gOverrides.srPreset),
-            static_cast<double>(gOverrides.srSharpness)
-        );
-        if (ret != 1 || !handle) {
-            return false;
-        }
-        gSr.feature     = handle;
-        gSr.create      = create;
-        gSr.evaluate    = evaluate;
-        gSr.created     = true;
-        gSr.outputState = D3D12_RESOURCE_STATE_COMMON;
-    }
-
-    // NGX's capability parameter object is process-wide: the engine writes its
-    // DLSS knobs into the same map we are about to edit. Swap only Color/Output,
-    // then put the engine's values back before its own EvaluateFeature runs -
-    // otherwise the engine's DLSS writes into *our* output texture and the screen
-    // freezes (observed screen frozen with Replace=7 in shadow mode).
-    // Warm-up: let our SR build its history in a private texture for the first
-    // ~60 frames, then take over the present texture. Writing a fresh feature's
-    // first frames straight onto the screen is what made the first two seconds in
-    // the world look broken.
-    constexpr unsigned kWarmup = 60;
-    bool const takeover = (gOverrides.replace == 8 || gOverrides.replace == 9);
-    bool const warmedUp = gSr.warmupFrames >= kWarmup;
-    ID3D12Resource* output = gSr.output;
-    if (takeover && warmedUp) {
-        // The engine double-buffers its Output: the parameter names a different
-        // texture every frame. Always follow it - caching one texture here made
-        // every other frame show a never-written buffer (black screen).
-        output = static_cast<ID3D12Resource*>(engineOutput);
-        if (!output) {
-            output = static_cast<ID3D12Resource*>(paramGetResource(engineParams, "Output"));
-        }
-        if (!output || output == gSr.output) {
-            static bool warned = false;
-            if (!warned) {
-                warned = true;
-                nrLog(2, "[sr] Replace=8 取不到引擎 Output，跳过");
-            }
-            return false;
-        }
-    }
-
-    void* savedColor  = paramGetResource(engineParams, "Color");
-    void* savedOutput = paramGetResource(engineParams, "Output");
-    bool const sharedParams = (gSr.params == engineParams);
-    if (!gSr.loggedShare) {
-        gSr.loggedShare = true;
-        nrLog(0, "[sr] 参数对象 same=%d（1 = NGX 单例，需要保存/恢复）", sharedParams ? 1 : 0);
-    }
-
-    paramSetPtr(engineParams, "Color", color);
-    paramSetPtr(engineParams, "Output", output);
-    paramSetPtr(engineParams, "Depth", depth);
-    paramSetPtr(engineParams, "MotionVectors", motionVectors);
-
-    transition(cmd, color, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    transition(cmd, depth, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    transition(cmd, static_cast<ID3D12Resource*>(motionVectors),
-               D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    bool const writeToEngineOutput = (output != gSr.output);
-    if (!writeToEngineOutput) {
-        transition(cmd, output, gSr.outputState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    }
-    // The engine's own Output texture is NOT transitioned here: NGX manages that
-    // resource's states itself, and bouncing it (ALL -> UAV -> ALL) desynchronises
-    // the engine feature's tracking of it. Once we had done that, the engine's own
-    // DLSS produced garbage until our SR overwrote the texture again.
-
-    bool resetIssued = false;
-    if (gSrResetPending.exchange(false, std::memory_order_relaxed)) {
-        // The engine's own contract dumps a bare "Reset" key (no DLSS. prefix).
-        paramSetI32(engineParams, "Reset", 1);
-        resetIssued = true;
-        nrLog(0, "[sr] 进存档：重置我们 SR 的时序历史");
-    }
-    // Diagnostic: SRReset=1 wipes our DLSS SR history every frame. If the burned-in
-    // outline disappears here but not with NRReset, the imprint lives in the SR's
-    // temporal state, not in NR's.
-    if (gOverrides.srResetEveryFrame != 0) {
-        paramSetI32(engineParams, "DLSS.Reset", 1);
-    }
-    int const ret = gSr.evaluate(cmd, gSr.feature, engineParams, nullptr, nullptr);
-    // Hand the engine its own parameters back before its EvaluateFeature. The
-    // reset flag is one-shot: leaving Reset=1 behind would keep resetting the
-    // history of whichever feature reads this object next.
-    if (resetIssued) {
-        paramSetI32(engineParams, "Reset", 0);
-    }
-    paramSetPtr(engineParams, "Color", savedColor);
-    paramSetPtr(engineParams, "Output", savedOutput);
-
-    if (!writeToEngineOutput) {
-        transition(cmd, output, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                   D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-        gSr.outputState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
-    }
-    transition(cmd, color, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-    transition(cmd, depth, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-    transition(cmd, static_cast<ID3D12Resource*>(motionVectors),
-               D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-
-    static unsigned calls = 0;
-    if (ret != 1 && ++calls < 8) {
-        nrLog(2, "[sr] EvaluateFeature ret=0x%08X (#%u)", static_cast<unsigned>(ret), calls);
-    }
-    gSr.lastOk = (ret == 1);
-    if (ret == 1 && gSr.warmupFrames < 1000000u) {
-        ++gSr.warmupFrames;
-    }
-    bool const ownsNow = (ret == 1 && gSr.warmupFrames >= 60 && takeover);
-    if (ownsNow && !gSr.ownsOutput) {
-        nrLog(0, "[sr] 预热完成（%u 帧），开始接管上屏", gSr.warmupFrames);
-    }
-    gSr.ownsOutput = ownsNow;
-    return ret == 1;
-}
-
-} // namespace
-
-void* nrSrOutputResource() { return gSr.output; }
-
-bool nrSrIsCreated() { return gSr.created; }
-
-int nrReplaceMode() { return gOverrides.replace; }
-
-bool nrParamLogEnabled() { return gOverrides.paramLog != 0; }
-
-bool nrSrOwnsOutput() {
-    // In control mode the engine's own DLSS still has to run (it writes our
-    // private texture), so the caller must not skip it. Before the warm-up ends
-    // the engine's evaluate must also keep running: we are only writing our
-    // private texture at that point.
-    return gSr.ownsOutput && gOverrides.control == 0;
-}
-
-void nrNotifyLevelLoaded() { gSrResetPending.store(true, std::memory_order_relaxed); }
-
-void nrSetNgxOriginals(void* createFeature, void* evaluateFeature) {
-    gOriginalCreateFeature   = createFeature;
-    gOriginalEvaluateFeature = evaluateFeature;
-}
-
-// Route A, second half: give the engine its own pixels back. Same command
-// list, right after the engine's EvaluateFeature returned. No-op otherwise.
-void nrRestoreColor(void* commandList) {
-    // Control mode leaves the engine's Output parameter pointing at our private
-    // texture (that is how its own DLSS gets redirected); put the real present
-    // texture back so the next frame starts from the engine's own state.
-    if (gControlParams && gSr.engineOutput) {
-        paramSetPtr(gControlParams, "Output", gSr.engineOutput);
-        gControlParams = nullptr;
-    }
-    if (!gColorBackupPending || !gColorBackup || !gColorBorrowed || !commandList) {
-        return;
-    }
-    auto* cmd = static_cast<ID3D12GraphicsCommandList*>(commandList);
-    unsigned const w = gColorBackupWidth;
-    unsigned const h = gColorBackupHeight;
-
-    transition(cmd, gColorBorrowed, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-               D3D12_RESOURCE_STATE_COPY_DEST);
-    transition(cmd, gColorBackup, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE);
-    D3D12_TEXTURE_COPY_LOCATION dst{};
-    dst.pResource        = gColorBorrowed;
-    dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    dst.SubresourceIndex = 0;
-    D3D12_TEXTURE_COPY_LOCATION src{};
-    src.pResource        = gColorBackup;
-    src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    src.SubresourceIndex = 0;
-    D3D12_BOX const region{0, 0, 0, w, h, 1};
-    cmd->CopyTextureRegion(&dst, 0, 0, 0, &src, &region);
-    transition(cmd, gColorBackup, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON);
-    transition(cmd, gColorBorrowed, D3D12_RESOURCE_STATE_COPY_DEST,
-               D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-
-    gColorBackupPending = false;
-    gColorBorrowed      = nullptr;
-}
-
-// Route A entry point for the probe: decode the last NR result into our own
-// texture and point the engine's parameter object at it (docs/D §6.16). Must be
-// called after nrRecord() and before the engine's own EvaluateFeature.
-bool nrReplaceEngineColor(void* commandList, void* engineColor, void* engineParams) {
-    // Only the "hijack the engine's parameter object" modes belong here: 1 (decode),
-    // 2 (copy test), 3 (borrow/restore), 4 (raw). 5 and 6 are composited inside
-    // nrRecord; 7 is shadow mode and must never touch the engine's picture.
-    // Missing the 7 here is what kept the screen frozen in shadow mode on
-    //  - the old swap path was still running.
-    int const mode = gOverrides.replace;
-    if (!gNr.created || !commandList || !engineParams || mode < 1 || mode > 4) {
-        return false;
-    }
-    auto* cmd = static_cast<ID3D12GraphicsCommandList*>(commandList);
-    return feedBackToColor(
-        cmd,
-        static_cast<ID3D12Resource*>(engineColor),
-        engineParams,
-        gNr.width,
-        gNr.height
-    );
-}
+void nrNotifyLevelLoaded() { gEngineResetPending.store(true, std::memory_order_relaxed); }
 
 bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, unsigned guideWidth,
               unsigned guideHeight, float motionVectorScaleX, float motionVectorScaleY,
@@ -2590,7 +1972,8 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
     unsigned const h  = gNr.height;
 
     reloadOverridesIfDue();
-    bool const useEncoded = gOverrides.replace != 4 && gEncodePso && gEncodedColor;
+    bool const useEncoded = (gOverrides.replace != 4 || gOverrides.nrEncode >= 0) && gEncodePso
+                         && gEncodedColor;
     paramSetPtr(params, "DLSSNR.Color", useEncoded ? static_cast<void*>(gEncodedColor) : color);
     paramSetPtr(params, "DLSSNR.Depth", depth);
     paramSetPtr(params, "DLSSNR.MVec", motionVectors);
@@ -2639,8 +2022,16 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
     // Motion-vector scale: 1.0 for pixel-space vectors, the render size for
     // normalised ones. Getting this wrong leaves the temporal history fixed to the
     // screen (ghost clouds, ), because nothing is reprojected.
-    float const mvScaleX = gOverrides.mvecScale >= 0.0f ? gOverrides.mvecScale : 1.0f;
-    float const mvScaleY = gOverrides.mvecScale >= 0.0f ? gOverrides.mvecScale : 1.0f;
+    //
+    // The engine's own DLSS is driven with MV.Scale = render width/height (see the
+    // parameter table in docs/D §6.16), i.e. its motion vectors are normalised.
+    // The probe passes exactly those numbers in; defaulting to 1.0 here was the
+    // reason NR's history never reprojected: every halo stayed nailed to the same
+    // screen pixels while the camera moved. MVecScale= still overrides both axes.
+    float const fallbackX = motionVectorScaleX > 0.0f ? motionVectorScaleX : static_cast<float>(w);
+    float const fallbackY = motionVectorScaleY > 0.0f ? motionVectorScaleY : static_cast<float>(h);
+    float const mvScaleX  = gOverrides.mvecScale >= 0.0f ? gOverrides.mvecScale : fallbackX;
+    float const mvScaleY  = gOverrides.mvecScale >= 0.0f ? gOverrides.mvecScale : fallbackY;
     paramSetF32(params, "DLSSNR.MVecScaleX", mvScaleX);
     paramSetF32(params, "DLSSNR.MVecScaleY", mvScaleY);
     // The runtime's shared keys are unprefixed (measured from the engine's own
@@ -2704,12 +2095,17 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
         loggedWindow = gWindowIndex;
         nrLog(
             0,
-            "[nr] 本窗参数 Style=%d Enabled=%d Intensity=%.2f DepthInverted=%d Replace=%d（窗口 #%d）",
+            "[nr] 本窗参数 Style=%d Enabled=%d Intensity=%.2f DepthInverted=%d Replace=%d "
+            "NrEncode=%d NRReset=%d（窗口 #%d）",
             style,
             enabled,
             static_cast<double>(gOverrides.intensity >= 0.0f ? gOverrides.intensity : 1.0f),
             inverted,
             gOverrides.replace,
+            useEncoded ? (gOverrides.nrEncode >= 0 ? gOverrides.nrEncode
+                                                  : (gOverrides.replace == 6 ? 3 : 0))
+                       : -1,
+            gOverrides.resetEveryFrame,
             gWindowIndex
         );
     }
@@ -2748,7 +2144,8 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
                 static_cast<ID3D12Resource*>(color),
                 static_cast<ID3D12Resource*>(color),
                 static_cast<ID3D12Resource*>(color),
-                gEncodedColor
+                gEncodedColor,
+                0
             );
             device->Release();
 
@@ -2759,12 +2156,17 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
             cmd->SetComputeRootDescriptorTable(
                 0, gEncodeHeap->GetGPUDescriptorHandleForHeapStart());
             // Replace=6 feeds the network TRP's encoded proxy (sRGB + shoulder);
-            // the other modes keep the earlier Reinhard encode for A/B.
+            // the other modes keep the earlier Reinhard encode for A/B. NrEncode
+            // overrides both so the input domain can be tested on any mode.
+            unsigned const encMode =
+                gOverrides.nrEncode >= 0
+                    ? static_cast<unsigned>(gOverrides.nrEncode)
+                    : (gOverrides.replace == 6 ? 3u : 0u);
             setPassConstants(
                 cmd,
                 w,
                 h,
-                gOverrides.replace == 6 ? 3u : 0u,
+                encMode,
                 gOverrides.whitePoint,
                 1.0f,
                 1.0f,
@@ -2801,6 +2203,20 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
     int const evaluateRet = gNr.evaluate(commandList, gNr.feature, params, nullptr, nullptr);
     if (evaluateRet == 1) {
         ++gNr.evalCount;
+    } else {
+        // Never silently accept a failed network evaluation: the output texture then
+        // keeps whatever it held (a previous view), and the composite would inject
+        // that stale frame into the current one.
+        static int failed = 0;
+        if (failed < 10) {
+            ++failed;
+            nrLog(
+                2,
+                "[nr] NR EvaluateFeature ret=0x%08X（输出保持上一次内容）(#%d)",
+                static_cast<unsigned>(evaluateRet),
+                failed
+            );
+        }
     }
 
     transition(cmd, output, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
@@ -2816,12 +2232,32 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
     gNr.outputWasSrv = true;
 
-    // Same frame now: composite this frame's NR result onto this frame's Color,
-    // then let our own DLSS SR reconstruct it. Replace=7 only dumps that result;
-    // Replace=8 writes it into the engine's present texture.
-    if (engineParams && (gOverrides.replace == 5 || gOverrides.replace == 6
-                         || gOverrides.replace == 7 || gOverrides.replace == 8)
-        && gEncodePso && gEncodedColor && gDecodedColor && gNr.evalCount > 2) {
+    // Same frame: composite this frame's NR result onto this frame's Color, then
+    // let the engine's own DLSS upscale it.
+    if (engineParams && gOverrides.replace == 5) {
+        // The engine never resets its own DLSS when a world loads, so its history
+        // keeps whatever was on screen when the previous world was left - the
+        // "ghost that survives a save reload and shows the first frame of the
+        // level" symptom. Reset is a one-shot key on the engine's parameter object
+        // (no DLSS. prefix); leaving it at 1 would wipe the history every frame.
+        static bool clearEngineReset = false;
+        if (gEngineResetPending.exchange(false, std::memory_order_relaxed)) {
+            paramSetI32(static_cast<void*>(engineParams), "Reset", 1);
+            clearEngineReset = true;
+            nrLog(0, "[nr] 进存档：给引擎 DLSS 发一次 Reset=1");
+        } else if (clearEngineReset) {
+            clearEngineReset = false;
+            paramSetI32(static_cast<void*>(engineParams), "Reset", 0);
+        }
+        // SRReset=1: wipe the engine's history every frame (diagnostic only).
+        // Must not run when the switch is off: it would overwrite the one-shot
+        // Reset=1 above with 0 before the engine ever sees it.
+        if (gOverrides.srResetEveryFrame != 0) {
+            paramSetI32(static_cast<void*>(engineParams), "Reset", 1);
+        }
+    }
+    if (engineParams && gOverrides.replace == 5 && gEncodePso && gEncodedColor && gDecodedColor
+        && gNr.evalCount > 2) {
         compositeGain(
             cmd,
             static_cast<ID3D12Resource*>(color),
@@ -2832,37 +2268,6 @@ bool nrRecord(void* commandList, void* color, void* depth, void* motionVectors, 
             h
         );
     }
-    // Replace=9 (bisect): our SR upscales the engine's own Color, with NR and the
-    // composite out of the picture entirely. Clean result => NR is what corrupts
-    // the picture; still dirty => our SR-to-screen path is.
-    if (gOverrides.replace == 9) {
-        srStep(
-            cmd,
-            static_cast<ID3D12Resource*>(color),
-            static_cast<ID3D12Resource*>(depth),
-            motionVectors,
-            engineParams,
-            engineOutput,
-            w,
-            h
-        );
-    }
-    if ((gOverrides.replace == 7 || gOverrides.replace == 8) && gDecodedColor) {
-        if (gOverrides.stamp != 0) {
-            stampMarker(cmd, gDecodedColor);
-        }
-        srStep(
-            cmd,
-            gDecodedColor,
-            static_cast<ID3D12Resource*>(depth),
-            motionVectors,
-            engineParams,
-            engineOutput,
-            w,
-            h
-        );
-    }
-
     static unsigned calls = 0;
     ++calls;
     if (evaluateRet != 1 && calls < 8) {

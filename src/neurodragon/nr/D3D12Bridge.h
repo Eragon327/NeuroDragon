@@ -39,6 +39,17 @@ void queueColorDumpEncoded(void* commandList, void* color, char const* fileName)
 void queueColorDumpLinear(void* commandList, void* color, char const* fileName);
 [[nodiscard]] bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords);
 
+// Second independent dump slot: queue/flush one more resource on the very same
+// frame, so two textures can be compared without camera motion in between.
+void               queueColorDump2(void* commandList, void* resource, char const* fileName);
+void               queueColorDumpEncoded2(void* commandList, void* resource, char const* fileName);
+[[nodiscard]] bool flushColorDump2(float* maxValue, std::uint32_t* nonZeroWords);
+
+// Generic slot form (0..3): capture several resources on the SAME frame. Domain is
+// 0 = linear HDR, 1 = display-encoded, 2 = linear in [0,1].
+void               queueColorDumpN(int slot, void* commandList, void* resource, char const* fileName, int domain);
+[[nodiscard]] bool flushColorDumpN(int slot, float* maxValue, std::uint32_t* nonZeroWords);
+
 // ---------------------------------------------------------------------------
 // Stage 2: NR (NGX feature 0x12) at the engine's render resolution.
 //
@@ -87,6 +98,13 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // written by the feature.
 [[nodiscard]] void* nrOutputResource();
 
+// The resource we most recently pointed the engine's own DLSS "Color" at, and
+// whether its pixels are display-encoded (1) or linear HDR (0). Null until a
+// Replace mode actually swaps. Diagnostic only: dumped so a frozen picture can
+// be attributed to our write versus the upscaler.
+[[nodiscard]] void* nrFedResource();
+[[nodiscard]] int   nrFedDomain();
+
 // The tone-mapped, gamma-encoded copy of Color that the network is fed (item
 // "HDR -> LDR encode"). Null until nrCreate has built the encoder.
 [[nodiscard]] void* nrEncodedColorResource();
@@ -96,31 +114,11 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // the picture can actually be judged by eye.
 [[nodiscard]] bool nrReplaceContinuous();
 
-// ---------------------------------------------------------------------------
-// Our own DLSS SR (Replace=7). Same structure as TRP: instead of re-pointing the
-// engine's DLSS at our texture (which froze the picture - NGX binds the feature's
-// input resource at CreateFeature), we create feature 1 ourselves, feed it our
-// composited image plus the engine's Depth/MV, and write into a texture we own.
-// The engine's own DLSS keeps running untouched in this step: the result is only
-// dumped, so a mistake cannot freeze or black the picture.
-// ---------------------------------------------------------------------------
-// The private 2560x1440 SR output; null until the feature exists.
-[[nodiscard]] void* nrSrOutputResource();
-[[nodiscard]] bool  nrSrIsCreated();
-[[nodiscard]] int   nrReplaceMode();
 // ParamLog=1 in nr_params.txt: the probe logs every engine NGX parameter write.
-[[nodiscard]] bool  nrParamLogEnabled();
-// Call on entering a world: resets our own SR history so the previous world's
-// image does not follow the player.
+[[nodiscard]] bool nrParamLogEnabled();
+// Called on entering a world: the engine never resets its own DLSS, so one
+// one-shot Reset=1 is sent to its parameter object at the first swap after a load.
 void nrNotifyLevelLoaded();
-// True when our own SR already wrote the engine's Output this frame, so the
-// caller must skip the engine's EvaluateFeature.
-[[nodiscard]] bool  nrSrOwnsOutput();
-
-// Hand over the *original* NGX CreateFeature/EvaluateFeature (the detours' next
-// pointers). Our own SR must call those, never the patched exports: the patched
-// entry point is our detour, so calling it recurses until the stack dies.
-void nrSetNgxOriginals(void* createFeature, void* evaluateFeature);
 
 // Records one evaluation on the game's command list. Handles every resource
 // state transition around the NGX call. `engineParams` (may be null) is the
@@ -142,19 +140,6 @@ bool nrRecord(
     void*    engineParams,
     void*    engineOutput
 );
-
-// Route A (docs/D §6.16): make the engine's own DLSS consume our texture, so the
-// picture on screen contains NR pixels. `replace=1` decodes the NR result first
-// (gamma + inverse Reinhard); `replace=2` is the mechanism test: it hands DLSS a
-// faithful *copy* of the engine's own Color from a foreign texture, which shows
-// whether NGX accepts a swapped resource at all. Call after nrRecord() and before
-// the engine's own EvaluateFeature. Returns false when it could not swap.
-bool nrReplaceEngineColor(void* commandList, void* engineColor, void* engineParams);
-
-// Second half of Replace=3 (docs/D §6.16): give the engine's own Color pixels
-// back right after its EvaluateFeature returned. Same command list; no-op when
-// nothing was borrowed.
-void nrRestoreColor(void* commandList);
 
 // Releases the feature and every GPU object this translation unit owns. Called
 // from the probe's uninstall(): a detour or a live D3D12 object left behind by an

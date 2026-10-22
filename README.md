@@ -30,8 +30,8 @@
 |---|---|---|
 | A. 白盒取证：RenderDragon 通道图与接入点 | ✅ 完成 | [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) |
 | B. Windows 侧符号/钩子落点确认 | ✅ 无 PDB 定位链 + RT 路径定位完成 | [docs/B-windows-probe.md](docs/B-windows-probe.md) |
-| C. 工程骨架（xmake + ImGui + 探针） | 🟡 xmake 工程 + 探针/钩子就位（ImGui 未做） | `src/neurodragon/probe/RenderProbe.cpp` |
-| D. NR 接入（NGX feature 0x12） | 🟡 **跑通且验证**：建 feature + 逐帧 evaluate（**~3.3 ms**，1485×835）+ HDR→LDR 编码；`Enabled=0` 冻结测试证明写入来自 NGX（§6.15）；**Route A：`Replace=1` 把结果写回引擎 Color，画面可见**（§6.16） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
+| C. 工程骨架（xmake + ImGui + 探针） | 🟡 xmake 工程 + 探针/钩子就位；**ImGui 面板设计已定稿**（[docs/F-ui-plan.md](docs/F-ui-plan.md)），实现待标准化后开始 | `src/neurodragon/probe/RenderProbe.cpp` |
+| D. NR 接入（NGX feature 0x12） | ✅ **跑通并上屏**：core 建 feature + 逐帧 evaluate（**~3.5 ms**，1485×835）+ HDR→LDR 编码 + 增益合成，`Replace=5` 时结果进引擎 DLSS 放大到 2560×1440。2026-10-22 修掉“编码纹理被描述符堆竞争冻结”的根因（§6.16） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
 | E. 超分（DLSS SR/DLAA） | ✅ **引擎自带**（RT 下已在跑，复用即可） | — |
 | F. UI 分层 + DLSS-G | 待开始 | — |
 
@@ -65,8 +65,7 @@ cp -r bin/NeuroDragon/* "E:/LeviLauncher/versions/1.26.51.01/mods/NeuroDragon/"
 grep -E "RenderProbe" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
 ```
 
-细节、判据与边界（launcher 安装目录仍不可写、部署前要关游戏）见
-[docs/E-local-loop.md](docs/E-local-loop.md)。
+细节、判据与边界见 [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) §6.16。
 
 ## 关键结论（一句话）
 
@@ -93,3 +92,4 @@ grep -E "RenderProbe" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
 | [docs/B-windows-probe.md](docs/B-windows-probe.md) | 无 PDB 的 taau 定位链（字符串→xref→`.pdata`）与运行时探针 |
 | [docs/C-levilamina-api-notes.md](docs/C-levilamina-api-notes.md) | LL API 速查（hook / signature / 线程 / 日志 / config），只记本项目用到的 |
 | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) | **RT 路线 + 复用引擎 DLSS 的 NR 接入规划**（事实、参数表、地址、坑、A~D 步骤） |
+| [docs/F-ui-plan.md](docs/F-ui-plan.md) | **UI 与设置系统设计稿**（ImGui→Output、输入吞噬、设置模型、M1–M4 里程碑） |

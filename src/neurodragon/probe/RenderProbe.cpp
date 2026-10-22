@@ -732,10 +732,6 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                     if (inWindow) {
                         nr::nrStampEnd(cmdList, n, 0);
                     }
-                    if (recorded && replaceNow) {
-                        // Route A: let the engine's own DLSS consume the NR result.
-                        nr::nrReplaceEngineColor(cmdList, const_cast<void*>(color), const_cast<void*>(params));
-                    }
                     if (reset) {
                         log.info(
                             "[nr] 窗口 #{} 首帧 f={} 指南={}x{} 特征={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
@@ -770,13 +766,30 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 }
                 nrDumpName(name, sizeof(name), "color_ref", gNrWindowIndex);
                 nr::queueColorDumpEncoded(cmdList, nr::nrEncodedColorResource(), name);
+                // Everything the upscaler touches, captured on THIS ONE frame so the
+                // comparison does not silently depend on the camera standing still:
+                //   0 color_ref (network input)  1 nr2 (network output)
+                //   2 fed       (what DLSS reads) 3 base (engine's own Color)
+                nrDumpName(name, sizeof(name), "nr2", gNrWindowIndex);
+                nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
+                if (void* fed = nr::nrFedResource()) {
+                    nrDumpName(name, sizeof(name), "fed", gNrWindowIndex);
+                    nr::queueColorDumpN(2, cmdList, fed, name, nr::nrFedDomain() == 1 ? 1 : 0);
+                }
+                nrDumpName(name, sizeof(name), "base", gNrWindowIndex);
+                nr::queueColorDumpN(3, cmdList, const_cast<void*>(color), name, 0);
             } else if (inWindow && n == gNrDumpFrame + 4) {
                 char          name[64];
                 float         peak = -1.0f;
                 std::uint32_t nz   = 0;
-                if (nr::flushColorDump(&peak, &nz)) {
-                    nrDumpName(name, sizeof(name), "color_ref", gNrWindowIndex);
-                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                char const*   tags[4] = {"color_ref", "nr2", "fed", "base"};
+                for (int slot = 0; slot < 4; ++slot) {
+                    peak = -1.0f;
+                    nz   = 0;
+                    if (nr::flushColorDumpN(slot, &peak, &nz)) {
+                        nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
+                        log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    }
                 }
             } else if (inWindow && n == gNrDumpFrame + 6) {
                 // out_after was queued right after the engine's evaluate: if it
@@ -804,6 +817,28 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                     nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
                     log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
                 }
+            } else if (inWindow && n == gNrDumpFrame + 34) {
+                // Same two resources as the +2 pair, ~32 frames later. If the encoder
+                // output is identical here while the camera moved, the network's input
+                // is frozen - which is what "NR is not real time" would look like.
+                char name[64];
+                nrDumpName(name, sizeof(name), "color_ref2", gNrWindowIndex);
+                nr::queueColorDumpN(0, cmdList, nr::nrEncodedColorResource(), name, 1);
+                nrDumpName(name, sizeof(name), "nr3", gNrWindowIndex);
+                nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
+            } else if (inWindow && n == gNrDumpFrame + 36) {
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                char const*   tags[2] = {"color_ref2", "nr3"};
+                for (int slot = 0; slot < 2; ++slot) {
+                    peak = -1.0f;
+                    nz   = 0;
+                    if (nr::flushColorDumpN(slot, &peak, &nz)) {
+                        nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
+                        log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    }
+                }
             }
 
             if (gNrWindowOpen && n >= gNrWindowEnd && !gNrReportAt) {
@@ -824,12 +859,8 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     if (measureBaseline) {
         nr::nrStampBegin(cmdList, n, 1);
     }
-    bool const srOwnsOutput = nr::nrSrOwnsOutput();
-    int const result = srOwnsOutput ? 1
-        : (gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0);
-    // Replace=3: the engine's DLSS has read the borrowed pixels, hand them back
-    // before anything later in this frame (or next frame's history) sees them.
-    nr::nrRestoreColor(cmdList);
+    int const result =
+        gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
     if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 4) {
         // The engine's own Output, right after its DLSS ran: this is the proof
         // that the swap reached the upscaler (route A).
@@ -843,14 +874,6 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
         char name[64];
         nrDumpName(name, sizeof(name), "out_b", gNrWindowIndex);
         nr::queueColorDumpLinear(cmdList, const_cast<void*>(out), name);
-    }
-    if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 12
-        && nr::nrSrOutputResource()) {
-        // Replace=7: our own DLSS SR result (linear HDR), dumped next to the
-        // engine's Output so the two can be compared frame by frame.
-        char name[64];
-        nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
-        nr::queueColorDumpLinear(cmdList, nr::nrSrOutputResource(), name);
     }
     if (measureBaseline) {
         nr::nrStampEnd(cmdList, n, 1);
@@ -941,12 +964,6 @@ void hookNgxExports() {
             log.error("[ngx] {} 挂钩失败", e.name);
         }
     }
-    // Our own DLSS SR calls these originals directly (calling the patched export
-    // recurses through our own detour).
-    nr::nrSetNgxOriginals(
-        reinterpret_cast<void*>(gNgxCreateOriginal),
-        reinterpret_cast<void*>(gNgxEvalOriginal)
-    );
     log.info(
         "[ngx] originals create={:#x} eval={:#x}",
         reinterpret_cast<std::uintptr_t>(gNgxCreateOriginal),

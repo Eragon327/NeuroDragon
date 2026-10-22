@@ -81,3 +81,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   所以问题不是 Minecraft 进程环境。
 - 当前未解：NR 输出直接使用时偏暗（TRP 会用自己的 resolve kernel 与原始颜色合成，并做 HDR→LDR encode）。
 - `DepthInverted=1`、`Style/Intensity/Local*Strength` 的取值仍是 TRP 默认，未单独验证。
+
+### Fixed（2026-10-22 傍晚：NR 的运动向量缩放）
+
+- **`DLSSNR.MVecScaleX/Y` 一直写成 1.0。** 引擎的 `MotionVectors` 是归一化的，它自己给 DLSS 用的
+  是 `MV.Scale = 1485/835`；NR 按“像素空间”解释，历史就永不重投影——光源周围的半透明光晕
+  固定在屏幕像素上、不随视角移动（`Replace=5` 的症状）。现在默认取调用方传入的渲染尺寸，
+  `MVecScale=` 仍可覆盖两个轴。
+- 新增 `NrEncode=0|3`：强制网络输入域（0 = Reinhard+gamma，3 = TRP shoulder+sRGB），
+  用它在任意 `Replace` 模式下单独验证“域不匹配”和“时序”。
+- 新增 `fed_wN.bmp` + `[dump] fed` 统计：这是**实际喂给引擎 DLSS** 的那张图。画面冻结时，它若
+  停更就是我们这边写挂；它若在变而引擎 `Output` 不变，才是 upscaler 不更新。
+
+
+### Fixed（2026-10-22 晚：幽灵的真正根因）
+
+- **编码纹理只在第一帧被写过。** 编码 pass 与合成 pass 共用同一个 4 槽描述符堆，同一帧各写
+  一次；命令列表先记录、后执行，GPU 执行时读到的是最后写入的那套描述符，于是编码 dispatch
+  实际写进了 `gDecodedColor`，随即被合成覆盖。`gEncodedColor` 从此永久冻结，NR 一直在处理
+  同一张旧帧——旧帧结构被当成“增益”乘到实时画面，就是那个“画面里没有的地形/手”的幽灵。
+  修复：堆扩到 8 槽（0–3 编码、4–7 合成/解码），各自绑定自己的 GPU 句柄。
+- `DLSSNR.MVecScaleX/Y` 修正为调用方传入的渲染尺寸（1485/835）。此前默认 1.0，而引擎的
+  `MotionVectors` 是归一化的，等于历史永不重投影。
+- 验证：同帧 `nr2` vs `color_ref` = 2.23/255，`fed` vs `base` = 1.86/255；跨窗 `color_ref`
+  差 41.6/255（修复前逐字节相同）。
+
+### Removed（2026-10-22 晚：收敛成一个能用的东西）
+
+- 删除自建 DLSS SR（旧 `Replace=7/8/9`，约 700 行）与所有“写引擎资源/借还/直拷”的早期模式
+  （旧 1–4、6）。模式只剩 `0`（关）与 `5`（增益合成上屏）。
+- 删除对应的一次性诊断开关（`Control`/`Stamp`/`DLSSPreset`/`Sharpness`），保留 `NrEncode`、
+  `NRReset`、`MVecScale`、`ParamLog`、`GainBoost` 与按窗口的 dump。
