@@ -29,21 +29,44 @@
 | 阶段 | 状态 | 产出 |
 |---|---|---|
 | A. 白盒取证：RenderDragon 通道图与接入点 | ✅ 完成（2026-10-20） | [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) |
-| B. Windows 侧符号/钩子落点确认 | 待开始 | — |
-| C. 工程骨架（xmake + ImGui + 探针） | 待开始 | — |
-| D. NR 接入（NGX feature 0x12） | 待开始 | — |
-| E. 超分（DLSS SR/DLAA） | 待开始 | — |
+| B. Windows 侧符号/钩子落点确认 | ✅ 无 PDB 定位链 + RT 路径定位完成（2026-10-21） | [docs/B-windows-probe.md](docs/B-windows-probe.md) |
+| C. 工程骨架（xmake + ImGui + 探针） | 🟡 xmake 工程 + 探针/钩子就位（ImGui 未做） | `src/neurodragon/probe/RenderProbe.cpp` |
+| D. NR 接入（NGX feature 0x12） | 🟡 **跑通且验证**：建 feature + 逐帧 evaluate（**~3.3 ms**，1485×835）+ HDR→LDR 编码；`Enabled=0` 冻结测试证明写入来自 NGX（§6.15） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
+| E. 超分（DLSS SR/DLAA） | ✅ **引擎自带**（RT 下已在跑，复用即可） | — |
 | F. UI 分层 + DLSS-G | 待开始 | — |
+
+## 驱动要求（2026-10-21 实测）
+
+- **NR 需要 NVIDIA 驱动 ≥ 617.42**：核心 `_nvngx.dll` 的 feature 表里才出现 `dlssnr`
+  （610.88 的核心没有，`core CreateFeature(0x12)` 返回 `OutOfDate`）。
+- 模型文件必须叫 **`nvngx_dlssnr.dll`** 并放在 **`Minecraft.Windows.exe` 同级**；
+  只放版本名（`nvngx_dlssnr_310.9.16.dll`）会得到 `0xBAD0000B`。
+- 建 feature 必须走 **core** 的 `CreateFeature`；模型自己的 `Init_Ext` 在本机恒为 `PlatformError`。
 
 ## 取证环境
 
 - IDA Pro GUI + DSH `ida` MCP（`idb_list` 取 session id）
-- Windows 客户端：`D:\Program Files\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe`（1.26.5101.0，**无 PDB**，但 RTTI 类型名可用，见文档 §7.8）
+- Windows 客户端：`E:\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe`（1.26.5101.0，**无 PDB**，但 RTTI 类型名可用，见文档 §7.8）
 - IDB：`D:\Documents\DecompileData\version\minecraft-edu\minecraft-edu.i64`
 - 来源：Minecraft Education **1.26.32.0** macOS 包（Mach-O，imagebase `0x100000000`），**全符号化**
 - 目标：Bedrock 客户端 **1.26.51**（LeviLamina 26.51.7），**同为 clang 构建**
 
 > 本目录下的 `.ida/*.json` 是从 IDB 导出的原始取证数据（callees / xrefs / decompile），不要删，后续 Windows 侧比对要用。
+
+## 本地验证（2026-10-21 起可自测）
+
+客户端已搬到 `E:\LeviLauncher`（`base_root` 同步改过），E: 盘普通权限可写、`RUNASADMIN` 已移除，
+所以「构建 → 部署 → 启动 → 读日志」可以整条链路自己跑，不再需要提权：
+
+```bash
+cd D:/Documents/NeuroDragon && xmake build -y      # 增量 <1s / 全量约 15s
+./build/thunk_test.exe                              # 期望 RESULT=PASS
+cp -r bin/NeuroDragon/* "E:/LeviLauncher/versions/1.26.51.01/mods/NeuroDragon/"
+grep -E "RenderProbe" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
+```
+
+细节、判据与边界（launcher 安装目录仍不可写、部署前要关游戏）见
+[docs/E-local-loop.md](docs/E-local-loop.md)。
 
 ## 关键结论（一句话）
 
@@ -61,3 +84,12 @@
 | 6 | `UpscalingCameraData` | prev/cur VP + 亚像素抖动/valid history + 世界原点；精确布局待 Windows |
 
 详见 [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) 第 7 节。
+
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) | RenderDragon 通道图、taau 契约、接入点方案、W1 结果 |
+| [docs/B-windows-probe.md](docs/B-windows-probe.md) | 无 PDB 的 taau 定位链（字符串→xref→`.pdata`）与运行时探针 |
+| [docs/C-levilamina-api-notes.md](docs/C-levilamina-api-notes.md) | LL API 速查（hook / signature / 线程 / 日志 / config），只记本项目用到的 |
+| [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) | **RT 路线 + 复用引擎 DLSS 的 NR 接入规划**（事实、参数表、地址、坑、A~D 步骤） |

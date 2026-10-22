@@ -276,7 +276,8 @@ bool  mEnableColorClipping;  bool mEnableMotionVectorFiltering;  glm::vec2 mVari
 
 **实际值：Fsr1 在 PC 上不会被选中【确认】；taau 还是 bilinear 取决于档位【部分确认】**
 
-用本机 Windows 1.26.5101.0 客户端实测（`D:\Program Files\LeviLauncher\versions\1.26.51.01`）：
+用本机 Windows 1.26.5101.0 客户端实测（当时在 `D:\Program Files\LeviLauncher\versions\1.26.51.01`；
+2026-10-21 已整体搬到 `E:\LeviLauncher\versions\1.26.51.01`，内容不变）：
 
 - `data/renderer/platform_config/pc/platform_configuration.pc.json`：`pc.tiers` 共 **5 档**，每档两个
   预设 `{name: Performance|Quality, lods: {upscaling_mode, ...}}`：
@@ -291,13 +292,13 @@ bool  mEnableColorClipping;  bool mEnableMotionVectorFiltering;  glm::vec2 mVari
 - 用户当前档：`Minecraft Bedrock/Users/Shared/games/com.mojang/minecraftpe/options.txt` 里有
   `gfx_upscaling:1`、`upscaling_mode:1`、`graphics_mode:2`、`deferred_viewdistance:12`（Vibrant Visuals /
   延迟渲染在跑）。
-- ⚠️ **`upscaling_mode` 的 0/1 顺序未钉死**：`UpscalingParameters::Mode` 是 `Taau=0,Bilinear=1`，但设置项是
-  独立的 radio（`#upscaling_mode_radio_taau|bilinear`、`options.upscalingModeOptions.*`），两者顺序不一定相同
-  【推断 0=bilinear、1=taau，因为平台配置里 Quality→taau 是更常见的默认档】。
-- **后果（未验证，别当定论）**：如果 `bilinear` 走的是与 taau 不同的分支（`_copy`/Blit 或独立 technique），
-  那 `frameImpl` 就不会进 taau → **P1 钩子不命中**；但 Upscaling 材质里同时存在
-  `Bilinear Upsample` / `FSR1 EASU Upsample` / `RCAS` 这些 technique，**bilinear 也可能仍由 taau 模块内的
-  technique 完成**。C 阶段第一件事：钩住 taau 打一行 `mUpscalingMode`，顺带确认命中次数 = 帧数。
+- ✅ **`upscaling_mode` 的 0/1 已实测钉死：`0=Taau`、`1=Bilinear`**（与 `UpscalingParameters::Mode`
+  枚举同序）。证据：用户在游戏内把 Upscaling 切到 TAAU 后，活动档案
+  `Minecraft Bedrock/Users/9587534086357524579/.../options.txt`（23:37 写入）里 `upscaling_mode` 由 `1` 变成 `0`；
+  `Users/Shared` 那份是 10-11 的旧档，仍为 `1`。**这直接解释了 23:26/23:36 两次「taau 钩子 0 命中」——
+  那两次实际跑的是 Bilinear，引擎压根不进 taau 分支。**
+- ✅ **后果已实测**：`bilinear`（值 1）时 taau 一次都不会被调用（23:26/23:36 两次运行 = 0 命中），
+  说明 bilinear 走的是另一条路径，**不进 taau 分支**；切到 `taau`（值 0）后才有资格命中 P1。
 - `getUpscalingFactor()` 返回的是当前 `mUpscalingFactor`（1.0=原生，0.5=半分辨率），来自
   `UpscalingData.mUpscalingParameters`；档位里给的是 `target_resolution`（如 `720p`）而非 factor，
   具体换算在动态分辨率模块里【推断】。
@@ -380,8 +381,8 @@ TAAU 材质（名字 `TAAUpscaling`，FNV-1a 64）**完整 uniform 集**（= cam
 
 **W1 用到的非 IDB 证据（本机源码副本）**：
 
-- `D:\Program Files\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe`
-  （311 MB，`MicrosoftGame.Config` 里 `Version="1.26.5101.0"`，**无 PDB**；RTTI 名字里带 taau 签名与 bgfx d3d12 类名）
+- `E:\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe`
+  （原在 `D:\Program Files\LeviLauncher\…`，2026-10-21 搬盘后路径如上；311 MB，`MicrosoftGame.Config` 里 `Version="1.26.5101.0"`，**无 PDB**；RTTI 名字里带 taau 签名与 bgfx d3d12 类名）
 - `…\data\renderer\platform_config\pc\platform_configuration.pc.json` —— PC 五档 × {Performance, Quality} 的
   `upscaling_mode`（只有 bilinear/taau）
 - `…\Minecraft Bedrock\Users\Shared\games\com.mojang\minecraftpe\options.txt` —— 用户当前

@@ -1,5 +1,7 @@
 #include "neurodragon/NeuroDragon.h"
 
+#include "neurodragon/probe/RenderProbe.h"
+
 #include "ll/api/mod/RegisterHelper.h"
 
 namespace neurodragon {
@@ -17,13 +19,14 @@ bool NeuroDragon::load() {
 
 bool NeuroDragon::enable() {
     getSelf().getLogger().debug("Enabling...");
-    // Code for enabling the mod goes here.
+    // Locate + hook dragon::framerenderer::modules::taau without any PDB.
+    probe::install();
     return true;
 }
 
 bool NeuroDragon::disable() {
     getSelf().getLogger().debug("Disabling...");
-    // Code for disabling the mod goes here.
+    probe::uninstall();
     return true;
 }
 
