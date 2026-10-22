@@ -1,0 +1,47 @@
+{
+    "nr": {
+        "info": {
+            "enabled": "NR 已启用（config/config.json：nr.enabled = true）",
+            "disabled": "NR 未启用：config/config.json 里 nr.enabled = false",
+            "ready": "NR 已就绪：{0}x{1}，首次创建耗时 {2:.0f} ms",
+            "modelCopied": "NR 模型已复制到游戏目录：{0}（{1}）"
+        },
+        "warn": {
+            "sizeChanged": "分辨率变了：NR 建在 {0}x{1}，当前 {2}x{3}，本窗口跳过（NR 不重建）",
+            "hardlinkFailed": "硬链接失败（错误码 {0}），改为复制 {1} 到游戏目录…"
+        },
+        "error": {
+            "noExeDir": "取不到游戏可执行文件目录，NR 不可用",
+            "modelMissing": "缺少 NR 模型：{0} 不存在，NR 不可用。把 nvngx_dlssnr.dll 放进模组目录即可",
+            "modelUnwritable": "游戏目录不可写：无法把 NR 模型放到 {0}（硬链接错误 {1}，复制错误 {2}）。请手动把 {3} 复制到 {0}",
+            "createFailed": "NR 创建失败（{0:#x}：{1}），本次运行 NR 不可用",
+            "evalFailed": "NR 求值失败（{0:#x}：{1}），画面保持上一帧（第 {2} 次）",
+            "engineEvalFailed": "引擎 DLSS 求值失败（{0:#x}：{1}，第 {2} 次）",
+            "missingExport": "NGX 核心缺少导出 {0}，NR 无法工作",
+            "hookFailed": "{0} 挂钩失败，NR 无法工作"
+        },
+        "result": {
+            "success": "成功（Success）",
+            "fail": "通用失败（Fail）",
+            "featureNotSupported": "功能不支持（FAIL_FeatureNotSupported）",
+            "platformError": "平台错误（FAIL_PlatformError）",
+            "featureAlreadyExists": "功能已存在（FAIL_FeatureAlreadyExists）",
+            "featureNotFound": "功能未找到（FAIL_FeatureNotFound）",
+            "invalidParameter": "无效参数（FAIL_InvalidParameter）",
+            "scratchBufferTooSmall": "暂存缓冲区过小（FAIL_ScratchBufferTooSmall）",
+            "notInitialized": "未初始化（FAIL_NotInitialized）",
+            "unsupportedInputFormat": "不支持的输入格式（FAIL_UnsupportedInputFormat）",
+            "rwFlagMissing": "缺少读写标志（FAIL_RWFlagMissing）",
+            "missingInput": "缺少输入（FAIL_MissingInput）",
+            "unableToInitFeature": "无法初始化功能（FAIL_UnableToInitializeFeature）",
+            "outOfDate": "版本过旧（FAIL_OutOfDate）",
+            "outOfGpuMemory": "GPU 显存不足（FAIL_OutOfGPUMemory）",
+            "unsupportedFormat": "不支持的格式（FAIL_UnsupportedFormat）",
+            "appDataPath": "无法写入 AppData 路径（FAIL_UnableToWriteToAppDataPath）",
+            "unsupportedParameter": "不支持的参数（FAIL_UnsupportedParameter）",
+            "denied": "被拒绝（FAIL_Denied）",
+            "notImplemented": "未实现（FAIL_NotImplemented）",
+            "unknown": "未知返回码（Unknown）"
+        }
+    }
+}

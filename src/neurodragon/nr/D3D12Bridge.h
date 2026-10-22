@@ -109,12 +109,12 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // "HDR -> LDR encode"). Null until nrCreate has built the encoder.
 [[nodiscard]] void* nrEncodedColorResource();
 
-// True when nr_params.txt asked for Replace (route A). The probe then evaluates
+// True when config.json asks for Replace (route A). The probe then evaluates
 // NR on every in-world frame instead of only inside the measurement windows, so
 // the picture can actually be judged by eye.
 [[nodiscard]] bool nrReplaceContinuous();
 
-// ParamLog=1 in nr_params.txt: the probe logs every engine NGX parameter write.
+// nr.paramLog in config.json: the probe logs every engine NGX parameter write.
 [[nodiscard]] bool nrParamLogEnabled();
 // Called on entering a world: the engine never resets its own DLSS, so one
 // one-shot Reset=1 is sent to its parameter object at the first swap after a load.
@@ -122,7 +122,7 @@ void nrNotifyLevelLoaded();
 
 // Records one evaluation on the game's command list. Handles every resource
 // state transition around the NGX call. `engineParams` (may be null) is the
-// engine's own NGX parameter object: when nr_params.txt asks for Replace=5 it is
+// engine's own NGX parameter object: when config.json asks for Replace=5 it is
 // pointed at our gain-composited texture (docs/D §6.16).
 //
 // NR stays 1:1 at the render resolution; it never upscales.
@@ -145,11 +145,6 @@ bool nrRecord(
 // from the probe's uninstall(): a detour or a live D3D12 object left behind by an
 // unloaded module is what crashed the client on disable (2026-10-21).
 void nrShutdown();
-
-// Level: 0 = info, 1 = warn, 2 = error. The D3D12 translation unit stays free
-// of engine headers, so logging is injected from the probe instead.
-using NrLogFn = void (*)(int level, char const* message);
-void nrSetLogger(NrLogFn fn);
 
 // GPU timestamps. id 0 brackets our NR evaluation, id 1 the engine's DLSS, so
 // both numbers come from the same run. Timing is harvested a few frames later:

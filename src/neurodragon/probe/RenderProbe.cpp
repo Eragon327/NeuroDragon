@@ -1,8 +1,13 @@
 #include "neurodragon/probe/RenderProbe.h"
 
+#include "neurodragon/Config.h"
+#include "neurodragon/Log.h"
+#include "neurodragon/utils/Utils.h"
+
 #include "neurodragon/NeuroDragon.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 
+#include "ll/api/i18n/I18n.h"
 #include "ll/api/memory/Hook.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -31,6 +36,8 @@
 // Log tags: [param] SetPtr  [param4] slot-4 unsigned Set  [eval] EvaluateFeature
 //           [create] CreateFeature  [res] first sighting  [desc] sampled GetDesc
 //           [dump] colour readback written
+
+using namespace ll::i18n_literals;
 
 namespace neurodragon::probe {
 namespace {
@@ -125,7 +132,7 @@ void describeNow(char const* name, void* value) {
         return;
     }
     auto const info = nr::describe(value);
-    NeuroDragon::getInstance().getSelf().getLogger().info(
+    utils::logger().info(
         "[desc] {} f={} p={:#x} fmt={} {}x{} mips={} flags={:#x}",
         name,
         gFrame.load(std::memory_order_relaxed),
@@ -154,7 +161,7 @@ std::array<ResourceWatch, 4> gResourceWatch{{
 }};
 
 void watchResource(char const* name, void* value) {
-    auto&      log   = NeuroDragon::getInstance().getSelf().getLogger();
+    auto&      log   = utils::logger();
     auto const frame = gFrame.load(std::memory_order_relaxed);
     for (auto& w : gResourceWatch) {
         if (!w.name || std::strcmp(w.name, name) != 0) {
@@ -163,7 +170,7 @@ void watchResource(char const* name, void* value) {
         if (!w.described && value) {
             w.described = true;
             auto const info = nr::describe(value);
-            log.info(
+            log.debug(
                 "[res] {} f={} p={:#x} dev={:#x} fmt={} {}x{} arr={} mips={} flags={:#x}",
                 name,
                 frame,
@@ -180,7 +187,7 @@ void watchResource(char const* name, void* value) {
         bool const wasNull = w.last == nullptr;
         bool const isNull  = value == nullptr;
         if (wasNull != isNull) {
-            log.info("[res] {} f={} -> {}", name, frame, isNull ? "null" : "set");
+            log.debug("[res] {} f={} -> {}", name, frame, isNull ? "null" : "set");
         }
         w.last = value;
         return;
@@ -206,7 +213,7 @@ NgxInitProjectFn gInitProjectOriginal = nullptr;
 std::atomic_bool gInitHooked{false};
 
 int ngxInitDetour(unsigned long long appId, wchar_t const* dataPath, void* device, int apiVersion) {
-    NeuroDragon::getInstance().getSelf().getLogger().info(
+    utils::logger().info(
         "[init] Init appId={:#x} api={:#x}", appId, static_cast<unsigned>(apiVersion));
     nr::nrSetEngineInit(appId, dataPath);
     return gInitOriginal ? gInitOriginal(appId, dataPath, device, apiVersion) : 0xBAD00007;
@@ -214,7 +221,7 @@ int ngxInitDetour(unsigned long long appId, wchar_t const* dataPath, void* devic
 
 int ngxInitExtDetour(unsigned long long appId, wchar_t const* dataPath, void* device,
                      int apiVersion, void const* params) {
-    NeuroDragon::getInstance().getSelf().getLogger().info(
+    utils::logger().info(
         "[init] Init_Ext appId={:#x} api={:#x}", appId, static_cast<unsigned>(apiVersion));
     nr::nrSetEngineInit(appId, dataPath);
     return gInitExtOriginal ? gInitExtOriginal(appId, dataPath, device, apiVersion, params)
@@ -223,7 +230,7 @@ int ngxInitExtDetour(unsigned long long appId, wchar_t const* dataPath, void* de
 
 int ngxInitProjectDetour(char const* projectId, int engineType, char const* engineVersion,
                          wchar_t const* dataPath, void* device, void const* info, int apiVersion) {
-    NeuroDragon::getInstance().getSelf().getLogger().info(
+    utils::logger().info(
         "[init] Init_ProjectID project={} engineType={} engineVersion={} api={:#x}",
         projectId ? projectId : "?", engineType, engineVersion ? engineVersion : "?",
         static_cast<unsigned>(apiVersion));
@@ -252,7 +259,7 @@ void hookInitOn(HMODULE module, char const* which) {
         {"NVSDK_NGX_D3D12_Init_with_ProjectID", reinterpret_cast<void*>(&ngxInitProjectDetour),
          reinterpret_cast<void**>(&gInitProjectOriginal)},
     };
-    auto& log = NeuroDragon::getInstance().getSelf().getLogger();
+    auto& log = utils::logger();
     for (auto const& e : entries) {
         auto* target = reinterpret_cast<void*>(GetProcAddress(module, e.name));
         if (!target) {
@@ -272,7 +279,7 @@ void hookInitOn(HMODULE module, char const* which) {
                 false /* suspendThreads */
             )
             == 0) {
-            log.info("[init] hooked {} on {}", e.name, which);
+            log.debug("[init] hooked {} on {}", e.name, which);
         }
     }
     gInitHooked.store(true, std::memory_order_relaxed);
@@ -281,11 +288,11 @@ void hookInitOn(HMODULE module, char const* which) {
 // ---------------------------------------------------------------------------
 // Stage 2: NR feature (NGX 0x12) at the engine's render resolution.
 //
-// Off unless "nr_swap.txt" sits next to the game executable. When on, one
+// Off unless config.json (nr.enabled) says so. When on, one
 // feature is created on the first frame whose colour/depth/MV are all bound,
 // evaluated for a 60-frame window, timed with GPU timestamps and dumped twice
 // (our output + the engine's Color) so "it ran" can be checked by eye.
-// The engine's DLSS keeps its own inputs unless nr_params.txt asks for
+// The engine's DLSS keeps its own inputs unless config.json asks for
 // Replace=1, which copies the NR result back into Color (docs/D §6.14 route A,
 // NR never upscales - the engine's DLSS still does the upscaling).
 // ---------------------------------------------------------------------------
@@ -297,8 +304,7 @@ int           gNrWindowIndex  = -1;
 bool          gNrSizeWarned   = false;
 unsigned      gNrCreateWidth  = 0;
 unsigned      gNrCreateHeight = 0;
-std::uint64_t gNrBaseFrame    = 0;
-std::uint64_t gNrCreateFrame  = 0;
+std::uint64_t gWindowAnchor   = 0;
 std::uint64_t gNrWindowStart  = 0;
 std::uint64_t gNrWindowEnd    = 0;
 std::uint64_t gNrDumpFrame    = 0;
@@ -321,56 +327,29 @@ void nrDumpName(char* buffer, std::size_t size, char const* stem, int index) {
 // whole NR measurement is gated on the client level actually being there.
 // Building the feature in the menu would also bake the menu's frame in before
 // the first real frame, and any window spent there would only dump black.
-std::atomic_bool gInWorld{false};
+// A level change only resets temporal history and restarts the dump/timing
+// window schedule; it never delays NR (that gate was removed on purpose).
 std::atomic_bool gRestartWindows{false};
 ll::event::ListenerPtr gJoinLevelListener;
 ll::event::ListenerPtr gExitLevelListener;
 
 void registerLevelListeners() {
-    auto& log = NeuroDragon::getInstance().getSelf().getLogger();
+    auto& log = utils::logger();
     auto& bus = ll::event::EventBus::getInstance();
     gJoinLevelListener = bus.emplaceListener<ll::event::client::ClientJoinLevelEvent>([](auto&) {
-        gInWorld.store(true, std::memory_order_relaxed);
+        nr::nrNotifyLevelLoaded();
         gRestartWindows.store(true, std::memory_order_relaxed);
     });
     gExitLevelListener = bus.emplaceListener<ll::event::client::ClientExitLevelEvent>([](auto&) {
-        gInWorld.store(false, std::memory_order_relaxed);
         gRestartWindows.store(true, std::memory_order_relaxed);
     });
-    log.info(
+    log.debug(
         "[nr] level 监听 join={} exit={}",
         gJoinLevelListener != nullptr,
         gExitLevelListener != nullptr
     );
 }
 
-bool fileNextToExe(char const* name) {
-    wchar_t path[MAX_PATH]{};
-    if (GetModuleFileNameW(nullptr, path, MAX_PATH) == 0) {
-        return false;
-    }
-    std::wstring file(path);
-    auto const   slash = file.find_last_of(L"\\/");
-    if (slash == std::wstring::npos) {
-        return false;
-    }
-    file.resize(slash + 1);
-    for (char const* p = name; *p; ++p) {
-        file.push_back(static_cast<wchar_t>(*p));
-    }
-    return GetFileAttributesW(file.c_str()) != INVALID_FILE_ATTRIBUTES;
-}
-
-void nrLogSink(int level, char const* message) {
-    auto& log = NeuroDragon::getInstance().getSelf().getLogger();
-    if (level <= 0) {
-        log.info("{}", message);
-    } else if (level == 1) {
-        log.warn("{}", message);
-    } else {
-        log.error("{}", message);
-    }
-}
 
 
 // ---------------------------------------------------------------------------
@@ -391,7 +370,7 @@ inline ll::memory::Signature const kSigCreateWrapper = ll::memory::Signature::pa
 // NGX parameter contract log.
 //
 // Every Set* the engine performs is recorded by name; value changes are logged
-// (budgeted) when nr_params.txt asks for ParamLog=1. This is how we learn the
+// (budgeted) when config.json sets nr.paramLog. This is how we learn the
 // exact parameter set - sizes, subrects, jitter, MV scale, exposure, presets -
 // that the engine's own DLSS SR is driven with.
 // ---------------------------------------------------------------------------
@@ -415,7 +394,7 @@ void recordParam(char const* name, char const* text) {
     // setup parameters (sizes, subrects, presets) are written once at creation and
     // would otherwise never show up as a "change".
     if (!gParamDumped.exchange(true)) {
-        auto& logger = NeuroDragon::getInstance().getSelf().getLogger();
+        auto& logger = utils::logger();
         for (auto const& [key, value] : gParamSeen) {
             logger.info("[ngxset] {} = {} (initial)", key, value);
         }
@@ -423,7 +402,7 @@ void recordParam(char const* name, char const* text) {
     if (gParamBudget.fetch_sub(1, std::memory_order_relaxed) <= 0) {
         return;
     }
-    NeuroDragon::getInstance().getSelf().getLogger().info(
+    utils::logger().info(
         "[ngxset] {} = {} f={}",
         name,
         text,
@@ -457,7 +436,7 @@ LL_AUTO_STATIC_HOOK(
     if (frame >= 32 && n % 600 != 0) {
         return;
     }
-    NeuroDragon::getInstance().getSelf().getLogger().info(
+    utils::logger().info(
         "[param] SetPtr {} f={} tid={} = {:#x}",
         name,
         frame,
@@ -517,7 +496,7 @@ LL_AUTO_STATIC_HOOK(
     static std::atomic<std::uint64_t> calls{0};
     auto const                        n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
     if (n <= 200) {
-        NeuroDragon::getInstance().getSelf().getLogger().info(
+        utils::logger().info(
             "[param4] {} f={} = {}",
             name ? name : "?",
             gFrame.load(std::memory_order_relaxed),
@@ -539,18 +518,14 @@ LL_AUTO_STATIC_HOOK(
     void** handle
 ) {
     int const result = origin(cmdList, feature, params, handle);
-    auto&     log    = NeuroDragon::getInstance().getSelf().getLogger();
-    log.info(
+    auto&     log    = utils::logger();
+    log.debug(
         "[create] feature={} params={:#x} ret={:#x} handle={:#x}",
         feature,
         reinterpret_cast<std::uintptr_t>(params),
         static_cast<unsigned>(result),
         handle ? reinterpret_cast<std::uintptr_t>(*handle) : std::uintptr_t{0}
     );
-    if (result == 1 && validParamObj(params)) {
-        NgxParamProbe probe{params};
-        log.info("[create] w={} h={}", probe.u32("Width"), probe.u32("Height"));
-    }
     return result;
 }
 
@@ -568,7 +543,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     if (!gActive.load(std::memory_order_relaxed)) {
         return gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
     }
-    auto&      log    = NeuroDragon::getInstance().getSelf().getLogger();
+    auto&      log    = utils::logger();
     auto const n      = gFrame.fetch_add(1, std::memory_order_relaxed) + 1;
     void*      color  = nullptr;
     void*      depth  = nullptr;
@@ -606,7 +581,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             float         peak = -1.0f;
             std::uint32_t nz   = 0;
             if (nr::flushColorDump(&peak, &nz)) {
-                log.info("[dump] color_dump.bmp written max={} nz={}", peak, nz);
+                log.debug("[dump] color_dump.bmp written max={} nz={}", peak, nz);
             }
         } else if (n == 2800) {
             nr::queueColorDump(cmdList, out, "output_dump.bmp");
@@ -614,7 +589,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             float         peak = -1.0f;
             std::uint32_t nz   = 0;
             if (nr::flushColorDump(&peak, &nz)) {
-                log.info("[dump] output_dump.bmp written max={} nz={}", peak, nz);
+                log.debug("[dump] output_dump.bmp written max={} nz={}", peak, nz);
             }
         }
     }
@@ -622,29 +597,24 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     // ---- stage 2: NR in front of the engine's DLSS -------------------------
     bool inWindow = false;
     if (gNrEnabled && validParamObj(const_cast<void*>(params))) {
-        // Entering/leaving a world re-anchors the window schedule: the menu's
+        // Entering/leaving a world only restarts the window schedule: the menu's
         // frames must not consume the ten slots.
         if (gRestartWindows.exchange(false, std::memory_order_relaxed)) {
-            gNrBaseFrame   = n;
+            gWindowAnchor  = n;
             gNrWindowIndex = -1;
             gNrWindowOpen  = false;
             gNrReportAt    = 0;
             gNrSizeWarned  = false;
-            nr::nrNotifyLevelLoaded();
-            log.info(
-                "[nr] 窗口重新锚定 f={} inWorld={}（此前窗口全部作废）",
-                n,
-                gInWorld.load(std::memory_order_relaxed)
-            );
+            log.debug("[nr] 窗口重新锚定 f={}（此前窗口全部作废）", n);
         }
 
-        bool const inWorld = gInWorld.load(std::memory_order_relaxed);
-        if (!gNrStartTried && inWorld && n >= gNrBaseFrame + 2 && color && depth && mv && out
-            && width && height) {
+        // No "wait until the level settles" gate: the moment the engine hands over
+        // real Color/Depth/MV/Output resources, NR is created.
+        if (!gNrStartTried && color && depth && mv && out && width && height) {
             gNrStartTried   = true;
-            gNrCreateFrame  = n;
             gNrCreateWidth  = width;
             gNrCreateHeight = height;
+            gWindowAnchor   = n;
             nr::nrCreate(
                 cmdList,
                 color,
@@ -657,16 +627,16 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
         }
 
         if (gNrStartTried) {
-            if (inWorld && !gNrWindowOpen && gNrWindowIndex + 1 < kNrWindows
-                && n >= gNrBaseFrame + 2 +
-                        static_cast<std::uint64_t>(gNrWindowIndex + 1) * kNrWindowSpacing) {
+            if (!gNrWindowOpen && gNrWindowIndex + 1 < kNrWindows
+                && n >= gWindowAnchor
+                        + static_cast<std::uint64_t>(gNrWindowIndex + 1) * kNrWindowSpacing) {
                 ++gNrWindowIndex;
                 gNrWindowOpen  = true;
                 gNrWindowStart = n;
                 gNrWindowEnd   = n + kNrWindowLength;
                 gNrDumpFrame   = n + 30;
                 nr::nrSetWindowIndex(gNrWindowIndex);
-                log.info(
+                log.debug(
                     "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（Replace=1 时画面显示 NR 结果，否则不变）",
                     gNrWindowIndex,
                     gNrWindowStart,
@@ -685,12 +655,9 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 if (width != gNrCreateWidth || height != gNrCreateHeight) {
                     if (!gNrSizeWarned) {
                         gNrSizeWarned = true;
-                        log.warn(
-                            "[nr] 尺寸变了：建 feature={}x{} 现值={}x{}，本窗口跳过记录（NR 不重建）",
-                            gNrCreateWidth,
-                            gNrCreateHeight,
-                            width,
-                            height
+                        neurodragon::log::write(
+                            1,
+                            "nr.warn.sizeChanged"_tr(gNrCreateWidth, gNrCreateHeight, width, height)
                         );
                     }
                 } else {
@@ -699,23 +666,12 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                         mvInfo.width ? static_cast<unsigned>(mvInfo.width) : width;
                     unsigned const guideHeight =
                         mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
-                    bool const reset = n == gNrWindowStart;
-                    // Never swap during the frames right after a level load or a
-                    // feature (re)create: those are black, and a black swap makes
-                    // the screen unreadable.
-                    bool const replaceNow = replaceMode && gNrCreateFrame != 0
-                                         && n > gNrCreateFrame + 120 && n > gNrBaseFrame + 120;
-                    // Level streaming is still in flux right after a load: creating
-                    // or evaluating our features then poisons their history and the
-                    // engine's output with it. Do nothing at all until the level has
-                    // settled, then attach once (this also covers future in-world
-                    // hot (re)loads: gNrBaseFrame moves, we detach, wait, reattach).
-                    bool const levelSettled = gNrBaseFrame != 0 ? (n > gNrBaseFrame + 120)
-                                                                : (n > 600);
+                    bool const reset     = n == gNrWindowStart;
+                    bool const replaceNow = replaceMode;
                     if (inWindow) {
                         nr::nrStampBegin(cmdList, n, 0);
                     }
-                    bool const recorded = levelSettled && nr::nrRecord(
+                    bool const recorded = nr::nrRecord(
                         cmdList,
                         color,
                         depth,
@@ -733,7 +689,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                         nr::nrStampEnd(cmdList, n, 0);
                     }
                     if (reset) {
-                        log.info(
+                        log.debug(
                             "[nr] 窗口 #{} 首帧 f={} 指南={}x{} 特征={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
                             gNrWindowIndex,
                             n,
@@ -762,7 +718,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 std::uint32_t nz   = 0;
                 if (nr::flushColorDump(&peak, &nz)) {
                     nrDumpName(name, sizeof(name), "nr_dump", gNrWindowIndex);
-                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    log.debug("[nr] dump {} written max={} nz={}", name, peak, nz);
                 }
                 nrDumpName(name, sizeof(name), "color_ref", gNrWindowIndex);
                 nr::queueColorDumpEncoded(cmdList, nr::nrEncodedColorResource(), name);
@@ -788,7 +744,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                     nz   = 0;
                     if (nr::flushColorDumpN(slot, &peak, &nz)) {
                         nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
-                        log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                        log.debug("[nr] dump {} written max={} nz={}", name, peak, nz);
                     }
                 }
             } else if (inWindow && n == gNrDumpFrame + 6) {
@@ -799,7 +755,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 std::uint32_t nz   = 0;
                 if (nr::flushColorDump(&peak, &nz)) {
                     nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
-                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    log.debug("[nr] dump {} written max={} nz={}", name, peak, nz);
                 }
             } else if (inWindow && n == gNrDumpFrame + 10) {
                 char          name[64];
@@ -807,7 +763,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 std::uint32_t nz   = 0;
                 if (nr::flushColorDump(&peak, &nz)) {
                     nrDumpName(name, sizeof(name), "out_b", gNrWindowIndex);
-                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    log.debug("[nr] dump {} written max={} nz={}", name, peak, nz);
                 }
             } else if (inWindow && n == gNrDumpFrame + 14) {
                 char          name[64];
@@ -815,7 +771,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 std::uint32_t nz   = 0;
                 if (nr::flushColorDump(&peak, &nz)) {
                     nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
-                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    log.debug("[nr] dump {} written max={} nz={}", name, peak, nz);
                 }
             } else if (inWindow && n == gNrDumpFrame + 34) {
                 // Same two resources as the +2 pair, ~32 frames later. If the encoder
@@ -836,7 +792,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                     nz   = 0;
                     if (nr::flushColorDumpN(slot, &peak, &nz)) {
                         nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
-                        log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                        log.debug("[nr] dump {} written max={} nz={}", name, peak, nz);
                     }
                 }
             }
@@ -848,7 +804,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 gNrReportAt   = 0;
                 gNrWindowOpen = false;
                 nr::nrStampTick(n);
-                log.info("[nr] 窗口 #{} 统计：", gNrWindowIndex);
+                log.debug("[nr] 窗口 #{} 统计：", gNrWindowIndex);
                 nr::nrStampReport();
                 nr::nrStampReset();
             }
@@ -884,7 +840,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     }
 
     if (n <= 3 || n % 600 == 0) {
-        log.info(
+        log.debug(
             "[eval] f={} tid={} cl={:#x} h={:#x} {}x{} c={:#x} d={:#x} mv={:#x} o={:#x} ret={:#x}",
             n,
             GetCurrentThreadId(),
@@ -907,8 +863,8 @@ int ngxCreateDetour(void* cmdList, int feature, void* params, void** handle) {
     if (!gActive.load(std::memory_order_relaxed)) {
         return result;
     }
-    auto&     log    = NeuroDragon::getInstance().getSelf().getLogger();
-    log.info(
+    auto&     log    = utils::logger();
+    log.debug(
         "[create-export] feature={} ret={:#x} handle={:#x}",
         feature,
         static_cast<unsigned>(result),
@@ -920,10 +876,10 @@ int ngxCreateDetour(void* cmdList, int feature, void* params, void** handle) {
 // Hooking must not run inside a LoadLibrary detour (loader lock), so a watcher
 // thread installs these once both modules are resident.
 void hookNgxExports() {
-    auto& log  = NeuroDragon::getInstance().getSelf().getLogger();
+    auto& log  = utils::logger();
     auto* core = GetModuleHandleW(L"_nvngx.dll");
     if (!core) {
-        log.warn("[ngx] 未找到 _nvngx.dll");
+        log.debug("[ngx] core not loaded yet, retrying");
         return;
     }
     struct Entry {
@@ -942,7 +898,7 @@ void hookNgxExports() {
     for (auto const& e : entries) {
         auto* target = reinterpret_cast<void*>(GetProcAddress(core, e.name));
         if (!target) {
-            log.warn("[ngx] 找不到导出 {}", e.name);
+            neurodragon::log::write(2, "nr.error.missingExport"_tr(e.name));
             continue;
         }
         // Same reasoning as hookInitOn: never suspend threads from the watcher.
@@ -959,12 +915,12 @@ void hookNgxExports() {
                 gHookRecords[gHookCount].detour = e.detour;
                 ++gHookCount;
             }
-            log.info("[ngx] hooked {} @ {:#x}", e.name, reinterpret_cast<std::uintptr_t>(target));
+            log.debug("[ngx] hooked {} @ {:#x}", e.name, reinterpret_cast<std::uintptr_t>(target));
         } else {
-            log.error("[ngx] {} 挂钩失败", e.name);
+            neurodragon::log::write(2, "nr.error.hookFailed"_tr(e.name));
         }
     }
-    log.info(
+    log.debug(
         "[ngx] originals create={:#x} eval={:#x}",
         reinterpret_cast<std::uintptr_t>(gNgxCreateOriginal),
         reinterpret_cast<std::uintptr_t>(gNgxEvalOriginal)
@@ -1007,7 +963,7 @@ void startWatcher() {
 } // namespace
 
 bool install() {
-    auto& log    = NeuroDragon::getInstance().getSelf().getLogger();
+    auto& log    = utils::logger();
     // Pin this module for the process lifetime. Unhooking while another thread is
     // inside one of our detours leaves it returning into freed trampoline memory
     // (0xC000001D, 2026-10-21), and the only safe alternative is to never unload
@@ -1020,23 +976,18 @@ bool install() {
                 reinterpret_cast<LPCWSTR>(&install),
                 &self
             )) {
-            log.info("[probe] 模块已 PIN（禁用后仍需重启游戏才能彻底卸载）");
+            log.debug("[probe] 模块已 PIN（禁用后仍需重启游戏才能彻底卸载）");
         }
     }
     gActive.store(true, std::memory_order_relaxed);
-    gNrEnabled   = fileNextToExe("nr_swap.txt");
-    nr::nrSetLogger(&nrLogSink);
+    config::reload();
+    gNrEnabled = config::get().nr.enabled;
     auto const   modDir = NeuroDragon::getInstance().getSelf().getModDir();
     std::error_code modDirError;
     auto const   modDirAbs = std::filesystem::absolute(modDir, modDirError);
     std::wstring modDirFull = (modDirError ? modDir : modDirAbs).wstring();
     nr::nrSetModDirectory(modDirFull.c_str());
-    log.info(
-        "[probe] install (nr_swap={}, modDir={} -> {})",
-        gNrEnabled ? "on" : "off",
-        modDir.string(),
-        std::filesystem::path(modDirFull).string()
-    );
+    neurodragon::log::write(0, gNrEnabled ? "nr.info.enabled"_tr() : "nr.info.disabled"_tr());
     if (gNrEnabled) {
         registerLevelListeners();
     }

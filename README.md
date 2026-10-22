@@ -39,9 +39,17 @@
 
 - **NR 需要 NVIDIA 驱动 ≥ 617.42**：核心 `_nvngx.dll` 的 feature 表里才出现 `dlssnr`
   （610.88 的核心没有，`core CreateFeature(0x12)` 返回 `OutOfDate`）。
-- 模型文件必须叫 **`nvngx_dlssnr.dll`** 并放在 **`Minecraft.Windows.exe` 同级**；
-  只放版本名（`nvngx_dlssnr_310.9.16.dll`）会得到 `0xBAD0000B`。
+- 驱动**不提供**模型：DriverStore 里只有 `_nvngx.dll` / `nvngx.dll` / `nvngx_dlssg.dll`，
+  没有 `nvngx_dlssnr.dll`，所以模型必须随包。
+- **模型怎么落地**：`nvngx_dlssnr.dll` 放在**模组目录**里，模组在 `load()` 时把它**硬链接**到
+  `Minecraft.Windows.exe` 同级（同卷零拷贝、零额外空间；跨卷或失败则复制；两者都不行就打印
+  目标路径让用户手动放）。文件名**必须是 `nvngx_dlssnr.dll`**——core 按这个名字找，
+  用版本名（`nvngx_dlssnr_310.9.16.dll`）会得到 `0xBAD0000B`。
+- 为什么必须落到 exe 目录：ngx_probe 实测（2026-10-22，同一台机器每次只改一个变量）core 只认
+  **exe 同目录** 和 **Init 的 `FeatureCommonInfo::PathListInfo`**；`SetDllDirectoryW`、
+  当前目录、`AddDllDirectory`、NGX 的 `dataPath` 全部仍返回 `0xBAD0000B`。
 - 建 feature 必须走 **core** 的 `CreateFeature`；模型自己的 `Init_Ext` 在本机恒为 `PlatformError`。
+
 
 ## 取证环境
 
@@ -60,10 +68,17 @@
 
 ```bash
 cd D:/Documents/NeuroDragon && xmake build -y      # 增量 <1s / 全量约 15s
-./build/thunk_test.exe                              # 期望 RESULT=PASS
+# bin/NeuroDragon/ = DLL、PDB、manifest.json、lang/
 cp -r bin/NeuroDragon/* "E:/LeviLauncher/versions/1.26.51.01/mods/NeuroDragon/"
-grep -E "RenderProbe" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
+grep -E "NR 已启用|NR 就绪|NR 创建失败" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
 ```
+
+打包器是 `scripts/after_build.lua`（替换 `@levibuildscript/modpacker`，多拷一个 `lang/`）。
+**NR 模型（266 MB）不进包**：手动放到 `mods/NeuroDragon/nvngx_dlssnr.dll`，模组在 load 时
+硬链接到游戏根目录（core 只在那儿找，见 docs/D §6.17）。
+
+开关与参数在 `mods/NeuroDragon/config/config.json`（`ll::config`，首次运行自动生成）：
+`nr.enabled` 是总开关，`nr.replace` 选上屏模式（5 = 增益合成），其余见 [src/neurodragon/Config.h](src/neurodragon/Config.h)。
 
 细节、判据与边界见 [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) §6.16。
 

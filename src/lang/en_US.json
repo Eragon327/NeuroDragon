@@ -1,0 +1,47 @@
+{
+    "nr": {
+        "info": {
+            "enabled": "NR enabled (config/config.json: nr.enabled = true)",
+            "disabled": "NR disabled: nr.enabled is false in config/config.json",
+            "ready": "NR ready: {0}x{1}, first creation took {2:.0f} ms",
+            "modelCopied": "NR model copied next to the game executable: {0} ({1})"
+        },
+        "warn": {
+            "sizeChanged": "Resolution changed: NR was created for {0}x{1}, now {2}x{3}; skipping this window (NR is not rebuilt)",
+            "hardlinkFailed": "Hard link failed (error {0}); copying {1} into the game directory instead..."
+        },
+        "error": {
+            "noExeDir": "Could not determine the game executable directory; NR unavailable",
+            "modelMissing": "NR model missing: {0} does not exist, NR unavailable. Put nvngx_dlssnr.dll into the mod folder",
+            "modelUnwritable": "Game directory is not writable: cannot place the NR model at {0} (hard link error {1}, copy error {2}). Copy {3} to {0} manually",
+            "createFailed": "NR creation failed ({0:#x}: {1}); NR unavailable for this run",
+            "evalFailed": "NR evaluation failed ({0:#x}: {1}); the frame keeps its previous content (attempt {2})",
+            "engineEvalFailed": "Engine DLSS evaluation failed ({0:#x}: {1}, attempt {2})",
+            "missingExport": "NGX core is missing the export {0}; NR cannot work",
+            "hookFailed": "Failed to hook {0}; NR cannot work"
+        },
+        "result": {
+            "success": "Success",
+            "fail": "Fail",
+            "featureNotSupported": "FAIL_FeatureNotSupported",
+            "platformError": "FAIL_PlatformError",
+            "featureAlreadyExists": "FAIL_FeatureAlreadyExists",
+            "featureNotFound": "FAIL_FeatureNotFound",
+            "invalidParameter": "FAIL_InvalidParameter",
+            "scratchBufferTooSmall": "FAIL_ScratchBufferTooSmall",
+            "notInitialized": "FAIL_NotInitialized",
+            "unsupportedInputFormat": "FAIL_UnsupportedInputFormat",
+            "rwFlagMissing": "FAIL_RWFlagMissing",
+            "missingInput": "FAIL_MissingInput",
+            "unableToInitFeature": "FAIL_UnableToInitializeFeature",
+            "outOfDate": "FAIL_OutOfDate",
+            "outOfGpuMemory": "FAIL_OutOfGPUMemory",
+            "unsupportedFormat": "FAIL_UnsupportedFormat",
+            "appDataPath": "FAIL_UnableToWriteToAppDataPath",
+            "unsupportedParameter": "FAIL_UnsupportedParameter",
+            "denied": "FAIL_Denied",
+            "notImplemented": "FAIL_NotImplemented",
+            "unknown": "Unknown result code"
+        }
+    }
+}

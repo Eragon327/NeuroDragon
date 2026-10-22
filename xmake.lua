@@ -21,7 +21,6 @@ end
 
 target("NeuroDragon") -- Change this to your mod name.
     add_rules("@levibuildscript/linkrule")
-    add_rules("@levibuildscript/modpacker")
     if is_plat("windows") then
         add_defines("NOMINMAX", "UNICODE", "_HAS_CXX23=1")
         set_exceptions("none") -- To avoid conflicts with /EHa.
@@ -55,3 +54,22 @@ target("NeuroDragon") -- Change this to your mod name.
     --  add_includedirs("src-client")
     --  add_files("src-client/**.cpp")
     end
+    -- Replaces @levibuildscript/modpacker: that rule only copies the DLL, its
+    -- PDB and manifest.json, while this mod also ships lang/ and the NR model.
+    after_build(function (target)
+        local mod_packer = import("scripts.after_build")
+
+        local tag = os.iorun("git describe --tags --abbrev=0 --always")
+        local major, minor, patch = tag:match("v(%d+)%.(%d+)%.(%d+)")
+        if not major then
+            print("Failed to parse version tag, using 0.0.0")
+            major, minor, patch = 0, 0, 0
+        end
+
+        mod_packer.pack_mod(target, {
+            modName = target:name(),
+            modFile = path.filename(target:targetfile()),
+            modVersion = major .. "." .. minor .. "." .. patch,
+            modPlatform = get_config("target_type"),
+        })
+    end)

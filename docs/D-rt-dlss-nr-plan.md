@@ -282,11 +282,10 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 4. 计时：NR 与**引擎 DLSS** 各夹一对 timestamp，`ResolveQueryData` 进常驻 map 的 READBACK，
    帧号 `% 8` 分槽、**第 3 帧后 harvest**。本项目拿不到游戏 queue，无法 `Signal` fence，所以
    「GPU 跑完」是按帧数推断的：样本按 `0.02–200 ms` 过滤，不合法就丢并计数（`dropped=`）。
-5. 窗口：**以「客户端进存档」为锚**（`ll::event::client::ClientJoinLevelEvent` / `ClientExitLevelEvent`）——
-   菜单里 Color 全黑，所以菜单期间**不建 feature、不开窗口**；进存档的事件到达后重新锚定基准帧，
-   从第 2 帧起**每 900 帧开一个 60 帧窗口，共 10 个**（约 2 分 15 秒的覆盖）；每窗第 30 帧录
-   `nr_dump_w<k>.bmp`（我们的输出）、第 32 帧录 `color_ref_w<k>.bmp`（引擎 Color）；窗口结束后打印
-   `[nr] gpu nr ms …` / `[nr] gpu engine-dlss ms …`。离开存档会作废当前窗口并再次重新锚定。
+5. 窗口：~~以「客户端进存档」为锚~~（2026-10-22 晚已改）——**不再有“进世界才建 / 等 120 帧”的门**：
+   引擎一旦交出真实的 Color/Depth/MV/Output，当帧就建 feature 并开始求值。事件监听只保留两个效果：
+   给引擎 DLSS 发一次 `Reset=1`，以及把 dump/计时窗口计划重新锚定到当前帧（`gWindowAnchor`）；
+   窗口仍是每 900 帧开 60 帧、共 10 个，每窗第 30/32 帧 dump 到 `<模组目录>/dump/`。
 
 **写入的参数**（全部经实测槽位：1=指针/资源、3=uint、6=float；读回 11=uint）
 
@@ -590,6 +589,65 @@ Route A 把合成塞进同一个堆时引入的。
 5. 模式语义随之简化：`0` = 直接透传（我们的 SR 仍存在，但不换色），`8` = 换色上屏。
 
 验收：进存档无损坏、跨存档无鬼影、切回 `0` 画面正常（不冻结），`8` 下画面是我们的 SR 结果。
+
+### 6.17 模型随包：core 的搜索规则与落地链（2026-10-22 晚）
+
+**问题**：原来要求用户把 266 MB 的 `nvngx_dlssnr.dll` 手动放到游戏根目录。能不能随包？
+
+**core 的搜索规则（ngx_probe 实测，同一台机器、每次只改一个变量）**
+
+| 组 | 条件 | `core CreateFeature(0x12)` |
+|---|---|---|
+| A | Init 的 `PathListInfo` 指向模型所在目录 | **0x1** |
+| B | 不给 pathlist，模型只在子目录 | `0xBAD0000B` |
+| C | 不给 pathlist + `SetDllDirectoryW(该目录)` | `0xBAD0000B` |
+| D | 不给 pathlist + `SetCurrentDirectoryW(该目录)` | `0xBAD0000B` |
+| E | 不给 pathlist + `AddDllDirectory(该目录)` | `0xBAD0000B` |
+| F | 模型**硬链接**到 exe 同目录，不给 pathlist | **0x1** |
+| G | 模型只放在 NGX 的 `dataPath`（`%TEMP%\ngx_probe`） | `0xBAD0000B` |
+
+⇒ core 只从 **exe 同目录** 或 **Init 时 `PathListInfo` 给的目录** 加载模型；它自己拼全路径去
+`LoadLibrary`，所以 C/D/E 这类“改进程搜索路径”的手段全部无效，**不要再试**。
+TRP 能把它那份放在自己模组目录里、还带版本名，正是因为它在自己的 `Init_with_ProjectID` 里
+把 `PathListInfo.Path` 设成了运行时目录（`NeuralRenderingFeatureSession.cpp:237-241`）——与本组 A 同一件事。
+驱动侧只有 `_nvngx.dll` / `nvngx.dll` / `nvngx_dlssg.dll`，**没有** `nvngx_dlssnr.dll`：驱动更新解决的是
+“core 认不认 feature 0x12”，模型永远得由包提供。
+
+**实现（`NeuroDragon::load()`，`src/neurodragon/NeuroDragon.cpp`）**
+
+包内带 `mods\NeuroDragon\nvngx_dlssnr.dll`，启动时按 **硬链接 → 复制 → 明示日志** 落地到
+`Minecraft.Windows.exe` 同级：
+
+1. 目标已存在 → 记一行大小后跳过，**绝不覆盖**（用户自己放的版本优先）；
+2. `CreateHardLinkW`（同卷：零拷贝、零额外磁盘占用，实测在 `E:\LeviLauncher` 下普通权限即可）；
+3. 失败 → `CopyFileW`（跨卷/文件系统不支持硬链接时的退路）；
+4. 再失败 → 打印“游戏目录不可写：请把 `<源>` 复制到 `<目标>`”，NR 报不可用，**不崩**。
+
+**未走的两条路**（留档）：① 游戏内二次 `Init_ProjectID` 把 `PathListInfo` 指向模组目录 —— pathlist 有效，
+但引擎已 Init 过，二次 Init 有弄坏引擎自己 DLSS 会话的风险；② IAT hook core 的 `LoadLibraryW/ExW`
+改写模型路径 —— core 确实导入这两个 API（静态查过），可以做到完全不写游戏目录，但需要 patch 驱动目录
+里 DLL 的 IAT，暂不做。若将来遇到“游戏目录只读”的安装形态（例如装在 Program Files），优先做 ②。
+
+### 6.18 配置：从 txt 换到 `ll::config`
+
+`nr_swap.txt`（存在即开）与 `nr_params.txt`（`key=value` 覆盖）已退役。所有开关集中在
+`<模组目录>/config/config.json`，由 `ll::config::loadConfig/saveConfig` 读写（聚合 struct +
+`version` + `boost::pfr` 反射，和 CoralFans 同一套）：
+
+```json
+{ "version": 1,
+  "nr": { "enabled": true, "replace": 5, "gainBoost": 1.0, "style": 0,
+          "intensity": 1.0, "localToneStrength": 1.0, "localStructureStrength": 1.0,
+          "depthInverted": -1, "sweep": 0, "mvecScale": -1.0, "nrEncode": -1,
+          "whitePoint": 1.0, "transferStrength": 1.0, "colourStrength": 1.0,
+          "maxRatio": 2.0, "resetEveryFrame": false, "srResetEveryFrame": false,
+          "paramLog": false } }
+```
+
+- 默认 `enabled = true`（NR 是唯一功能），`replace = 5`（增益合成上屏）；
+- 文件缺失/缺键/版本不符 → 自动补默认并回写；文件写坏 → 记 error 后重写默认，不崩；
+- 实时调参：渲染线程每 ~2 s `reload()`，`replace` / `gainBoost` 变化会打 debug；
+- 字段语义见 [src/neurodragon/Config.h](../../src/neurodragon/Config.h)。
 
 ## 7. RR 地基：`doAllRayTracing`（第二阶段，不在当前范围）
 
