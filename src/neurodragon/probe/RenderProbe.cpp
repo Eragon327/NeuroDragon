@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <map>
 #include <string>
 #include <thread>
 
@@ -257,7 +258,20 @@ void hookInitOn(HMODULE module, char const* which) {
         if (!target) {
             continue;
         }
-        if (ll::memory::hook(target, e.detour, e.original, ll::memory::HookPriority::Normal) == 0) {
+        // No thread suspension: this runs from a watcher thread and the window in
+        // which _nvngx.dll becomes visible is exactly the window in which the game
+        // is still inside the loader lock. Suspending the loader thread there
+        // deadlocked the client at startup (hangs right after the first
+        // [rt] dispatch, where the good runs logged "[init] hooked ...").
+        // LeviLamina's own AUTO hooks install with suspendThreads = false too.
+        if (ll::memory::hook(
+                target,
+                e.detour,
+                e.original,
+                ll::memory::HookPriority::Normal,
+                false /* suspendThreads */
+            )
+            == 0) {
             log.info("[init] hooked {} on {}", e.name, which);
         }
     }
@@ -271,7 +285,9 @@ void hookInitOn(HMODULE module, char const* which) {
 // feature is created on the first frame whose colour/depth/MV are all bound,
 // evaluated for a 60-frame window, timed with GPU timestamps and dumped twice
 // (our output + the engine's Color) so "it ran" can be checked by eye.
-// The engine's DLSS keeps its own inputs: nothing is swapped in this stage.
+// The engine's DLSS keeps its own inputs unless nr_params.txt asks for
+// Replace=1, which copies the NR result back into Color (docs/D §6.14 route A,
+// NR never upscales - the engine's DLSS still does the upscaling).
 // ---------------------------------------------------------------------------
 
 bool          gNrEnabled      = false;
@@ -282,6 +298,7 @@ bool          gNrSizeWarned   = false;
 unsigned      gNrCreateWidth  = 0;
 unsigned      gNrCreateHeight = 0;
 std::uint64_t gNrBaseFrame    = 0;
+std::uint64_t gNrCreateFrame  = 0;
 std::uint64_t gNrWindowStart  = 0;
 std::uint64_t gNrWindowEnd    = 0;
 std::uint64_t gNrDumpFrame    = 0;
@@ -370,6 +387,50 @@ inline ll::memory::Signature const kSigSet4 = ll::memory::Signature::parse("48 8
 inline ll::memory::Signature const kSigCreateWrapper = ll::memory::Signature::parse("48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 48 83 3D ?? ?? ?? ?? 00");
 } // namespace sig
 
+// ---------------------------------------------------------------------------
+// NGX parameter contract log.
+//
+// Every Set* the engine performs is recorded by name; value changes are logged
+// (budgeted) when nr_params.txt asks for ParamLog=1. This is how we learn the
+// exact parameter set - sizes, subrects, jitter, MV scale, exposure, presets -
+// that the engine's own DLSS SR is driven with.
+// ---------------------------------------------------------------------------
+std::map<std::string, std::string> gParamSeen;
+std::atomic<int>                   gParamBudget{800};
+std::atomic<bool>                  gParamDumped{false};
+
+void recordParam(char const* name, char const* text) {
+    if (!name || !text) {
+        return;
+    }
+    auto it = gParamSeen.find(name);
+    if (it != gParamSeen.end() && it->second == text) {
+        return;
+    }
+    gParamSeen[name] = text;
+    if (!nr::nrParamLogEnabled()) {
+        return;
+    }
+    // First time logging is on, dump everything recorded so far: the important
+    // setup parameters (sizes, subrects, presets) are written once at creation and
+    // would otherwise never show up as a "change".
+    if (!gParamDumped.exchange(true)) {
+        auto& logger = NeuroDragon::getInstance().getSelf().getLogger();
+        for (auto const& [key, value] : gParamSeen) {
+            logger.info("[ngxset] {} = {} (initial)", key, value);
+        }
+    }
+    if (gParamBudget.fetch_sub(1, std::memory_order_relaxed) <= 0) {
+        return;
+    }
+    NeuroDragon::getInstance().getSelf().getLogger().info(
+        "[ngxset] {} = {} f={}",
+        name,
+        text,
+        gFrame.load(std::memory_order_relaxed)
+    );
+}
+
 // SetPtr(param, name, value): the resource overload.
 LL_AUTO_STATIC_HOOK(
     ParamSetPtrHook,
@@ -384,6 +445,10 @@ LL_AUTO_STATIC_HOOK(
     if (!name) {
         return;
     }
+    char text[32];
+    std::snprintf(text, sizeof(text), "%#llx", static_cast<unsigned long long>(
+        reinterpret_cast<std::uintptr_t>(value)));
+    recordParam(name, text);
     // The engine rewrites Color/Output every frame (Output alternates between two
     // textures), so log the first frames only and then sparsely.
     static std::atomic<std::uint64_t> calls{0};
@@ -412,6 +477,9 @@ LL_AUTO_STATIC_HOOK(
     float       value
 ) {
     origin(param, name, value);
+    char text[32];
+    std::snprintf(text, sizeof(text), "%.6g", static_cast<double>(value));
+    recordParam(name, text);
 }
 
 // Set(param, name, unsigned) - slot 3.
@@ -425,6 +493,9 @@ LL_AUTO_STATIC_HOOK(
     unsigned    value
 ) {
     origin(param, name, value);
+    char text[32];
+    std::snprintf(text, sizeof(text), "%u", value);
+    recordParam(name, text);
 }
 
 // Set(param, name, unsigned) - slot 4. The DLSS creation path feeds it the sizes
@@ -440,6 +511,9 @@ LL_AUTO_STATIC_HOOK(
     unsigned    value
 ) {
     origin(param, name, value);
+    char text[32];
+    std::snprintf(text, sizeof(text), "%u", value);
+    recordParam(name, text);
     static std::atomic<std::uint64_t> calls{0};
     auto const                        n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
     if (n <= 200) {
@@ -556,6 +630,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             gNrWindowOpen  = false;
             gNrReportAt    = 0;
             gNrSizeWarned  = false;
+            nr::nrNotifyLevelLoaded();
             log.info(
                 "[nr] 窗口重新锚定 f={} inWorld={}（此前窗口全部作废）",
                 n,
@@ -567,6 +642,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
         if (!gNrStartTried && inWorld && n >= gNrBaseFrame + 2 && color && depth && mv && out
             && width && height) {
             gNrStartTried   = true;
+            gNrCreateFrame  = n;
             gNrCreateWidth  = width;
             gNrCreateHeight = height;
             nr::nrCreate(
@@ -591,7 +667,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 gNrDumpFrame   = n + 30;
                 nr::nrSetWindowIndex(gNrWindowIndex);
                 log.info(
-                    "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（不替换 Color，画面应保持不变）",
+                    "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（Replace=1 时画面显示 NR 结果，否则不变）",
                     gNrWindowIndex,
                     gNrWindowStart,
                     gNrWindowEnd - 1,
@@ -600,7 +676,12 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             }
 
             inWindow = gNrWindowOpen && n >= gNrWindowStart && n < gNrWindowEnd;
-            if (inWindow && nr::nrIsCreated()) {
+            // Replace=1 is about looking at the picture, not sampling it, so in
+            // that mode NR runs on every in-world frame; only the timing/dump
+            // machinery stays windowed (a 60-frame burst every 900 frames is
+            // useless for judging image quality by eye).
+            bool const replaceMode = nr::nrReplaceContinuous();
+            if ((inWindow || replaceMode) && nr::nrIsCreated()) {
                 if (width != gNrCreateWidth || height != gNrCreateHeight) {
                     if (!gNrSizeWarned) {
                         gNrSizeWarned = true;
@@ -619,8 +700,22 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                     unsigned const guideHeight =
                         mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
                     bool const reset = n == gNrWindowStart;
-                    nr::nrStampBegin(cmdList, n, 0);
-                    bool const recorded = nr::nrRecord(
+                    // Never swap during the frames right after a level load or a
+                    // feature (re)create: those are black, and a black swap makes
+                    // the screen unreadable.
+                    bool const replaceNow = replaceMode && gNrCreateFrame != 0
+                                         && n > gNrCreateFrame + 120 && n > gNrBaseFrame + 120;
+                    // Level streaming is still in flux right after a load: creating
+                    // or evaluating our features then poisons their history and the
+                    // engine's output with it. Do nothing at all until the level has
+                    // settled, then attach once (this also covers future in-world
+                    // hot (re)loads: gNrBaseFrame moves, we detach, wait, reattach).
+                    bool const levelSettled = gNrBaseFrame != 0 ? (n > gNrBaseFrame + 120)
+                                                                : (n > 600);
+                    if (inWindow) {
+                        nr::nrStampBegin(cmdList, n, 0);
+                    }
+                    bool const recorded = levelSettled && nr::nrRecord(
                         cmdList,
                         color,
                         depth,
@@ -630,9 +725,17 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                         static_cast<float>(width),
                         static_cast<float>(height),
                         1,
-                        reset
+                        reset,
+                        replaceNow ? const_cast<void*>(params) : nullptr,
+                        const_cast<void*>(out)
                     );
-                    nr::nrStampEnd(cmdList, n, 0);
+                    if (inWindow) {
+                        nr::nrStampEnd(cmdList, n, 0);
+                    }
+                    if (recorded && replaceNow) {
+                        // Route A: let the engine's own DLSS consume the NR result.
+                        nr::nrReplaceEngineColor(cmdList, const_cast<void*>(color), const_cast<void*>(params));
+                    }
                     if (reset) {
                         log.info(
                             "[nr] 窗口 #{} 首帧 f={} 指南={}x{} 特征={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
@@ -675,6 +778,32 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                     nrDumpName(name, sizeof(name), "color_ref", gNrWindowIndex);
                     log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
                 }
+            } else if (inWindow && n == gNrDumpFrame + 6) {
+                // out_after was queued right after the engine's evaluate: if it
+                // equals nr_dump the upscaler really ran on the NR result.
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
+                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
+            } else if (inWindow && n == gNrDumpFrame + 10) {
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "out_b", gNrWindowIndex);
+                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
+            } else if (inWindow && n == gNrDumpFrame + 14) {
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
+                    log.info("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
             }
 
             if (gNrWindowOpen && n >= gNrWindowEnd && !gNrReportAt) {
@@ -695,7 +824,34 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     if (measureBaseline) {
         nr::nrStampBegin(cmdList, n, 1);
     }
-    int const result = gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
+    bool const srOwnsOutput = nr::nrSrOwnsOutput();
+    int const result = srOwnsOutput ? 1
+        : (gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0);
+    // Replace=3: the engine's DLSS has read the borrowed pixels, hand them back
+    // before anything later in this frame (or next frame's history) sees them.
+    nr::nrRestoreColor(cmdList);
+    if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 4) {
+        // The engine's own Output, right after its DLSS ran: this is the proof
+        // that the swap reached the upscaler (route A).
+        char name[64];
+        nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
+        nr::queueColorDumpLinear(cmdList, const_cast<void*>(out), name);
+    } else if (gNrEnabled && gNrWindowOpen
+               && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 8) {
+        // Second sample a few frames later: if it is identical to out_after the
+        // engine stopped refreshing its Output (frozen picture).
+        char name[64];
+        nrDumpName(name, sizeof(name), "out_b", gNrWindowIndex);
+        nr::queueColorDumpLinear(cmdList, const_cast<void*>(out), name);
+    }
+    if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 12
+        && nr::nrSrOutputResource()) {
+        // Replace=7: our own DLSS SR result (linear HDR), dumped next to the
+        // engine's Output so the two can be compared frame by frame.
+        char name[64];
+        nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
+        nr::queueColorDumpLinear(cmdList, nr::nrSrOutputResource(), name);
+    }
     if (measureBaseline) {
         nr::nrStampEnd(cmdList, n, 1);
     }
@@ -766,7 +922,15 @@ void hookNgxExports() {
             log.warn("[ngx] 找不到导出 {}", e.name);
             continue;
         }
-        if (ll::memory::hook(target, e.detour, e.original, ll::memory::HookPriority::Normal) == 0) {
+        // Same reasoning as hookInitOn: never suspend threads from the watcher.
+        if (ll::memory::hook(
+                target,
+                e.detour,
+                e.original,
+                ll::memory::HookPriority::Normal,
+                false /* suspendThreads */
+            )
+            == 0) {
             if (gHookCount < 4) {
                 gHookRecords[gHookCount].target = target;
                 gHookRecords[gHookCount].detour = e.detour;
@@ -777,6 +941,17 @@ void hookNgxExports() {
             log.error("[ngx] {} 挂钩失败", e.name);
         }
     }
+    // Our own DLSS SR calls these originals directly (calling the patched export
+    // recurses through our own detour).
+    nr::nrSetNgxOriginals(
+        reinterpret_cast<void*>(gNgxCreateOriginal),
+        reinterpret_cast<void*>(gNgxEvalOriginal)
+    );
+    log.info(
+        "[ngx] originals create={:#x} eval={:#x}",
+        reinterpret_cast<std::uintptr_t>(gNgxCreateOriginal),
+        reinterpret_cast<std::uintptr_t>(gNgxEvalOriginal)
+    );
 }
 
 void startWatcher() {

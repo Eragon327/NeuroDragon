@@ -1,12 +1,12 @@
 # D. RT 路线 + 复用引擎 DLSS 的 NR 接入规划
 
-> 记录时间：2026-10-21。目标客户端 `1.26.5101.0`
+> 目标客户端 `1.26.5101.0`
 > （`E:\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe`——测量时在
 > `D:\Program Files\LeviLauncher\…`，同日搬盘，文件不变；
 > PE 时间戳 `0x6aa482fd`，`.text` = RVA `0x1000` + `0xe5a5ab6`）。
 > 机器：NVIDIA GeForce RTX 5070 Laptop（RT/DLSS4 可用）。
 
-## 0. 一句话结论（2026-10-21 深夜更新）
+## 0. 一句话结论
 
 **超分白送、NR 已跑通、只剩色彩**：
 
@@ -103,10 +103,10 @@ SetUI  48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4
 - `Color` 在 Evaluate 时的资源状态未知（DLSS 按 SRV 读，推测是 `NON_PIXEL_SHADER_RESOURCE`）；
   C 步可能需要先试 `ALL_SHADER_RESOURCE → COPY_SOURCE`，失败则改用「自建副本 pass」；
 - DLSS-RR 参数位全 0 —— 已查明原因（引擎自带降噪，不用 RR），不属当前范围，见 §7；
-- NR 来源已定（2026-10-21）：直接套用 NVIDIA 的 NGX feature `0x12`（`nvngx_dlssnr.dll`），**不写自定义 compute**
+- NR 来源已定：直接套用 NVIDIA 的 NGX feature `0x12`（`nvngx_dlssnr.dll`），**不写自定义 compute**
   —— 自己写一个 compute 滤镜得到的不是 NR，是另一个滤镜。契约、可直接拿的值与唯一的未知见 §6。
 
-## 6. NR 模块化契约（TRP 实证，2026-10-21 补）
+## 6. NR 模块化契约（TRP 实证， 补）
 
 结论两句：**能直接套用 `nvngx_dlssnr.dll`** —— 它就是 NGX 的一个 feature runtime，与
 `nvngx_dlss.dll` 同级，导出同一套 `NVSDK_NGX_D3D12_*` 入口；**但不能整块搬 TRP 的 NR 模块**
@@ -135,7 +135,7 @@ UI mask、D3D11→D3D12 交接）。第一版只要 600–900 行骨架。
 - **历史 reset 时机**：维度切换 / 传送 / 加载 / 开菜单（NR 有内部历史，错了就是拖影）；
 - **runtime 落盘位置**：`LoadLibrary` 全路径放自己的目录，**别**放游戏根目录去抢 `_nvngx`。
 
-### 6.3 二次 Init 的问题（**已解，2026-10-21**：不是关键；真正卡点是驱动版本 + 模型文件名 + 必须走 core create，见 §6.12）
+### 6.3 二次 Init 的问题（**已解，**：不是关键；真正卡点是驱动版本 + 模型文件名 + 必须走 core create，见 §6.12）
 
 引擎启动 0.3 s 内已用 `_nvngx.dll` 初始化过 NGX，我们再 Init 一次行不行？
 
@@ -163,7 +163,7 @@ Install   LoadLibrary(dlssnr) → 取 5 个导出 → Init(device) → GetCapabi
 queue/allocator/fence 是给 CreateFeature 用的，逐帧工作在游戏 cmdlist 上就够了）。
 §5 的 B / C 两步仍然保留 —— 它们是「纯色 → 恢复」的两次可见验收，成本低、能提前暴露 barrier 问题。
 
-### 6.5 实测：`SetPtr` 与参数对象读回**一致**，但有一次全 0（2026-10-21，`logs/latest.log`）
+### 6.5 实测：`SetPtr` 与参数对象读回**一致**，但有一次全 0
 
 | 运行 | 日志 | 结论 |
 |---|---|---|
@@ -207,7 +207,7 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 
 在 2 通过之前，**不要**按「value 就是资源」设计任何替换。
 
-### 6.6 离线验证：`nvngx_dlssnr.dll` 的 NGX 入口形状（2026-10-21）
+### 6.6 离线验证：`nvngx_dlssnr.dll` 的 NGX 入口形状
 
 对 `nvngx_dlssnr_310.9.16.dll`（266 MB）做 PE 解析，两条关键事实：
 
@@ -222,7 +222,7 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 - **B'**：自己 `LoadLibrary` 核心的副本 + `Init`（本项目 app id）—— 仍然可能 `ALREADY_INITIALIZED`；
 - 断言：**不要**指望从模型 DLL 拿 `Init`（它只会返回 `0xBAD00001`）。
 
-### 6.7 阶段 1：只读探针（已实现并编译，2026-10-21）
+### 6.7 阶段 1：只读探针（已实现并编译，）
 
 `src/neurodragon/probe/RenderProbe.cpp` + 新 TU `src/neurodragon/nr/D3D12Bridge.{h,cpp}`。
 **全部只读，不替换任何资源、不创建 feature、不跑 GPU 命令。**
@@ -240,7 +240,7 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 
 
 
-### 6.8 实测结论：色彩缓冲是 2560 纹理里的 **1485×835 子矩形**（2026-10-21 回读证实）
+### 6.8 实测结论：色彩缓冲是 2560 纹理里的 **1485×835 子矩形**
 
 方法：在 `EvaluateFeature` 的钩子里用引擎自己的 command list 录一次
 `CopyTextureRegion`（`ALL_SHADER_RESOURCE → COPY_SOURCE → 回 ALL_SHADER_RESOURCE`），
@@ -259,9 +259,9 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 4. 置换 Color 时：纹理与格式必须与原件一致（2560×1440 `R16G16B16A16_FLOAT`），NR 结果写在**左上角 1485×835**，其余区域保持原样即可；
 5. 「控两头强制 720p」收益只有 26%（0.92 vs 1.24 MP），**不做**。
 
-坑：主菜单里光追没开，`Color` 全黑 —— 必须**进存档**才能抓到内容（2026-10-21 实测两次空dump）。
+坑：主菜单里光追没开，`Color` 全黑 —— 必须**进存档**才能抓到内容。
 
-### 6.9 阶段 2：NR feature 的测量装置（已实现，2026-10-21）
+### 6.9 阶段 2：NR feature 的测量装置（已实现，）
 
 目标：**只验证「feature 0x12 能不能在我们这个进程里建起来并真跑出东西」+ 拿到 GPU 耗时**，
 不替换 Color、不改画面。代码：`src/neurodragon/nr/D3D12Bridge.{h,cpp}`、`src/neurodragon/probe/RenderProbe.cpp`。
@@ -316,7 +316,7 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 `[nr] dump nr_dump_w<k>.bmp written …` → `[nr] gpu nr ms …`。若 BMP 与 `color_ref_w<k>.bmp` **完全一致**，
 说明 1:1 模式下运行时只是空转，P-A 路线当场作废。
 
-### 6.10 排查过程：被排除的假设（2026-10-21；**结论已被 §6.12 取代**）
+### 6.10 排查过程：被排除的假设
 
 | 探针 | 结果 |
 |---|---|
@@ -341,7 +341,7 @@ feature 名字表根本不参与；而且同机同驱动（610.88）的 TRP 日�
 [DLSSNR Source] evaluation recorded count=600 reset=false … style=1 intensity=1.000 …
 ```
 
-（`C:\Users\Eragon\Documents\My Games\Skyrim Special Edition\SKSE\TheosRenderPipeline.log`，2026-10-19 17:40）
+（`C:\Users\Eragon\Documents\My Games\Skyrim Special Edition\SKSE\TheosRenderPipeline.log`）
 
 ⇒ 真正的差别是**谁初始化了 NGX 会话**：TRP 自己做 `NVSDK_NGX_D3D12_Init_with_ProjectID`（结果 `0x1`），
 所以模型 `Init_Ext` 和 `CreateFeature` 都认它；MC 里 **引擎先初始化了这个进程的 NGX**（游戏自己的
@@ -351,7 +351,7 @@ app id / API 版本），我们再拿模型去 create 就是 `PlatformError` / `
 create；③ core create。若都不行，就试「私有 core」：把 `_nvngx.dll` 复制一份、`LoadLibrary` 后用
 自己的 project id 初始化，得到**第二个 NGX 会话**再建 feature（TRP 相当于天然独占一个会话）。
 
-### 6.11 2026-10-21 晚：独立探针（不需要游戏）+ 四个问题的答案
+### 6.11  晚：独立探针（不需要游戏）+ 四个问题的答案
 
 **工具**：`D:\Documents\NeuroDragonWorkSpace\tools\ngx_probe.{cpp,bat}`（按约定放在模组仓库外层）。
 `run_probe.bat` 一键运行：自建 D3D12 设备 → 从模组目录加载 runtime → ①不初始化 core 直接 `Init_Ext`；
@@ -388,7 +388,7 @@ SDK 头文件正好相反。按头文件调用时 core 把 `info` 指针当 32 �
 4. 只有 1/2/3 有一个成功，才谈 **host 进程形态**（共享纹理 + 共享 fence + 流水线，+1 帧延迟，
    价值是崩溃隔离）。
 
-### 6.12 2026-10-21 深夜：驱动 617.42 之后的**正确接法**（已解锁建 feature）
+### 6.12 ：驱动 617.42 之后的**正确接法**（已解锁建 feature）
 
 **结论（探针实测，可重复）**：NR feature 能建起来，必须同时满足三条——
 
@@ -412,7 +412,7 @@ SDK 头文件正好相反。按头文件调用时 core 把 `info` 指针当 32 �
 **因此模组已改为**：不预加载模型、优先用 **core** 的 `CreateFeature`/`EvaluateFeature`（参数写入与
 资源转场不变），游戏根目录放 `nvngx_dlssnr.dll`。进游戏验证时只需重新创建 `nr_swap.txt`。
 
-### 6.13 2026-10-21 23:33：**游戏内首次跑通 NR**（实测数据）
+### 6.13  23:33：**游戏内首次跑通 NR**（实测数据）
 
 日志（`logs/latest.log`，窗口 #0–#2，每窗 60 帧）：
 
@@ -467,7 +467,7 @@ encode 步骤。NR 的 62 个参数里**没有** HDR/色彩空间开关（已从
 
 建议：**先 A 拿到可看的画面，再按观感决定 B 还是 C**。
 
-### 6.15 2026-10-22 白天：编码链路、出图口径，以及“到底是不是 NR”
+### 6.15 编码链路、出图口径，以及“到底是不是 NR”
 
 **修掉的 bug（害了两次运行）**：`D3D12_ROOT_CONSTANTS` 是三个字段
 `{ShaderRegister, RegisterSpace, Num32BitValues}`，我写成 `{0, 2}` 把 2 当成了 space，
@@ -508,6 +508,76 @@ RGBA16F 纹理，feature 读这张图；引擎 Color 用完转回 `ALL_SHADER_RE
 
 **遗留（用户已判定可接受）**：NR 的增量很小（同窗 1.5–2.5%），与 MC 的 16× 素材信息密度低一致；
 `DepthInverted=1` 仍是假设，未单独验证。
+
+### 6.16 Route A：把 NR 结果交给超分
+
+#### 引擎的 NGX 参数契约（实测）
+
+用 `SetPtr / SetU32 / SetF32` 的钩子把引擎在 `EvaluateFeature` 之前的全部写入记下来，得到它
+驱动自己 DLSS SR 的完整契约。命名**无前缀**（不是 `DLSS.*`）：
+
+| 参数 | 引擎的值 | 说明 |
+|---|---|---|
+| `Width` / `Height` | 1485 / 835 | 渲染分辨率（不是 2560×1440） |
+| `OutWidth` / `OutHeight` | 2560 / 1440 | 放大目标 |
+| `MV.Scale.X` / `MV.Scale.Y` | 1485 / 835 | 运动向量是**归一化**的，按分辨率缩放 |
+| `DLSS.Render.Subrect.Dimensions.Width/Height` | 1485 / 835 | 输入子矩形 |
+| `DLSS.Input.{Color,Depth,MV,Translucency}.Subrect.Base.X/Y` | 0 | 输入从 (0,0) 开始 |
+| `DLSS.Output.Subrect.Base.X/Y` | 0 | 输出从 (0,0) 开始 |
+| `DLSS.Enable.Output.Subrects` | 0 | 关闭输出子矩形 |
+| `DLSS.Feature.Create.Flags` | 3 | **创建时**生效；不设就没有子矩形感知的输入路径 |
+| `PerfQualityValue` | 1 | 质量档 |
+| `DLSS.Pre.Exposure` / `DLSS.Exposure.Scale` | 1 / 1 | 曝光 |
+| `Sharpness` | 0.35 | |
+| `Reset` | 0 | **无前缀**；重置时序历史的唯一键 |
+| `CreationNodeMask` / `VisibilityNodeMask` | 1 / 1 | |
+| `DLSS.Hint.Render.Preset.*` | Quality/DLAA/Balanced/UltraQuality = `0x8000000B`，Performance = `0x8000000D`，UltraPerformance = `0x8000000C` | preset 提示 |
+
+每帧被重写的是 `Output`、`Jitter.Offset.X`、`Jitter.Offset.Y`；`Color/Depth/MotionVectors` 与
+上表其余项只在创建时写一次。`Output` 在**两张纹理之间交替**（双缓冲）。
+
+#### 已确认的规则（每条都有运行证据）
+
+1. **不要写引擎的 `Color`。** 它参与引擎的时序链，写进去一帧近黑内容后整条链永久死掉
+   （之后每帧读回都是 0）。
+2. **不要 transition 引擎拥有的纹理**（`Color/Depth/MV/Output`）。NGX 自己管理这些资源的状态；
+   我们把它 `ALL → UAV → ALL` 来回切会打乱引擎 feature 的内部跟踪，之后引擎自己就画不对。
+3. **一个进程里只能有一个 DLSS SR 实例。** 我们 `CreateFeature(1)` 自建第二个 SR 之后，
+   引擎那个 feature 就再也产不出正确结果：它的 `EvaluateFeature` 仍然返回 1，但输出不再更新
+   （表现为“我们停止写 Output 后画面冻结”，且只有重启进程才能恢复）。
+4. 求值必须用钩子的 **original** 指针。`GetProcAddress` 拿到的地址是我们自己的 detour，
+   会递归到栈溢出（`0xC00000FD`）。
+5. 我们的 SR 里必须按上面的契约设：`MV.Scale.*`（否则历史不重投影 → 内容固定在屏幕上）、
+   `DLSS.Feature.Create.Flags=3`（否则子矩形输入路径没开 → 竖条纹垃圾）。
+6. **`Reset` 无前缀**：`DLSS.Reset` 不被读取，跨存档/跨关卡的时序残留需要写 `Reset=1`（一次性）。
+
+#### 当前模式表
+
+| 值 | 含义 |
+|---|---|
+| 0 | 关闭（NR 只求值，不参与画面） |
+| 1–4 | 早期路线：改引擎 `Color` / 借还 / 直拷（会冻结或全黑，仅作对照） |
+| 5 | 增益合成后交给引擎 DLSS（读上一帧 NR 结果，有屏幕固定残影） |
+| 6 | TRP Ratio resolve 后交给引擎 DLSS |
+| 7 | 自建 SR 只写私有纹理（影子模式，可 dump，画面不动） |
+| 8 | 自建 SR 写引擎 `Output` 并跳过引擎 evaluate（能上屏，但会**顶掉引擎的 SR**） |
+| 9 | 自建 SR 直接吃引擎 `Color`（NR 不上场，二分用） |
+
+`7/8/9` 都依赖“自建第二个 SR”，因此都触犯第 3 条；`8/9` 还触犯第 2 条。这两条是路线 A 目前
+所有画面异常（开局损坏、切回 0 冻结、跨存档鬼影）的根源。
+
+#### 规划：接管引擎那一次创建（不再建第二个实例）
+
+1. 钩住引擎的 `CreateFeature(1)`：**不转发**，用引擎传进来的参数对象替它创建我们的 feature，
+   把我们的 handle 作为返回值交回去（`ret=1`）；
+2. 从此引擎每帧的 `EvaluateFeature(handle)` 就是我们的 feature，运行在引擎自己的命令流里，
+   用引擎自己设好的 jitter / MV / Output / 尺寸，我们不再手动摆弄任何引擎资源；
+3. 我们只做一件事：evaluate 前把 `Color` 换成我们的合成图；关卡加载/过场期间不换（喂引擎原图），
+   这样加载期画面完全由引擎自己的逻辑决定，不会损坏；
+4. 进存档时发一次 `Reset=1`，鬼影不会跨存档；
+5. 模式语义随之简化：`0` = 直接透传（我们的 SR 仍存在，但不换色），`8` = 换色上屏。
+
+验收：进存档无损坏、跨存档无鬼影、切回 `0` 画面正常（不冻结），`8` 下画面是我们的 SR 结果。
 
 ## 7. RR 地基：`doAllRayTracing`（第二阶段，不在当前范围）
 

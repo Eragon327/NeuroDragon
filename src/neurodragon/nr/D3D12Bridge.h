@@ -91,8 +91,43 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // "HDR -> LDR encode"). Null until nrCreate has built the encoder.
 [[nodiscard]] void* nrEncodedColorResource();
 
+// True when nr_params.txt asked for Replace (route A). The probe then evaluates
+// NR on every in-world frame instead of only inside the measurement windows, so
+// the picture can actually be judged by eye.
+[[nodiscard]] bool nrReplaceContinuous();
+
+// ---------------------------------------------------------------------------
+// Our own DLSS SR (Replace=7). Same structure as TRP: instead of re-pointing the
+// engine's DLSS at our texture (which froze the picture - NGX binds the feature's
+// input resource at CreateFeature), we create feature 1 ourselves, feed it our
+// composited image plus the engine's Depth/MV, and write into a texture we own.
+// The engine's own DLSS keeps running untouched in this step: the result is only
+// dumped, so a mistake cannot freeze or black the picture.
+// ---------------------------------------------------------------------------
+// The private 2560x1440 SR output; null until the feature exists.
+[[nodiscard]] void* nrSrOutputResource();
+[[nodiscard]] bool  nrSrIsCreated();
+[[nodiscard]] int   nrReplaceMode();
+// ParamLog=1 in nr_params.txt: the probe logs every engine NGX parameter write.
+[[nodiscard]] bool  nrParamLogEnabled();
+// Call on entering a world: resets our own SR history so the previous world's
+// image does not follow the player.
+void nrNotifyLevelLoaded();
+// True when our own SR already wrote the engine's Output this frame, so the
+// caller must skip the engine's EvaluateFeature.
+[[nodiscard]] bool  nrSrOwnsOutput();
+
+// Hand over the *original* NGX CreateFeature/EvaluateFeature (the detours' next
+// pointers). Our own SR must call those, never the patched exports: the patched
+// entry point is our detour, so calling it recurses until the stack dies.
+void nrSetNgxOriginals(void* createFeature, void* evaluateFeature);
+
 // Records one evaluation on the game's command list. Handles every resource
-// state transition around the NGX call.
+// state transition around the NGX call. `engineParams` (may be null) is the
+// engine's own NGX parameter object: when nr_params.txt asks for Replace=5 it is
+// pointed at our gain-composited texture (docs/D §6.16).
+//
+// NR stays 1:1 at the render resolution; it never upscales.
 bool nrRecord(
     void*    commandList,
     void*    color,
@@ -103,8 +138,23 @@ bool nrRecord(
     float    motionVectorScaleX,
     float    motionVectorScaleY,
     int      depthInverted,
-    bool     reset
+    bool     reset,
+    void*    engineParams,
+    void*    engineOutput
 );
+
+// Route A (docs/D §6.16): make the engine's own DLSS consume our texture, so the
+// picture on screen contains NR pixels. `replace=1` decodes the NR result first
+// (gamma + inverse Reinhard); `replace=2` is the mechanism test: it hands DLSS a
+// faithful *copy* of the engine's own Color from a foreign texture, which shows
+// whether NGX accepts a swapped resource at all. Call after nrRecord() and before
+// the engine's own EvaluateFeature. Returns false when it could not swap.
+bool nrReplaceEngineColor(void* commandList, void* engineColor, void* engineParams);
+
+// Second half of Replace=3 (docs/D §6.16): give the engine's own Color pixels
+// back right after its EvaluateFeature returned. Same command list; no-op when
+// nothing was borrowed.
+void nrRestoreColor(void* commandList);
 
 // Releases the feature and every GPU object this translation unit owns. Called
 // from the probe's uninstall(): a detour or a live D3D12 object left behind by an

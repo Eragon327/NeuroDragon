@@ -6,7 +6,7 @@
 场景原生输出 → NR 神经渲染 → 超分 → 原生 UI 合成 → 帧生成 → 显示器
 ```
 
-## 范围（2026-10-20 用户定稿）
+## 范围
 
 **做**（= TRP 的渲染链路本身）：
 
@@ -28,14 +28,14 @@
 
 | 阶段 | 状态 | 产出 |
 |---|---|---|
-| A. 白盒取证：RenderDragon 通道图与接入点 | ✅ 完成（2026-10-20） | [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) |
-| B. Windows 侧符号/钩子落点确认 | ✅ 无 PDB 定位链 + RT 路径定位完成（2026-10-21） | [docs/B-windows-probe.md](docs/B-windows-probe.md) |
+| A. 白盒取证：RenderDragon 通道图与接入点 | ✅ 完成 | [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) |
+| B. Windows 侧符号/钩子落点确认 | ✅ 无 PDB 定位链 + RT 路径定位完成 | [docs/B-windows-probe.md](docs/B-windows-probe.md) |
 | C. 工程骨架（xmake + ImGui + 探针） | 🟡 xmake 工程 + 探针/钩子就位（ImGui 未做） | `src/neurodragon/probe/RenderProbe.cpp` |
-| D. NR 接入（NGX feature 0x12） | 🟡 **跑通且验证**：建 feature + 逐帧 evaluate（**~3.3 ms**，1485×835）+ HDR→LDR 编码；`Enabled=0` 冻结测试证明写入来自 NGX（§6.15） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
+| D. NR 接入（NGX feature 0x12） | 🟡 **跑通且验证**：建 feature + 逐帧 evaluate（**~3.3 ms**，1485×835）+ HDR→LDR 编码；`Enabled=0` 冻结测试证明写入来自 NGX（§6.15）；**Route A：`Replace=1` 把结果写回引擎 Color，画面可见**（§6.16） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
 | E. 超分（DLSS SR/DLAA） | ✅ **引擎自带**（RT 下已在跑，复用即可） | — |
 | F. UI 分层 + DLSS-G | 待开始 | — |
 
-## 驱动要求（2026-10-21 实测）
+## 驱动要求
 
 - **NR 需要 NVIDIA 驱动 ≥ 617.42**：核心 `_nvngx.dll` 的 feature 表里才出现 `dlssnr`
   （610.88 的核心没有，`core CreateFeature(0x12)` 返回 `OutOfDate`）。
@@ -53,7 +53,7 @@
 
 > 本目录下的 `.ida/*.json` 是从 IDB 导出的原始取证数据（callees / xrefs / decompile），不要删，后续 Windows 侧比对要用。
 
-## 本地验证（2026-10-21 起可自测）
+## 本地验证
 
 客户端已搬到 `E:\LeviLauncher`（`base_root` 同步改过），E: 盘普通权限可写、`RUNASADMIN` 已移除，
 所以「构建 → 部署 → 启动 → 读日志」可以整条链路自己跑，不再需要提权：
@@ -72,7 +72,7 @@ grep -E "RenderProbe" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
 
 `dragon::framerenderer::modules::taau` 就是「3D 之后、UI/色调映射之前」的那个上采样模块，输入里直接带 **`InputBufferMotionVectors`**；接入点不是"在帧图里找缝"，而是**包住这个函数**。
 
-## W1（6 项确认，2026-10-20）
+## W1（6 项确认）
 
 | # | 问题 | 结论 |
 |---|---|---|
