@@ -242,6 +242,97 @@ struct PanelStats {
     double   engineMs       = 0.0;
 };
 
+// Engine SR (DLSS feature 1) read-back for the "SR" tab. Everything here is
+// observed, never applied: the callback wrapper forwards the engine's own
+// optimal-settings answer unchanged and only records it (docs/I §10).
+struct SrStats {
+    bool     wrapped       = false;
+    unsigned callbackCount = 0;
+    unsigned cbDisplayW    = 0;
+    unsigned cbDisplayH    = 0;
+    unsigned cbRenderW     = 0;
+    unsigned cbRenderH     = 0;
+    unsigned cbQuality     = 0;
+    float    cbSharpness   = 0.0f;
+    unsigned dynMinW       = 0;
+    unsigned dynMinH       = 0;
+    unsigned dynMaxW       = 0;
+    unsigned dynMaxH       = 0;
+    unsigned quality       = 0;
+    unsigned flags         = 0;
+    unsigned preset        = 0;
+    float    sharpness     = 0.0f;
+};
+
+// Engine upscaling configuration, read from the per-frame render context
+// (base+0xdfc53c0 args) and the renderer config object (base+0x3c564xx).
+// Everything here is measured, not guessed: the panel shows both sides so a
+// write can be checked against what the engine asked for (docs/I §11).
+struct SrEngineStats {
+    bool     valid      = false;
+    unsigned calls      = 0;
+    unsigned ctxMode    = 0;
+    unsigned ctxQuality = 0;
+    unsigned ctxBools   = 0;
+    float    ctxFactor  = 0.0f;
+    float    ctxExtra   = 0.0f;
+    unsigned activeQ    = 0;
+    unsigned requestedQ = 0;
+    float    activeF    = 0.0f;
+    float    requestedF = 0.0f;
+    unsigned renderW    = 0;
+    unsigned renderH    = 0;
+    float    tailFactor = 0.0f;
+};
+
+[[nodiscard]] SrEngineStats srEngineStats();
+
+// Factor behind a percentage, matching the engine's own upscaling table:
+// 33 -> 0.3334, 50 -> 0.5, 58 -> 0.58, 66 -> 0.667, 75 -> 0.75, 100 -> 1.0.
+// 0 for "follow the engine" or an unknown value.
+float srFactorForPercent(int percent);
+
+// DLSS quality slot that produces the requested ratio: 33/50/58/66/100 map to
+// the engine's native slots 3/0/1/2/5. -1 = no override (follow the engine).
+int srQualityForPercent(int percent);
+
+// Applies the panel's DLSS model preset and sharpness override to the engine's
+// CreateFeature parameter object. Called from the CreateFeature detour before the
+// original runs; preset changes only take effect on the next feature rebuild.
+void srApplyCreateOverrides(void* params, int feature);
+
+// Forces the engine to rebuild its DLSS feature, which is what applies a new
+// model preset (it is only read at CreateFeature). The render size is pinned
+// during the rebuild, so there is no visible resolution change.
+void srRequestFeatureRebuild();
+
+// Called at the top of the engine's per-frame frame-context copy. Publishes the
+// measured values and, when the config asks for it, rewrites the quality slot
+// and/or the upscaling factor before the engine copies them into the renderer.
+void srDriveFrameContext(void* engine, void* ctx);
+
+// Per-evaluate request write: pushes the configured quality/factor into the
+// renderer's *requested* fields so the engine's own sizing function notices the
+// change and rebuilds the DLSS feature/render size on its next pass. This is the
+// path that does not need a window resize; it becomes live once the renderer
+// object has been seen by srDriveFrameContext at least once.
+void srDriveEngineRequest();
+
+[[nodiscard]] SrStats srPanelStats();
+
+// Installs the read-only wrapper into an NGX parameter object. Called wherever
+// an engine parameter object becomes visible (docs/I §10.3): GetCapabilityParameters,
+// GetParameters and CreateFeature.
+void srInstallCallback(void* params);
+
+// Publishes the engine SR parameters the SR tab shows and applies a pending
+// one-shot Reset. Called once per engine evaluation.
+void srReadEngineParams(void* params);
+
+// One-shot history wipe for the engine's DLSS: writes Reset=1 for one frame,
+// then back to 0 (the same key the engine uses when a world loads).
+void srRequestReset();
+
 [[nodiscard]] PanelStats nrPanelStats();
 
 } // namespace neurodragon::nr

@@ -41,6 +41,26 @@ struct Nr {
     bool paramLog        = false; // TEST builds only: log every engine NGX parameter write
 };
 
+// Engine SR (DLSS feature 1) knobs. The internal resolution has two sides that
+// must agree: the DLSS quality slot (which the engine turns into its input size)
+// and the frame builder's scene factor (which the world render rect follows).
+// One percentage drives both; the panel's choice applies immediately, without a
+// window resize (docs/I §11).
+struct Sr {
+    // 0 = follow the engine (Balanced 58% in practice). 33/50/58/66/100 = render
+    // and upscale at that ratio: the DLSS quality slot is set accordingly and the
+    // frame builder's factor table entry is patched to the same value. Only the
+    // ratios DLSS has a native slot for are offered (no 75%).
+    int scalePercent = 0;
+
+    // DLSS model preset request (NGX DLSS.Hint.Render.Preset.*): 0 = driver
+    // default, 5/6 = legacy E/F, 10 = J, 11 = K, 12 = L, 13 = M. Written into all
+    // six per-slot hints at CreateFeature, keeping the 0x80000000 bit the engine
+    // sets. 0 is written too, so "driver default" actually clears a previous
+    // choice (the parameter object is reused across feature builds).
+    int preset = 0;
+};
+
 struct Config;
 
 // Panel settings. Like everything else here: read once at load, written only by
@@ -53,6 +73,7 @@ struct Ui {
 struct Config {
     int version = 1;
     Nr  nr{};
+    Sr  sr{};
     Ui  ui{};
 };
 
@@ -63,11 +84,9 @@ Config& get();
 // written at all - a malformed file is repaired with the defaults.
 bool loadOrCreate();
 
-// Re-read the file. Only the load path uses this: there is no hot reload, a file
-// edited while the game runs has no effect until the next start.
-void reload();
-
 // Write config.json now ("Save as default" in the panel, and mod disable).
+// There is no runtime read: the file is imported once at load and is write-only
+// afterwards, so a file edited while the game runs has no effect until restart.
 bool save();
 
 } // namespace neurodragon::config

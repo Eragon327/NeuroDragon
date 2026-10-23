@@ -33,6 +33,29 @@ using namespace theme;
 // ---------------------------------------------------------------------------
 
 config::Nr  gDraft{};
+config::Sr  gDraftSr{};
+
+// A percentage saved by an older build (75%) is no longer offered. Treat any
+// unknown value as "follow the engine" so the dropdown and the live config agree.
+int sanitizedSrPercent(int percent) {
+    switch (percent) {
+    case 0:
+    case 33:
+    case 50:
+    case 58:
+    case 66:
+    case 100:
+        return percent;
+    default:
+        return 0;
+    }
+}
+
+config::Sr sanitizedSr(config::Sr sr) {
+    sr.scalePercent = sanitizedSrPercent(sr.scalePercent);
+    return sr;
+}
+
 int         gDraftKey{VK_END};
 int         gActiveTab{};
 bool        gDirty{};
@@ -121,6 +144,54 @@ std::string replaceHint(int mode) {
         return "ui.replace.hint6"_tr();
     default:
         return "ui.replace.hintOther"_tr();
+    }
+}
+
+// DLSS quality slot (the engine writes PerfQualityValue at create) and the network
+// preset hint. Values are the measured ones from docs/I §10: 0..5 = MaxPerf /
+// Balanced / MaxQuality / UltraPerf / UltraQuality (rejected by NGX) / DLAA, and
+// the preset hint carries 0x80000000 | (5=E, 6=F, 10=J, 11=K, 12=L, 13=M).
+std::string qualityName(unsigned quality) {
+    switch (quality) {
+    case 0:
+        return "MaxPerf";
+    case 1:
+        return "Balanced";
+    case 2:
+        return "MaxQuality";
+    case 3:
+        return "UltraPerf";
+    case 4:
+        return "UltraQuality";
+    case 5:
+        return "DLAA";
+    default:
+        return "-";
+    }
+}
+
+std::string presetName(unsigned hint) {
+    unsigned const preset = hint & 0x7FFFFFFFu;
+    switch (preset) {
+    case 0:
+        return "ui.sr.presetDefault"_tr();
+    case 5:
+        return "E";
+    case 6:
+        return "F";
+    case 10:
+        return "J";
+    case 11:
+        return "K";
+    case 12:
+        return "L";
+    case 13:
+        return "M";
+    default: {
+        char buffer[16]{};
+        std::snprintf(buffer, sizeof(buffer), "#%u", preset);
+        return buffer;
+    }
     }
 }
 
@@ -358,15 +429,16 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
 void drawTabs(Layout const& layout) {
     float const y = layout.pos.y + layout.pad + layout.headerHeight + layout.pipelineHeight;
 
-    std::string const tabs[3] = {
+    std::string const tabs[4] = {
         "ui.tab.neural"_tr(),
+        "ui.tab.sr"_tr(),
         "ui.tab.diagnostics"_tr(),
         "ui.tab.advanced"_tr(),
     };
 
     at(ImVec2(layout.pos.x + layout.pad, y));
     if (ImGui::BeginTabBar("##neurodragonTabs")) {
-        for (int index = 0; index < 3; ++index) {
+        for (int index = 0; index < 4; ++index) {
             ImGui::PushID(index);
             if (ImGui::BeginTabItem(tabs[index].c_str())) {
                 gActiveTab = index;
@@ -516,6 +588,156 @@ void drawTabNeural() {
     if (widgets::slider("ui.neural.maxRatio"_tr().c_str(), &gDraft.maxRatio, 1.0f, 8.0f, "%.2f")) markDirty();
 }
 
+void drawTabSr() {
+    auto const sr = nr::srPanelStats();
+    auto const ps = nr::nrPanelStats();
+
+    char buffer[128]{};
+
+    widgets::sectionHeader("ui.sr.engine"_tr().c_str());
+
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", ps.renderWidth, ps.renderHeight);
+    widgets::statRow("ui.sr.renderSize"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", ps.outputWidth, ps.outputHeight);
+    widgets::statRow("ui.sr.outputSize"_tr().c_str(), buffer);
+    if (ps.outputWidth != 0 && ps.renderWidth != 0) {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%.1f%%",
+            100.0 * static_cast<double>(ps.renderWidth) / static_cast<double>(ps.outputWidth)
+        );
+        widgets::statRow("ui.sr.ratio"_tr().c_str(), buffer);
+    }
+    widgets::statRow("ui.sr.quality"_tr().c_str(), qualityName(sr.quality).c_str());
+    widgets::statRow("ui.sr.preset"_tr().c_str(), presetName(sr.preset).c_str());
+    std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(sr.sharpness));
+    widgets::statRow("ui.sr.sharpness"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
+    widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
+    widgets::hint("ui.sr.readOnlyHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.internal"_tr().c_str());
+    // Only the ratios DLSS actually has a slot for: each one maps 1:1 to the
+    // engine's own quality slot, so the DLSS size is the engine's exact answer and
+    // the scene factor table is patched to the same ratio. "Follow" leaves both
+    // alone and restores the table.
+    std::string const scaleItems[6] = {
+        "ui.sr.scaleAuto"_tr(),
+        "33%",
+        "50%",
+        "58%",
+        "66%",
+        "100%",
+    };
+    char const* scalePointers[6] = {
+        scaleItems[0].c_str(),
+        scaleItems[1].c_str(),
+        scaleItems[2].c_str(),
+        scaleItems[3].c_str(),
+        scaleItems[4].c_str(),
+        scaleItems[5].c_str(),
+    };
+    int const scaleValues[6] = {0, 33, 50, 58, 66, 100};
+    if (mappedCombo("ui.sr.scale"_tr().c_str(), &gDraftSr.scalePercent, scalePointers, scaleValues, 6)) {
+        markDirty();
+    }
+    widgets::hint("ui.sr.scaleHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.model"_tr().c_str());
+    std::string const modelItems[7] = {
+        "ui.sr.presetAuto"_tr(),
+        "ui.sr.presetE"_tr(),
+        "ui.sr.presetF"_tr(),
+        "ui.sr.presetJ"_tr(),
+        "ui.sr.presetK"_tr(),
+        "ui.sr.presetL"_tr(),
+        "ui.sr.presetM"_tr(),
+    };
+    char const* modelPointers[7] = {
+        modelItems[0].c_str(),
+        modelItems[1].c_str(),
+        modelItems[2].c_str(),
+        modelItems[3].c_str(),
+        modelItems[4].c_str(),
+        modelItems[5].c_str(),
+        modelItems[6].c_str(),
+    };
+    int const modelValues[7] = {0, 5, 6, 10, 11, 12, 13};
+    if (mappedCombo("ui.sr.model"_tr().c_str(), &gDraftSr.preset, modelPointers, modelValues, 7)) {
+        markDirty();
+    }
+    widgets::hint("ui.sr.modelHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.ctx"_tr().c_str());
+    auto const eng = nr::srEngineStats();
+    if (eng.valid) {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%u / %.3f",
+            eng.ctxQuality,
+            static_cast<double>(eng.ctxFactor)
+        );
+        widgets::statRow("ui.sr.ctxCtx"_tr().c_str(), buffer);
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%u / %.3f",
+            eng.requestedQ,
+            static_cast<double>(eng.requestedF)
+        );
+        widgets::statRow("ui.sr.ctxEngine"_tr().c_str(), buffer);
+        std::snprintf(buffer, sizeof(buffer), "%u x %u", eng.renderW, eng.renderH);
+        widgets::statRow("ui.sr.ctxRender"_tr().c_str(), buffer);
+        std::snprintf(buffer, sizeof(buffer), "%.3f", static_cast<double>(eng.ctxExtra));
+        widgets::statRow("ui.sr.ctxExtra"_tr().c_str(), buffer);
+    } else {
+        widgets::hint("ui.sr.ctxNone"_tr().c_str());
+    }
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.callback"_tr().c_str());
+
+    std::snprintf(buffer, sizeof(buffer), "%u", sr.callbackCount);
+    widgets::statRow("ui.sr.cbCount"_tr().c_str(), buffer);
+    if (sr.callbackCount != 0) {
+        std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbDisplayW, sr.cbDisplayH);
+        widgets::statRow("ui.sr.cbDisplay"_tr().c_str(), buffer);
+        std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbRenderW, sr.cbRenderH);
+        widgets::statRow("ui.sr.cbRender"_tr().c_str(), buffer);
+        std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(sr.cbSharpness));
+        widgets::statRow("ui.sr.cbSharpness"_tr().c_str(), buffer);
+        if (sr.dynMinW != 0) {
+            std::snprintf(
+                buffer,
+                sizeof(buffer),
+                "%u x %u .. %u x %u",
+                sr.dynMinW,
+                sr.dynMinH,
+                sr.dynMaxW,
+                sr.dynMaxH
+            );
+            widgets::statRow("ui.sr.dynamic"_tr().c_str(), buffer);
+        }
+    } else {
+        widgets::hint("ui.sr.cbNone"_tr().c_str());
+    }
+    widgets::hint("ui.sr.cbHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.actions"_tr().c_str());
+    std::string resetLabel = "ui.sr.reset"_tr();
+    resetLabel += "##srReset";
+    if (ImGui::Button(resetLabel.c_str())) {
+        nr::srRequestReset();
+    }
+    widgets::hint("ui.sr.resetHint"_tr().c_str());
+}
+
 void drawTabDiagnostics() {
     auto const stats = nr::nrPanelStats();
 
@@ -613,10 +835,18 @@ void drawTabAdvanced() {
 // Footer --------------------------------------------------------------------
 
 void applyDraft(bool persist) {
+    int const oldPreset    = config::get().sr.preset;
     config::get().nr         = gDraft;
+    config::get().sr         = gDraftSr;
     config::get().ui.openKey = gDraftKey;
     Overlay::getInstance().refreshHotkey();
     gDirty = false;
+
+    // A model preset is only read at CreateFeature, so applying a new one has to
+    // make the engine rebuild its DLSS feature. Other settings are read live.
+    if (config::get().sr.preset != oldPreset) {
+        nr::srRequestFeatureRebuild();
+    }
 
     if (!persist) {
         setStatus("ui.footer.applied"_tr());
@@ -673,6 +903,7 @@ void drawFooter(Layout const& layout) {
     at(ImVec2(x, top));
     if (widgets::footerButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), false)) {
         gDraft    = config::get().nr;
+        gDraftSr  = sanitizedSr(config::get().sr);
         gDraftKey = config::get().ui.openKey;
         gDirty    = false;
         setStatus("ui.footer.discarded"_tr());
@@ -787,6 +1018,9 @@ void render() {
                 drawTabNeural();
                 break;
             case 1:
+                drawTabSr();
+                break;
+            case 2:
                 drawTabDiagnostics();
                 break;
             default:
@@ -808,6 +1042,7 @@ void onOpened() {
     // file is an import at load, and the panel is a staging area over the live
     // values.
     gDraft    = config::get().nr;
+    gDraftSr  = sanitizedSr(config::get().sr);
     gDraftKey = config::get().ui.openKey;
     gDirty    = false;
     gStatus.clear();

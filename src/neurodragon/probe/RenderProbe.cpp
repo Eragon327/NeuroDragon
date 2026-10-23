@@ -8,6 +8,11 @@
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/ui/Overlay.h"
 
+// Engine frame builder (read-only): its upscaling factor is the one the scene
+// render rect follows, independent of the DLSS optimal-settings answer.
+#include "mc/common/Globals.h"
+#include "mc/deps/minecraft_renderer/framebuilder/FrameBuilder.h"
+
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
 #include "ll/api/event/client/ClientJoinLevelEvent.h"
@@ -18,6 +23,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -63,7 +69,7 @@ struct HookRecord {
     void* target = nullptr;
     void* detour = nullptr;
 };
-HookRecord       gHookRecords[4];
+HookRecord       gHookRecords[6];
 int              gHookCount = 0;
 std::thread      gWatcherThread;
 std::atomic_bool gNgxHooked{false};
@@ -576,6 +582,202 @@ LL_AUTO_STATIC_HOOK(
 using NgxEvalFn   = int (*)(void* cmdList, void* handle, void const* params, void* callback, void* userData);
 using NgxCreateFn = int (*)(void* cmdList, int feature, void* params, void** handle);
 
+// Read-only view of the engine frame builder: getRenderResolution() is the size
+// the scene actually renders at, getUpscalingFactor() is the factor the scene
+// render rect follows. Neither comes from the DLSS sizing callback, which is why
+// changing the DLSS quality never filled the black area (2026-10-23).
+namespace {
+std::atomic<std::uintptr_t> gFbFactorTable{0};
+std::atomic<std::size_t>    gFbIndexOffset{0};
+std::atomic<void*>          gFbObject{nullptr};
+std::atomic<bool>           gFbProbed{false};
+std::atomic<unsigned>       gFbPatchedIndex{0xFFFFFFFFu};
+std::atomic<unsigned>       gFbPatchedOrigBits{0};
+} // namespace
+
+// getUpscalingFactor() is vtable slot 83 (our own call compiles to
+// `call [rax+0x298]`). It returns table[index] when ray tracing is on and
+// index <= 4, otherwise 1.0; the table is [0.5, 0.58, 0.667, 0.3334, 0.75].
+// That value is what the scene render rect follows, which is why changing the
+// DLSS quality or the renderer's factor field never filled the frame. Locate the
+// table from the getter's `lea rcx,[rip+disp]` and patch the entry once.
+std::size_t probeFrameBuilderFactor(void* fb) {
+    if (gFbProbed.exchange(true, std::memory_order_relaxed)) {
+        return gFbIndexOffset.load(std::memory_order_relaxed);
+    }
+    auto* vt     = *reinterpret_cast<std::uintptr_t**>(fb);
+    auto* module = reinterpret_cast<std::uint8_t*>(::GetModuleHandleW(nullptr));
+    if (!vt || !module) {
+        utils::logger().info("[sr] fb factor table: no vtable");
+        return 0;
+    }
+    auto*      dos   = reinterpret_cast<IMAGE_DOS_HEADER*>(module);
+    auto*      nt    = reinterpret_cast<IMAGE_NT_HEADERS64*>(module + dos->e_lfanew);
+    auto const begin = reinterpret_cast<std::uintptr_t>(module);
+    auto const end   = begin + nt->OptionalHeader.SizeOfImage;
+    auto*      fn    = reinterpret_cast<std::uint8_t*>(vt[83]);
+    auto const addr  = reinterpret_cast<std::uintptr_t>(fn);
+    if (addr < begin || addr >= end) {
+        utils::logger().info("[sr] fb factor table: slot 83 outside image");
+        return 0;
+    }
+    // 48 8D 0D disp32 = lea rcx,[rip+disp]; the displacement points at the table.
+    for (int k = 0; k + 7 <= 96; ++k) {
+        if (fn[k] != 0x48 || fn[k + 1] != 0x8D || fn[k + 2] != 0x0D) {
+            continue;
+        }
+        auto const disp  = *reinterpret_cast<std::int32_t*>(fn + k + 3);
+        auto*      table = fn + k + 7 + disp;
+        auto const taddr = reinterpret_cast<std::uintptr_t>(table);
+        if (taddr < begin || taddr >= end) {
+            continue;
+        }
+        float const first = *reinterpret_cast<float*>(table);
+        if (first < 0.2f || first > 1.5f) {
+            continue;
+        }
+        unsigned const index = *reinterpret_cast<unsigned const*>(static_cast<std::uint8_t*>(fb) + 0x57c);
+        if (index > 4) {
+            continue;
+        }
+        gFbFactorTable.store(taddr, std::memory_order_relaxed);
+        gFbIndexOffset.store(0x57c, std::memory_order_relaxed);
+        gFbObject.store(fb, std::memory_order_relaxed);
+        utils::logger().info(
+            "[sr] fb factor table_rva={:#x} index={} current={:.3f}",
+            taddr - begin,
+            index,
+            static_cast<double>(*reinterpret_cast<float*>(table + index * 4))
+        );
+        return 0x57c;
+    }
+    utils::logger().info("[sr] fb factor table: lea not found");
+    return 0;
+}
+
+// Per-frame patch of the table entry the getter reads. This is the single knob
+// behind "internal resolution": the DLSS quality slot is set separately, the
+// scene factor here, and both use the same percentage. With the config at 0 the
+// original table entry is restored, so "follow the engine" leaves no trace.
+namespace {
+unsigned floatToBits(float value) {
+    unsigned bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+float bitsToFloat(unsigned bits) {
+    float value = 0.0f;
+    std::memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+} // namespace
+
+void driveFrameBuilderFactor() {
+    auto* tableBytes = reinterpret_cast<std::uint8_t*>(gFbFactorTable.load(std::memory_order_relaxed));
+    auto* fb         = static_cast<std::uint8_t*>(gFbObject.load(std::memory_order_relaxed));
+    if (!tableBytes || !fb) {
+        return;
+    }
+    auto*    table       = reinterpret_cast<float*>(tableBytes);
+    unsigned index       = *reinterpret_cast<unsigned const*>(fb + 0x57c);
+    int const pct        = config::get().sr.scalePercent;
+    float const want     = nr::srFactorForPercent(pct);
+    unsigned const patched = gFbPatchedIndex.load(std::memory_order_relaxed);
+
+    // Only move the scene factor once the DLSS side has actually rebuilt to the
+    // target size; otherwise the two disagree for the frames in between (the
+    // brief cut seen on 66->100). Follow targets Balanced, the engine's default.
+    float const     targetFactor = (want > 0.0f) ? want : nr::srFactorForPercent(58);
+    auto const      stats        = nr::nrPanelStats();
+    unsigned const  outW         = stats.outputWidth;
+    unsigned const  outH         = stats.outputHeight;
+    if (outW < 64 || outH < 64) {
+        return;
+    }
+    unsigned const desiredW = static_cast<unsigned>(
+        std::lround(static_cast<double>(outW) * static_cast<double>(targetFactor))
+    );
+    unsigned const renderW = stats.renderWidth;
+    if (renderW + 4 < desiredW || renderW > desiredW + 4) {
+        return;
+    }
+
+    if (want <= 0.0f) {
+        if (patched <= 4) {
+            DWORD oldProtect = 0;
+            if (::VirtualProtect(&table[patched], sizeof(float), PAGE_READWRITE, &oldProtect)) {
+                float const orig = bitsToFloat(gFbPatchedOrigBits.load(std::memory_order_relaxed));
+                table[patched]   = orig;
+                DWORD ignored    = 0;
+                ::VirtualProtect(&table[patched], sizeof(float), oldProtect, &ignored);
+                gFbPatchedIndex.store(0xFFFFFFFFu, std::memory_order_relaxed);
+                utils::logger().info(
+                    "[sr] fb factor table[{}] restored {:.3f}",
+                    patched,
+                    static_cast<double>(orig)
+                );
+            }
+        }
+        return;
+    }
+    if (index > 4) {
+        return;
+    }
+    float* entry = &table[index];
+    if (*entry == want) {
+        return;
+    }
+    DWORD oldProtect = 0;
+    if (!::VirtualProtect(entry, sizeof(float), PAGE_READWRITE, &oldProtect)) {
+        return;
+    }
+    float const before = *entry;
+    if (patched != index) {
+        gFbPatchedOrigBits.store(floatToBits(before), std::memory_order_relaxed);
+        gFbPatchedIndex.store(index, std::memory_order_relaxed);
+    }
+    *entry        = want;
+    DWORD ignored = 0;
+    ::VirtualProtect(entry, sizeof(float), oldProtect, &ignored);
+    static std::atomic<std::uint64_t> lastLog{0};
+    std::uint64_t const               now  = GetTickCount64();
+    std::uint64_t                     prev = lastLog.load(std::memory_order_relaxed);
+    if (now - prev >= 1000 && lastLog.compare_exchange_strong(prev, now)) {
+        utils::logger().info(
+            "[sr] fb factor table[{}] {:.3f} -> {:.3f} ({}%)",
+            index,
+            static_cast<double>(before),
+            static_cast<double>(want),
+            pct
+        );
+    }
+}
+
+void logFrameBuilderState() {
+    static std::atomic<std::uint64_t> last{0};
+    std::uint64_t const               now  = GetTickCount64();
+    std::uint64_t                     prev = last.load(std::memory_order_relaxed);
+    if (now - prev < 1000 || !last.compare_exchange_strong(prev, now)) {
+        return;
+    }
+    auto* fb = ::renderDragonFrameBuilder();
+    if (!fb) {
+        utils::logger().info("[sr] frame builder = null");
+        return;
+    }
+    probeFrameBuilderFactor(fb);
+    auto const res = fb->getRenderResolution();
+    utils::logger().info(
+        "[sr] fb render={}x{} factor={:.3f} enabled={} info={}",
+        res.x,
+        res.y,
+        static_cast<double>(fb->getUpscalingFactor()),
+        fb->isUpscalingEnabled(),
+        std::string(fb->getUpscalingInfo())
+    );
+}
+
 NgxEvalFn   gNgxEvalOriginal   = nullptr;
 NgxCreateFn gNgxCreateOriginal = nullptr;
 int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* callback, void* userData) {
@@ -639,6 +841,18 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         }
 #endif
     }
+
+    // Read-only engine-SR view: wrap the optimal-settings callback (idempotent)
+    // and publish what the engine's own upscaling is configured with. This runs
+    // with NR off too, and it never changes a value - only observes.
+    nr::srInstallCallback(const_cast<void*>(params));
+    nr::srReadEngineParams(const_cast<void*>(params));
+    // Push the configured quality/factor into the renderer's requested fields;
+    // unlike the per-rebuild context copy this runs every evaluation, so the
+    // engine's sizing function can notice the change on its next pass.
+    nr::srDriveEngineRequest();
+    driveFrameBuilderFactor();
+    logFrameBuilderState();
 
     // ---- stage 2: NR in front of the engine's DLSS -------------------------
     bool inWindow    = false;
@@ -919,7 +1133,35 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
 }
 
 int ngxCreateDetour(void* cmdList, int feature, void* params, void** handle) {
+#if defined(TEST)
+    // Which engine function drives the rebuild? The caller chain answers it
+    // without guessing, and a direct call becomes possible once it is known.
+    {
+        void*                frames[8]{};
+        USHORT const         depth = ::CaptureStackBackTrace(0, 8, frames, nullptr);
+        auto const           base  = reinterpret_cast<std::uintptr_t>(::GetModuleHandleW(nullptr));
+        char                 text[256]{};
+        int                  used = 0;
+        for (USHORT i = 0; i < depth && used < 200; ++i) {
+            used += std::snprintf(
+                text + used,
+                sizeof(text) - static_cast<std::size_t>(used),
+                " exe+%llx",
+                static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(frames[i]) - base)
+            );
+        }
+        utils::logger().info("[sr] create stack:{}", text);
+    }
+#endif
+    // Preset and sharpness have to be in the parameter object before NGX reads
+    // it, so they are applied on the way in, not after the create.
+    nr::srApplyCreateOverrides(params, feature);
     int const result = gNgxCreateOriginal ? gNgxCreateOriginal(cmdList, feature, params, handle) : 0;
+    // The engine hands its parameter object to CreateFeature; wrapping the
+    // optimal-settings callback here is what makes later size changes visible.
+    if (result == 1) {
+        nr::srInstallCallback(params);
+    }
     if (!gActive.load(std::memory_order_relaxed)) {
         return result;
     }
@@ -929,6 +1171,29 @@ int ngxCreateDetour(void* cmdList, int feature, void* params, void** handle) {
         static_cast<unsigned>(result),
         handle ? reinterpret_cast<std::uintptr_t>(*handle) : std::uintptr_t{0}
     );
+    return result;
+}
+
+// NVSDK_NGX_D3D12_GetCapabilityParameters / GetParameters: the engine's parameter
+// object appears here first. Wrapping the optimal-settings callback at this point
+// means the engine's own render-size computation already calls our copy.
+using NgxParamsFn         = int (*)(void** params);
+NgxParamsFn gNgxGetCapsOriginal   = nullptr;
+NgxParamsFn gNgxGetParamsOriginal = nullptr;
+
+int ngxGetCapsDetour(void** params) {
+    int const result = gNgxGetCapsOriginal ? gNgxGetCapsOriginal(params) : 0;
+    if (result == 1 && params) {
+        nr::srInstallCallback(*params);
+    }
+    return result;
+}
+
+int ngxGetParamsDetour(void** params) {
+    int const result = gNgxGetParamsOriginal ? gNgxGetParamsOriginal(params) : 0;
+    if (result == 1 && params) {
+        nr::srInstallCallback(*params);
+    }
     return result;
 }
 
@@ -944,6 +1209,7 @@ void hookNgxExports() {
         char const* name;
         void*       detour;
         void**      original;
+        bool        required = true;
     };
     Entry const entries[] = {
         {"NVSDK_NGX_D3D12_EvaluateFeature",
@@ -952,11 +1218,25 @@ void hookNgxExports() {
         {"NVSDK_NGX_D3D12_CreateFeature",
          reinterpret_cast<void*>(&ngxCreateDetour),
          reinterpret_cast<void**>(&gNgxCreateOriginal)},
+        // Optional: only the SR read-out needs them, and a core without them must
+        // not turn into a "missing export" error line.
+        {"NVSDK_NGX_D3D12_GetCapabilityParameters",
+         reinterpret_cast<void*>(&ngxGetCapsDetour),
+         reinterpret_cast<void**>(&gNgxGetCapsOriginal),
+         false                                        },
+        {"NVSDK_NGX_D3D12_GetParameters",
+         reinterpret_cast<void*>(&ngxGetParamsDetour),
+         reinterpret_cast<void**>(&gNgxGetParamsOriginal),
+         false                                        },
     };
     for (auto const& e : entries) {
         auto* target = reinterpret_cast<void*>(GetProcAddress(core, e.name));
         if (!target) {
-            neurodragon::log::write(2, "nr.error.missingExport"_tr(e.name));
+            if (e.required) {
+                neurodragon::log::write(2, "nr.error.missingExport"_tr(e.name));
+            } else {
+                ND_DEBUG("[ngx] optional export {} not found", e.name);
+            }
             continue;
         }
         // Same reasoning as hookInitOn: never suspend threads from the watcher.
@@ -968,7 +1248,7 @@ void hookNgxExports() {
                 false /* suspendThreads */
             )
             == 0) {
-            if (gHookCount < 4) {
+            if (gHookCount < 6) {
                 gHookRecords[gHookCount].target = target;
                 gHookRecords[gHookCount].detour = e.detour;
                 ++gHookCount;
@@ -983,6 +1263,53 @@ void hookNgxExports() {
         reinterpret_cast<std::uintptr_t>(gNgxCreateOriginal),
         reinterpret_cast<std::uintptr_t>(gNgxEvalOriginal)
     );
+}
+
+// ---------------------------------------------------------------------------
+// Engine upscaling-configuration hook (release).
+//
+// The engine copies the frame's upscaling parameters into the renderer once per
+// frame (base+0xdfc53c0). Rewriting the frame context *before* that copy is the
+// lever that moves the world render rect above the 58% Balanced factor without
+// touching the window or the swapchain; with the config overrides at 0 the
+// detour is a pure read-out. The signature is the function prologue (unique in
+// 1.26.51.01) and a lookup failure only disables the overrides.
+// ---------------------------------------------------------------------------
+namespace srsig {
+inline ll::memory::Signature const kFrameContext = ll::memory::Signature::parse(
+    "41 56 56 57 53 48 83 EC 28 48 89 CE 80 B9 78 5E 16 04 01 75 59 8B 46 50"
+);
+}
+
+using SrFrameContextFn = void (*)(void*, void*, void*, void*);
+SrFrameContextFn gSrFrameContextOriginal = nullptr;
+
+void srFrameContextDetour(void* engine, void* ctx, void* arg3, void* arg4) {
+    nr::srDriveFrameContext(engine, ctx);
+    if (gSrFrameContextOriginal) {
+        gSrFrameContextOriginal(engine, ctx, arg3, arg4);
+    }
+}
+
+bool installSrFrameContextHook() {
+    void* target = ll::memory::SignatureView{srsig::kFrameContext}.resolve(true);
+    if (!target) {
+        utils::logger().error("[sr] frame-context signature not found; engine overrides disabled");
+        return false;
+    }
+    if (ll::memory::hook(
+            target,
+            reinterpret_cast<void*>(&srFrameContextDetour),
+            reinterpret_cast<void**>(&gSrFrameContextOriginal),
+            ll::memory::HookPriority::Normal,
+            true
+        )
+        != 0) {
+        utils::logger().error("[sr] frame-context hook failed");
+        return false;
+    }
+    utils::logger().info("[sr] frame-context hook @ {:#x}", reinterpret_cast<std::uintptr_t>(target));
+    return true;
 }
 
 void startWatcher() {
@@ -1046,7 +1373,6 @@ bool install() {
         }
     }
     gActive.store(true, std::memory_order_relaxed);
-    config::reload();
     gNrEnabled = config::get().nr.enabled;
 #ifdef TEST
     // Only the dump writer needs the mod directory; the NR model itself is
@@ -1062,6 +1388,7 @@ bool install() {
         registerLevelListeners();
     }
     startWatcher();
+    installSrFrameContextHook();
     return true;
 }
 

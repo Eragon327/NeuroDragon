@@ -36,9 +36,9 @@
 | `ui/Overlay.{h,cpp}` | Present/Resize/队列钩子、11on12 设备、窗口过程子类化、帧计时、提示条、卸载 |
 | `ui/InputGuard.{h,cpp}` | 拦引擎自己的输入通路（`MouseDevice::feed`、`HIDControllerGameCoreDesktop::$onKeyDown/$onKeyUp`），F11 放行 |
 | `ui/Theme.{h,cpp}` | TRP 风格配色、微软雅黑 2x 图集（按实际用字构建）、按视口高度缩放（**下限 1.0**，小分辨率不再缩小） |
-| `ui/Menu.{h,cpp}` | 顶部管线图 + 四页签 + 左统计栏 + 右设置栏 + 底部按钮条 |
+| `ui/Menu.{h,cpp}` | 顶部管线图 + 五页签 + 左统计栏 + 右设置栏 + 底部按钮条 |
 | `ui/Widgets.{h,cpp}` | 自绘勾选框、滑条、下拉、管线节点/箭头、帧时间折线、页脚按钮 |
-| `ui/Glyphs.h` | **生成物**：`scripts/collect_glyphs.py` 从 `src/lang/*.json` 抽出的非 ASCII 字集（现 300 个） |
+| `ui/Glyphs.h` | **生成物**：`scripts/collect_glyphs.py` 从 `src/lang/*.json` 抽出的非 ASCII 字集（现 333 个） |
 | `src/lang/*.json` | 面板文案（`ui.*`，`zh_CN` / `en_US` 各 106 个键，占位符一致） |
 | `nr/D3D12Bridge` | 新增只读 `nrPanelStats()`：尺寸、状态、错误码、两张 GPU 中位数 |
 
@@ -78,8 +78,10 @@
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-- 页签只有三个：`神经渲染` / `诊断` / `高级`。原来的 `画面` 页内容（开关、替换模式、
-  增益、Style）已并入 `神经渲染` 页顶部，页面本身删除。
+- 页签四个：`神经渲染` / `超分` / `诊断` / `高级`。原来的 `画面` 页内容（开关、替换模式、
+  增益、Style）已并入 `神经渲染` 页顶部，页面本身删除。`超分` 页是只读的引擎 SR 读数
+  （渲染/输出尺寸、比例、档位、预设字母、Sharpness、flags、尺寸回调统计）+ 一个「立即清除 SR 历史」按钮，
+  见 docs/I §10。
 - 两栏是**固定宽度**（330 / 460 逻辑，gutter 18），窗口宽度由它们推出来，所以滑条不会随
   屏幕变长；行宽另有一道上限（440 逻辑）。子窗口内边距 14 逻辑，**必须传
   `ImGuiChildFlags_AlwaysUseWindowPadding`**（无边框 child 默认没有 padding）；

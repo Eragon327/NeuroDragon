@@ -14,6 +14,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdarg>
+#include <cstring>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -522,12 +523,14 @@ constexpr int kSlotSetU32 = 3;  // unsigned
 constexpr int kSlotSetI32 = 4;  // int (the 310.x runtime reads its flags as int)
 constexpr int kSlotSetF32 = 6;  // float
 constexpr int kSlotGetU32 = 11; // unsigned read-back
+constexpr int kSlotGetF32 = 14; // float read-back (probe scan: Sharpness = 0.35)
 
 using SetPtrFn          = void (*)(void*, char const*, void*);
 using SetU32Fn          = void (*)(void*, char const*, unsigned);
 using SetI32Fn          = void (*)(void*, char const*, int);
 using SetF32Fn          = void (*)(void*, char const*, float);
 using GetU32Fn          = int (*)(void*, char const*, unsigned*);
+using GetF32Fn          = int (*)(void*, char const*, float*);
 using GetResFn          = int (*)(void*, char const*, void**);
 using CreateFeatureFn   = int (*)(void*, int, void*, void**);
 using EvaluateFeatureFn = int (*)(void*, void*, void const*, void*, void*);
@@ -618,10 +621,19 @@ unsigned paramGetU32(void* params, char const* name) {
     return value;
 }
 
+float paramGetF32(void* params, char const* name) {
+    float value = 0.0f;
+    if (params && name) {
+        (void)ngxSlot<GetF32Fn>(params, kSlotGetF32)(params, name, &value);
+    }
+    return value;
+}
+
 void* paramGetResource(void* params, char const* name) {
     // Measured read order for this runtime: 9 and 8 both return the D3D12
-    // resource, 14 is the older guess and stays as a last resort.
-    static constexpr int kSlots[] = {9, 8, 14};
+    // resource. Slot 14 used to be a "last resort" guess; it is the float getter
+    // (docs/I §10), so reading it as a pointer would hand out 0.35 as an address.
+    static constexpr int kSlots[] = {9, 8};
     for (int const index : kSlots) {
         void* value = nullptr;
         if (ngxSlot<GetResFn>(params, index)(params, name, &value) && value) {
@@ -2589,6 +2601,648 @@ void nrStampClearReported() {
         gStampMedianMs[id].store(0.0, std::memory_order_relaxed);
         gStampMedianCount[id].store(0, std::memory_order_relaxed);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Engine SR (DLSS feature 1): a read-only view of the engine's own upscaling.
+//
+// The engine sizes its render targets by calling the callback stored under
+// "DLSSOptimalSettingsCallback" (docs/I §10.3). Wrapping that pointer is the
+// cheapest observation point - and, later, the lever for an arbitrary R_in.
+// The wrapper below forwards the answer unchanged: it records it, and in a TEST
+// build logs it. No value is modified, so the picture cannot change.
+// ---------------------------------------------------------------------------
+namespace {
+
+using SrOptimalFn = int (*)(void*);
+
+std::atomic<SrOptimalFn> gSrOriginal{nullptr};
+std::atomic<unsigned>    gSrCallbackCount{0};
+
+// Forced feature rebuild (Apply with a new model preset). Phase 1 asks the engine
+// for a different quality slot, phase 2 restores the mapped one; while either is
+// active the sizing callback keeps the render size at the current value, so the
+// feature is recreated without moving the resolution (2026-10-24).
+std::atomic<unsigned> gSrRebuildPhase{0};
+std::atomic<unsigned> gSrRebuildTicks{0};
+// Readout hold: after the rebuild phases end the engine can still be using the
+// temporary slot for a few frames while it settles, which made the read-only
+// section flash. Keep reporting the stable slot until the hold expires.
+std::atomic<unsigned> gSrReadoutHold{0};
+// Render size captured when the rebuild is requested; the sizing callback pins
+// it while the feature is recreated, so the image does not resize.
+std::atomic<unsigned> gSrRebuildPinW{0};
+std::atomic<unsigned> gSrRebuildPinH{0};
+std::atomic<unsigned>    gSrDisplayW{0};
+std::atomic<unsigned>    gSrDisplayH{0};
+std::atomic<unsigned>    gSrRenderW{0};
+std::atomic<unsigned>    gSrRenderH{0};
+std::atomic<unsigned>    gSrQuality{0};
+std::atomic<unsigned>    gSrSharpBits{0};
+std::atomic<unsigned>    gSrDynMinW{0};
+std::atomic<unsigned>    gSrDynMinH{0};
+std::atomic<unsigned>    gSrDynMaxW{0};
+std::atomic<unsigned>    gSrDynMaxH{0};
+std::atomic_bool         gSrResetPending{false};
+
+std::atomic<unsigned> gEngineQuality{0};
+std::atomic<unsigned> gEngineFlags{0};
+std::atomic<unsigned> gEnginePreset{0};
+std::atomic<unsigned> gEngineSharpBits{0};
+
+// Engine upscaling configuration (see srDriveFrameContext). Every value is
+// measured from the engine's own objects, never inferred.
+std::atomic<bool>     gSrEngValid{false};
+std::atomic<unsigned> gSrEngCalls{0};
+std::atomic<unsigned> gSrEngRejects{0};
+std::atomic<unsigned> gSrCtxMode{0};
+std::atomic<unsigned> gSrCtxQuality{0};
+std::atomic<unsigned> gSrCtxBools{0};
+std::atomic<unsigned> gSrCtxFactorBits{0};
+std::atomic<unsigned> gSrCtxExtraBits{0};
+std::atomic<unsigned> gSrActiveQ{0};
+std::atomic<unsigned> gSrRequestedQ{0};
+std::atomic<unsigned> gSrActiveFBits{0};
+std::atomic<unsigned> gSrRequestedFBits{0};
+std::atomic<unsigned> gSrEngRenderW{0};
+std::atomic<unsigned> gSrEngRenderH{0};
+std::atomic<unsigned> gSrTailFactorBits{0};
+// The renderer object the engine hands to the per-frame copy (base+0xdfc53c0).
+// Captured on the first call so the per-evaluate request write can target the
+// same object without having to re-enter the rebuild path.
+std::atomic<void*> gSrEngineObject{nullptr};
+
+#if defined(TEST)
+std::atomic<int> gSrLogBudget{200};
+#endif
+
+unsigned floatBits(float value) {
+    unsigned bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+float bitsFloat(unsigned bits) {
+    float value = 0.0f;
+    std::memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
+int srOptimalCallback(void* params) {
+    SrOptimalFn const original = gSrOriginal.load(std::memory_order_relaxed);
+    int const         ret      = original ? original(params) : 0;
+    if (!params) {
+        return ret;
+    }
+    unsigned const displayW = paramGetU32(params, "Width");
+    unsigned const displayH = paramGetU32(params, "Height");
+    unsigned const quality  = paramGetU32(params, "PerfQualityValue");
+    unsigned       renderW  = paramGetU32(params, "OutWidth");
+    unsigned       renderH  = paramGetU32(params, "OutHeight");
+    unsigned const minW     = paramGetU32(params, "DLSS.Get.Dynamic.Min.Render.Width");
+    unsigned const minH     = paramGetU32(params, "DLSS.Get.Dynamic.Min.Render.Height");
+    unsigned const maxW     = paramGetU32(params, "DLSS.Get.Dynamic.Max.Render.Width");
+    unsigned const maxH     = paramGetU32(params, "DLSS.Get.Dynamic.Max.Render.Height");
+    float const    sharp    = paramGetF32(params, "Sharpness");
+
+    // Forced rebuild: while one is in flight the engine is asked for a different
+    // quality slot, so pin the size (and the dynamic range) to the size captured
+    // at request time. Otherwise the temporary slot's range clamps it (q=3 pins
+    // 853, q=5 clamps to 2534; 2026-10-24).
+    if (gSrRebuildPhase.load(std::memory_order_relaxed) != 0) {
+        unsigned const pinW = gSrRebuildPinW.load(std::memory_order_relaxed);
+        unsigned const pinH = gSrRebuildPinH.load(std::memory_order_relaxed);
+        if (pinW != 0 && pinH != 0) {
+            paramSetU32(params, "DLSS.Get.Dynamic.Min.Render.Width", pinW);
+            paramSetU32(params, "DLSS.Get.Dynamic.Min.Render.Height", pinH);
+            paramSetU32(params, "DLSS.Get.Dynamic.Max.Render.Width", pinW);
+            paramSetU32(params, "DLSS.Get.Dynamic.Max.Render.Height", pinH);
+            paramSetU32(params, "OutWidth", pinW);
+            paramSetU32(params, "OutHeight", pinH);
+            renderW = pinW;
+            renderH = pinH;
+#if defined(TEST)
+            nrLog(0, "[sr] rebuild size pinned to %ux%u", pinW, pinH);
+#endif
+        }
+    }
+
+    unsigned const n = gSrCallbackCount.fetch_add(1, std::memory_order_relaxed) + 1;
+    gSrDisplayW.store(displayW, std::memory_order_relaxed);
+    gSrDisplayH.store(displayH, std::memory_order_relaxed);
+    gSrRenderW.store(renderW, std::memory_order_relaxed);
+    gSrRenderH.store(renderH, std::memory_order_relaxed);
+    gSrQuality.store(quality, std::memory_order_relaxed);
+    gSrSharpBits.store(floatBits(sharp), std::memory_order_relaxed);
+    gSrDynMinW.store(minW, std::memory_order_relaxed);
+    gSrDynMinH.store(minH, std::memory_order_relaxed);
+    gSrDynMaxW.store(maxW, std::memory_order_relaxed);
+    gSrDynMaxH.store(maxH, std::memory_order_relaxed);
+
+#if defined(TEST)
+    if (gSrLogBudget.fetch_sub(1, std::memory_order_relaxed) > 0) {
+        // Who calls the engine's sizing function? The backtrace answers it without
+        // hooking an unknown-signature function.
+        void*          frames[6]{};
+        USHORT const   depth   = ::CaptureStackBackTrace(2, 6, frames, nullptr);
+        std::uintptr_t exeBase = reinterpret_cast<std::uintptr_t>(::GetModuleHandleW(nullptr));
+        char           stack[256]{};
+        int            used = 0;
+        for (USHORT i = 0; i < depth && used < 200; ++i) {
+            used += std::snprintf(
+                stack + used,
+                sizeof(stack) - static_cast<std::size_t>(used),
+                " exe+%llx",
+                static_cast<unsigned long long>(
+                    reinterpret_cast<std::uintptr_t>(frames[i]) - exeBase
+                )
+            );
+        }
+        nrLog(0, "[sr] cb stack:%s", stack);
+        nrLog(
+            0,
+            "[sr] cb #%u display=%ux%u q=%u -> render=%ux%u sharp=%.3f dyn[%ux%u..%ux%u] ret=0x%08X",
+            n,
+            displayW,
+            displayH,
+            quality,
+            renderW,
+            renderH,
+            static_cast<double>(sharp),
+            minW,
+            minH,
+            maxW,
+            maxH,
+            static_cast<unsigned>(ret)
+        );
+    }
+#else
+    (void)n;
+#endif
+    return ret;
+}
+
+} // namespace
+
+float srFactorForPercent(int percent) {
+    switch (percent) {
+    case 33:
+        return 0.3333f; // matches the engine's 853x480 at 2560x1440
+    case 50:
+        return 0.5f;
+    case 58:
+        return 0.58f;
+    case 66:
+        return 0.6667f; // matches the engine's 1707x960
+    case 100:
+        return 1.0f;
+    default:
+        return 0.0f;
+    }
+}
+
+int srQualityForPercent(int percent) {
+    switch (percent) {
+    case 33:
+        return 3; // UltraPerformance
+    case 50:
+        return 0; // Performance
+    case 58:
+        return 1; // Balanced
+    case 66:
+        return 2; // Quality
+    case 100:
+        return 5; // DLAA
+    default:
+        return -1;
+    }
+}
+
+// The engine's CreateFeature parameter object is the last place the DLSS model
+// preset can be set. TRP wrote all six per-quality hints the same way; the engine
+// marks the value with 0x80000000, so that bit is preserved. 0 is written too:
+// the object is reused across feature builds, so skipping it would leave a
+// previously chosen preset in place instead of returning to the driver default.
+void srApplyCreateOverrides(void* params, int feature) {
+    if (!params || feature != 1) { // 1 = NVSDK_NGX_Feature_SuperSampling (DLSS)
+        return;
+    }
+    static char const* const keys[] = {
+        "DLSS.Hint.Render.Preset.DLAA",
+        "DLSS.Hint.Render.Preset.Quality",
+        "DLSS.Hint.Render.Preset.Balanced",
+        "DLSS.Hint.Render.Preset.Performance",
+        "DLSS.Hint.Render.Preset.UltraPerformance",
+        "DLSS.Hint.Render.Preset.UltraQuality",
+    };
+    unsigned const preset = static_cast<unsigned>(config::get().sr.preset);
+    unsigned const old    = paramGetU32(params, "DLSS.Hint.Render.Preset.Quality");
+    for (char const* key : keys) {
+        unsigned const current = paramGetU32(params, key);
+        paramSetU32(params, key, (current & 0x80000000u) | preset);
+    }
+#if defined(TEST)
+    nrLog(0, "[sr] create preset=%u (hint 0x%x -> 0x%x)", preset, old, (old & 0x80000000u) | preset);
+#endif
+}
+
+void srInstallCallback(void* params) {
+    if (!params) {
+        return;
+    }
+    void* current = paramGetResource(params, "DLSSOptimalSettingsCallback");
+    if (!current || current == reinterpret_cast<void*>(&srOptimalCallback)) {
+        return;
+    }
+    // The first pointer seen is the runtime's own function (nvngx_dlss.dll). Any
+    // later object carries either the same one or our wrapper, which is skipped
+    // above; the saved copy is the only callable original.
+    SrOptimalFn expected = nullptr;
+    (void)gSrOriginal.compare_exchange_strong(expected, reinterpret_cast<SrOptimalFn>(current));
+    paramSetPtr(params, "DLSSOptimalSettingsCallback", reinterpret_cast<void*>(&srOptimalCallback));
+    NR_DEBUG("[sr] wrapped optimal-settings callback params=%p orig=%p", params, current);
+}
+
+void srReadEngineParams(void* params) {
+    if (!params) {
+        return;
+    }
+    gEngineQuality.store(paramGetU32(params, "PerfQualityValue"), std::memory_order_relaxed);
+    gEngineFlags.store(paramGetU32(params, "DLSS.Feature.Create.Flags"), std::memory_order_relaxed);
+    gEnginePreset.store(paramGetU32(params, "DLSS.Hint.Render.Preset.Quality"), std::memory_order_relaxed);
+    gEngineSharpBits.store(floatBits(paramGetF32(params, "Sharpness")), std::memory_order_relaxed);
+
+    // One-shot history wipe. The engine never clears this key itself, so leaving
+    // it at 1 would reset every frame; writing 0 again on the next frame restores
+    // the engine's own "no reset" state.
+    static bool restoreReset = false;
+    if (gSrResetPending.exchange(false, std::memory_order_relaxed)) {
+        paramSetI32(params, "Reset", 1);
+        restoreReset = true;
+        NR_DEBUG("[sr] manual reset: Reset=1 for one frame");
+    } else if (restoreReset) {
+        restoreReset = false;
+        paramSetI32(params, "Reset", 0);
+    }
+}
+
+void srRequestReset() { gSrResetPending.store(true, std::memory_order_relaxed); }
+
+// ---------------------------------------------------------------------------
+// Engine upscaling configuration: measured, and optionally overridden.
+//
+// The engine copies the frame's upscaling parameters into the renderer once per
+// frame (base+0xdfc53c0). The context layout is:
+//   +0xe806d8 mode (int)   +0xe806dc quality (int)
+//   +0xe806e0 flags (2+2 bytes)   +0xe806e4 factor (float)
+//   +0xe8083c second factor (float)
+// and the renderer mirrors them at +0x3c56424..30, with the render size at
+// +0x3c56434/38. The quality slot is what the engine feeds both into the
+// optimal-settings callback and into its own world render rect, so it is the
+// only lever that can move the world above the 58% Balanced factor (docs/I §11).
+//
+// Writes happen only when config.sr.qualityOverride / factorOverride are set;
+// with both 0 this function is a pure read-out.
+// ---------------------------------------------------------------------------
+namespace {
+
+constexpr std::size_t kCtxMode      = 0xe806d8;
+constexpr std::size_t kCtxQuality   = 0xe806dc;
+constexpr std::size_t kCtxFlags     = 0xe806e0;
+constexpr std::size_t kCtxFactor    = 0xe806e4;
+constexpr std::size_t kCtxExtra     = 0xe8083c;
+
+constexpr std::size_t kEngActiveQ   = 0x3c56418;
+constexpr std::size_t kEngActiveF   = 0x3c56420;
+constexpr std::size_t kEngRequestQ  = 0x3c56428;
+constexpr std::size_t kEngRequestF  = 0x3c56430;
+constexpr std::size_t kEngRenderW   = 0x3c56434;
+constexpr std::size_t kEngRenderH   = 0x3c56438;
+constexpr std::size_t kEngTailF     = 0x3c5644c;
+
+unsigned loadU32(void* base, std::size_t offset) {
+    unsigned value = 0;
+    std::memcpy(&value, static_cast<std::uint8_t*>(base) + offset, sizeof(value));
+    return value;
+}
+
+float loadF32(void* base, std::size_t offset) {
+    float value = 0.0f;
+    std::memcpy(&value, static_cast<std::uint8_t*>(base) + offset, sizeof(value));
+    return value;
+}
+
+void storeU32(void* base, std::size_t offset, unsigned value) {
+    std::memcpy(static_cast<std::uint8_t*>(base) + offset, &value, sizeof(value));
+}
+
+void storeF32(void* base, std::size_t offset, float value) {
+    std::memcpy(static_cast<std::uint8_t*>(base) + offset, &value, sizeof(value));
+}
+
+// The engine uses -1 as the "no explicit override / Automatic" sentinel for
+// these factors, so the check has to accept it: rejecting -1 made the first
+// version skip every call, including the world load (2026-10-23 log).
+bool plausibleFactor(float value) { return value > -2.0f && value < 4.0f; }
+
+// The slot the engine should use for the chosen percentage. Every offered ratio
+// now has its own native DLSS slot (33/50/58/66/100 -> 3/0/1/2/5), so this is a
+// pure mapping: no slot has to be borrowed and no forced rebuild is needed. Both
+// writers (the per-frame context copy and the per-evaluate request) use it.
+unsigned chosenQuality() {
+    int const pct = config::get().sr.scalePercent;
+    if (pct <= 0) {
+        return 0xFFFFFFFFu;
+    }
+    int const mapped = srQualityForPercent(pct);
+    return mapped < 0 ? 0xFFFFFFFFu : static_cast<unsigned>(mapped);
+}
+
+// Quality to write during the current frame: a forced rebuild asks for a
+// different slot in phase 1 and the mapped one in phase 2. The ctx writer is the
+// one that reaches the frame builder; the per-evaluate writer only mirrors it.
+unsigned currentQuality(unsigned wantedQ) {
+    unsigned const phase = gSrRebuildPhase.load(std::memory_order_relaxed);
+    if (phase == 0) {
+        return wantedQ;
+    }
+    return (phase == 1) ? ((wantedQ == 2u) ? 1u : 2u) : wantedQ;
+}
+
+} // namespace
+
+void srDriveFrameContext(void* engine, void* ctx) {
+    if (!engine || !ctx) {
+        return;
+    }
+    unsigned const calls = gSrEngCalls.fetch_add(1, std::memory_order_relaxed) + 1;
+
+    unsigned const ctxMode    = loadU32(ctx, kCtxMode);
+    unsigned const ctxQuality = loadU32(ctx, kCtxQuality);
+    unsigned const ctxFlags   = loadU32(ctx, kCtxFlags);
+    float const    ctxFactor  = loadF32(ctx, kCtxFactor);
+    float const    ctxExtra   = loadF32(ctx, kCtxExtra);
+
+    unsigned const activeQ    = loadU32(engine, kEngActiveQ);
+    unsigned const requestedQ = loadU32(engine, kEngRequestQ);
+    unsigned const renderW    = loadU32(engine, kEngRenderW);
+    unsigned const renderH    = loadU32(engine, kEngRenderH);
+    float const    activeF    = loadF32(engine, kEngActiveF);
+    float const    requestedF = loadF32(engine, kEngRequestF);
+    float const    tailF      = loadF32(engine, kEngTailF);
+
+    // Sanity gate: only the fields this hook writes (quality) and reads for the
+    // decision (active factor) have to look like the layout it was built
+    // against. The rest is published, not trusted: rejecting on them made the
+    // first version silently do nothing (2026-10-23).
+    bool const valid = ctxMode <= 8 && ctxQuality <= 8 && activeQ <= 8 && plausibleFactor(activeF) && renderW <= 16384
+                    && renderH <= 16384;
+
+    gSrEngValid.store(valid, std::memory_order_relaxed);
+    gSrEngineObject.store(engine, std::memory_order_relaxed);
+    if (calls <= 10) {
+        nrLog(
+            0,
+            "[sr] ctx call #%u engine=%p ctx=%p mode=%u q=%u flags=0x%x f=%.3f extra=%.3f | aq=%u rq=%u af=%.3f "
+            "rf=%.3f render=%ux%u tail=%.3f valid=%d",
+            calls,
+            engine,
+            ctx,
+            ctxMode,
+            ctxQuality,
+            ctxFlags,
+            static_cast<double>(ctxFactor),
+            static_cast<double>(ctxExtra),
+            activeQ,
+            requestedQ,
+            static_cast<double>(activeF),
+            static_cast<double>(requestedF),
+            renderW,
+            renderH,
+            static_cast<double>(tailF),
+            valid ? 1 : 0
+        );
+    }
+    if (!valid) {
+        if (gSrEngRejects.fetch_add(1, std::memory_order_relaxed) < 3) {
+            nrLog(
+                0,
+                "[sr] ctx layout rejected (mode=%u q=%u aq=%u rq=%u f=%.3f af=%.3f rf=%.3f tail=%.3f rw=%u rh=%u)",
+                ctxMode,
+                ctxQuality,
+                activeQ,
+                requestedQ,
+                static_cast<double>(ctxFactor),
+                static_cast<double>(activeF),
+                static_cast<double>(requestedF),
+                static_cast<double>(tailF),
+                renderW,
+                renderH
+            );
+        }
+        return;
+    }
+
+
+    // Only touch the quality slot once the engine has already created its DLSS
+    // feature (the callback wrapper is installed by CreateFeature). Writing a
+    // non-default q before that makes the engine skip DLSS entirely - observed
+    // 2026-10-23: config q=5 at startup -> no CreateFeature, no EvaluateFeature,
+    // so NR never ran. After creation the same write is what drives the rebuild.
+    bool const engineHasDlss = gSrOriginal.load(std::memory_order_relaxed) != nullptr;
+
+    unsigned newQuality = ctxQuality;
+    unsigned const wantedQ = chosenQuality();
+    unsigned const phase   = gSrRebuildPhase.load(std::memory_order_relaxed);
+    bool const     holdReadout = phase != 0 || gSrReadoutHold.load(std::memory_order_relaxed) != 0;
+    // A forced rebuild also has to work while "follow the engine" is selected:
+    // there is no mapped slot then, so the engine's own ctx quality is the base.
+    unsigned const baseQ   = (wantedQ != 0xFFFFFFFFu) ? wantedQ : ctxQuality;
+    bool const     canWrite = engineHasDlss && (wantedQ != 0xFFFFFFFFu || phase != 0);
+    if (canWrite) {
+        newQuality = currentQuality(baseQ);
+        // Advance the forced-rebuild state machine here: this hook runs once per
+        // frame and its ctx write is what the shim copies into the renderer; the
+        // per-evaluate writer must not advance it a second time.
+        if (phase != 0) {
+            unsigned const ticks = gSrRebuildTicks.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (phase == 1) {
+                if (ticks >= 6) {
+                    gSrRebuildPhase.store(2, std::memory_order_relaxed);
+                    gSrRebuildTicks.store(0, std::memory_order_relaxed);
+                }
+            } else if (ticks >= 6) {
+                gSrRebuildPhase.store(0, std::memory_order_relaxed);
+            }
+        }
+        if (newQuality != ctxQuality) {
+            storeU32(ctx, kCtxQuality, newQuality);
+        }
+    }
+
+    // The engine really is using the temporary slot for a few frames; report the
+    // stable one so the read-only section does not flash another slot. The size
+    // and the model are unchanged, only the slot used to force the recreate.
+    unsigned const readoutQ = (holdReadout && canWrite) ? baseQ : newQuality;
+    if (gSrReadoutHold.load(std::memory_order_relaxed) != 0) {
+        gSrReadoutHold.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+#if defined(TEST)
+    if (newQuality != ctxQuality) {
+        static std::uint64_t lastLog = 0;
+        auto const          now     = GetTickCount64();
+        if (now - lastLog > 1000) {
+            lastLog = now;
+            nrLog(
+                0,
+                "[sr] ctx write q=%u->%u (engine aq=%u af=%.3f render=%ux%u)",
+                ctxQuality,
+                newQuality,
+                activeQ,
+                static_cast<double>(activeF),
+                renderW,
+                renderH
+            );
+        }
+    }
+    if (calls <= 5 || calls % 600 == 0) {
+        nrLog(
+            0,
+            "[sr] ctx #%u q=%u f=%.3f extra=%.3f flags=0x%x | engine aq=%u rq=%u af=%.3f rf=%.3f render=%ux%u tail=%.3f",
+            calls,
+            newQuality,
+            static_cast<double>(ctxFactor),
+            static_cast<double>(ctxExtra),
+            ctxFlags,
+            activeQ,
+            requestedQ,
+            static_cast<double>(activeF),
+            static_cast<double>(requestedF),
+            renderW,
+            renderH,
+            static_cast<double>(tailF)
+        );
+    }
+#else
+    (void)calls;
+    (void)ctxFlags;
+    (void)ctxExtra;
+#endif
+
+    gSrCtxMode.store(ctxMode, std::memory_order_relaxed);
+    gSrCtxQuality.store(readoutQ, std::memory_order_relaxed);
+    gSrCtxBools.store(ctxFlags, std::memory_order_relaxed);
+    gSrCtxFactorBits.store(floatBits(ctxFactor), std::memory_order_relaxed);
+    gSrCtxExtraBits.store(floatBits(ctxExtra), std::memory_order_relaxed);
+    gSrActiveQ.store(holdReadout ? baseQ : activeQ, std::memory_order_relaxed);
+    gSrRequestedQ.store(holdReadout ? baseQ : requestedQ, std::memory_order_relaxed);
+    gSrActiveFBits.store(floatBits(activeF), std::memory_order_relaxed);
+    gSrRequestedFBits.store(floatBits(requestedF), std::memory_order_relaxed);
+    gSrEngRenderW.store(renderW, std::memory_order_relaxed);
+    gSrEngRenderH.store(renderH, std::memory_order_relaxed);
+    gSrTailFactorBits.store(floatBits(tailF), std::memory_order_relaxed);
+}
+
+void srRequestFeatureRebuild() {
+    // Capture the size the engine is rendering right now; the sizing callback
+    // pins it while the feature is recreated (works for both a mapped slot and
+    // "follow the engine").
+    gSrRebuildPinW.store(gSrEngRenderW.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    gSrRebuildPinH.store(gSrEngRenderH.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    gSrRebuildTicks.store(0, std::memory_order_relaxed);
+    gSrRebuildPhase.store(1, std::memory_order_relaxed);
+    gSrReadoutHold.store(90, std::memory_order_relaxed);
+    NR_DEBUG("[sr] feature rebuild requested");
+}
+
+void srDriveEngineRequest() {
+    void* engine = gSrEngineObject.load(std::memory_order_relaxed);
+    if (!engine) {
+        return;
+    }
+    unsigned const wantedQ = chosenQuality();
+    if (wantedQ == 0xFFFFFFFFu) {
+        return;
+    }
+
+    // Mirror the ctx writer. The shim copies the ctx quality into the renderer
+    // every frame, so the phase machine lives in srDriveFrameContext; writing the
+    // renderer field directly here would be overwritten before the frame builder
+    // reads it (this is why the first rebuild attempt did nothing, 2026-10-24).
+    unsigned const q = currentQuality(wantedQ);
+
+    unsigned const activeQ    = loadU32(engine, kEngActiveQ);
+    unsigned const requestedQ = loadU32(engine, kEngRequestQ);
+    float const    activeF    = loadF32(engine, kEngActiveF);
+    float const    requestedF = loadF32(engine, kEngRequestF);
+    if (activeQ > 8 || requestedQ > 8 || !plausibleFactor(activeF) || !plausibleFactor(requestedF)) {
+        return;
+    }
+
+    bool     changed = false;
+    unsigned newQ    = requestedQ;
+    if (q != requestedQ) {
+        newQ = q;
+        storeU32(engine, kEngRequestQ, newQ);
+        changed = true;
+    }
+
+    if (changed) {
+        static std::uint64_t lastLog = 0;
+        auto const          now     = GetTickCount64();
+        if (now - lastLog > 1000) {
+            lastLog = now;
+            nrLog(
+                0,
+                "[sr] req q=%u->%u (active q=%u f=%.3f)",
+                requestedQ,
+                newQ,
+                activeQ,
+                static_cast<double>(activeF)
+            );
+        }
+    }
+}
+
+SrEngineStats srEngineStats() {
+    SrEngineStats stats;
+    stats.valid      = gSrEngValid.load(std::memory_order_relaxed);
+    stats.calls      = gSrEngCalls.load(std::memory_order_relaxed);
+    stats.ctxMode    = gSrCtxMode.load(std::memory_order_relaxed);
+    stats.ctxQuality = gSrCtxQuality.load(std::memory_order_relaxed);
+    stats.ctxBools   = gSrCtxBools.load(std::memory_order_relaxed);
+    stats.ctxFactor  = bitsFloat(gSrCtxFactorBits.load(std::memory_order_relaxed));
+    stats.ctxExtra   = bitsFloat(gSrCtxExtraBits.load(std::memory_order_relaxed));
+    stats.activeQ    = gSrActiveQ.load(std::memory_order_relaxed);
+    stats.requestedQ = gSrRequestedQ.load(std::memory_order_relaxed);
+    stats.activeF    = bitsFloat(gSrActiveFBits.load(std::memory_order_relaxed));
+    stats.requestedF = bitsFloat(gSrRequestedFBits.load(std::memory_order_relaxed));
+    stats.renderW    = gSrEngRenderW.load(std::memory_order_relaxed);
+    stats.renderH    = gSrEngRenderH.load(std::memory_order_relaxed);
+    stats.tailFactor = bitsFloat(gSrTailFactorBits.load(std::memory_order_relaxed));
+    return stats;
+}
+
+SrStats srPanelStats() {
+    SrStats stats;
+    stats.wrapped       = gSrOriginal.load(std::memory_order_relaxed) != nullptr;
+    stats.callbackCount = gSrCallbackCount.load(std::memory_order_relaxed);
+    stats.cbDisplayW    = gSrDisplayW.load(std::memory_order_relaxed);
+    stats.cbDisplayH    = gSrDisplayH.load(std::memory_order_relaxed);
+    stats.cbRenderW     = gSrRenderW.load(std::memory_order_relaxed);
+    stats.cbRenderH     = gSrRenderH.load(std::memory_order_relaxed);
+    stats.cbQuality     = gSrQuality.load(std::memory_order_relaxed);
+    stats.cbSharpness   = bitsFloat(gSrSharpBits.load(std::memory_order_relaxed));
+    stats.dynMinW       = gSrDynMinW.load(std::memory_order_relaxed);
+    stats.dynMinH       = gSrDynMinH.load(std::memory_order_relaxed);
+    stats.dynMaxW       = gSrDynMaxW.load(std::memory_order_relaxed);
+    stats.dynMaxH       = gSrDynMaxH.load(std::memory_order_relaxed);
+    stats.quality       = gEngineQuality.load(std::memory_order_relaxed);
+    stats.flags         = gEngineFlags.load(std::memory_order_relaxed);
+    stats.preset        = gEnginePreset.load(std::memory_order_relaxed);
+    stats.sharpness     = bitsFloat(gEngineSharpBits.load(std::memory_order_relaxed));
+    return stats;
 }
 
 PanelStats nrPanelStats() {

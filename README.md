@@ -30,10 +30,11 @@
 |---|---|---|
 | A. 白盒取证：RenderDragon 通道图与接入点 | ✅ 完成 | [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) |
 | B. Windows 侧符号/钩子落点确认 | ✅ 无 PDB 定位链 + RT 路径定位完成 | [docs/B-windows-probe.md](docs/B-windows-probe.md) |
-| C. 工程骨架（xmake + ImGui + 探针） | 🟡 xmake 工程 + 探针/钩子就位；**ImGui 面板设计已定稿**（[docs/F-ui-plan.md](docs/F-ui-plan.md)），实现待标准化后开始 | `src/neurodragon/probe/RenderProbe.cpp` |
+| C. 工程骨架（xmake + ImGui + 探针） | ✅ xmake 工程 + 探针/钩子 + **面板已实现并部署**（4 页签、`End` 开关，见 [docs/F](docs/F-ui-plan.md)） | `src/neurodragon/probe/`、`src/neurodragon/ui/` |
 | D. NR 接入（NGX feature 0x12） | ✅ **跑通并上屏**：core 建 feature + 逐帧 evaluate（**~3.5 ms**，1485×835）+ HDR→LDR 编码 + 增益合成，`Replace=5` 时结果进引擎 DLSS 放大到 2560×1440。2026-10-22 修掉“编码纹理被描述符堆竞争冻结”的根因（§6.16） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
-| E. 超分（DLSS SR/DLAA） | ✅ **引擎自带**（RT 下已在跑，复用即可） | — |
-| F. UI 分层 + DLSS-G | 待开始 | — |
+| E. 超分（DLSS SR/DLAA） | ✅ 引擎自带 + **内部分辨率 33/50/58/66/100、DLSS 模型预设、应用即重建**已实现；78% 与锐化未做（原因见 J §4/§5） | [docs/J-sr-implementation.md](docs/J-sr-implementation.md) |
+| F. UI 分层 + DLSS-G | —（不排期）Bedrock 没有帧生成；UI 分层已由面板的 Present 方案覆盖 | — |
+| 下一步优先级 | 见 TRP 对照与代价评估 | [docs/K-trp-feature-gap.md](docs/K-trp-feature-gap.md) |
 
 ## 驱动要求
 
@@ -119,10 +120,18 @@ xmake f --test=n && xmake build -y      # 发布构建（默认）
 
 ## 文档
 
-| 文档 | 内容 |
-|---|---|
-| [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) | RenderDragon 通道图、taau 契约、接入点方案、W1 结果 |
-| [docs/B-windows-probe.md](docs/B-windows-probe.md) | 无 PDB 的 taau 定位链（字符串→xref→`.pdata`）与运行时探针 |
-| [docs/C-levilamina-api-notes.md](docs/C-levilamina-api-notes.md) | LL API 速查（hook / signature / 线程 / 日志 / config），只记本项目用到的 |
-| [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) | **RT 路线 + 复用引擎 DLSS 的 NR 接入规划**（事实、参数表、地址、坑、A~D 步骤） |
-| [docs/F-ui-plan.md](docs/F-ui-plan.md) | **UI 与设置系统设计稿**（ImGui→Output、输入吞噬、设置模型、M1–M4 里程碑） |
+**先看 [docs/README.md](docs/README.md)**：每篇的状态（权威 / 参考 / 历史）与「结论冲突时听谁的」。
+
+| 文档 | 状态 | 内容 |
+|---|---|---|
+| [docs/README.md](docs/README.md) | 索引 | 文档状态表、权威顺序、TRP 源码读法 |
+| [docs/A-renderdragon-passmap.md](docs/A-renderdragon-passmap.md) | 参考 | RenderDragon 通道图、taau 契约、接入点方案、W1 结果 |
+| [docs/B-windows-probe.md](docs/B-windows-probe.md) | 参考 | 无 PDB 的 taau 定位链（字符串→xref→`.pdata`）与运行时探针 |
+| [docs/C-levilamina-api-notes.md](docs/C-levilamina-api-notes.md) | 参考 | LL API 速查（hook / signature / 线程 / 日志 / config），只记本项目用到的 |
+| [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) | **NR 事实权威** | RT 路线与 NR 接入的实测：参数表、地址、坑、A~D 步骤 |
+| [docs/F-ui-plan.md](docs/F-ui-plan.md) | 历史（已实现） | 面板设计：为什么用 Present 钩子、输入吞噬、设置模型 |
+| [docs/G-nr-customization-plan.md](docs/G-nr-customization-plan.md) | 历史（被 K 取代） | 按 TRP 0.4.5 面板逐项判定「能不能做」的推理 |
+| [docs/H-sr-plan.md](docs/H-sr-plan.md) | 历史（被 I/J 取代） | SR 可行性：三种「能」、预设四层 |
+| [docs/I-sr-final-plan.md](docs/I-sr-final-plan.md) | 部分有效 | 控制层 L1–L6、R_in/R_sr/R_out、VV 迁移 TAAU（未开始部分仍权威） |
+| [docs/J-sr-implementation.md](docs/J-sr-implementation.md) | **SR 权威** | 内部分辨率、模型预设、重建的实现、证据与坑 |
+| [docs/K-trp-feature-gap.md](docs/K-trp-feature-gap.md) | **路线权威** | TRP 0.5.3 的 SR/NR 全量对照、可做项、代价与排期 |

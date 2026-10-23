@@ -42,14 +42,6 @@ bool loadOrCreate() {
     return ll::config::saveConfig(gConfig, path);
 }
 
-void reload() {
-    try {
-        ll::config::loadConfig(gConfig, configPath());
-    } catch (...) {
-        // Keep the last good values.
-    }
-}
-
 bool save() {
     try {
         if (!ll::config::saveConfig(gConfig, configPath())) {

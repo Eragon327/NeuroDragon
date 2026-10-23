@@ -1,5 +1,9 @@
 # D. RT 路线 + 复用引擎 DLSS 的 NR 接入规划
 
+> **2026-10-24 状态**：本文的**事实**（引擎 NGX 参数表、代码地址、实测日志、踩过的坑）仍是 NR 的权威来源；
+> §6 里少数结论已被后续推翻或补全。动手前先看 [`docs/J`](J-sr-implementation.md)（SR 的实现）
+> 与 [`docs/K`](K-trp-feature-gap.md)（TRP 全量对照、优先级与代价）。
+
 > 目标客户端 `1.26.5101.0`
 > （`E:\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe`——测量时在
 > `D:\Program Files\LeviLauncher\…`，同日搬盘，文件不变；
