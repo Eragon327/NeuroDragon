@@ -3,7 +3,8 @@
         "info": {
             "enabled": "NR enabled (config/config.json: nr.enabled = true)",
             "disabled": "NR disabled: nr.enabled is false in config/config.json",
-            "modelCopied": "NR model copied next to the game executable: {0} ({1})"
+            "modelCopied": "NR model copied next to the game executable: {0} ({1})",
+            "unloaded": "NR unloaded: feature, textures and model released (enabling it again rebuilds them)"
         },
         "warn": {
             "rebuildFailed": "Resolution changed: NR rebuild failed ({0:#x}: {1}); {2}x{3} is not applied",
@@ -77,6 +78,7 @@
             "renderSize": "Render",
             "outputSize": "Output",
             "status": "Status",
+            "disabled": "Off",
             "replace": "Replace",
             "nrGpu": "NR GPU",
             "dlssGpu": "DLSS GPU",

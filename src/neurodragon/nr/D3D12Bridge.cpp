@@ -1098,6 +1098,18 @@ struct NrState {
 
 NrState gNr;
 
+// What the engine's own DLSS is doing this frame, independent of NR. The panel's
+// monitor reads it, so switching NR off does not blank out the sizes.
+struct EngineFrame {
+    unsigned renderWidth  = 0;
+    unsigned renderHeight = 0;
+    unsigned outputWidth  = 0;
+    unsigned outputHeight = 0;
+    void*    output       = nullptr;
+};
+
+EngineFrame gEngineFrame;
+
 // One resolution change is one rebuild. The cap bounds a session that flips sizes
 // constantly (a dynamic-resolution setting): beyond it NR stays on the size it has
 // instead of building features forever.
@@ -1886,6 +1898,23 @@ void nrShutdown() {
     NR_DEBUG("[nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）");
 }
 
+void nrPublishEngineFrame(unsigned renderWidth, unsigned renderHeight, void* output) {
+    if (renderWidth && renderHeight) {
+        gEngineFrame.renderWidth  = renderWidth;
+        gEngineFrame.renderHeight = renderHeight;
+    }
+    if (output && output != gEngineFrame.output) {
+        // The engine's upscale target is stable per frame-graph generation, so the
+        // description is only taken when the pointer changes (a resize).
+        ResourceInfo const info = describe(output);
+        if (info.width && info.height) {
+            gEngineFrame.output       = output;
+            gEngineFrame.outputWidth  = static_cast<unsigned>(info.width);
+            gEngineFrame.outputHeight = static_cast<unsigned>(info.height);
+        }
+    }
+}
+
 void nrUnload() {
     if (!gNr.created && !gNr.attempted) {
         return;
@@ -1928,6 +1957,8 @@ void nrUnload() {
     gEncodedIsSrv                = false;
     gDecodedIsSrv                = false;
     NR_DEBUG("[nr] 已卸载：feature 与纹理退役，模型随最后一个 feature 离开驱动");
+    // The user asked for it explicitly ("保存为默认" with NR off): say that it happened.
+    neurodragon::log::write(0, neurodragon::log::text("nr.info.unloaded"));
 }
 
 namespace {
@@ -2441,6 +2472,19 @@ bool nrRecord(
     return evaluateRet == 1;
 }
 
+void nrEnsureStamps(void* commandList) {
+    if (gStamps.active || !commandList) {
+        return;
+    }
+    auto*         cmd    = static_cast<ID3D12GraphicsCommandList*>(commandList);
+    ID3D12Device* device = nullptr;
+    if (FAILED(cmd->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device))) || !device) {
+        return;
+    }
+    ensureStamps(device);
+    device->Release();
+}
+
 void nrStampBegin(void* commandList, std::uint64_t frame, int id) {
     if (!gStamps.active || !commandList || id < 0 || id >= kStampKinds) {
         return;
@@ -2553,10 +2597,13 @@ PanelStats nrPanelStats() {
     stats.stampsActive   = gStamps.active;
     stats.evalCount      = gNr.evalCount;
     stats.lastError      = gNr.lastError;
-    stats.renderWidth    = gNr.width;
-    stats.renderHeight   = gNr.height;
-    stats.outputWidth    = gNr.engineOutputWidth;
-    stats.outputHeight   = gNr.engineOutputHeight;
+    // Sizes come from the engine's own frame (published every evaluation), so the
+    // monitor keeps showing them with NR off or unloaded; the feature's numbers are
+    // only the fallback for the frames before the first publication.
+    stats.renderWidth    = gEngineFrame.renderWidth ? gEngineFrame.renderWidth : gNr.width;
+    stats.renderHeight   = gEngineFrame.renderHeight ? gEngineFrame.renderHeight : gNr.height;
+    stats.outputWidth    = gEngineFrame.outputWidth ? gEngineFrame.outputWidth : gNr.engineOutputWidth;
+    stats.outputHeight   = gEngineFrame.outputHeight ? gEngineFrame.outputHeight : gNr.engineOutputHeight;
 
     stats.nrSamples     = gStampMedianCount[0].load(std::memory_order_relaxed);
     stats.engineSamples = gStampMedianCount[1].load(std::memory_order_relaxed);

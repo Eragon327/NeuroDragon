@@ -601,6 +601,9 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         out    = probe.resAny("Output");
         width  = probe.u32("Width");
         height = probe.u32("Height");
+        // The panel's monitor must not depend on NR being alive: publish the engine's
+        // own render/output sizes every frame, before any decision about NR.
+        nr::nrPublishEngineFrame(width, height, out);
 #ifdef TEST
         watchResource("Color", color);
         watchResource("Depth", depth);
@@ -643,6 +646,9 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // Needed both to rebuild (fence before releasing the old feature) and to unload,
     // so it is refreshed every frame whether NR is enabled or not.
     nr::nrSetGameQueue(ui::overlayGameQueue());
+    // Timestamps are engine infrastructure, not NR's: create them on the first
+    // evaluation so the engine's own DLSS time is measurable with NR off.
+    nr::nrEnsureStamps(cmdList);
     if (nr::nrTakeUnloadRequest()) {
         // Only "Save as default" with NR off asks for this (Menu::applyDraft(true)):
         // the feature, its textures and the 264 MB model are released. "Apply" leaves
@@ -862,7 +868,10 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         }
     }
 
-    bool const measureBaseline = inWindow || replaceMode;
+    // The engine's DLSS runs whether NR does or not, and the panel shows its cost, so
+    // measure it whenever a number can be seen: an NR window, Replace mode, or the
+    // panel being open (the only place the numbers are displayed).
+    bool const measureBaseline = inWindow || replaceMode || ui::Overlay::getInstance().isVisible();
     if (measureBaseline) {
         nr::nrStampBegin(cmdList, n, 1);
     }
@@ -886,9 +895,9 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         nr::nrStampEnd(cmdList, n, 1);
     }
 
-    if (gNrEnabled) {
-        nr::nrStampTick(n);
-    }
+    // Harvests whatever was recorded (the ring is a no-op while inactive); not tied
+    // to NR being enabled, because the engine's own samples still have to be read.
+    nr::nrStampTick(n);
 
     if (n <= 3 || n % 600 == 0) {
         ND_DEBUG(

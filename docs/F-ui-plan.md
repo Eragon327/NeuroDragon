@@ -139,6 +139,10 @@
 - 缩放与软件光标：`io.MouseDrawCursor` 的箭头是**按当前字号**画的，`FontGlobalScale = s * 0.45`
   会把它一起缩小 —— 720p 下旧的 0.7 倍只剩 ~10 px，鼠标几乎看不见（2026-10-23 用户反馈）。
   现在 `scale` 下限 1.0（小分辨率不缩小），并把 `style.MouseCursorScale` 抬到 1.3。
+- 监控不能寄生在 NR 上：引擎的渲染/输出尺寸由 probe 每个求值帧发布（`nrPublishEngineFrame`，
+  `Output` 只在资源指针变化时 `describe`），GPU 时间戳对象在第一次求值时创建（`nrEnsureStamps`），
+  否则 NR 一关面板就只剩帧率、尺寸全 0（2026-10-23 截图）。
+  这一层现在是**最小改动**，正式拆分计划见 §8 待办。
 - GPU 计时与面板：`nrStampReset()` 只清原始样本，**不要**在里面清已发布的中位数 ——
   测量窗口每 60 帧结束一次就会调它，清了面板就永远读「无样本」。要清已发布值请用
   `nrStampClearReported()`（面板按钮）。中位数每 30 帧发布一次，`Replace != 0` 时每帧打点。
@@ -147,9 +151,50 @@
 
 ## 8. 待办
 
+- **监控与 NR 拆分（只规划、未实施）**：把「帧统计 + 引擎尺寸/输出 + GPU 时间戳环 + 面板快照」
+  从 `nr/D3D12Bridge` 抽成独立的 `monitor` 模块，NR 只负责 feature 生命周期并向它上报自己的
+  计时；计划见 **§9**。
 - 背景模糊（从后台缓冲降采样 + blur 再叠面板，+0.3~0.5 ms）。
 - 预设：命名保存/加载（现在只有「保存为默认」）。
 - 诊断页的「手动 dump 一次」按钮（需要桥里加一个触发入口）。
 - 把 `Replace=6` 真正接到合成上（`compositeGain` 的条件），然后更新文案。
 - 面板热键目前只认单键（不接受组合键）；若要 `Ctrl+...` 之类的组合，需要把
   `Overlay` 的热键判定改成和 `Mangrove::input::KeyBind` 一样按「组合」处理。
+
+## 9. 监控与 NR 的拆分计划（2026-10-23 规划，**未实施**）
+
+现状：`nr/D3D12Bridge.cpp`（~2600 行）同时装着五件事——NR feature 生命周期、HDR↔LDR 编码/合成、
+GPU 时间戳环、引擎侧帧事实（`gEngineFrame`）、面板快照（`PanelStats`）。`ui/Menu` 通过
+`nrPanelStats()` 读面板数据，所以「NR 卸载」和「监控可用」在 API 上是纠缠的。本轮只做了最小解耦
+（`nrPublishEngineFrame` / `nrEnsureStamps` 让数据在 NR 关着时也有），名字仍挂在 `nr::` 下。
+
+目标：监控的生命周期属于模组，NR 只是它汇报数据的一个子系统。
+
+### 阶段 1：抽数据（低风险，约 1–2 h）
+
+- 新增 `src/neurodragon/monitor/FrameMonitor.{h,cpp}`：
+  - `publishEngineFrame(w, h, output)` —— 从 `D3D12Bridge` 原样搬（`describe` 的指针缓存一起走）；
+  - `struct Snapshot { renderW/H, outputW/H, stampsActive, nrMs/engineMs, samples, featureCreated, enabled }`；
+  - `snapshot()` 与 `setNrState(created, w, h, enabled)`。
+- `D3D12Bridge` 只在创建/卸载/重建时调 `monitor::setNrState(...)`；
+- `Menu` 改读 `monitor::snapshot()`，`PanelStats` 暂时保留作过渡。
+
+### 阶段 2：抽时间戳（中风险，约 1 h）
+
+- `StampRing` + `ensureStamps` + `nrStamp{Begin,End,Tick,Report,Reset,ClearReported}` 整体搬进
+  `monitor`（改名 `stampBegin(0=NR, 1=engine)`）：它是**引擎级**基础设施，不属于 NR。
+- NR 的计时仍由 probe 在 evaluate 前后用 `monitor::stampBegin/End(0)` 打点，只是换命名空间；
+- `nrEnsureStamps` 删除（probe 改调 `monitor::ensureStamps`）。
+
+### 阶段 3：面板只读快照（低风险，约 0.5 h）
+
+- 删除 `PanelStats` / `nrPanelStats()`；`ui/Menu.cpp` 不再 include `nr/D3D12Bridge.h`；
+- `ui` 只剩 `monitor`（外加 `Overlay` 的帧统计）依赖。
+
+### 不做的事
+
+- 不动 NR 的 feature 寿命/重建/卸载逻辑（刚稳定，且与监控无关）；
+- 不把 probe 的「每帧编排」一起拆（风险高、收益低）；以后统计项再变多，才考虑
+  `probe/FrameTelemetry.cpp`。
+
+判据：每个阶段做完都能单独构建，并用面板对照一次（NR 开/关 × 1280×720/2560×1440），不需要一次全做完。

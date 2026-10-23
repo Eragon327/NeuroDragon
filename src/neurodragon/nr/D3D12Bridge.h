@@ -149,6 +149,15 @@ void nrNotifyLevelLoaded();
 // not changed (two compares), so the probe can call it every in-world frame.
 bool nrEnsureRenderSize(void* commandList, void* color, unsigned width, unsigned height);
 
+// Engine-side frame facts for the panel, published from the evaluation hook before
+// any NR decision. Keeps the monitor alive when NR is switched off or unloaded - the
+// feature must not be the only source of "what size is this frame".
+void nrPublishEngineFrame(unsigned renderWidth, unsigned renderHeight, void* output);
+
+// Creates the GPU timestamp objects if they do not exist yet. Called from the
+// evaluation hook, so the engine's own DLSS timing also works without NR.
+void nrEnsureStamps(void* commandList);
+
 // The game's D3D12 direct queue, captured by the overlay's ExecuteCommandLists
 // hook. Only used to wait for the GPU before releasing retired objects; when it is
 // null those objects are kept instead (a leak is cheaper than a driver crash).

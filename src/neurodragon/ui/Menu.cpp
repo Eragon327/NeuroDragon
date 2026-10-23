@@ -305,7 +305,9 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
     }
 
     bool const nrActive   = live.enabled && live.replace == 5;
-    bool const dlssActive = stats.featureCreated;
+    // The upscaler is part of the engine and keeps running with NR off, so its node
+    // lights up whenever its cost is actually being measured.
+    bool const dlssActive = stats.stampsActive || stats.hasEngine;
 
     std::string const titles[4] = {
         "ui.pipeline.world"_tr(),
@@ -404,18 +406,22 @@ void drawStatsColumn(Layout const& layout, nr::PanelStats const& stats) {
     std::snprintf(buffer, sizeof(buffer), "%u x %u", stats.outputWidth, stats.outputHeight);
     widgets::statRow("ui.stats.outputSize"_tr().c_str(), buffer);
 
-    widgets::statRow(
-        "ui.stats.status"_tr().c_str(),
-        (stats.featureCreated ? "ui.stats.created"_tr() : "ui.stats.notCreated"_tr()).c_str(),
-        stats.featureCreated ? kGreen : kRed
-    );
+    // "Off" is a deliberate state, not "not ready yet": with the feature unloaded the
+    // sizes above still come from the engine, so only the NR-specific rows change.
+    std::string const statusText = !live.enabled ? "ui.stats.disabled"_tr()
+                                  : stats.featureCreated ? "ui.stats.created"_tr()
+                                                         : "ui.stats.notCreated"_tr();
+    ImU32 const statusColor = !live.enabled ? kTextDim : (stats.featureCreated ? kGreen : kRed);
+    widgets::statRow("ui.stats.status"_tr().c_str(), statusText.c_str(), statusColor);
     widgets::statRow("ui.stats.replace"_tr().c_str(), replaceName(live.replace).c_str());
 
     if (!stats.stampsActive) {
         widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
         widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
     } else {
-        if (stats.hasNr) {
+        if (!live.enabled) {
+            widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.stats.disabled"_tr().c_str(), kTextDim);
+        } else if (stats.hasNr) {
             std::snprintf(buffer, sizeof(buffer), "%.2f ms", stats.nrMs);
             widgets::statRow("ui.stats.nrGpu"_tr().c_str(), buffer, kAccent);
         } else {

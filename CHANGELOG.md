@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed（2026-10-23：卸载 NR 会写日志；面板在 NR 关闭/卸载后仍有基础监控）
+
+- 「保存为默认」且 NR 关闭时，卸载会写一行 info：`NR 已卸载：feature、纹理与模型都已释放（重新启用会重建）`。
+- 面板监控不再依赖 NR feature：引擎的渲染/输出尺寸由 probe 每个求值帧发布（`nrPublishEngineFrame`，
+  `Output` 只在资源指针变化时 `describe`）；GPU 时间戳对象在第一次求值时创建（`nrEnsureStamps`，
+  不随 NR 创建/卸载）；引擎 DLSS 的计时在「面板可见 / 测量窗口 / Replace」时记录。所以 NR 关闭或卸载后，
+  渲染尺寸、输出尺寸、DLSS GPU、光栅帧率/帧时间都还在，只有 NR 专属的两项显示「已关闭」。
+- 状态行新增「已关闭」（`ui.stats.disabled`），不再把「关闭」显示成红色「未就绪」；管线图里
+  「引擎 DLSS」节点在计时可用时点亮（它属于引擎，NR 关着也在跑）。
+
 ### Added（2026-10-23：关掉「启用神经渲染」= 卸载 NR）
 
 - `nr.enabled = false` 以前只跳过求值，feature 与 264 MB 模型继续常驻；现在 probe 每帧检查配置，

@@ -3,7 +3,8 @@
         "info": {
             "enabled": "NR 已启用（config/config.json：nr.enabled = true）",
             "disabled": "NR 未启用：config/config.json 里 nr.enabled = false",
-            "modelCopied": "NR 模型已复制到游戏目录：{0}（{1}）"
+            "modelCopied": "NR 模型已复制到游戏目录：{0}（{1}）",
+            "unloaded": "NR 已卸载：feature、纹理与模型都已释放（重新启用会重建）"
         },
         "warn": {
             "rebuildFailed": "分辨率变化：NR 重建失败（{0:#x}：{1}），{2}x{3} 暂不生效",
@@ -77,6 +78,7 @@
             "renderSize": "渲染尺寸",
             "outputSize": "输出尺寸",
             "status": "状态",
+            "disabled": "已关闭",
             "replace": "替换模式",
             "nrGpu": "NR GPU",
             "dlssGpu": "DLSS GPU",
