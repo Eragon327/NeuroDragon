@@ -544,7 +544,7 @@ bool initializeGraphics(IDXGISwapChain* swapChain) {
         gOriginalWndProc =
             reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gWindow, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(windowProc)));
         gImGuiReady.store(true, std::memory_order_release);
-        logger().info("overlay: ImGui context created on window {}", static_cast<void*>(gWindow));
+        logger().debug("overlay: ImGui context created on window {}", static_cast<void*>(gWindow));
     }
 
     if (!ImGui_ImplDX11_Init(gDevice, gDeviceContext)) {
@@ -974,7 +974,7 @@ bool Overlay::install() {
     if (!guard.keyUpHookInstalled) logger().warn("overlay: key-up guard failed");
 
     gInstalled.store(true, std::memory_order_release);
-    logger().info("overlay: ready (VK {:#x} opens the panel)", gHotkey.load(std::memory_order_relaxed));
+    logger().debug("overlay: ready (VK {:#x} opens the panel)", gHotkey.load(std::memory_order_relaxed));
     return true;
 }
 
@@ -1033,7 +1033,7 @@ void Overlay::uninstall() {
     gGameMouseButtonsDown.fill(false);
 
     gInstalled.store(false, std::memory_order_release);
-    if (wasInstalled) logger().info("overlay: uninstalled");
+    if (wasInstalled) logger().debug("overlay: uninstalled");
 }
 
 bool Overlay::isVisible() const { return gVisible.load(std::memory_order_acquire); }
