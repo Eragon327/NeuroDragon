@@ -51,7 +51,9 @@ struct Nr {
 
     // Split comparison (batch 1): 0 = off, 1 = the left part of the picture keeps
     // the engine's original colour while the right part is composited. Purely a
-    // diagnostic - it is the only way to judge what NR did to a frame.
+    // diagnostic - it is the only way to judge what NR did to a frame. Session-only:
+    // loadOrCreate() clears it, so a forgotten seam never survives a restart (TRP's
+    // Compare is session-only for the same reason).
     int   compare         = 0;
     float compareSplit    = 0.5f; // 0..1 of the width that stays original
 
@@ -111,12 +113,6 @@ struct Sr {
     // RCAS delta by 0..4x (see sr/SrSharpening.h), not only the lobe: the first
     // version scaled the lobe like TRP and measured 0.38/255 mean change.
     float sharpness = 0.672f;
-
-    // Split compare: left of the line keeps the untouched frame, right is
-    // sharpened, so one frame shows both sides. Diagnostic only (it is not a
-    // normal play mode); the panel can move the line.
-    bool  compare      = false;
-    float compareSplit = 0.5f;
 };
 
 struct Config;

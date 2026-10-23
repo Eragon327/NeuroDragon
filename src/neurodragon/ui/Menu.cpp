@@ -831,23 +831,10 @@ void drawTabSr() {
         if (widgets::slider("ui.sr.sharpStrength"_tr().c_str(), &gDraftSr.sharpness, 0.0f, 1.0f, "%.3f")) {
             markDirty();
         }
-        if (widgets::toggle("ui.sr.compareEnable"_tr().c_str(), &gDraftSr.compare)) {
-            markDirty();
-        }
-        if (!gDraftSr.compare) {
-            ImGui::BeginDisabled();
-        }
-        if (widgets::slider("ui.sr.compareSplit"_tr().c_str(), &gDraftSr.compareSplit, 0.02f, 0.98f, "%.2f")) {
-            markDirty();
-        }
-        if (!gDraftSr.compare) {
-            ImGui::EndDisabled();
-        }
         if (!gDraftSr.sharpening) {
             ImGui::EndDisabled();
         }
         widgets::hint("ui.sr.sharpHint"_tr().c_str());
-        widgets::hint("ui.sr.compareHint"_tr().c_str());
 
         // Read-back (docs/L §0.7): what the render thread actually recorded, not
         // what the draft says. "Applied" is dim until a frame has gone through.

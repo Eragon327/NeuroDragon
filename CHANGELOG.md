@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed（2026-10-24：分屏对比只留一个，且不再跨会话保留）
+
+- 删掉「超分 → 锐化」里的**分屏对比**（`sr.compare` / `sr.compareSplit`、RCAS shader 的 `Split` 分支、
+  面板开关与「分割位置」滑杆、3 个 i18n 键）：分屏只保留「神经渲染」页判断 NR 的那一个。理由：TRP
+  也只有一个 Compare（放在 NR resolve、会话内不保存）；两个都开会出现两条缝、四段画面，而且两个页面
+  上「左半 = 原图」的含义并不相同。锐化改为**整帧开关**判断效果（实测 0.672 时 30% 像素变化 >2/255，
+  整帧开关即可辨认）。
+- `nr.compare` 改为**会话内**：`loadOrCreate()` 加载后清零（分割位置照旧保存），与 TRP 的 Compare 一致
+  ——否则忘关分屏会把一条暗缝带到下一次启动，而屏幕上没有任何东西解释它。
+- 旧 `config.json` 里残留的 `sr.compare*` 键在加载时被忽略（字段已删，没有迁移）。
+
 ### Changed（2026-10-24：默认替换模式改为 6（TRP Ratio），移除「只求值」入口）
 
 - `nr.replace` 默认值改为 **6（TRP Ratio）**：高光取自原图、按原图亮度重基准；面板下拉第一项即它。

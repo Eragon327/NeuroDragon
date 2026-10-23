@@ -19,6 +19,12 @@ std::filesystem::path configPath() {
     return dir / "config.json";
 }
 
+// Diagnostic switches are session-only. A split seam is saved like any other key
+// (the whole struct is reflected), but a forgotten one would then be baked into every
+// frame of the next session with nothing on screen explaining it - so it is cleared
+// after load, the way TRP keeps its Compare out of its config. The position stays.
+void clearSessionOnly() { gConfig.nr.compare = 0; }
+
 } // namespace
 
 Config& get() { return gConfig; }
@@ -33,14 +39,17 @@ bool loadOrCreate() {
     try {
         if (!ll::config::loadConfig(gConfig, path)) {
             utils::logger().warn("config.json is incomplete, saving defaults");
+            clearSessionOnly();
             return ll::config::saveConfig(gConfig, path);
         }
+        clearSessionOnly();
         return true;
     } catch (std::exception const& e) {
         utils::logger().error("config.json is malformed ({}), rewriting defaults", e.what());
     } catch (...) {
         utils::logger().error("config.json is malformed, rewriting defaults");
     }
+    clearSessionOnly();
     return ll::config::saveConfig(gConfig, path);
 }
 

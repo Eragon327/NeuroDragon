@@ -62,11 +62,9 @@ cbuffer Params : register(b0)
     float Sharpness;
     uint  Width;
     uint  Height;
-    // 0 = off; otherwise the fraction of the width that stays unsharpened (left
-    // side), with a 2px black divider on the line. A split on one frame makes the
-    // difference visible on any screen size, which the plain full-frame view does
-    // not (measured: mean change 0.38/255 at the old strength).
-    float Split;
+    // The root signature passes four 32-bit constants (strength, width, height,
+    // pad) because a cbuffer block is 16 bytes; this slot is never read.
+    uint  Padding;
 };
 
 float3 EncodeReinhard(float3 c)
@@ -100,26 +98,6 @@ void main(uint3 tid : SV_DispatchThreadID)
     int2 hi = int2(int(Width) - 1, int(Height) - 1);
 
     float4 centerRaw = Source.Load(int3(p, 0));
-
-    // Split compare: left of the line is the untouched frame, right is sharpened,
-    // and the line itself is two black pixels. Diagnostic only; the panel exposes
-    // it because a side-by-side on one frame is the only way to judge a subtle
-    // sharpening on a small or remote screen.
-    if (Split > 0.0)
-    {
-        float splitX = Split * (float)Width;
-        float dx     = (float)tid.x - splitX;
-        if (dx < 0.0)
-        {
-            Dest[tid.xy] = float4(centerRaw.rgb, centerRaw.a);
-            return;
-        }
-        if (dx < 2.0)
-        {
-            Dest[tid.xy] = float4(0.0, 0.0, 0.0, centerRaw.a);
-            return;
-        }
-    }
 
     float3 e = EncodeReinhard(centerRaw.rgb);
 
@@ -525,8 +503,7 @@ void recordPass(
     ID3D12Resource*            output,
     unsigned                   width,
     unsigned                   height,
-    float                      strength,
-    float                      split
+    float                      strength
 ) {
     // 1. Copy the finished DLSS frame into our own texture. The engine output goes
     //    ALL_SHADER_RESOURCE -> COPY_SOURCE -> (later) COPY_DEST -> ALL_SHADER_RESOURCE:
@@ -548,7 +525,7 @@ void recordPass(
     cmd->SetPipelineState(g.pso);
     D3D12_GPU_DESCRIPTOR_HANDLE table = g.heap->GetGPUDescriptorHandleForHeapStart();
     cmd->SetComputeRootDescriptorTable(0, table);
-    std::uint32_t const constants[4] = {floatBits(strength), width, height, floatBits(split)};
+    std::uint32_t const constants[4] = {floatBits(strength), width, height, 0};
     cmd->SetComputeRoot32BitConstants(1, 4, constants, 0);
     cmd->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, 1);
 
@@ -615,7 +592,6 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
 
     unsigned const width  = g.width;
     unsigned const height = g.height;
-    float const    split  = config.compare ? std::clamp(config.compareSplit, 0.0f, 1.0f) : 0.0f;
 
 #ifdef TEST
     // Same-frame before/after pair, queued where the engine output is in
@@ -632,7 +608,7 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
     // Bracket 5 of D3D12Bridge.cpp's stamp table (0 NR, 1 engine DLSS, 2 encode,
     // 3 evaluate, 4 composite, 5 RCAS); the panel shows it as the RCAS row.
     nr::nrStampBegin(cmd, frame, 5);
-    recordPass(cmd, output, width, height, strength, split);
+    recordPass(cmd, output, width, height, strength);
     nr::nrStampEnd(cmd, frame, 5);
 
 #ifdef TEST
@@ -670,12 +646,11 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
         g.loggedOff = false;
         srLog(
             0,
-            "[sr] RCAS 锐化已启用：强度 %.3f（增量 %.2f 倍），%ux%u%s（HDR→Reinhard 域，在引擎调色与 UI 之前）",
+            "[sr] RCAS 锐化已启用：强度 %.3f（增量 %.2f 倍），%ux%u（HDR→Reinhard 域，在引擎调色与 UI 之前）",
             static_cast<double>(strength),
             static_cast<double>(4.0f * strength),
             width,
-            height,
-            split > 0.0f ? "，分屏对比开" : ""
+            height
         );
     }
     if (frames == 1 || frames % 600 == 0) {
