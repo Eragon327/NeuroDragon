@@ -11,8 +11,7 @@ namespace neurodragon::config {
 // defaults below are written again. `version` is required by ll::config's
 // concept; bump it only when a key's meaning changes.
 struct Nr {
-    // Master switch. NR is the only feature of this mod, so it defaults to on.
-    bool enabled = true;
+    bool enabled = false;
 
     // 5 = gain composite onto the engine's DLSS input, 6 = TRP ratio resolve (default:
     // the one that reaches the screen with highlights taken from the original).
