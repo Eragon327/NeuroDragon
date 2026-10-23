@@ -699,8 +699,8 @@ void render(IDXGISwapChain* swapChain) {
     if (visible) ClipCursor(nullptr);
 
     // The first frame here rasterises the font atlas and uploads its texture. That
-    // measured 16 ms on 2026-10-23, so no stage marker: the one visible hitch at
-    // start-up is the temporary D3D11 device in hookSwapChainEntryPoints().
+    // measured 16 ms on 2026-10-23, so no stage marker: start-up's one large stall is
+    // the temporary objects in hookSwapChainEntryPoints(), which has its own stage.
     if (gDevice11On12) {
         drawOnWrappedBackBuffer(swapChain);
     } else {
@@ -740,57 +740,208 @@ void removeHook(void*& target) {
     target = nullptr;
 }
 
-bool hookSwapChainEntryPoints(HWND window) {
-    // A throw-away D3D11 device plus a swap chain on the real window, purely to read
-    // the vtable. Measured 3519 ms on 2026-10-23 (the whole 3.9 s enable()), so this
-    // is the one start-up step that keeps a stage pair of its own.
-    log::Stage stage{"log.stage.overlayDevices"};
+// A window of our own, used only as the output of the throw-away swap chain that
+// exists to hand us the DXGI vtable slots. Never shown, never presented: a hidden 8x8
+// popup never enters DWM's composition path.
+constexpr wchar_t kDummyWindowClass[] = L"NeuroDragonTempSwapChainWindow";
 
-    RECT clientRect{};
-    if (!GetClientRect(window, &clientRect)) {
-        stage.markFailed();
-        return false;
+class DummyWindow {
+public:
+    DummyWindow() {
+        static std::once_flag registered;
+        std::call_once(registered, [] {
+            WNDCLASSEXW description{};
+            description.cbSize        = sizeof(description);
+            description.lpfnWndProc   = DefWindowProcW;
+            description.hInstance     = GetModuleHandleW(nullptr);
+            description.lpszClassName = kDummyWindowClass;
+            RegisterClassExW(&description);
+        });
+        window_ = CreateWindowExW(
+            WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+            kDummyWindowClass,
+            L"",
+            WS_POPUP,
+            0,
+            0,
+            8,
+            8,
+            nullptr,
+            nullptr,
+            GetModuleHandleW(nullptr),
+            nullptr
+        );
     }
+
+    ~DummyWindow() {
+        if (window_) DestroyWindow(window_);
+    }
+
+    DummyWindow(DummyWindow const&)            = delete;
+    DummyWindow& operator=(DummyWindow const&) = delete;
+
+    [[nodiscard]] HWND get() const { return window_; }
+
+private:
+    HWND window_{};
+};
+
+// The throw-away D3D11 device and swap chain used only when D3D12 is unavailable.
+// Kept in one place so the objects are released in the right order.
+struct TempSwapChain {
+    ID3D11Device*        device{};
+    ID3D11DeviceContext* context{};
+    IDXGISwapChain*      swapChain{};
+
+    TempSwapChain()                                = default;
+    ~TempSwapChain() { release(); }
+    TempSwapChain(TempSwapChain const&)            = delete;
+    TempSwapChain& operator=(TempSwapChain const&) = delete;
+
+    void release() {
+        if (swapChain) swapChain->Release();
+        if (context) context->Release();
+        if (device) device->Release();
+        swapChain = nullptr;
+        context   = nullptr;
+        device    = nullptr;
+    }
+};
+
+bool createTempSwapChain(HWND outputWindow, TempSwapChain& temp) {
+    RECT clientRect{};
+    if (!GetClientRect(outputWindow, &clientRect)) return false;
+
     // The client area can still be 0x0 right after window creation; a swap chain of
     // that size fails to create, so fall back to a minimum.
     auto const width  = static_cast<UINT>(std::max<LONG>(clientRect.right - clientRect.left, 8));
     auto const height = static_cast<UINT>(std::max<LONG>(clientRect.bottom - clientRect.top, 8));
 
-    D3D_FEATURE_LEVEL    featureLevel = D3D_FEATURE_LEVEL_11_0;
+    D3D_FEATURE_LEVEL featureLevels[]{D3D_FEATURE_LEVEL_11_0};
+
+    auto const deviceResult
+        = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, featureLevels, 1, D3D11_SDK_VERSION,
+                            &temp.device, nullptr, &temp.context);
+    if (FAILED(deviceResult) || !temp.device) {
+        temp.release();
+        return false;
+    }
+
     DXGI_SWAP_CHAIN_DESC description{};
     description.BufferCount       = 1;
     description.BufferDesc.Width  = width;
     description.BufferDesc.Height = height;
     description.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     description.BufferUsage       = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    description.OutputWindow      = window;
+    description.OutputWindow      = outputWindow;
     description.SampleDesc.Count  = 1;
     description.Windowed          = TRUE;
     description.SwapEffect        = DXGI_SWAP_EFFECT_DISCARD;
 
-    ID3D11Device*        dummyDevice{};
-    ID3D11DeviceContext* dummyContext{};
-    IDXGISwapChain*      dummySwapChain{};
-    if (FAILED(D3D11CreateDeviceAndSwapChain(
-            nullptr,
-            D3D_DRIVER_TYPE_HARDWARE,
-            nullptr,
-            0,
-            &featureLevel,
-            1,
-            D3D11_SDK_VERSION,
-            &description,
-            &dummySwapChain,
-            &dummyDevice,
-            nullptr,
-            &dummyContext
-        ))) {
-        logger().warn("overlay: temporary swap chain creation failed; retry on the next frame");
-        stage.markFailed();
+    IDXGIFactory1* factory{};
+    if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory))) || !factory) {
+        temp.release();
         return false;
     }
 
-    auto** vtable = *reinterpret_cast<void***>(dummySwapChain);
+    auto const chainResult = factory->CreateSwapChain(temp.device, &description, &temp.swapChain);
+    factory->Release();
+    if (FAILED(chainResult) || !temp.swapChain) {
+        temp.release();
+        return false;
+    }
+    return true;
+}
+
+// The throw-away D3D12 device + direct queue. Kept alive while the flip chain below
+// and the ExecuteCommandLists hook need them, then released in order.
+struct TempD3D12 {
+    ID3D12Device*       device{};
+    ID3D12CommandQueue* queue{};
+
+    TempD3D12()                            = default;
+    ~TempD3D12() { release(); }
+    TempD3D12(TempD3D12 const&)            = delete;
+    TempD3D12& operator=(TempD3D12 const&) = delete;
+
+    void release() {
+        if (queue) queue->Release();
+        if (device) device->Release();
+        queue  = nullptr;
+        device = nullptr;
+    }
+};
+
+bool createTempD3D12(TempD3D12& temp) {
+    auto const result = D3D12CreateDevice(
+        nullptr,
+        D3D_FEATURE_LEVEL_11_0,
+        __uuidof(ID3D12Device),
+        reinterpret_cast<void**>(&temp.device)
+    );
+    if (FAILED(result) || !temp.device) {
+        temp.release();
+        return false;
+    }
+
+    D3D12_COMMAND_QUEUE_DESC description{};
+    description.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    if (FAILED(temp.device->CreateCommandQueue(
+            &description,
+            __uuidof(ID3D12CommandQueue),
+            reinterpret_cast<void**>(&temp.queue)
+        ))
+        || !temp.queue) {
+        temp.release();
+        return false;
+    }
+    return true;
+}
+
+// The game's D3D12 direct queue is what D3D11On12CreateDevice needs; the vtable of
+// our throw-away queue is enough to hook it.
+bool hookCommandQueue(TempD3D12& temp) {
+    if (gOriginalExecuteCommandLists) return true;
+    gExecuteCommandListsTarget = (*reinterpret_cast<void***>(temp.queue))[kExecuteCommandListsVtableIndex];
+    return installHook(
+        gExecuteCommandListsTarget,
+        reinterpret_cast<void*>(executeCommandListsHook),
+        reinterpret_cast<void**>(&gOriginalExecuteCommandLists)
+    );
+}
+
+// A flip-model chain on our hidden window, only ever read for the IDXGISwapChain
+// vtable slots. Same chain class the game presents with, and - unlike the D3D11
+// bitblt chain this replaced - creating and releasing it is free in this process.
+bool createTempFlipChain(ID3D12CommandQueue* queue, HWND outputWindow, IDXGISwapChain** chain) {
+    IDXGIFactory2* factory{};
+    if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&factory))) || !factory) {
+        return false;
+    }
+
+    DXGI_SWAP_CHAIN_DESC1 description{};
+    description.Width            = 8;
+    description.Height           = 8;
+    description.Format           = DXGI_FORMAT_R8G8B8A8_UNORM;
+    description.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    description.BufferCount      = 2;
+    description.SampleDesc.Count = 1;
+    description.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+    IDXGISwapChain1* swapChain1{};
+    auto const       result = factory->CreateSwapChainForHwnd(queue, outputWindow, &description, nullptr, nullptr, &swapChain1);
+    factory->Release();
+    if (FAILED(result) || !swapChain1) return false;
+    *chain = swapChain1;
+    return true;
+}
+
+// The five entry points taken from a live chain. Both the D3D12 primary path and the
+// D3D11 fallback feed this, so whatever the source, the hooked behaviour is the same.
+bool installSwapChainHooks(IDXGISwapChain* swapChain) {
+    if (gOriginalPresent && gOriginalPresent1 && gOriginalResizeBuffers && gOriginalResizeBuffers1) return true;
+
+    auto** vtable = *reinterpret_cast<void***>(swapChain);
     bool   ok     = installHook(
                   vtable[kPresentVtableIndex],
                   reinterpret_cast<void*>(presentHook),
@@ -805,7 +956,7 @@ bool hookSwapChainEntryPoints(HWND window) {
     gResizeBuffersTarget = vtable[kResizeBuffersVtableIndex];
 
     IDXGISwapChain1* swapChain1{};
-    if (SUCCEEDED(dummySwapChain->QueryInterface(__uuidof(IDXGISwapChain1), reinterpret_cast<void**>(&swapChain1)))) {
+    if (SUCCEEDED(swapChain->QueryInterface(__uuidof(IDXGISwapChain1), reinterpret_cast<void**>(&swapChain1)))) {
         gPresent1Target = (*reinterpret_cast<void***>(swapChain1))[kPresent1VtableIndex];
         ok              = installHook(
                  gPresent1Target,
@@ -817,7 +968,7 @@ bool hookSwapChainEntryPoints(HWND window) {
     }
 
     IDXGISwapChain3* swapChain3{};
-    if (SUCCEEDED(dummySwapChain->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain3)))) {
+    if (SUCCEEDED(swapChain->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain3)))) {
         gResizeBuffers1Target = (*reinterpret_cast<void***>(swapChain3))[kResizeBuffers1VtableIndex];
         ok                    = installHook(
                  gResizeBuffers1Target,
@@ -827,45 +978,51 @@ bool hookSwapChainEntryPoints(HWND window) {
           && ok;
         swapChain3->Release();
     }
-
-    dummySwapChain->Release();
-    dummyContext->Release();
-    dummyDevice->Release();
-    if (!ok) stage.markFailed();
     return ok;
 }
 
-// The game's D3D12 direct queue is what D3D11On12CreateDevice needs.
-bool hookCommandQueueEntryPoint() {
-    // D3D12CreateDevice measured 123 ms on 2026-10-23 - below the stage-marker bar.
-    ID3D12Device* dummyDevice12{};
-    if (FAILED(D3D12CreateDevice(
-            nullptr,
-            D3D_FEATURE_LEVEL_11_0,
-            __uuidof(ID3D12Device),
-            reinterpret_cast<void**>(&dummyDevice12)
-        ))) {
+bool hookSwapChainEntryPoints(HWND gameWindow) {
+    // The five DXGI entry points come from a throw-away chain. Measured 2026-10-23,
+    // when that chain was a D3D11 device + bitblt chain: device 112 ms, chain 25 ms,
+    // hooks 232 ms - yet the step read 3861 ms (and 3519 / 4869 ms in two earlier
+    // runs). What cost the seconds was the *teardown* of those temporary D3D11
+    // objects, which sits in this same scope. A D3D12 device + queue costs 0-123 ms
+    // to create and 62 ms for chain+device+queue release, and the queue is needed for
+    // the ExecuteCommandLists hook anyway, so the vtable now comes from a flip chain
+    // on a hidden window: the step is 375 ms, 217 ms of it MinHook's thread
+    // suspension. No stage pair of its own - the caller's "installing the in-game
+    // panel" marker covers it since 2026-10-23. The D3D11 chain stays only as the
+    // fallback.
+    DummyWindow output{};
+
+    TempD3D12 d3d12{};
+    if (createTempD3D12(d3d12)) {
+        if (!hookCommandQueue(d3d12)) {
+            logger().warn("overlay: D3D12 queue hook failed; D3D11On12 rendering may be unavailable");
+        }
+
+        IDXGISwapChain* chain{};
+        if (output.get() && createTempFlipChain(d3d12.queue, output.get(), &chain)) {
+            bool const ok = installSwapChainHooks(chain);
+            chain->Release();
+            d3d12.release();
+            return ok;
+        }
+        d3d12.release();
+    }
+
+    // Fallback: a D3D11 device plus a bitblt chain. Its teardown is what made this
+    // step cost seconds on 2026-10-23, so it only runs when D3D12 or the hidden flip
+    // chain is unavailable.
+    TempSwapChain temp{};
+    bool const     onOwnWindow = output.get() && createTempSwapChain(output.get(), temp);
+    if (!onOwnWindow && (!gameWindow || !createTempSwapChain(gameWindow, temp))) {
+        logger().warn("overlay: temporary swap chain creation failed; retry on the next frame");
         return false;
     }
 
-    bool                     ok = false;
-    D3D12_COMMAND_QUEUE_DESC queueDescription{};
-    queueDescription.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    ID3D12CommandQueue* dummyQueue{};
-    if (SUCCEEDED(dummyDevice12->CreateCommandQueue(
-            &queueDescription,
-            __uuidof(ID3D12CommandQueue),
-            reinterpret_cast<void**>(&dummyQueue)
-        ))) {
-        gExecuteCommandListsTarget = (*reinterpret_cast<void***>(dummyQueue))[kExecuteCommandListsVtableIndex];
-        ok                         = installHook(
-            gExecuteCommandListsTarget,
-            reinterpret_cast<void*>(executeCommandListsHook),
-            reinterpret_cast<void**>(&gOriginalExecuteCommandLists)
-        );
-        dummyQueue->Release();
-    }
-    dummyDevice12->Release();
+    bool const ok = installSwapChainHooks(temp.swapChain);
+    temp.release();
     return ok;
 }
 
@@ -940,9 +1097,10 @@ bool Overlay::install() {
         return false;
     }
 
-    // Everything below creates D3D devices and patches entry points: 3774 ms in the
-    // 2026-10-23 log, almost all of it the temporary swap chain in
-    // hookSwapChainEntryPoints(), which has its own (nested) stage pair.
+    // Everything below creates D3D devices and patches entry points: 523 ms in the
+    // 2026-10-23 log, 375 ms of it the temporary objects in
+    // hookSwapChainEntryPoints(), which has its own (nested) stage pair - down from
+    // 3774 ms before that step stopped destroying a temporary D3D11 device.
     log::Stage stage{"log.stage.overlay"};
 
     auto const status = MH_Initialize();
@@ -957,15 +1115,13 @@ bool Overlay::install() {
     // The hotkey comes from config.json, which was imported during load().
     refreshHotkey();
 
+    // This also installs the D3D12 command-queue hook: both need the same temporary
+    // device and queue, so they are created once inside that step.
     if (!hookSwapChainEntryPoints(window)) {
         logger().warn("overlay: DXGI hooks could not be installed; will retry");
         stage.markFailed();
         uninstall();
         return false;
-    }
-    // Only needed on D3D12; the D3D11 path still renders without it.
-    if (!hookCommandQueueEntryPoint()) {
-        logger().warn("overlay: D3D12 queue hook failed; D3D11On12 rendering may be unavailable");
     }
 
     auto const guard = installInputGuard();

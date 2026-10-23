@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed（2026-10-23：启动时那 3.5–4.9 秒不是建设备，是销毁临时 D3D11 设备）
+
+- **安装游戏内面板 3774 → 523 ms**，其中「创建临时设备与交换链」那一步
+  3519 / 4869 / 3861 ms → **375 ms**。Present 槽位不再从「临时 D3D11 设备 + 位块链」取，
+  改成「本来就要为 `ExecuteCommandLists` 建的临时 D3D12 设备 + 直接队列 + 隐藏窗口上的
+  flip-model 链」；D3D11 那条路只留在回退分支（D3D12 或隐藏窗口 flip 链不可用时）。
+- 怎么定的位：把这一步拆成 **设备 / 链 / 钩子 / 销毁** 四段单独计时（临时 info 行，已删）。
+  创建侧合计只有 112 + 25 + 232 ms，整步却是 3861 ms —— 差额全在 `Release()`：
+  **销毁临时 D3D11 设备**在这个进程里要 ~3.5 s；干净进程探针里同一步只要 9 ms，而销毁
+  D3D12 设备 + 队列 + flip 链只要 62 ms。所以「3.9 s 全在
+  `D3D11CreateDeviceAndSwapChain`」的旧结论错在把创建和销毁包进了同一个 stage。
+- 临时链的输出窗口也换成了我们自己创建的隐藏 8×8 popup（`WS_POPUP`、不显示、不呈现），
+  不再借用游戏窗口；`D3D11CreateDeviceAndSwapChain` 拆成 `D3D11CreateDevice` +
+  `IDXGIFactory::CreateSwapChain`，两条路径共用 `installSwapChainHooks()`，vtable 槽位
+  （8 / 13 / 22 / 39）和钩子体没动。
+- 之后按作者要求**只留父标记**「安装游戏内面板」：这一步不再有 `log.stage.overlayDevices`
+  子标记（它的 375 ms 已经算在父标记里），i18n 键删掉，`src/neurodragon/ui/Glyphs.h` 重新
+  生成（302 个字形），`log.stage.*` 现 6 个键。
+- 剩下的余量：375 ms 里 217 ms 是 MinHook 的 5 次 `MH_EnableHook`（每次挂起所有线程）。
+  想再压可以全部 `MH_CreateHook` 后一次 `MH_EnableHook(MH_ALL_HOOKS)`（一次挂起），本轮没做。
+
 ### Changed（2026-10-23：dump、参数追踪与 debug 输出收进 TEST 构建）
 
 - **诊断代码只在 `TEST` 构建里存在**（`xmake f --test=y`，开关与说明见
@@ -27,8 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/neurodragon/Log.h`），失败分支写「失败」。首轮实测后**只保留 ≥200 ms 的四处**：
   创建临时 D3D11 设备与交换链 **3519 ms**、安装游戏内面板 3774 ms、创建 NR 功能 542 ms、
   core 加载 264 MB 模型 304 ms。日志最后一行因此就是「卡在哪一步」。
-- 那 3.9 s 的 enable() 黑箱由此定位：**全在 `hookSwapChainEntryPoints()` 的
-  `D3D11CreateDeviceAndSwapChain`**；同一轮的 `D3D12CreateDevice` 只有 123 ms。
+- 那 3.9 s 的 enable() 黑箱由此定位到 `hookSwapChainEntryPoints()`；同一轮的
+  `D3D12CreateDevice` 只有 123 ms。**当时写的「全在 `D3D11CreateDeviceAndSwapChain`」
+  后来证明不对**：大头是同一个 scope 里的 `Release()`（见上方 2026-10-23 的 Fixed 条目）。
 - 实测 <200 ms 的 11 个标记（模组加载 1、模型准备 0、渲染钩子 117、D3D12 队列 123、
   输入钩子 131、ImGui 图形 41、D3D11On12 设备 26、上下文与字体 14、DX11 后端 0、
   字体预热 16、着色器编译 44）已按阈值删除，对应 i18n 键一并删掉（`log.stage.*` 现 7 个）。

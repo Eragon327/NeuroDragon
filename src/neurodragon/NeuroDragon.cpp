@@ -64,9 +64,10 @@ bool NeuroDragon::enable() {
     probe::install();
 
     // The panel is not essential to NR: if the game window is not up yet the probe
-    // watcher retries it in the background. install() writes its own stage pair -
-    // creating the temporary D3D11 device and swap chain is the slow part of enable()
-    // (3.5 s on this machine, 2026-10-23).
+    // watcher retries it in the background. install() writes its own stage pair - the
+    // temporary objects that find Present are the slow part of enable(), but since
+    // 2026-10-23 that is 375 ms (a D3D12 device + flip chain) instead of the 3.5-4.9 s
+    // the temporary D3D11 device cost when it was destroyed.
     if (!ui::Overlay::getInstance().install()) {
         getSelf().getLogger().warn("overlay: not installed yet; the probe watcher will retry");
     }
