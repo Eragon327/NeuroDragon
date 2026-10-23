@@ -15,6 +15,13 @@ add_requires("levilamina", {configs = {target_type = get_config("target_type")}}
 
 add_requires("levibuildscript")
 
+-- UI layer: Dear ImGui (Win32 + DX11 backend) + MinHook - the same stack Mangrove
+-- and LHolo already ship for their overlays. A client mod can only draw a resident
+-- panel above the game's HUD by hooking DXGI Present and rendering on the
+-- D3D11On12-wrapped back buffer, which is what those two projects prove out.
+add_requires("imgui v1.91.9", {configs = {shared = false, win32 = true, dx11 = true, no_demo_windows = true}})
+add_requires("minhook", {configs = {shared = false}})
+
 if not has_config("vs_runtime") then
     set_runtimes("MD")
 end
@@ -40,7 +47,8 @@ target("NeuroDragon") -- Change this to your mod name.
         )
         set_toolchains("clang-cl")
     end
-    add_packages("levilamina")
+    add_packages("levilamina", "imgui", "minhook")
+    add_syslinks("user32", "d3d11", "d3d12", "dxgi")
     set_kind("shared")
     set_languages("c++20")
     set_symbols("debug")

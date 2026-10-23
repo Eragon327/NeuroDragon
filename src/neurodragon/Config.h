@@ -41,9 +41,19 @@ struct Nr {
     bool paramLog        = false; // log every engine NGX parameter write
 };
 
+struct Config;
+
+// Panel settings. Like everything else here: read once at load, written only by
+// "Save as default" in the panel.
+struct Ui {
+    // Virtual-key code of the panel hotkey. 0x23 = VK_END.
+    int openKey = 0x23;
+};
+
 struct Config {
     int version = 1;
     Nr  nr{};
+    Ui  ui{};
 };
 
 Config& get();
@@ -53,8 +63,11 @@ Config& get();
 // written at all - a malformed file is repaired with the defaults.
 bool loadOrCreate();
 
-// Live tuning: re-read the file (used every ~2 s while rendering so Replace or
-// GainBoost can be judged without restarting the game).
+// Re-read the file. Only the load path uses this: there is no hot reload, a file
+// edited while the game runs has no effect until the next start.
 void reload();
+
+// Write config.json now ("Save as default" in the panel, and mod disable).
+bool save();
 
 } // namespace neurodragon::config

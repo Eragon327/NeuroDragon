@@ -43,5 +43,134 @@
             "notImplemented": "FAIL_NotImplemented",
             "unknown": "Unknown result code"
         }
+    },
+    "ui": {
+        "subtitle": "Render Pipeline",
+        "state": {
+            "healthy": "Healthy",
+            "notReady": "NR not ready",
+            "off": "Off",
+            "notOnScreen": "NR not on screen"
+        },
+        "tab": {
+            "neural": "Neural Rendering",
+            "diagnostics": "Diagnostics",
+            "advanced": "Advanced"
+        },
+        "pipeline": {
+            "world": "Engine World",
+            "raster": "Raster",
+            "nr": "Neural Rendering",
+            "nrRunning": "NR running",
+            "nrOff": "NR off",
+            "upscale": "Engine DLSS",
+            "upscaleSub": "Upscale",
+            "output": "Output",
+            "outputSub": "This panel",
+            "off": "Off",
+            "waiting": "No samples"
+        },
+        "stats": {
+            "frames": "Frame stats",
+            "fps": "Raster FPS",
+            "frameTime": "Frame time",
+            "renderSize": "Render",
+            "outputSize": "Output",
+            "status": "Status",
+            "replace": "Replace",
+            "nrGpu": "NR GPU",
+            "dlssGpu": "DLSS GPU",
+            "noSamples": "No samples",
+            "created": "Created",
+            "notCreated": "Not ready"
+        },
+        "replace": {
+            "0": "Evaluate only",
+            "5": "Gain composite",
+            "6": "TRP Ratio",
+            "other": "Unimplemented",
+            "item0": "Evaluate only (no picture change)",
+            "item5": "Gain composite (on screen)",
+            "item6": "TRP Ratio",
+            "hint0": "NR evaluates every frame but leaves the picture untouched; use it to measure GPU time.",
+            "hint5": "The network's relative gain is multiplied back onto the engine's linear HDR picture, then the engine's DLSS upscales it. The only mode that actually reaches the screen today.",
+            "hint6": "TRP's Ratio composite. Note: the current code only calls the composite for Replace=5, so 6 behaves like evaluate-only.",
+            "hintOther": "This id is not implemented in this build; it behaves like evaluate-only."
+        },
+        "style": {
+            "section": "Style",
+            "style": "Style",
+            "intensity": "Intensity",
+            "localTone": "Local tone",
+            "localStructure": "Local structure"
+        },
+        "neural": {
+            "disabledHint": "Neural rendering is off; these values take effect once it is enabled again.",
+            "input": "Input",
+            "depth": "Depth inverted",
+            "depthFollow": "Follow engine",
+            "depthNormal": "Normal",
+            "depthInverted": "Inverted",
+            "autoMv": "Auto motion-vector scale",
+            "mvHint": "Auto = normalised by the render size (recommended). A manual value is the MV pixel scale.",
+            "mv": "MV scale",
+            "encode": "Encode",
+            "encodeHint": "NR consumes a display-referred picture; the encode decides how the engine's linear HDR becomes display-referred.",
+            "encodeAuto": "Per mode",
+            "encodeReinhard": "Reinhard",
+            "encodeTrp": "TRP",
+            "ratio": "TRP Ratio parameters",
+            "white": "White point",
+            "transfer": "Transfer strength",
+            "colour": "Colour strength",
+            "maxRatio": "Max ratio",
+            "enableSection": "Neural Rendering",
+            "enable": "Enable neural rendering",
+            "replace": "Replace mode",
+            "gain": "Gain boost"
+        },
+        "diag": {
+            "gpu": "GPU timings",
+            "nr": "Neural rendering",
+            "dlss": "Engine DLSS",
+            "sample": "{0} samples",
+            "lastError": "Last error",
+            "clear": "Clear samples",
+            "hint": "Timings come from a timestamp query ring; only frames completed inside a window are counted.",
+            "switches": "Diagnostic switches",
+            "resetNr": "Reset NR history every frame",
+            "resetSr": "Reset engine SR history every frame",
+            "paramLog": "Log NGX parameter writes",
+            "warnHint": "All three break the picture on purpose; they exist to locate problems. Logs go to the mod directory.",
+            "timingOff": "Timing unavailable"
+        },
+        "adv": {
+            "ui": "Interface",
+            "scale": "UI scale",
+            "scaleHint": "Use the - / + buttons in the title bar; the scale follows the resolution.",
+            "keys": "Hotkeys",
+            "open": "Open / close",
+            "close": "Close panel",
+            "rebindHint": "Click the button, then press the key you want (Esc cancels).",
+            "capturing": "Press a key…",
+            "config": "Config file",
+            "configHint": "The config is imported at startup only; Apply affects this run, Save as default also writes config/config.json.",
+            "about": "About",
+            "version": "Version"
+        },
+        "footer": {
+            "clean": "No changes",
+            "dirty": "Modified, not applied",
+            "applied": "Applied",
+            "saved": "Saved as default",
+            "discarded": "Changes discarded",
+            "writeFailed": "Write failed",
+            "discard": "Discard",
+            "apply": "Apply",
+            "saveDefault": "Save as default"
+        },
+        "key": {
+            "unknown": "Key 0x{0:02X}"
+        }
     }
 }

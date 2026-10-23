@@ -6,6 +6,7 @@
 
 #include "neurodragon/NeuroDragon.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/ui/Overlay.h"
 
 #include "ll/api/i18n/I18n.h"
 #include "ll/api/memory/Hook.h"
@@ -545,6 +546,9 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     }
     auto&      log    = utils::logger();
     auto const n      = gFrame.fetch_add(1, std::memory_order_relaxed) + 1;
+    // The panel's "Apply" can flip this without a restart, and the flag gates both
+    // NR itself and the diagnostic window schedule, so read it per frame.
+    gNrEnabled        = config::get().nr.enabled;
     void*      color  = nullptr;
     void*      depth  = nullptr;
     void*      mv     = nullptr;
@@ -595,7 +599,8 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     }
 
     // ---- stage 2: NR in front of the engine's DLSS -------------------------
-    bool inWindow = false;
+    bool inWindow    = false;
+    bool replaceMode = false;
     if (gNrEnabled && validParamObj(const_cast<void*>(params))) {
         // Entering/leaving a world only restarts the window schedule: the menu's
         // frames must not consume the ten slots.
@@ -650,7 +655,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             // that mode NR runs on every in-world frame; only the timing/dump
             // machinery stays windowed (a 60-frame burst every 900 frames is
             // useless for judging image quality by eye).
-            bool const replaceMode = nr::nrReplaceContinuous();
+            replaceMode = nr::nrReplaceContinuous();
             if ((inWindow || replaceMode) && nr::nrIsCreated()) {
                 if (width != gNrCreateWidth || height != gNrCreateHeight) {
                     if (!gNrSizeWarned) {
@@ -668,7 +673,10 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                         mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
                     bool const reset     = n == gNrWindowStart;
                     bool const replaceNow = replaceMode;
-                    if (inWindow) {
+                    // The panel wants live GPU numbers in the mode people actually
+                    // use for tuning, so Replace also stamps outside the windows.
+                    bool const timed = inWindow || replaceMode;
+                    if (timed) {
                         nr::nrStampBegin(cmdList, n, 0);
                     }
                     bool const recorded = nr::nrRecord(
@@ -685,7 +693,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                         replaceNow ? const_cast<void*>(params) : nullptr,
                         const_cast<void*>(out)
                     );
-                    if (inWindow) {
+                    if (timed) {
                         nr::nrStampEnd(cmdList, n, 0);
                     }
                     if (reset) {
@@ -811,7 +819,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
         }
     }
 
-    bool const measureBaseline = inWindow;
+    bool const measureBaseline = inWindow || replaceMode;
     if (measureBaseline) {
         nr::nrStampBegin(cmdList, n, 1);
     }
@@ -945,17 +953,26 @@ void startWatcher() {
         }
         for (int i = 0; i < 3000; ++i) {
             if (gWatcherStop.load(std::memory_order_relaxed) || gNgxHooked.load(std::memory_order_relaxed)) {
-                return;
+                break;
             }
             if (GetModuleHandleW(L"_nvngx.dll") && GetModuleHandleW(L"nvngx_dlss.dll")) {
                 std::this_thread::sleep_for(150ms);
                 if (gNgxHooked.exchange(true)) {
-                    return;
+                    break;
                 }
                 hookNgxExports();
-                return;
+                break;
             }
             std::this_thread::sleep_for(20ms);
+        }
+
+        // Phase 3: the UI overlay needs the game window (and, on D3D12, the game's
+        // command queue). If enable() ran before either existed, keep trying here
+        // instead of leaving the panel unavailable for the whole session.
+        for (int i = 0; i < 240 && !gWatcherStop.load(std::memory_order_relaxed); ++i) {
+            if (ui::Overlay::getInstance().isInstalled()) return;
+            if (ui::Overlay::getInstance().install()) return;
+            std::this_thread::sleep_for(250ms);
         }
     });
 }

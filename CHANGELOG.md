@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed（2026-10-23 下午四轮：子窗口内边距、文字裁切、拖动粘滞、热键要按两次）
+
+- **子窗口根本没有内边距**：无边框的 `BeginChild` 默认**不使用** `WindowPadding`
+  （imgui.h 原文："no padding by default for non-bordered child windows"），所以两栏文字
+  一直贴在栏边——上一轮把 padding 调大没有效果就是这个原因。两个子窗口都补上
+  `ImGuiChildFlags_AlwaysUseWindowPadding`。
+- **统计行标签被上下裁掉一半**：`PushClipRect` 的起点取自 `GetCursorScreenPos()`，而
+  `RenderText()` 实际画在 `CursorPos.y + CurrLineTextBaseOffset`（`AlignTextToFramePadding`
+  把这个偏移设成 `FramePadding.y`），所以裁剪框比字形高出一截。改成**按宽度截断字符串**
+  （UTF-8 安全，末尾补 `…`），不再用裁剪矩形。
+- **拖动时元素粘滞**：原来在 `Begin` 之后 `SetWindowPos`——窗口边框动了，但两栏是按拖动前
+  坐标定位的子窗口，于是错位。现在拖动在 **`Begin` 之前**把 `io.MouseDelta` 累加到 `gPos`，
+  窗口、背景、两个子栏同一帧用同一个坐标；面板整体比鼠标晚一帧，肉眼不可见。
+- **Esc 关闭后要按两次 End 才能再打开**：面板打开时热键的**抬起**被当作普通面板输入吞掉，
+  `gToggleKeyDown` 一直是 true，下一次按下被当成键盘自动重复而忽略。现在抬起会清零；
+  顺带让热键在面板打开时也能关闭面板。
+- 标题条的可拖区域改成「几何判定 + `IsAnyItemHovered()`」，不再占一个 item，缩放按钮
+  不会被拖拽区抢走点击。
+- **右上角状态点位置**：圆点原来画在 `AddText` 的 `y` 上，而那是行框顶部（不是字形中心），
+  所以看起来悬在「健康」上方。现在状态文字是真正的 ImGui item，圆点取它的
+  `GetItemRect` 竖直中心，并且文字在缩放按钮那一行里居中。
+
+### Changed（2026-10-23 下午三轮：只从标题条拖动、页签合并、子窗口内边距）
+
+- **拖动**：窗口改成 `NoMove`，只有标题条（渲染管线图上方那一条）能拖，和 Windows 窗口
+  一个逻辑；拖拽热区是一个覆盖标题条的 `InvisibleButton`（先提交），缩放/状态按钮后提交，
+  所以仍能点；鼠标停在标题条上显示移动光标。其余区域点击不会拖动窗口。
+- **页签**：`画面` 页删除，内容（开关、替换模式、增益、Style）并入 `神经渲染` 页顶部，
+  现在是 `神经渲染 / 诊断 / 高级` 三个页签。
+- **`求值次数` 从统计栏删除**（对玩家没有意义的内部计数）。
+- **Style 改下拉**（0/1/2）：三个离散档位，滑条没有必要，而且 0 处把手会被裁一半。
+- **子窗口安全区**：内边距 11→14，左栏 280→330、gutter 14→18（540→850 的窗口由两栏
+  宽度推出来），统计行「标签 ... 数值」不再被裁掉；`statRow` 的标签加裁剪矩形，
+  长标签不会钻到右对齐的值下面；滑条把手在 0/1 两端内缩半个把手宽度。
+- 附带：`ui.tab.image` / `ui.image.*` / `ui.stats.evals` 三个键从两份语言文件删除，
+  新增 `ui.neural.enableSection/enable/replace/gain`。
+
+### Fixed（2026-10-23 下午二轮：面板可读性 + GPU 计时「无样本」）
+
+- **全角标点显示成 `?`**：字表只收 `4E00-9FFF` 的汉字，而 `，（）：…` 在 FF00/3000 区，
+  一个都没进图集。`scripts/collect_glyphs.py` 改成收**所有非 ASCII 字符**（现 294 个），
+  中英文稿一起扫，改完文案要重跑。
+- **面板 GPU 两个数永远是「无样本」**：`nrStampReset()` 会在每个测量窗口结束时把**已发布的
+  中位数一起清零**，而面板读的正是这两个原子量。现在 `nrStampReset()` 只清原始样本，另加
+  `nrStampClearReported()` 专给面板的「清空计时样本」按钮；中位数改为每 30 帧发布一次，
+  并且 `Replace != 0`（逐帧求值）时每帧都打时间戳，面板才有实时数字。计时堆没建起来时
+  显示「计时未启用」而不是「无样本」。
+- **面板太大、控件贴边、滑条过长**：全屏面板改成**可拖动浮窗**——默认 790×700 逻辑
+  （1440p ≈ 1053×933）、停在左上角；背景空白处按住即可拖动，拖出屏幕会保留 120px 可见；
+  内边距 18 逻辑、左右两栏固定宽（280 / 460）、行宽上限 440，滑条不再横跨半个屏幕；
+  正文字号密度 0.9。
+- **帧时间折线自动缩放**：按峰值在 16.7/25/33.3/50/66.7/100/150/250 ms 之间取档，平滑过渡，
+  不再固定 0–50 ms（掉帧时曲线贴顶看不出形状）。
+
+### Changed（2026-10-23 下午：面板快捷键 = End、配置只在启动导入、暂存式应用）
+
+- 面板快捷键改为 **End**（不再是 F10），并可在面板 `高级 → 热键` 里**点按重绑**：点一下按钮，
+  再按目标键（Esc 取消）、修饰键单独按不算。绑定存在 `config.json` 的 **`ui.openKey`**
+  （Windows 虚拟键码，默认 `0x23` = VK_END），和其余配置一样**只在启动时导入**。
+- **删掉 hot reload**：渲染线程里每 ~2 s 重读 `config.json` 的 `reloadConfigIfDue()` 删除，
+  `nrCreate()` 里那一次 `config::reload()` 也删除。现在改文件对运行中的游戏不再有任何影响。
+- 面板改成**暂存式**：所有控件编辑的是一份 `draft`，`config::get().nr` 不动；底部
+  **`应用`** 只把 draft 写进内存（本次运行生效、不落盘），**`保存为默认`** 才额外写
+  `config/config.json`，**`放弃`** 把 draft 退回当前运行值。关闭面板丢弃未应用的改动
+  （会弹一条提示条）。诊断页三个开关也走同一套暂存逻辑。
+- 顶部状态点/管线图/左统计栏显示的是**正在运行的值**，不是 draft —— 应用前它们不会变。
+- 语言：面板所有文案改走已有的 `ll::i18n`（`src/lang/{zh_CN,en_US}.json` 的 `ui.*`，
+  两边各 106 个键，占位符一致），不再硬编码中文。字体图集改由
+  `scripts/collect_glyphs.py` 扫 `src/lang/*.json`（现 284 个汉字），改文案后要重跑。
+
+### Added（2026-10-23：游戏内面板）
+
+- 新增**顶层覆盖层面板**：DXGI `Present`/`Present1`/`ResizeBuffers*` 钩子 +
+  `D3D11On12`（绑定游戏自己的 D3D12 direct queue）+ ImGui 的 DX11 后端，画在游戏 HUD **之上**，
+  主菜单也能开。`End` 开关，`Esc` 关闭，打开时吞掉游戏输入并补发「已按下」的抬起事件，
+  关闭时把光标收回窗口中心再交还游戏。
+  路线与实现细节参照本地已验证的两个覆盖层：`D:\Documents\Mangrove\src\mangrove\ui`
+  与 `D:\Documents\LHolo\src\overlay`（同一套 Present 钩子 + 11on12 + Win32/DX11 后端）。
+- 新目录 [src/neurodragon/ui/](src/neurodragon/ui/)：
+  `Overlay`（钩子/设备/窗口过程/帧计时/提示条）、`InputGuard`（拦 `MouseDevice::feed` 与
+  `HIDControllerGameCoreDesktop::$onKeyDown/$onKeyUp`，F11 放行）、`Theme`（TRP 风格配色、
+  微软雅黑 2x 图集、按 1080p 高度缩放）、`Menu`（顶部管线图 + 四个页签 + 左统计栏 + 右设置栏 +
+  底部 放弃/应用/保存为默认）、`Widgets`（自绘勾选框、滑条、下拉、管线节点与箭头、帧时间折线）。
+- 面板的配置语义（当天下午改成暂存式，见下一条 Changed）：编辑 draft，`应用` 只进内存、
+  `保存为默认` 才落盘、`放弃` 退回运行值；`config::suppressReload` 已随 hot reload 一起删除。
+- 面板数据来自真实测量：`nr::nrPanelStats()`（渲染/输出尺寸、feature 状态、求值次数、
+  最近错误码、NR 与引擎 DLSS 的 GPU 中位数，后者由 `reportOne` 以原子量发布）+
+  `Overlay::frameStats()`（`Present` 间隔算出的帧率/帧时间/折线）。
+- 字体图集按**本面板实际用到的汉字**构建（`scripts/collect_glyphs.py` → `ui/Glyphs.h`，
+  当前 229 个字形），不拉 2 万字全表。
+- 已知：`Replace=6`（TRP Ratio）目前在代码里不会调用合成（`compositeGain` 只挂在 `replace == 5`），
+  所以面板的替换模式只列 `0 / 5 / 6`，并在 6 的说明里写明"实际等同于只求值"，等接线后再改文案。
+
 ### Removed（2026-10-22 晚：删掉进世界的等待门）
 
 - 删掉 `gInWorld` 与整套"进世界才算数"的等待逻辑：不再有 `join 事件 → gInWorld` 的门、

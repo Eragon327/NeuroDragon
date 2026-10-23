@@ -10,6 +10,7 @@
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdarg>
 #include <cstddef>
@@ -672,25 +673,9 @@ void* gActiveEngineParams = nullptr;
 
 ID3D12RootSignature* gEncodeRoot = nullptr;
 
-// Live tuning: re-read config.json every ~2 s so Replace (and GainBoost) can be
-// judged without restarting the game. Same cadence the txt file used to have.
-void reloadConfigIfDue() {
-    static unsigned frame = 0;
-    if (++frame % 120u != 0u) {
-        return;
-    }
-    int const   beforeReplace = config::get().nr.replace;
-    float const beforeBoost   = config::get().nr.gainBoost;
-    config::reload();
-    if (beforeReplace != config::get().nr.replace || beforeBoost != config::get().nr.gainBoost) {
-        nrLog(
-            3,
-            "[nr] config reloaded: Replace=%d GainBoost=%.2f",
-            config::get().nr.replace,
-            static_cast<double>(config::get().nr.gainBoost)
-        );
-    }
-}
+// There is deliberately no hot reload: config/config.json is imported once at
+// load, and the only things that change these values afterwards are the panel's
+// "Apply" (in memory) and "Save as default" (memory + file).
 
 ID3D12PipelineState*  gEncodePso    = nullptr;
 ID3D12DescriptorHeap* gEncodeHeap   = nullptr;
@@ -1062,6 +1047,10 @@ struct NrState {
     bool              resourceRoundtripChecked = false;
     unsigned          evalCount                = 0;
     int               lastError                = 0;
+    // The engine's own DLSS output (the texture the panel calls "Output"). Purely
+    // for display; 0 until the first frame that handed us one.
+    unsigned          engineOutputWidth        = 0;
+    unsigned          engineOutputHeight       = 0;
 };
 
 NrState gNr;
@@ -1088,6 +1077,22 @@ struct StampRing {
 };
 
 StampRing gStamps;
+
+// The panel reads these; the render thread publishes them a few times per second
+// (publishMedian), so a reader can never see a half-appended sample vector.
+std::atomic<double>   gStampMedianMs[kStampKinds]{};
+std::atomic<unsigned> gStampMedianCount[kStampKinds]{};
+
+void publishMedian(int id) {
+    if (id < 0 || id >= kStampKinds) return;
+    auto const& values = gStamps.samples[id];
+    if (values.empty()) return;
+
+    std::vector<double> sorted = values;
+    std::sort(sorted.begin(), sorted.end());
+    gStampMedianMs[id].store(sorted[sorted.size() / 2], std::memory_order_relaxed);
+    gStampMedianCount[id].store(static_cast<unsigned>(sorted.size()), std::memory_order_relaxed);
+}
 
 bool ensureStamps(ID3D12Device* device) {
     if (gStamps.active) {
@@ -1155,6 +1160,7 @@ void reportOne(int id, char const* name) {
         sum += v;
     }
     double const median = sorted[sorted.size() / 2];
+    publishMedian(id);
     nrLog(
         3,
         "[nr] gpu %s ms median=%.3f mean=%.3f min=%.3f max=%.3f n=%zu dropped=%u",
@@ -1403,7 +1409,6 @@ bool nrCreate(
     gNr.width  = width;
     gNr.height = height;
 
-    config::reload();
     ensureEncoder(device, outDesc);
 
     bool const stamps = ensureStamps(device);
@@ -1779,7 +1784,17 @@ bool nrRecord(
     unsigned const w      = gNr.width;
     unsigned const h      = gNr.height;
 
-    reloadConfigIfDue();
+    // Display only: remember what the engine's DLSS is upscaling into, so the panel
+    // can show the real resolution instead of a guess. Described once; the resource
+    // is stable for the lifetime of the frame graph.
+    if (gNr.engineOutputWidth == 0 && engineOutput) {
+        ResourceInfo const info = describe(engineOutput);
+        if (info.width && info.height) {
+            gNr.engineOutputWidth  = static_cast<unsigned>(info.width);
+            gNr.engineOutputHeight = static_cast<unsigned>(info.height);
+        }
+    }
+
     bool const useEncoded = (config::get().nr.replace != 4 || config::get().nr.nrEncode >= 0) && gEncodePso && gEncodedColor;
     paramSetPtr(params, "DLSSNR.Color", useEncoded ? static_cast<void*>(gEncodedColor) : color);
     paramSetPtr(params, "DLSSNR.Depth", depth);
@@ -2158,11 +2173,24 @@ void nrStampTick(std::uint64_t frame) {
             }
             if (valid) {
                 gStamps.samples[id].push_back(ms);
+                // Rolling window: in Replace mode the panel wants live numbers, so
+                // the vectors are no longer drained at every window boundary.
+                constexpr size_t kMaxSamples = 240;
+                if (gStamps.samples[id].size() > kMaxSamples) {
+                    gStamps.samples[id].erase(gStamps.samples[id].begin());
+                }
             } else {
                 ++gStamps.dropped[id];
             }
         }
         gStamps.pending[slot] = 0;
+    }
+
+    // Publish a few times per second rather than once per measurement window, so
+    // the panel's GPU row tracks the picture instead of a number from 30 s ago.
+    if (frame % 30 == 0) {
+        publishMedian(0);
+        publishMedian(1);
     }
 }
 
@@ -2175,11 +2203,45 @@ void nrStampReport() {
 }
 
 void nrStampReset() {
+    // Only the raw samples: the published medians are what the panel shows between
+    // windows, and clearing them here used to blank the panel right after every
+    // measurement window ended.
     for (int id = 0; id < kStampKinds; ++id) {
         gStamps.samples[id].clear();
         gStamps.dropped[id]  = 0;
         gStamps.recorded[id] = 0;
     }
+}
+
+void nrStampClearReported() {
+    for (int id = 0; id < kStampKinds; ++id) {
+        gStampMedianMs[id].store(0.0, std::memory_order_relaxed);
+        gStampMedianCount[id].store(0, std::memory_order_relaxed);
+    }
+}
+
+PanelStats nrPanelStats() {
+    PanelStats stats;
+    stats.featureCreated = gNr.created;
+    stats.stampsActive   = gStamps.active;
+    stats.evalCount      = gNr.evalCount;
+    stats.lastError      = gNr.lastError;
+    stats.renderWidth    = gNr.width;
+    stats.renderHeight   = gNr.height;
+    stats.outputWidth    = gNr.engineOutputWidth;
+    stats.outputHeight   = gNr.engineOutputHeight;
+
+    stats.nrSamples     = gStampMedianCount[0].load(std::memory_order_relaxed);
+    stats.engineSamples = gStampMedianCount[1].load(std::memory_order_relaxed);
+    if (stats.nrSamples != 0) {
+        stats.nrMs   = gStampMedianMs[0].load(std::memory_order_relaxed);
+        stats.hasNr = true;
+    }
+    if (stats.engineSamples != 0) {
+        stats.engineMs   = gStampMedianMs[1].load(std::memory_order_relaxed);
+        stats.hasEngine = true;
+    }
+    return stats;
 }
 
 } // namespace neurodragon::nr

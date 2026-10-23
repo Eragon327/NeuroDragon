@@ -1,89 +1,150 @@
-# F. UI 与设置系统规划
+# F. UI 与设置系统
 
-> 状态：**设计稿，未实现**。用户正在做 mod 的标准化（目录/命名/配置），本文件里凡标注
-> 「待定案」的点都等标准出来后再落代码，避免返工。
+> 状态（2026-10-23）：**面板已实现并部署**，`End` 开关（可重绑）。本文档描述的是实现后的样子，
+> 早期「画到引擎 `Output` 上（HUD 之下）」的方案已作废，原因见 §1。
 
 ## 0. 一句话
 
-把 NR 的参数从「改 txt + 重启」变成「游戏内面板实时调」，并为后续阶段（Style 调参、
-预设、诊断）提供一个统一入口。
+把 NR 的参数从「改 config.json + 重启」变成「游戏内面板调、按应用生效」，
+并为后续（预设、诊断、更多特征页签）留一个统一入口。
 
-## 1. 现状
+## 1. 渲染方案：为什么是 Present 钩子
 
-- 参数来源：`<游戏目录>\nr_params.txt`，模组每秒重读一次；
-  支持 `Replace` / `GainBoost` / `Style` / `Intensity` / `LocalToneStrength` /
-  `LocalStructureStrength` / `DepthInverted` / `NrEncode` / `NRReset` / `MVecScale` / `ParamLog`。
-- 没有任何 UI，也没有预设；每次调参都要切出游戏、改文件、等重读。
-- 渲染侧已经具备条件：我们在 NGX `EvaluateFeature` 的钩子里能拿到**引擎的 command list**、
-  `Color`（DLSS 输入）与 `Output`（DLSS 输出）资源，并且已经在这根 list 上做编码/合成。
+早期设计是「画在引擎 DLSS 的 `Output` 纹理上、位于 HUD 之下」。这条路的两个代价
+（HUD 会盖住面板、主菜单不开光追时钩子不跑）在本地已有更好答案：
 
-## 2. 目标与非目标
+`D:\Documents\Mangrove`（`src/mangrove/ui/Overlay.cpp`）与 `D:\Documents\LHolo`
+（`src/overlay/ImGuiOverlay.cpp`）都已经做到**顶层**，用的是同一套：
 
-**目标**
+- `MinHook` 挂 `IDXGISwapChain::Present`（虚表 8）/ `Present1`（22）/
+  `ResizeBuffers`（13）/ `ResizeBuffers1`（39）；
+- 钩 `ID3D12CommandQueue::ExecuteCommandLists`（虚表 10）只为拿到游戏的 direct queue；
+- `D3D11On12CreateDevice(device12, ..., &gameQueue, 1, ...)` 建一个 D3D11On12 设备，
+  ImGui 用 **DX11 后端**（`imgui v1.91.9` 的 xmake 包已把 `imgui_impl_dx11` /
+  `imgui_impl_win32` 编进 `imgui.lib`，不需要拉后端源码）；
+- 每帧：`GetCurrentBackBufferIndex` → `GetBuffer` 取 `ID3D12Resource` →
+  `ID3D11On12Device::CreateWrappedResource(PRESENT, PRESENT)` →
+  `AcquireWrappedResources` → 画 → `ReleaseWrappedResources` → `Flush` → 真正的 `Present`。
 
-- `F10` 开关面板；打开时吞掉游戏输入，关闭立刻恢复。
-- 控件与现有参数一一对应，改动**即时生效**，不需要改 txt。
-- 预设：命名保存/加载，落在 mod 目录。
-- 诊断页：NR / 引擎 DLSS 的 GPU 计时、当前分辨率与 Replace 状态、手动触发一次 dump。
+所以面板画在后台缓冲上，**在所有游戏内容（含 HUD）之上**，主菜单也能开，
+且不受 `Output` 颜色空间 / 后处理影响。
 
-**非目标（本阶段）**
+## 2. 文件
 
-- 不做全屏设置菜单、不做多语言。
-- 不替换游戏自带的设置界面。
-- 不做 HUD 之上的绘制（那需要 hook Present/swapchain，另议，见 §7）。
+| 文件 | 职责 |
+|---|---|
+| `ui/Overlay.{h,cpp}` | Present/Resize/队列钩子、11on12 设备、窗口过程子类化、帧计时、提示条、卸载 |
+| `ui/InputGuard.{h,cpp}` | 拦引擎自己的输入通路（`MouseDevice::feed`、`HIDControllerGameCoreDesktop::$onKeyDown/$onKeyUp`），F11 放行 |
+| `ui/Theme.{h,cpp}` | TRP 风格配色、微软雅黑 2x 图集（按实际用字构建）、按 1080p 高度缩放 |
+| `ui/Menu.{h,cpp}` | 顶部管线图 + 四页签 + 左统计栏 + 右设置栏 + 底部按钮条 |
+| `ui/Widgets.{h,cpp}` | 自绘勾选框、滑条、下拉、管线节点/箭头、帧时间折线、页脚按钮 |
+| `ui/Glyphs.h` | **生成物**：`scripts/collect_glyphs.py` 从 `src/lang/*.json` 抽出的汉字集（现 284 个） |
+| `src/lang/*.json` | 面板文案（`ui.*`，`zh_CN` / `en_US` 各 106 个键，占位符一致） |
+| `nr/D3D12Bridge` | 新增只读 `nrPanelStats()`：尺寸、状态、错误码、两张 GPU 中位数 |
 
-## 3. 渲染方案（已定，用户已确认位置）
+单独编译单元：`ui/` 里只有 `Overlay.cpp` 碰 `<d3d12.h>`，`Menu/Widgets/Theme` 只碰 ImGui，
+`D3D12Bridge.h` 依旧不把 D3D 头带进别的 TU（docs/D §4 的约束不变）。
 
-**画到引擎的 `Output` 上，在引擎自己 evaluate 之后的同一根 command list 里。**
+## 3. 界面
 
-- ImGui `v1.91.0-docking`（dx11/dx12 变体）——xmake 包里已有（levilamina 的依赖），无需自己拉。
-- 位置：**3D 之上、HUD 之下**（HUD 都在屏幕边缘，中间的面板不会被挡）。
-- 为什么不用 Present hook：省掉 swapchain/backbuffer 生命周期问题，复用现成资源与 command list；
-  代价只是面板会被 HUD 覆盖，将来要盖 HUD 再升级。
-- 关键点：
-  - 首帧创建 ImGui 上下文、字体图集、SRV 堆（字体）与 1 个 RTV（Output）；
-  - 每帧：`Output` 从 NGX 之后的状态 → `RENDER_TARGET` → `RenderDrawData` → 还原状态；
-  - 面板关闭时不产生任何额外 GPU 工作；
-  - 不阻塞主线程，不等待 GPU。
+**可拖动浮窗**，默认 850×700 逻辑单位（1440p ≈ 1133×933），左上角 (26,26) 逻辑；
+**只有标题条**（渲染管线图上方那一条）能拖，和 Windows 窗口一个逻辑。窗口是 `NoMove`，
+拖拽是自绘状态机：
 
-## 4. 输入方案
+- 拖动量在 `Begin` **之前**用 `io.MouseDelta` 累加到 `gPos`，然后 `SetNextWindowPos(gPos, Always)`
+  ——窗口、背景、两个子栏同一帧用同一个坐标，不会出现「边框动了、子栏还留在原地」；
+  面板整体比鼠标晚一帧。
+- 命中判定是几何的（`IsMouseHoveringRect(标题条)` 且 `!IsAnyItemHovered()`），不占 item，
+  所以缩放按钮照样能点；悬停时把鼠标光标改成「移动」。
+- 拖出屏幕保留 120px 可见。
 
-- `ll::event::input::KeyInputEvent`（**Cancellable**）：`F10` 开关；面板打开时吞掉其它按键（保留 `F10`/`Esc`）。
-- `ll::event::input::MouseInputEvent`（**Cancellable**）：x/y/dx/dy 与按钮，直接喂给 ImGui IO；打开时吞掉。
-- 顺序很重要：**先让 ImGui 处理，再决定是否 cancel**，否则面板自己的点击也会被吞。
-- 不做自己的 WndProc 钩子：LL 的事件已经能拿到坐标与按键，少一个可能打架的钩子。
+```
+┌ 面板（圆角 6，深灰 #212224，橙色 #F0A33C 强调，内边距 18）──────────────────┐
+│ NeuroDragon  ← 整条标题条都可以拖动          [-] 100% [+]   ● 健康         │
+│ ┌引擎世界──┐ → ┌神经渲染──┐ → ┌引擎 DLSS─┐ → ┌输出────┐                  │
+│ │1485x835  │   │NR 运行   │   │超分放大  │   │2560x1440│                  │
+│ │光栅      │   │3.25 ms   │   │1.64 ms   │   │本面板    │                  │
+│ [神经渲染] [诊断] [高级]                                                   │
+│ ┌ 左：帧统计 (330) ─┐ ┌ 右：当前页签的设置 (460) ──────────────────────┐ │
+│ │ 光栅帧率 / 帧时间   │ │ 启用神经渲染 / 替换模式 / 增益                │ │
+│ │ 自动缩放折线       │ │ Style（下拉）/ 整体 / 局部色调 / 局部结构      │ │
+│ │ 渲染尺寸/输出尺寸   │ │ 输入：深度反转、运动矢量；编码；TRP Ratio     │ │
+│ │ 状态/替换          │ │                                            │ │
+│ │ NR GPU / DLSS GPU  │ │                                            │ │
+│ └───────────────────┘ └────────────────────────────────────────────┘ │
+│ 未修改                                          [放弃] [应用] [保存为默认] │
+└──────────────────────────────────────────────────────────────────────────┘
+```
 
-## 5. 设置模型
+- 页签只有三个：`神经渲染` / `诊断` / `高级`。原来的 `画面` 页内容（开关、替换模式、
+  增益、Style）已并入 `神经渲染` 页顶部，页面本身删除。
+- 两栏是**固定宽度**（330 / 460 逻辑，gutter 18），窗口宽度由它们推出来，所以滑条不会随
+  屏幕变长；行宽另有一道上限（440 逻辑）。子窗口内边距 14 逻辑，**必须传
+  `ImGuiChildFlags_AlwaysUseWindowPadding`**（无边框 child 默认没有 padding）；
+  统计行的标签超宽时按宽度截断成 `…`（不要用 `PushClipRect`，`RenderText` 的
+  `CurrLineTextBaseOffset` 会让裁剪框比字形高一截，把字切掉一半）；
+  滑条把手在 0/1 两端内缩半个把手宽度。
+- Style 是**下拉**（0/1/2），不是滑条：三个离散档位，滑条上的把手在 0 处只会被切一半。
+- 帧时间折线按峰值自动取档（16.7/25/33.3/50/66.7/100/150/250 ms）并平滑过渡。
+- 替换模式只列代码里真实存在的三个值：`0 只求值`、`5 增益合成（上屏）`、`6 TRP Ratio`。
+  **注意 6 目前不会合成**（`compositeGain` 只挂在 `replace == 5`），界面里已如实标注。
 
-- 内存里的 `Settings` 是唯一真源；`nr_params.txt` 降级成「启动导入 / 调试导出」。
-- 面板改动 → 立即写入运行参数并标记 dirty（写盘节流，例如 2 秒或关闭面板时）。
-- 持久化格式与文件名：**待定案**（跟着用户的标准走）。
-- 预设：命名槽，保存一组参数；先给三档内置（`TRP 默认` / `低` / `高`）。
+## 4. 输入
 
-## 6. 里程碑（每个都以“用户能亲手验证”为验收）
+- `End` 开关（`config.json` 的 `ui.openKey`，默认 `0x23` = VK_END）；面板打开时 `Esc` 关闭。
+- 重绑：面板 `高级 → 热键 → 打开/关闭` 点一下，再按目标键（Esc 取消，单独修饰键不接受）。
+  时序上捕获发生在窗口过程里、早于 ImGui 与游戏，所以按键不会漏进任何一边。
+- 面板打开时窗口过程吞掉键鼠消息并交给 ImGui；`InputGuard` 同时拦掉引擎自己的 HID 通路
+  （两条通路都走，只拦一条会出现「面板开着但人还在走」）。
+- 打开瞬间把游戏已收到的按键/鼠标键补发抬起；关闭时 `PostMessage` 让窗口线程把光标
+  收回客户区中心再交还游戏（不能在 Present 线程直接动光标）。
+- `F11`（切全屏）在两处都放行：面板画歪时这是唯一出路。
 
-| 里程碑 | 内容 | 验收 |
-|---|---|---|
-| **M1** 骨架 | 能画出窗口 + 一个 `GainBoost` 滑条 + 一个开关；`F10` 开合；输入被吞 | 拖滑条，画面立刻变亮/变暗；关闭后键鼠恢复正常 |
-| **M2** 控件铺满 | `Replace` 开关、`Style`、`Intensity`、`Local*Strength`、`DepthInverted`、`NrEncode`，全部实时生效 | 面板里关掉 NR，画面立刻回到引擎原图 |
-| **M3** 持久化 + 预设 | 保存/加载、启动自动读取 | 重启游戏后设置还在 |
-| **M4** 诊断页 | GPU 计时、分辨率/模式显示、dump 按钮 | 面板上的毫秒数与日志里的一致 |
+## 5. 配置语义（暂存式）
 
-M1 约半天，M2–M4 各半天。
+- `config/config.json` **只在启动时导入**，没有任何 hot reload（`reloadConfigIfDue` 已删）。
+- 面板里的控件改的是一份 `draft`，运行中的 `config::get().nr` 不动；顶部状态点、管线图、
+  左统计栏显示的仍是**正在运行**的值。
+- 底部三个按钮：**`应用`** = draft 写进内存（本次运行生效，不落盘）；
+  **`保存为默认`** = 应用 + 写 `config/config.json`；**`放弃`** = draft 退回运行值。
+- 关闭面板 = 丢弃未应用的改动（有改动时弹一条提示条）。
+- 诊断页的三个开关也走同一套暂存逻辑，避免出现「一半实时一半暂存」的混乱。
+- 底部状态行：`未修改` / `已修改 · 未应用` / `已应用` / `已保存为默认` / `已放弃改动`。
 
-## 7. 风险与对策
+## 6. 数据来源（都是实测值，没有估算）
 
-- **ImGui 的 dx12 backend 与本工程的 `set_exceptions("none")` / `EHs`** 可能冲突：先做最小链接
-  验证（能编译、能画出三角形），再铺控件。
-- **`Output` 在 NGX 之后的状态未知**：NGX 可能把它留在 `UNORDERED_ACCESS` 或
-  `ALL_SHADER_RESOURCE`，我们先按已知状态 transition，必要时加一次 debug 校验日志。
-- **输入吞噬**：若 LL 事件的坐标/按钮与原版语义有出入，先在日志里打原始值对齐一次。
-- **面板与 NR 求值的顺序**：同一根 command list，先画 UI 或先合成都不影响数值；固定成
-  「合成 → 引擎 evaluate → 画 UI」，避免以后改顺序时踩状态。
+| 面板显示 | 来源 |
+|---|---|
+| 光栅帧率 / 帧时间 / 折线 | `Overlay` 在 `Present` 里用 QPC 计时，240 点环形历史 |
+| 渲染尺寸 | `gNr.width/height`（feature 建立时的 1:1 尺寸） |
+| 输出尺寸 | 第一次拿到引擎 `Output` 时 `describe()` 读到后缓存 |
+| NR GPU / DLSS GPU | `reportOne` 算出的中位数，以 `std::atomic<double>` 发布（渲染线程写、面板读，避免读半截 vector） |
+| 求值次数 / 错误码 | `gNr.evalCount` / `gNr.lastError` |
 
-## 8. 与「标准化」的接口
+## 7. 坑（都已踩过）
 
-- UI 代码建议独立成 `src/neurodragon/ui/`，与 `nr/`、`probe/` 平级，便于后续替换或裁剪。
-- 本文档中标「待定案」的三处（配置文件格式/名称、模块划分、面板样式）都以用户的标准为准；
-  代码只依赖一个 `Settings` 结构体 + 一组回调，样式与文件格式改起来不碰逻辑。
-- 若标准化后目录结构变化，M1 只受影响的是 include 路径与文件位置，不影响设计。
+- `imgui` 的 xmake 包**只有** `imgui.lib` 与 `backends/imgui_impl_{dx11,win32}.h`；
+  dx12 后端源码不在包里。这里走 DX11 后端 + 11on12，正好绕开。
+- `<d3d11on12.h>` 与某些 SDK 的 `<d3d12.h>` 会重复定义三个结构体，`Overlay.cpp` 顶部
+  用宏改名绕开（Mangrove 同款）。
+- `D3D11On12CreateDevice` 必须拿到游戏**自己的** direct queue，否则画面不同步；
+  队列只能从 `ExecuteCommandLists` 钩子里取第一个 DIRECT 队列。
+- `ResizeBuffers*` 之前必须先拆掉 11on12 侧所有引用，否则 Size mismatch。
+- 字体图集：2 万字全表会拉出几十 MB 纹理 + 明显卡顿，所以只按实际用字建（294 个字形）；
+  字表由 `scripts/collect_glyphs.py` 从 `src/lang/*.json` 生成，**收的是所有非 ASCII 字符**
+  （只收 `4E00-9FFF` 会让 `，（）：…` 这类全角标点缺失、在界面上显示成 `?`）。
+  **改文案（含英文稿）后要重跑**，否则新字会缺字形。
+- GPU 计时与面板：`nrStampReset()` 只清原始样本，**不要**在里面清已发布的中位数 ——
+  测量窗口每 60 帧结束一次就会调它，清了面板就永远读「无样本」。要清已发布值请用
+  `nrStampClearReported()`（面板按钮）。中位数每 30 帧发布一次，`Replace != 0` 时每帧打点。
+- 字体图集/字体贴图的构建发生在**第一帧 `ImGui_ImplDX11_NewFrame()`**，所以面板关着时
+  也要空跑 2 帧（`kWarmupFrames`），把这笔开销花在加载画面里。
+
+## 8. 待办
+
+- 背景模糊（从后台缓冲降采样 + blur 再叠面板，+0.3~0.5 ms）。
+- 预设：命名保存/加载（现在只有「保存为默认」）。
+- 诊断页的「手动 dump 一次」按钮（需要桥里加一个触发入口）。
+- 把 `Replace=6` 真正接到合成上（`compositeGain` 的条件），然后更新文案。
+- 面板热键目前只认单键（不接受组合键）；若要 `Ctrl+...` 之类的组合，需要把
+  `Overlay` 的热键判定改成和 `Mangrove::input::KeyBind` 一样按「组合」处理。

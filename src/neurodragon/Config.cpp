@@ -46,7 +46,20 @@ void reload() {
     try {
         ll::config::loadConfig(gConfig, configPath());
     } catch (...) {
-        // Keep the last good values; the next tick tries again.
+        // Keep the last good values.
+    }
+}
+
+bool save() {
+    try {
+        if (!ll::config::saveConfig(gConfig, configPath())) {
+            utils::logger().warn("config.json could not be written");
+            return false;
+        }
+        return true;
+    } catch (...) {
+        utils::logger().warn("config.json could not be written (exception)");
+        return false;
     }
 }
 

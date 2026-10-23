@@ -1,0 +1,799 @@
+#include "neurodragon/ui/Menu.h"
+
+#include "neurodragon/Config.h"
+#include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/ui/Overlay.h"
+#include "neurodragon/ui/Theme.h"
+#include "neurodragon/ui/Widgets.h"
+
+#include "ll/api/i18n/I18n.h"
+
+#include <imgui.h>
+
+#include <Windows.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <string>
+
+namespace neurodragon::ui::menu {
+namespace {
+
+using ll::i18n_literals::operator""_tr;
+using namespace theme;
+
+// ---------------------------------------------------------------------------
+// Panel state
+//
+// The panel edits a *draft* copy; the running renderer only sees it after
+// "Apply". Nothing is written to disk unless "Save as default" is pressed -
+// config/config.json is an import at load, not a live file.
+// ---------------------------------------------------------------------------
+
+config::Nr  gDraft{};
+int         gDraftKey{VK_END};
+int         gActiveTab{};
+bool        gDirty{};
+std::string gStatus;
+
+// Window position. The ImGui window is not movable (NoMove): dragging is handled
+// by the title strip only, exactly like a Win32 window, so a click anywhere else in
+// the panel never drags it.
+ImVec2 gPos{-1.0f, -1.0f};
+bool   gDragging{};
+
+void markDirty() {
+    gDirty = true;
+    gStatus.clear();
+}
+
+void setStatus(std::string text) { gStatus = std::move(text); }
+
+void at(ImVec2 position) { ImGui::SetCursorScreenPos(position); }
+
+// Readable name for a virtual-key code.
+std::string keyLabel(int virtualKey) {
+    if (virtualKey >= 'A' && virtualKey <= 'Z') return std::string(1, static_cast<char>(virtualKey));
+    if (virtualKey >= '0' && virtualKey <= '9') return std::string(1, static_cast<char>(virtualKey));
+    if (virtualKey >= VK_F1 && virtualKey <= VK_F12) return "F" + std::to_string(virtualKey - VK_F1 + 1);
+    switch (virtualKey) {
+    case VK_END: return "End";
+    case VK_HOME: return "Home";
+    case VK_INSERT: return "Insert";
+    case VK_DELETE: return "Delete";
+    case VK_PRIOR: return "PageUp";
+    case VK_NEXT: return "PageDown";
+    case VK_TAB: return "Tab";
+    case VK_SPACE: return "Space";
+    case VK_RETURN: return "Enter";
+    case VK_ESCAPE: return "Esc";
+    default: return "ui.key.unknown"_tr(virtualKey);
+    }
+}
+
+bool mappedCombo(char const* label, int* value, char const* const* items, int const* values, int count) {
+    int index = 0;
+    for (int candidate = 0; candidate < count; ++candidate) {
+        if (values[candidate] == *value) {
+            index = candidate;
+            break;
+        }
+    }
+    if (!widgets::combo(label, &index, items, count)) return false;
+    if (values[index] == *value) return false;
+    *value = values[index];
+    return true;
+}
+
+std::string replaceName(int mode) {
+    switch (mode) {
+    case 0: return "ui.replace.0"_tr();
+    case 5: return "ui.replace.5"_tr();
+    case 6: return "ui.replace.6"_tr();
+    default: return "ui.replace.other"_tr();
+    }
+}
+
+std::string replaceHint(int mode) {
+    switch (mode) {
+    case 0: return "ui.replace.hint0"_tr();
+    case 5: return "ui.replace.hint5"_tr();
+    case 6: return "ui.replace.hint6"_tr();
+    default: return "ui.replace.hintOther"_tr();
+    }
+}
+
+// Frame-time graph: the y axis follows the data instead of a fixed 0-50 ms, with
+// a small smoothing so the scale does not flicker frame to frame.
+float autoGraphMax(std::vector<float> const& values) {
+    static float shown = 33.3f;
+
+    float peak = 8.0f;
+    for (float const value : values) peak = std::max(peak, value);
+    float const target = peak * 1.2f;
+
+    float const steps[] = {16.7f, 25.0f, 33.3f, 50.0f, 66.7f, 100.0f, 150.0f, 250.0f};
+    float       bound   = steps[static_cast<int>(sizeof(steps) / sizeof(steps[0])) - 1];
+    for (float const step : steps) {
+        if (target <= step) {
+            bound = step;
+            break;
+        }
+    }
+    shown += (bound - shown) * 0.2f;
+    return shown;
+}
+
+// Layout --------------------------------------------------------------------
+
+struct Layout {
+    ImVec2 pos{};
+    ImVec2 size{};
+    float  scale{1.0f};
+    float  pad{};
+    float  headerHeight{};
+    float  pipelineHeight{};
+    float  tabsHeight{};
+    float  footerHeight{};
+    float  bodyTop{};
+    float  bodyHeight{};
+    float  leftWidth{};
+    float  gutter{};
+};
+
+Layout computeLayout(ImVec2 pos, ImVec2 size) {
+    Layout layout;
+    layout.pos   = pos;
+    layout.size  = size;
+    layout.scale = theme::scale();
+
+    float const s = layout.scale;
+    layout.pad            = 18.0f * s;
+    layout.headerHeight   = 54.0f * s; // title strip, also the drag handle
+    layout.pipelineHeight = 90.0f * s;
+    layout.tabsHeight     = 34.0f * s;
+    layout.footerHeight   = 50.0f * s;
+
+    layout.bodyTop    = pos.y + layout.pad + layout.headerHeight + layout.pipelineHeight + layout.tabsHeight;
+    layout.bodyHeight = pos.y + size.y - layout.pad - layout.footerHeight - layout.bodyTop;
+    layout.bodyHeight = std::max(layout.bodyHeight, 70.0f * s);
+
+    layout.gutter    = 18.0f * s;
+    // Fixed columns: the window is sized from them, and the stats column has to be
+    // wide enough for "label ... value" on one line at this font size.
+    layout.leftWidth = std::min(330.0f * s, size.x - layout.pad * 2.0f - 240.0f * s);
+    return layout;
+}
+
+// Header (title strip; the whole strip is the drag handle) -------------------
+
+void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
+    auto*      drawList = ImGui::GetWindowDrawList();
+    auto const s        = layout.scale;
+    auto const& live    = config::get().nr;
+
+    ImVec2 const titlePos{layout.pos.x + layout.pad, layout.pos.y + layout.pad * 0.42f};
+
+    at(titlePos);
+    ImGui::PushFont(theme::titleFont());
+    ImGui::TextUnformatted("NeuroDragon");
+    ImGui::PopFont();
+
+    drawList->AddText(
+        ImVec2(titlePos.x + 1.0f * s, titlePos.y + 26.0f * s),
+        kTextFaint,
+        "ui.subtitle"_tr().c_str()
+    );
+
+    float const right = layout.pos.x + layout.size.x - layout.pad;
+
+    char zoomText[32]{};
+    std::snprintf(zoomText, sizeof(zoomText), "%d%%", static_cast<int>(std::lround(theme::userScale() * 100.0f)));
+
+    float const button = 20.0f * s;
+    float const gap    = 5.0f * s;
+
+    std::string stateText;
+    ImU32       stateColor = kGreen;
+    if (!stats.featureCreated) {
+        stateText  = "ui.state.notReady"_tr();
+        stateColor = stats.lastError ? kRed : kAmber;
+    } else if (!live.enabled) {
+        stateText  = "ui.state.off"_tr();
+        stateColor = kTextDim;
+    } else if (live.replace != 5) {
+        stateText  = "ui.state.notOnScreen"_tr();
+        stateColor = kAmber;
+    } else {
+        stateText = "ui.state.healthy"_tr();
+    }
+
+    auto const stateSize  = ImGui::CalcTextSize(stateText.c_str());
+    auto const stateWidth = stateSize.x + 20.0f * s;
+    float const stateX    = right - stateWidth;
+    float const dotRadius = 4.0f * s;
+
+    float const zoomWidth = ImGui::CalcTextSize(zoomText).x + 10.0f * s;
+    float const zoomX     = stateX - 18.0f * s - zoomWidth - button * 2.0f - gap * 2.0f;
+    float const zoomY     = layout.pos.y + layout.pad * 0.42f;
+
+    // The label is a real ImGui item, so its rect is exactly where its glyphs are
+    // centred; it is vertically centred inside the taller zoom buttons, and the dot
+    // is placed on that same centre. Using the AddText position instead put the dot
+    // on the line-box top, which is visibly above the text.
+    at(ImVec2(stateX + dotRadius * 2.0f + 8.0f * s, zoomY + (button - stateSize.y) * 0.5f));
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kText), "%s", stateText.c_str());
+    {
+        ImVec2 const itemMin = ImGui::GetItemRectMin();
+        ImVec2 const itemMax = ImGui::GetItemRectMax();
+        drawList->AddCircleFilled(
+            ImVec2(stateX + dotRadius, (itemMin.y + itemMax.y) * 0.5f),
+            dotRadius,
+            stateColor
+        );
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f * s, 1.0f * s));
+    at(ImVec2(zoomX, zoomY));
+    if (ImGui::Button("-##zoomOut", ImVec2(button, button))) theme::setUserScale(theme::userScale() - 0.05f);
+    at(ImVec2(zoomX + button + gap, zoomY + 2.0f * s));
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", zoomText);
+    at(ImVec2(zoomX + button + gap + zoomWidth + gap, zoomY));
+    if (ImGui::Button("+##zoomIn", ImVec2(button, button))) theme::setUserScale(theme::userScale() + 0.05f);
+    ImGui::PopStyleVar();
+
+    float const ruleY = layout.pos.y + layout.pad + layout.headerHeight - 10.0f * s;
+    drawList->AddLine(
+        ImVec2(layout.pos.x + layout.pad, ruleY),
+        ImVec2(right, ruleY),
+        kBorderSoft,
+        std::max(1.0f, 1.0f * s)
+    );
+}
+
+// Pipeline strip ------------------------------------------------------------
+
+void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
+    auto const  s    = layout.scale;
+    auto const& live = config::get().nr;
+
+    float const top    = layout.pos.y + layout.pad + layout.headerHeight;
+    float const height = layout.pipelineHeight - 18.0f * s;
+    float const left   = layout.pos.x + layout.pad;
+    float const width  = layout.size.x - layout.pad * 2.0f;
+
+    constexpr int kArrows    = 3;
+    float const   arrowWidth = 30.0f * s;
+    float const   nodeWidth  = (width - static_cast<float>(kArrows) * arrowWidth) / 4.0f;
+
+    char render[48]{};
+    char output[48]{};
+    std::snprintf(render, sizeof(render), "%u x %u", stats.renderWidth, stats.renderHeight);
+    std::snprintf(output, sizeof(output), "%u x %u", stats.outputWidth, stats.outputHeight);
+
+    char nrLine[64]{};
+    if (!live.enabled) {
+        std::snprintf(nrLine, sizeof(nrLine), "%s", "ui.pipeline.off"_tr().c_str());
+    } else if (!stats.stampsActive) {
+        std::snprintf(nrLine, sizeof(nrLine), "%s", "ui.diag.timingOff"_tr().c_str());
+    } else if (stats.hasNr) {
+        std::snprintf(nrLine, sizeof(nrLine), "%.2f ms", stats.nrMs);
+    } else {
+        std::snprintf(nrLine, sizeof(nrLine), "%s", "ui.pipeline.waiting"_tr().c_str());
+    }
+
+    char dlssLine[64]{};
+    if (!stats.stampsActive) {
+        std::snprintf(dlssLine, sizeof(dlssLine), "%s", "ui.diag.timingOff"_tr().c_str());
+    } else if (stats.hasEngine) {
+        std::snprintf(dlssLine, sizeof(dlssLine), "%.2f ms", stats.engineMs);
+    } else {
+        std::snprintf(dlssLine, sizeof(dlssLine), "%s", "ui.pipeline.waiting"_tr().c_str());
+    }
+
+    bool const nrActive   = live.enabled && live.replace == 5;
+    bool const dlssActive = stats.featureCreated;
+
+    std::string const titles[4] = {
+        "ui.pipeline.world"_tr(),
+        "ui.pipeline.nr"_tr(),
+        "ui.pipeline.upscale"_tr(),
+        "ui.pipeline.output"_tr(),
+    };
+    std::string const nrTitle    = live.enabled ? "ui.pipeline.nrRunning"_tr() : "ui.pipeline.nrOff"_tr();
+    std::string const outSub     = "ui.pipeline.outputSub"_tr();
+    std::string const upscaleSub = "ui.pipeline.upscaleSub"_tr();
+    std::string const rasterSub  = "ui.pipeline.raster"_tr();
+
+    struct Node {
+        char const* title{};
+        char const* line1{};
+        char const* line2{};
+        bool        active{};
+    };
+    Node const nodes[4] = {
+        {titles[0].c_str(), render, rasterSub.c_str(), true},
+        {titles[1].c_str(), nrTitle.c_str(), nrLine, nrActive},
+        {titles[2].c_str(), upscaleSub.c_str(), dlssLine, dlssActive},
+        {titles[3].c_str(), output, outSub.c_str(), true},
+    };
+
+    for (int index = 0; index < 4; ++index) {
+        float const x = left + static_cast<float>(index) * (nodeWidth + arrowWidth);
+        widgets::nodeBox(
+            ImVec2(x, top),
+            ImVec2(nodeWidth, height),
+            nodes[index].title,
+            nodes[index].line1,
+            nodes[index].line2,
+            nodes[index].active
+        );
+
+        if (index < 3) {
+            float const fromX = x + nodeWidth + 5.0f * s;
+            float const toX   = x + nodeWidth + arrowWidth - 2.0f * s;
+            float const midY  = top + height * 0.5f;
+            widgets::nodeArrow(ImVec2(fromX, midY), ImVec2(toX, midY), nodes[index + 1].active);
+        }
+    }
+}
+
+// Tabs ----------------------------------------------------------------------
+
+void drawTabs(Layout const& layout) {
+    float const y = layout.pos.y + layout.pad + layout.headerHeight + layout.pipelineHeight;
+
+    std::string const tabs[3] = {
+        "ui.tab.neural"_tr(),
+        "ui.tab.diagnostics"_tr(),
+        "ui.tab.advanced"_tr(),
+    };
+
+    at(ImVec2(layout.pos.x + layout.pad, y));
+    if (ImGui::BeginTabBar("##neurodragonTabs")) {
+        for (int index = 0; index < 3; ++index) {
+            ImGui::PushID(index);
+            if (ImGui::BeginTabItem(tabs[index].c_str())) {
+                gActiveTab = index;
+                ImGui::EndTabItem();
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTabBar();
+    }
+}
+
+// Stats column --------------------------------------------------------------
+
+void drawStatsColumn(Layout const& layout, nr::PanelStats const& stats) {
+    auto const s       = layout.scale;
+    auto const frame   = Overlay::getInstance().frameStats();
+    auto const history = Overlay::getInstance().recentFrameMs();
+    auto const& live   = config::get().nr;
+
+    widgets::sectionHeader("ui.stats.frames"_tr().c_str());
+
+    char buffer[64]{};
+    std::snprintf(buffer, sizeof(buffer), "%.1f fps", frame.fps);
+    widgets::statRow("ui.stats.fps"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%.2f ms", frame.frameMs);
+    widgets::statRow("ui.stats.frameTime"_tr().c_str(), buffer);
+
+    ImVec2 const graphSize{ImGui::GetContentRegionAvail().x, 56.0f * s};
+    auto const   graphPos = ImGui::GetCursorScreenPos();
+    widgets::frameGraph(graphPos, graphSize, history, autoGraphMax(history));
+    ImGui::Dummy(ImVec2(graphSize.x, graphSize.y + 4.0f * s));
+
+    widgets::sectionHeader("ui.tab.neural"_tr().c_str());
+
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", stats.renderWidth, stats.renderHeight);
+    widgets::statRow("ui.stats.renderSize"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", stats.outputWidth, stats.outputHeight);
+    widgets::statRow("ui.stats.outputSize"_tr().c_str(), buffer);
+
+    widgets::statRow(
+        "ui.stats.status"_tr().c_str(),
+        (stats.featureCreated ? "ui.stats.created"_tr() : "ui.stats.notCreated"_tr()).c_str(),
+        stats.featureCreated ? kGreen : kRed
+    );
+    widgets::statRow("ui.stats.replace"_tr().c_str(), replaceName(live.replace).c_str());
+
+    if (!stats.stampsActive) {
+        widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
+        widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
+    } else {
+        if (stats.hasNr) {
+            std::snprintf(buffer, sizeof(buffer), "%.2f ms", stats.nrMs);
+            widgets::statRow("ui.stats.nrGpu"_tr().c_str(), buffer, kAccent);
+        } else {
+            widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+        }
+        if (stats.hasEngine) {
+            std::snprintf(buffer, sizeof(buffer), "%.2f ms", stats.engineMs);
+            widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), buffer);
+        } else {
+            widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+        }
+    }
+}
+
+// Settings columns ----------------------------------------------------------
+
+void drawTabNeural() {
+    widgets::sectionHeader("ui.neural.enableSection"_tr().c_str());
+
+    if (widgets::toggle("ui.neural.enable"_tr().c_str(), &gDraft.enabled)) markDirty();
+    if (!gDraft.enabled) widgets::hint("ui.neural.disabledHint"_tr().c_str());
+
+    if (!gDraft.enabled) ImGui::BeginDisabled();
+
+    std::string const replaceItems[3] = {
+        "ui.replace.item0"_tr(),
+        "ui.replace.item5"_tr(),
+        "ui.replace.item6"_tr(),
+    };
+    char const* itemPointers[3]  = {replaceItems[0].c_str(), replaceItems[1].c_str(), replaceItems[2].c_str()};
+    int const   replaceValues[3] = {0, 5, 6};
+    if (mappedCombo("ui.neural.replace"_tr().c_str(), &gDraft.replace, itemPointers, replaceValues, 3)) markDirty();
+    widgets::hint(replaceHint(gDraft.replace).c_str());
+
+    if (widgets::slider("ui.neural.gain"_tr().c_str(), &gDraft.gainBoost, 0.5f, 8.0f, "%.2f", "x")) markDirty();
+
+    if (!gDraft.enabled) ImGui::EndDisabled();
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.style.section"_tr().c_str());
+
+    // A dropdown, not a slider: three discrete styles and no meaningful order.
+    static char const* const kStyleItems[]  = {"0", "1", "2"};
+    static int const         kStyleValues[] = {0, 1, 2};
+    if (mappedCombo("ui.style.style"_tr().c_str(), &gDraft.style, kStyleItems, kStyleValues, 3)) markDirty();
+    if (widgets::slider("ui.style.intensity"_tr().c_str(), &gDraft.intensity, 0.0f, 2.0f, "%.2f")) markDirty();
+    if (widgets::slider("ui.style.localTone"_tr().c_str(), &gDraft.localToneStrength, 0.0f, 2.0f, "%.2f")) markDirty();
+    if (widgets::slider(
+            "ui.style.localStructure"_tr().c_str(),
+            &gDraft.localStructureStrength,
+            0.0f,
+            2.0f,
+            "%.2f"
+        )) {
+        markDirty();
+    }
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.neural.input"_tr().c_str());
+
+    std::string const depthItems[3] = {
+        "ui.neural.depthFollow"_tr(),
+        "ui.neural.depthNormal"_tr(),
+        "ui.neural.depthInverted"_tr(),
+    };
+    char const* depthPointers[3] = {depthItems[0].c_str(), depthItems[1].c_str(), depthItems[2].c_str()};
+    int const   depthValues[3]   = {-1, 0, 1};
+    if (mappedCombo("ui.neural.depth"_tr().c_str(), &gDraft.depthInverted, depthPointers, depthValues, 3)) markDirty();
+
+    bool autoMvec = gDraft.mvecScale < 0.0f;
+    if (widgets::toggle("ui.neural.autoMv"_tr().c_str(), &autoMvec)) {
+        gDraft.mvecScale = autoMvec ? -1.0f : 0.0f;
+        markDirty();
+    }
+    widgets::hint("ui.neural.mvHint"_tr().c_str());
+    if (!autoMvec) {
+        if (widgets::slider("ui.neural.mv"_tr().c_str(), &gDraft.mvecScale, 1.0f, 2048.0f, "%.0f")) markDirty();
+    }
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.neural.encode"_tr().c_str());
+
+    std::string const encodeItems[3] = {
+        "ui.neural.encodeAuto"_tr(),
+        "ui.neural.encodeReinhard"_tr(),
+        "ui.neural.encodeTrp"_tr(),
+    };
+    char const* encodePointers[3] = {encodeItems[0].c_str(), encodeItems[1].c_str(), encodeItems[2].c_str()};
+    int const   encodeValues[3]   = {-1, 0, 3};
+    if (mappedCombo("ui.neural.encode"_tr().c_str(), &gDraft.nrEncode, encodePointers, encodeValues, 3)) markDirty();
+    widgets::hint("ui.neural.encodeHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.neural.ratio"_tr().c_str());
+    if (widgets::slider("ui.neural.white"_tr().c_str(), &gDraft.whitePoint, 0.05f, 4.0f, "%.3f")) markDirty();
+    if (widgets::slider("ui.neural.transfer"_tr().c_str(), &gDraft.transferStrength, 0.0f, 2.0f, "%.2f")) markDirty();
+    if (widgets::slider("ui.neural.colour"_tr().c_str(), &gDraft.colourStrength, 0.0f, 2.0f, "%.2f")) markDirty();
+    if (widgets::slider("ui.neural.maxRatio"_tr().c_str(), &gDraft.maxRatio, 1.0f, 8.0f, "%.2f")) markDirty();
+}
+
+void drawTabDiagnostics() {
+    auto const stats = nr::nrPanelStats();
+
+    widgets::sectionHeader("ui.diag.gpu"_tr().c_str());
+
+    char buffer[96]{};
+    if (!stats.stampsActive) {
+        widgets::statRow("ui.diag.nr"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
+        widgets::statRow("ui.diag.dlss"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
+    } else {
+        if (stats.hasNr) {
+            std::snprintf(buffer, sizeof(buffer), "%.3f ms  %s", stats.nrMs, "ui.diag.sample"_tr(stats.nrSamples).c_str());
+            widgets::statRow("ui.diag.nr"_tr().c_str(), buffer, kAccent);
+        } else {
+            widgets::statRow("ui.diag.nr"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+        }
+        if (stats.hasEngine) {
+            std::snprintf(
+                buffer,
+                sizeof(buffer),
+                "%.3f ms  %s",
+                stats.engineMs,
+                "ui.diag.sample"_tr(stats.engineSamples).c_str()
+            );
+            widgets::statRow("ui.diag.dlss"_tr().c_str(), buffer);
+        } else {
+            widgets::statRow("ui.diag.dlss"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+        }
+    }
+    if (stats.lastError != 0) {
+        std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(stats.lastError));
+        widgets::statRow("ui.diag.lastError"_tr().c_str(), buffer, kRed);
+    }
+    std::string clearLabel = "ui.diag.clear"_tr();
+    clearLabel += "##clearSamples";
+    if (ImGui::Button(clearLabel.c_str())) nr::nrStampClearReported();
+    widgets::hint("ui.diag.hint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.diag.switches"_tr().c_str());
+    if (widgets::toggle("ui.diag.resetNr"_tr().c_str(), &gDraft.resetEveryFrame)) markDirty();
+    if (widgets::toggle("ui.diag.resetSr"_tr().c_str(), &gDraft.srResetEveryFrame)) markDirty();
+    if (widgets::toggle("ui.diag.paramLog"_tr().c_str(), &gDraft.paramLog)) markDirty();
+    widgets::hint("ui.diag.warnHint"_tr().c_str());
+}
+
+void drawTabAdvanced() {
+    widgets::sectionHeader("ui.adv.ui"_tr().c_str());
+    char buffer[64]{};
+    std::snprintf(buffer, sizeof(buffer), "%d%%", static_cast<int>(std::lround(theme::userScale() * 100.0f)));
+    widgets::statRow("ui.adv.scale"_tr().c_str(), buffer);
+    widgets::hint("ui.adv.scaleHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.adv.keys"_tr().c_str());
+
+    auto& overlay = Overlay::getInstance();
+
+    widgets::beginRow();
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", "ui.adv.open"_tr().c_str());
+
+    std::string const label = overlay.isCapturingHotkey() ? "ui.adv.capturing"_tr() : keyLabel(gDraftKey);
+    float const       width = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(widgets::rowRight() - width);
+    if (ImGui::Button((label + "##rebind").c_str())) overlay.beginHotkeyCapture();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "ui.adv.rebindHint"_tr().c_str());
+
+    if (int const captured = overlay.takeCapturedHotkey(); captured != 0 && captured != gDraftKey) {
+        gDraftKey = captured;
+        markDirty();
+    }
+
+    widgets::statRow("ui.adv.close"_tr().c_str(), "Esc");
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.adv.config"_tr().c_str());
+    widgets::hint("ui.adv.configHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.adv.about"_tr().c_str());
+    widgets::statRow("ui.adv.version"_tr().c_str(), "0.0.0");
+}
+
+// Footer --------------------------------------------------------------------
+
+void applyDraft(bool persist) {
+    config::get().nr         = gDraft;
+    config::get().ui.openKey = gDraftKey;
+    Overlay::getInstance().refreshHotkey();
+    gDirty = false;
+
+    if (!persist) {
+        setStatus("ui.footer.applied"_tr());
+        return;
+    }
+    if (config::save()) setStatus("ui.footer.saved"_tr());
+    else setStatus("ui.footer.writeFailed"_tr());
+}
+
+void drawFooter(Layout const& layout) {
+    auto*      drawList = ImGui::GetWindowDrawList();
+    auto const s        = layout.scale;
+
+    float const ruleY = layout.pos.y + layout.size.y - layout.pad - layout.footerHeight + 2.0f * s;
+    drawList->AddLine(
+        ImVec2(layout.pos.x + layout.pad, ruleY),
+        ImVec2(layout.pos.x + layout.size.x - layout.pad, ruleY),
+        kBorderSoft,
+        std::max(1.0f, 1.0f * s)
+    );
+
+    float const top = ruleY + 14.0f * s;
+
+    std::string status = gStatus;
+    if (status.empty()) status = gDirty ? "ui.footer.dirty"_tr() : "ui.footer.clean"_tr();
+
+    at(ImVec2(layout.pos.x + layout.pad, top + 7.0f * s));
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(gDirty ? kAccent : kTextDim), "%s", status.c_str());
+
+    float const buttonHeight = 28.0f * s;
+    float const buttonWidth  = 96.0f * s;
+    float const gap          = 7.0f * s;
+    float       x            = layout.pos.x + layout.size.x - layout.pad - buttonWidth;
+
+    at(ImVec2(x, top));
+    if (widgets::footerButton("ui.footer.saveDefault"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), true)) {
+        applyDraft(true);
+    }
+
+    x -= buttonWidth + gap;
+    at(ImVec2(x, top));
+    if (widgets::footerButton("ui.footer.apply"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), false)) {
+        applyDraft(false);
+    }
+
+    x -= buttonWidth + gap;
+    at(ImVec2(x, top));
+    if (widgets::footerButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), false)) {
+        gDraft    = config::get().nr;
+        gDraftKey = config::get().ui.openKey;
+        gDirty    = false;
+        setStatus("ui.footer.discarded"_tr());
+    }
+}
+
+} // namespace
+
+void render() {
+    auto const viewport = ImGui::GetIO().DisplaySize;
+    if (viewport.x <= 1.0f || viewport.y <= 1.0f) return;
+
+    theme::apply(viewport);
+
+    float const s = theme::scale();
+    // Width comes from the two fixed columns (330 + 460 logical) plus the gutter,
+    // not from the viewport.
+    ImVec2 const defaultSize{
+        std::min(850.0f * s, viewport.x - 64.0f * s),
+        std::min(700.0f * s, viewport.y - 64.0f * s),
+    };
+    ImVec2 const defaultPos{26.0f * s, 26.0f * s};
+    if (gPos.x < 0.0f) gPos = defaultPos;
+
+    // Drag is applied *before* Begin: the window, its background and both child
+    // columns are then all laid out at the same position. Applying it after Begin
+    // (SetWindowPos mid-frame) moved the frame but not the already-positioned
+    // children, which is exactly the "elements lag behind the window" symptom.
+    auto const& io      = ImGui::GetIO();
+    float const minX    = 120.0f * s;
+    float const minY    = 40.0f * s;
+    if (gDragging) {
+        gPos.x += io.MouseDelta.x;
+        gPos.y += io.MouseDelta.y;
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) gDragging = false;
+    }
+    gPos = ImVec2(
+        std::clamp(gPos.x, -(defaultSize.x - minX), viewport.x - minX),
+        std::clamp(gPos.y, 0.0f, viewport.y - minY)
+    );
+
+    ImGui::SetNextWindowPos(gPos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(defaultSize, ImGuiCond_Always);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f * s);
+
+    // NoMove: dragging is our own state machine over the title strip only.
+    constexpr ImGuiWindowFlags kWindowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
+                                            | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings
+                                            | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNavFocus
+                                            | ImGuiWindowFlags_NoBackground;
+
+    if (ImGui::Begin("##neurodragonPanel", nullptr, kWindowFlags)) {
+        ImVec2 const size = ImGui::GetWindowSize();
+
+        auto const layout = computeLayout(gPos, size);
+        auto const stats  = nr::nrPanelStats();
+
+        auto* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kPanel, 6.0f * s);
+        drawList->AddRect(
+            gPos,
+            ImVec2(gPos.x + size.x, gPos.y + size.y),
+            kBorder,
+            6.0f * s,
+            0,
+            std::max(1.0f, s)
+        );
+
+        drawHeader(layout, stats);
+
+        // Drag affordance: the title strip, minus anything interactive on it (the
+        // zoom buttons). Checked after the header so IsAnyItemHovered() already
+        // knows about them.
+        ImVec2 const stripMax{gPos.x + size.x, gPos.y + layout.pad + layout.headerHeight};
+        bool const   overStrip =
+            ImGui::IsMouseHoveringRect(gPos, stripMax) && !ImGui::IsAnyItemHovered();
+        if (overStrip && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) gDragging = true;
+        if (overStrip || gDragging) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+
+        drawPipeline(layout, stats);
+        drawTabs(layout);
+
+        float const leftX  = gPos.x + layout.pad;
+        float const rightX = leftX + layout.leftWidth + layout.gutter;
+        float const rightW = gPos.x + size.x - layout.pad - rightX;
+
+        drawList->AddRectFilled(
+            ImVec2(leftX, layout.bodyTop),
+            ImVec2(leftX + layout.leftWidth, layout.bodyTop + layout.bodyHeight),
+            kPanelDeep,
+            4.0f * s
+        );
+
+        float const padding = 14.0f * s;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
+        at(ImVec2(leftX, layout.bodyTop));
+        // A borderless child window gets no padding unless asked for, which is why
+        // the columns looked like the text was glued to their edges.
+        if (ImGui::BeginChild(
+                "##statsColumn",
+                ImVec2(layout.leftWidth, layout.bodyHeight),
+                ImGuiChildFlags_AlwaysUseWindowPadding
+            )) {
+            drawStatsColumn(layout, stats);
+        }
+        ImGui::EndChild();
+
+        at(ImVec2(rightX, layout.bodyTop));
+        if (ImGui::BeginChild(
+                "##settingsColumn",
+                ImVec2(rightW, layout.bodyHeight),
+                ImGuiChildFlags_AlwaysUseWindowPadding
+            )) {
+            switch (gActiveTab) {
+            case 0: drawTabNeural(); break;
+            case 1: drawTabDiagnostics(); break;
+            default: drawTabAdvanced(); break;
+            }
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleVar();
+
+        drawFooter(layout);
+    }
+    ImGui::End();
+    ImGui::PopStyleVar(3);
+}
+
+void onOpened() {
+    // Start from what is running right now. Nothing is read from disk here: the
+    // file is an import at load, and the panel is a staging area over the live
+    // values.
+    gDraft    = config::get().nr;
+    gDraftKey = config::get().ui.openKey;
+    gDirty    = false;
+    gStatus.clear();
+}
+
+void onClosed() {
+    // Unapplied edits die with the panel - same contract as the reference UI:
+    // Apply is the only way a change reaches the renderer.
+    gDragging = false;
+    if (gDirty) {
+        gDirty = false;
+        Overlay::getInstance().notify("ui.footer.discarded"_tr());
+    }
+}
+
+} // namespace neurodragon::ui::menu

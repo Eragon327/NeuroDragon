@@ -2,6 +2,7 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/probe/RenderProbe.h"
+#include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
 
 #include "ll/api/i18n/I18n.h"
@@ -51,10 +52,19 @@ bool NeuroDragon::load() {
 bool NeuroDragon::enable() {
     // Locate + hook dragon::framerenderer::modules::taau without any PDB.
     probe::install();
+
+    // The panel is not essential to NR: if the game window is not up yet the probe
+    // watcher retries it in the background.
+    if (!ui::Overlay::getInstance().install()) {
+        getSelf().getLogger().warn("overlay: not installed yet; the probe watcher will retry");
+    }
     return true;
 }
 
 bool NeuroDragon::disable() {
+    // Take the panel down first: it owns the window procedure and hooks Present,
+    // both of which must be in their original state before the NR hooks are dropped.
+    ui::Overlay::getInstance().uninstall();
     probe::uninstall();
     return true;
 }

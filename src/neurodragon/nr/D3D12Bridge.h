@@ -154,6 +154,35 @@ void nrStampBegin(void* commandList, std::uint64_t frame, int id);
 void nrStampEnd(void* commandList, std::uint64_t frame, int id);
 void nrStampTick(std::uint64_t frame);
 void nrStampReport();
+// Drop the raw samples (the measurement machinery calls this per window).
 void nrStampReset();
+// Forget the published medians too - only the panel's "clear samples" button
+// should do this; resetting them per window is what made the panel read "no
+// samples" forever.
+void nrStampClearReported();
+
+// ---------------------------------------------------------------------------
+// Read-only snapshot for the in-game panel (src/neurodragon/ui).
+// Every number is either a size the last frame actually used or a GPU median
+// published atomically once per measurement window; nothing here is a guess.
+// ---------------------------------------------------------------------------
+struct PanelStats {
+    bool     featureCreated = false;
+    bool     stampsActive   = false; // false = GPU timing unavailable this run
+    unsigned evalCount      = 0;
+    int      lastError      = 0;
+    unsigned renderWidth    = 0; // NR render size (1:1 with the engine's Color)
+    unsigned renderHeight   = 0;
+    unsigned outputWidth    = 0; // engine DLSS output (the presented picture)
+    unsigned outputHeight   = 0;
+    unsigned nrSamples      = 0; // samples behind nrMs
+    unsigned engineSamples  = 0; // samples behind engineMs
+    bool     hasNr          = false;
+    bool     hasEngine      = false;
+    double   nrMs           = 0.0;
+    double   engineMs       = 0.0;
+};
+
+[[nodiscard]] PanelStats nrPanelStats();
 
 } // namespace neurodragon::nr

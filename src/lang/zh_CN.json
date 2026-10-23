@@ -43,5 +43,134 @@
             "notImplemented": "未实现（FAIL_NotImplemented）",
             "unknown": "未知返回码（Unknown）"
         }
+    },
+    "ui": {
+        "subtitle": "渲染管线",
+        "state": {
+            "healthy": "健康",
+            "notReady": "NR 未就绪",
+            "off": "已关闭",
+            "notOnScreen": "NR 未上屏"
+        },
+        "tab": {
+            "neural": "神经渲染",
+            "diagnostics": "诊断",
+            "advanced": "高级"
+        },
+        "pipeline": {
+            "world": "引擎世界",
+            "raster": "光栅",
+            "nr": "神经渲染",
+            "nrRunning": "NR 运行",
+            "nrOff": "NR 关闭",
+            "upscale": "引擎 DLSS",
+            "upscaleSub": "超分放大",
+            "output": "输出",
+            "outputSub": "本面板",
+            "off": "已关闭",
+            "waiting": "等待样本"
+        },
+        "stats": {
+            "frames": "帧统计",
+            "fps": "光栅帧率",
+            "frameTime": "帧时间",
+            "renderSize": "渲染尺寸",
+            "outputSize": "输出尺寸",
+            "status": "状态",
+            "replace": "替换模式",
+            "nrGpu": "NR GPU",
+            "dlssGpu": "DLSS GPU",
+            "noSamples": "无样本",
+            "created": "已创建",
+            "notCreated": "未就绪"
+        },
+        "replace": {
+            "0": "只求值",
+            "5": "增益合成",
+            "6": "TRP Ratio",
+            "other": "未实现",
+            "item0": "只求值（不改画面）",
+            "item5": "增益合成（上屏）",
+            "item6": "TRP Ratio",
+            "hint0": "NR 每帧求值但不改画面，只用来量 GPU 时间。",
+            "hint5": "网络算出的相对增益乘回引擎的线性 HDR 画面，再由引擎 DLSS 放大。目前唯一真正上屏的模式。",
+            "hint6": "TRP 的 Ratio 合成。注意：当前代码只在 Replace=5 时调用合成，选 6 实际等同于只求值。",
+            "hintOther": "这个编号在当前版本里没有实现，效果等同于只求值。"
+        },
+        "style": {
+            "section": "Style",
+            "style": "风格强度",
+            "intensity": "整体强度",
+            "localTone": "局部色调",
+            "localStructure": "局部结构"
+        },
+        "neural": {
+            "disabledHint": "神经渲染当前是关闭的；下面这些参数会在重新启用后生效。",
+            "input": "输入",
+            "depth": "深度反转",
+            "depthFollow": "跟随引擎",
+            "depthNormal": "不反转",
+            "depthInverted": "反转",
+            "autoMv": "运动矢量自动缩放",
+            "mvHint": "自动 = 按渲染尺寸归一化（推荐）。手动值是 MV 的像素缩放。",
+            "mv": "MV 缩放",
+            "encode": "编码",
+            "encodeHint": "NR 吃的是显示域画面；编码决定把引擎的线性 HDR 转成显示域的方式。",
+            "encodeAuto": "按模式自动",
+            "encodeReinhard": "Reinhard",
+            "encodeTrp": "TRP",
+            "ratio": "TRP Ratio 参数",
+            "white": "白点",
+            "transfer": "迁移强度",
+            "colour": "色彩强度",
+            "maxRatio": "最大比值",
+            "enableSection": "神经渲染",
+            "enable": "启用神经渲染",
+            "replace": "替换模式",
+            "gain": "增益 Boost"
+        },
+        "diag": {
+            "gpu": "GPU 计时",
+            "nr": "神经渲染",
+            "dlss": "引擎 DLSS",
+            "sample": "{0} 样本",
+            "lastError": "最近错误",
+            "clear": "清空计时样本",
+            "hint": "计时来自时间戳查询环；只统计窗口内完成的帧。",
+            "switches": "诊断开关",
+            "resetNr": "每帧重置 NR 历史",
+            "resetSr": "每帧重置引擎 SR 历史",
+            "paramLog": "记录 NGX 参数写入",
+            "warnHint": "这三个都会让画面不正常，只用于定位问题。日志写在模组目录。",
+            "timingOff": "计时未启用"
+        },
+        "adv": {
+            "ui": "界面",
+            "scale": "界面缩放",
+            "scaleHint": "用标题栏右上角的 - / + 调整；缩放会跟着分辨率走。",
+            "keys": "热键",
+            "open": "打开 / 关闭",
+            "close": "关闭面板",
+            "rebindHint": "点一下按钮，再按你要用的键（Esc 取消）。",
+            "capturing": "按键中…",
+            "config": "配置文件",
+            "configHint": "配置只在启动时读取；「应用」只作用于本次运行，「保存为默认」才会写入 config/config.json。",
+            "about": "关于",
+            "version": "版本"
+        },
+        "footer": {
+            "clean": "未修改",
+            "dirty": "已修改 · 未应用",
+            "applied": "已应用",
+            "saved": "已保存为默认",
+            "discarded": "已放弃改动",
+            "writeFailed": "写入失败",
+            "discard": "放弃",
+            "apply": "应用",
+            "saveDefault": "保存为默认"
+        },
+        "key": {
+            "unknown": "按键 0x{0:02X}"
+        }
     }
 }
