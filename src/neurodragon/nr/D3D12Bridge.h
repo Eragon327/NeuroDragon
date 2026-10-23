@@ -187,6 +187,15 @@ void nrShutdown();
 // buffers resident, so merely skipping the evaluation is not "off".
 void nrUnload();
 
+// Set by the panel's "Save as default" when the persisted config has NR off; the
+// render thread consumes it at the next evaluation and calls nrUnload(). This is the
+// only path that unloads - "Apply" keeps the feature resident so toggling NR while
+// tuning stays instant.
+void nrRequestUnload();
+
+// True once per request (the flag is cleared).
+[[nodiscard]] bool nrTakeUnloadRequest();
+
 // GPU timestamps. id 0 brackets our NR evaluation, id 1 the engine's DLSS, so
 // both numbers come from the same run. Timing is harvested a few frames later:
 // there is no fence on the game's queue, so pairs that read as unfinished (zero,

@@ -1930,6 +1930,19 @@ void nrUnload() {
     NR_DEBUG("[nr] 已卸载：feature 与纹理退役，模型随最后一个 feature 离开驱动");
 }
 
+namespace {
+
+// Written by the panel's "Save as default" (render thread), consumed by the
+// evaluation hook. One shot on purpose: a request that arrives before NR ever
+// created anything must not unload a feature created afterwards.
+std::atomic_bool gUnloadRequested{false};
+
+} // namespace
+
+void nrRequestUnload() { gUnloadRequested.store(true, std::memory_order_release); }
+
+bool nrTakeUnloadRequest() { return gUnloadRequested.exchange(false, std::memory_order_acq_rel); }
+
 #ifdef TEST
 void* nrOutputResource() { return gNr.output; }
 

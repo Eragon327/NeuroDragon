@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   （模型重新载入 ~0.3 s）。
 - 编码 PSO / 根签名 / 描述符堆不随卸载销毁：`ensureEncoder` 拆成「管线」与「两张纹理」两段
   （新增 `ensureEncodeTextures`），重建时只补纹理。
-- 触发点是配置值本身：面板「应用」和「保存为默认」都会卸载，只改复选框不会。发布版不写日志。
+- 触发点**只有「保存为默认」**：`applyDraft(true)` 在配置为关闭时调 `nrRequestUnload()`（一次性原子
+  标志，渲染线程下次求值消费）。**「应用」不卸载**——它只改内存配置，NR 停止求值但 feature 与模型
+  继续常驻，方便调参时来回勾选；保存为默认才真正释放。发布版不写日志。
 
 ### Changed（2026-10-23：NR 创建的启动日志压成一首一尾；面板在小分辨率下不再缩小）
 

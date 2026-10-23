@@ -643,10 +643,10 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // Needed both to rebuild (fence before releasing the old feature) and to unload,
     // so it is refreshed every frame whether NR is enabled or not.
     nr::nrSetGameQueue(ui::overlayGameQueue());
-    if (!gNrEnabled) {
-        // "off" means unloaded, not merely skipped: an idle feature keeps the 264 MB
-        // model and its history buffers resident. Re-enabling creates everything
-        // again through the normal creation path below.
+    if (nr::nrTakeUnloadRequest()) {
+        // Only "Save as default" with NR off asks for this (Menu::applyDraft(true)):
+        // the feature, its textures and the 264 MB model are released. "Apply" leaves
+        // them resident so toggling NR while tuning stays instant.
         nr::nrUnload();
         gNrStartTried = false;
     }

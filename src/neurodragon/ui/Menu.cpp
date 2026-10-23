@@ -618,6 +618,13 @@ void applyDraft(bool persist) {
     }
     if (config::save()) setStatus("ui.footer.saved"_tr());
     else setStatus("ui.footer.writeFailed"_tr());
+
+    // "Save as default" with NR off is the deliberate "done with it" action: ask the
+    // render thread to unload the feature and the 264 MB model. "Apply" deliberately
+    // does not, so toggling NR while tuning stays instant.
+    if (!config::get().nr.enabled) {
+        nr::nrRequestUnload();
+    }
 }
 
 void drawFooter(Layout const& layout) {
