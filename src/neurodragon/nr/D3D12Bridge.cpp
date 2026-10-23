@@ -19,6 +19,7 @@
 #include <cstring>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace neurodragon::nr {
@@ -824,6 +825,8 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
     if (gEncodePso) {
         return true;
     }
+    // D3DCompile plus the pipeline state measured 44 ms on 2026-10-23 - below the
+    // stage-marker bar, and covered by the enclosing nrCreate pair anyway.
     HMODULE    compiler = LoadLibraryW(L"d3dcompiler_47.dll");
     auto const compile  = compiler ? reinterpret_cast<D3DCompileFn>(GetProcAddress(compiler, "D3DCompile")) : nullptr;
     HMODULE    d3d12    = GetModuleHandleW(L"d3d12.dll");
@@ -1374,10 +1377,17 @@ bool nrCreate(
         return false;
     }
 
+    // One stage for the whole creation: the output texture, the shader compile, the
+    // timestamp heap and the NGX call that makes the core load the 264 MB model. Each
+    // of those has been the slow part at some point, and this pair reports which.
+    // The model itself gets its own nested stage below.
+    log::Stage createStage{"log.stage.nrCreate"};
+
     auto*         color  = static_cast<ID3D12Resource*>(colorResource);
     ID3D12Device* device = nullptr;
     if (FAILED(color->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device))) || !device) {
         nrLog(2, "[nr] create: no ID3D12Device from Color");
+        createStage.markFailed();
         return false;
     }
 
@@ -1404,6 +1414,7 @@ bool nrCreate(
             static_cast<unsigned long long>(outDesc.Height),
             static_cast<unsigned>(outDesc.Format)
         );
+        createStage.markFailed();
         return false;
     }
     gNr.width  = width;
@@ -1428,6 +1439,7 @@ bool nrCreate(
     if (!core) {
         nrLog(2, "[nr] NGX core module is not loaded");
         device->Release();
+        createStage.markFailed();
         return false;
     }
     nrLog(3, "[nr] core module=%p", static_cast<void*>(core));
@@ -1494,6 +1506,7 @@ bool nrCreate(
     if (capsRet != 1 || !params) {
         nrLog(2, "[nr] GetCapabilityParameters ret=0x%08X params=%p", static_cast<unsigned>(capsRet), params);
         device->Release();
+        createStage.markFailed();
         return false;
     }
     if (engineParams) {
@@ -1529,19 +1542,18 @@ bool nrCreate(
         }
         void* handle = nullptr;
         // The core loads the ~264 MB NR model inside this call, so the first
-        // CreateFeature of a session can stall for seconds. Time it so a stall is
-        // attributable instead of looking like a freeze.
-        LARGE_INTEGER freq{};
-        LARGE_INTEGER before{};
-        QueryPerformanceFrequency(&freq);
-        QueryPerformanceCounter(&before);
-        int const     ret = api.create(commandList, 0x12, params, &handle);
-        LARGE_INTEGER after{};
-        QueryPerformanceCounter(&after);
-        double const ms = freq.QuadPart ? static_cast<double>(after.QuadPart - before.QuadPart) * 1000.0
-                                              / static_cast<double>(freq.QuadPart)
-                                        : 0.0;
-        if (ret == 1 && handle) {
+        // CreateFeature of a session can stall for seconds. The stage is written
+        // before the call, so a frozen picture has a line naming the load; the
+        // timing it returns feeds the "NR ready" message.
+        //
+        // Only the core attempt announces itself: the runtime rungs below are a
+        // fallback whose return codes are debug-only, and three identical "loading
+        // the model" pairs would read like three loads.
+        log::Stage   modelStage{"log.stage.nrModel", std::string_view(api.name) == "core"};
+        int const    ret     = api.create(commandList, 0x12, params, &handle);
+        bool const   created = ret == 1 && handle != nullptr;
+        double const ms      = modelStage.finish(!created);
+        if (created) {
             gNr.params   = params;
             gNr.feature  = handle;
             gNr.create   = api.create;

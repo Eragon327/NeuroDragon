@@ -69,6 +69,28 @@ log.setLevel(ll::io::LogLevel::Warn);
 - 格式串是**编译期检查**的：参数个数/类型不匹配直接编不过（这反而是个好事）。
 - 目录：`getConfigDir()` / `getDataDir()` / `getWorldDataDir()` —— 后续存探针开关、NR 模型/缓存都放这里。
 
+### 启动阶段的成对 info 标记（`log::Stage`）
+
+`src/neurodragon/Log.h` 的 `log::Stage` 在**动手之前**写「xxx：开始…」，做完写
+「xxx：完成，用时 N ms」（失败分支 `markFailed()` 写「失败」）。卡住时日志的最后一行就是卡在哪一步。
+
+**只有实测 ≥ 200 ms 的步骤才留标记**（2026-10-23 用一整条启动日志定过阈值，单位 ms）：
+
+| 标记 | 实测 | 处置 |
+|---|---|---|
+| 创建临时 D3D11 设备与交换链 | **3519** | 留（`overlay: ready` 前那段 3.9 s 就是它） |
+| 安装游戏内面板（父） | 3774 | 留 |
+| 创建 NR 功能（父） | 542 | 留 |
+| 加载 NR 模型（core 载入 264 MB） | 304 | 留（只报 core 那次，runtime 回退阶梯静音） |
+| 模组加载 1 / 模型准备 0 / 渲染钩子 117 / D3D12 设备 123 / 输入钩子 131 / ImGui 图形 41 / D3D11On12 设备 26 / 上下文与字体 14 / DX11 后端 0 / 字体预热 16 / 着色器编译 44 | <200 | 删 |
+
+要让「开始」那行真正有用，必须提 flush level：LL 的 `FileSink` 默认 `flushLevel = Off`
+（`src/ll/api/io/FileSink.cpp`，只有 CrashLogger 在崩溃时临时提到 Info），info 行留在
+`std::ofstream` 缓冲里，游戏被强杀就一起丢了。`load()` 里用
+`getSelf().getLogger().setFlushLevel(ll::io::LogLevel::Info)` 提到 Info。注意 sinks 是**共享**的
+（`getDefaultFileSink()` 一个实例给所有 logger），所以等于整个 latest.log 每行 info 都 flush；
+写盘发生在 LL 的日志线程池（`Logger::printStr` 投递），不在渲染线程，不会卡帧。
+
 ## 5. 配置 —— `ll/api/Config.h`
 
 ```cpp

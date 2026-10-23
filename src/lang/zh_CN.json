@@ -172,5 +172,16 @@
         "key": {
             "unknown": "按键 0x{0:02X}"
         }
+    },
+    "log": {
+        "stage": {
+            "start": "{0}：开始…",
+            "done": "{0}：完成，用时 {1:.0f} ms",
+            "failed": "{0}：失败，用时 {1:.0f} ms",
+            "overlay": "安装游戏内面板",
+            "overlayDevices": "创建临时 D3D11 设备与交换链（找 Present 入口）",
+            "nrCreate": "创建 NR 功能（纹理、着色器、模型）",
+            "nrModel": "加载 NR 模型（core 载入 264 MB 的 nvngx_dlssnr.dll）"
+        }
     }
 }

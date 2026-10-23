@@ -172,5 +172,16 @@
         "key": {
             "unknown": "Key 0x{0:02X}"
         }
+    },
+    "log": {
+        "stage": {
+            "start": "{0}: starting...",
+            "done": "{0}: done in {1:.0f} ms",
+            "failed": "{0}: failed after {1:.0f} ms",
+            "overlay": "installing the in-game panel",
+            "overlayDevices": "creating a temporary D3D11 device and swap chain (to find Present)",
+            "nrCreate": "creating the NR feature (textures, shaders, model)",
+            "nrModel": "loading the NR model (the core loads the 264 MB nvngx_dlssnr.dll)"
+        }
     }
 }

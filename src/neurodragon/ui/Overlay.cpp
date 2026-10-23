@@ -1,6 +1,7 @@
 #include "neurodragon/ui/Overlay.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/Log.h"
 #include "neurodragon/ui/InputGuard.h"
 #include "neurodragon/ui/Menu.h"
 #include "neurodragon/ui/Theme.h"
@@ -490,6 +491,7 @@ bool initializeGraphics(IDXGISwapChain* swapChain) {
         ID3D12Device* device12{};
         if (FAILED(swapChain->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device12)))) return false;
 
+        // Measured at 26 ms on 2026-10-23, so this is no longer worth a stage marker.
         auto const result = D3D11On12CreateDevice(
             device12,
             D3D11_CREATE_DEVICE_BGRA_SUPPORT,
@@ -696,6 +698,9 @@ void render(IDXGISwapChain* swapChain) {
     ImGui::GetIO().MouseDrawCursor = visible;
     if (visible) ClipCursor(nullptr);
 
+    // The first frame here rasterises the font atlas and uploads its texture. That
+    // measured 16 ms on 2026-10-23, so no stage marker: the one visible hitch at
+    // start-up is the temporary D3D11 device in hookSwapChainEntryPoints().
     if (gDevice11On12) {
         drawOnWrappedBackBuffer(swapChain);
     } else {
@@ -736,8 +741,16 @@ void removeHook(void*& target) {
 }
 
 bool hookSwapChainEntryPoints(HWND window) {
+    // A throw-away D3D11 device plus a swap chain on the real window, purely to read
+    // the vtable. Measured 3519 ms on 2026-10-23 (the whole 3.9 s enable()), so this
+    // is the one start-up step that keeps a stage pair of its own.
+    log::Stage stage{"log.stage.overlayDevices"};
+
     RECT clientRect{};
-    if (!GetClientRect(window, &clientRect)) return false;
+    if (!GetClientRect(window, &clientRect)) {
+        stage.markFailed();
+        return false;
+    }
     // The client area can still be 0x0 right after window creation; a swap chain of
     // that size fails to create, so fall back to a minimum.
     auto const width  = static_cast<UINT>(std::max<LONG>(clientRect.right - clientRect.left, 8));
@@ -773,6 +786,7 @@ bool hookSwapChainEntryPoints(HWND window) {
             &dummyContext
         ))) {
         logger().warn("overlay: temporary swap chain creation failed; retry on the next frame");
+        stage.markFailed();
         return false;
     }
 
@@ -817,11 +831,13 @@ bool hookSwapChainEntryPoints(HWND window) {
     dummySwapChain->Release();
     dummyContext->Release();
     dummyDevice->Release();
+    if (!ok) stage.markFailed();
     return ok;
 }
 
 // The game's D3D12 direct queue is what D3D11On12CreateDevice needs.
 bool hookCommandQueueEntryPoint() {
+    // D3D12CreateDevice measured 123 ms on 2026-10-23 - below the stage-marker bar.
     ID3D12Device* dummyDevice12{};
     if (FAILED(D3D12CreateDevice(
             nullptr,
@@ -924,9 +940,15 @@ bool Overlay::install() {
         return false;
     }
 
+    // Everything below creates D3D devices and patches entry points: 3774 ms in the
+    // 2026-10-23 log, almost all of it the temporary swap chain in
+    // hookSwapChainEntryPoints(), which has its own (nested) stage pair.
+    log::Stage stage{"log.stage.overlay"};
+
     auto const status = MH_Initialize();
     if (status != MH_OK && status != MH_ERROR_ALREADY_INITIALIZED) {
         logger().error("overlay: MinHook initialization failed ({})", static_cast<int>(status));
+        stage.markFailed();
         return false;
     }
 
@@ -937,6 +959,7 @@ bool Overlay::install() {
 
     if (!hookSwapChainEntryPoints(window)) {
         logger().warn("overlay: DXGI hooks could not be installed; will retry");
+        stage.markFailed();
         uninstall();
         return false;
     }

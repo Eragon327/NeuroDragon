@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added（2026-10-23：启动阶段的成对 info 标记，卡住时能说出卡在哪）
+
+- 「可能卡一下」的步骤在开始前写一行 info、结束后写一行带毫秒的 info（`log::Stage`，
+  `src/neurodragon/Log.h`），失败分支写「失败」。首轮实测后**只保留 ≥200 ms 的四处**：
+  创建临时 D3D11 设备与交换链 **3519 ms**、安装游戏内面板 3774 ms、创建 NR 功能 542 ms、
+  core 加载 264 MB 模型 304 ms。日志最后一行因此就是「卡在哪一步」。
+- 那 3.9 s 的 enable() 黑箱由此定位：**全在 `hookSwapChainEntryPoints()` 的
+  `D3D11CreateDeviceAndSwapChain`**；同一轮的 `D3D12CreateDevice` 只有 123 ms。
+- 实测 <200 ms 的 11 个标记（模组加载 1、模型准备 0、渲染钩子 117、D3D12 队列 123、
+  输入钩子 131、ImGui 图形 41、D3D11On12 设备 26、上下文与字体 14、DX11 后端 0、
+  字体预热 16、着色器编译 44）已按阈值删除，对应 i18n 键一并删掉（`log.stage.*` 现 7 个）。
+- 为此把模组日志的 flush level 提到 info：LL 的 `FileSink` 默认 `flushLevel = Off`，
+  info 行留在 `ofstream` 缓冲里，游戏被强杀就一起丢——「开始」那行必须已经在盘上才算证据。
+  写盘在 LL 的日志线程里，不在渲染线程（详见 docs/C §4）。
+
 ### Fixed（2026-10-23 下午四轮：子窗口内边距、文字裁切、拖动粘滞、热键要按两次）
 
 - **子窗口根本没有内边距**：无边框的 `BeginChild` 默认**不使用** `WindowPadding`

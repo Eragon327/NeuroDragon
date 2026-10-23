@@ -6,6 +6,7 @@
 #include "neurodragon/utils/Utils.h"
 
 #include "ll/api/i18n/I18n.h"
+#include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
 
 namespace neurodragon {
@@ -18,6 +19,15 @@ NeuroDragon& NeuroDragon::getInstance() {
 constexpr wchar_t const* kModelFileName = L"nvngx_dlssnr.dll";
 
 bool NeuroDragon::load() {
+    // Flush every info line straight to latest.log. LeviLamina's file sink buffers
+    // by default (it flushes on level <= Off, i.e. never), which is the one thing a
+    // stage marker must not do: the line written *before* a step that then stalls
+    // for seconds has to be on disk while the game is stuck, otherwise a client
+    // that has to be killed leaves no record of where it was. Flushing happens on
+    // the loader's log thread, never on the render thread, so it cannot hitch a
+    // frame.
+    getSelf().getLogger().setFlushLevel(ll::io::LogLevel::Info);
+
     // Everything the release build prints goes through lang/<locale>.json, so the
     // catalogue must be in place before the first message (the model bootstrap
     // below already speaks i18n).
@@ -54,7 +64,9 @@ bool NeuroDragon::enable() {
     probe::install();
 
     // The panel is not essential to NR: if the game window is not up yet the probe
-    // watcher retries it in the background.
+    // watcher retries it in the background. install() writes its own stage pair -
+    // creating the temporary D3D11 device and swap chain is the slow part of enable()
+    // (3.5 s on this machine, 2026-10-23).
     if (!ui::Overlay::getInstance().install()) {
         getSelf().getLogger().warn("overlay: not installed yet; the probe watcher will retry");
     }

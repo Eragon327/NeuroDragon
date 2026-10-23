@@ -70,8 +70,13 @@
 cd D:/Documents/NeuroDragon && xmake build -y      # 增量 <1s / 全量约 15s
 # bin/NeuroDragon/ = DLL、PDB、manifest.json、lang/
 cp -r bin/NeuroDragon/* "E:/LeviLauncher/versions/1.26.51.01/mods/NeuroDragon/"
-grep -E "NR 已启用|NR 就绪|NR 创建失败" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
+grep -E "NR 已启用|NR 就绪|NR 创建失败|：开始|：完成|：失败" "E:/LeviLauncher/versions/1.26.51.01/logs/latest.log"
 ```
+
+最后那条 grep 里的「开始/完成/失败」是启动阶段的成对 info 标记
+（`log::Stage`，见 docs/C §4）：**实测 ≥200 ms 的步骤**在开始前和结束后各留一行（后者带毫秒），
+现在只有四处——临时 D3D11 设备与交换链（3.5 s）、面板安装、NR 创建、core 加载模型。
+游戏卡死时日志的最后一行就是卡住的那一步。
 
 打包器是 `scripts/after_build.lua`（替换 `@levibuildscript/modpacker`，多拷一个 `lang/`）。
 **NR 模型（266 MB）不进包**：手动放到 `mods/NeuroDragon/nvngx_dlssnr.dll`，模组在 load 时
