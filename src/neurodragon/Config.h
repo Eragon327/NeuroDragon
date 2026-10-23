@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace neurodragon::config {
 
@@ -13,9 +14,11 @@ struct Nr {
     // Master switch. NR is the only feature of this mod, so it defaults to on.
     bool enabled = true;
 
-    // 0 = evaluate only (picture untouched), 5 = gain composite onto the engine's
-    // DLSS input (docs/D §6.16). 6 = TRP ratio resolve.
-    int replace = 5;
+    // 5 = gain composite onto the engine's DLSS input, 6 = TRP ratio resolve (default:
+    // the one that reaches the screen with highlights taken from the original).
+    // No other value has a meaning any more (the old "evaluate only" 0 is gone): the
+    // renderer treats everything except 5 as 6, deliberately without a config migration.
+    int replace = 6;
 
     float gainBoost = 1.0f; // exaggerate the network's gain, for judging only
 
@@ -23,7 +26,34 @@ struct Nr {
     float intensity       = 1.0f;
     float localToneStrength = 1.0f;
     float localStructureStrength = 1.0f;
+    // Runtime picker (docs/L 3.1): file name in the mod directory that is materialised
+    // next to the game executable as nvngx_dlssnr.dll. Empty = the canonical name.
+    // Read at load, so a change takes effect on the next start.
+    std::string modelFile;
+
+    // DLSSNR.SkinStructureStrength: 0..2, -1 = follow LocalStructureStrength
+    // (the 310.x sentinel). Probed with Sweep=3 (docs/L P1): on Minecraft content
+    // there was no visible difference at -1/0/1, and TRP ties this knob to its
+    // automatic skin mask, which needs skin classification our inputs cannot carry.
+    // Kept for the TEST build's probe; 1.0 = the old hardcoded value.
+    float skinStructure   = 1.0f;
     int   depthInverted   = -1; // -1 = follow what the engine asked for
+
+    // NR input scaling (docs/L batch 2): 50 / 66 / 100. The feature's work extent
+    // becomes render size x percent while depth/MV guides stay full resolution and
+    // the composite still writes the full-resolution picture - the 310.x contract
+    // TRP uses. Anything else means 100.
+    int   inputPercent    = 100;
+
+    // DLSSNR.Hint.Render.Preset: 0 = default network, 1 = the previous one. Only
+    // read at CreateFeature, so a change needs a restart (docs/L P2).
+    int   networkPreset   = 0;
+
+    // Split comparison (batch 1): 0 = off, 1 = the left part of the picture keeps
+    // the engine's original colour while the right part is composited. Purely a
+    // diagnostic - it is the only way to judge what NR did to a frame.
+    int   compare         = 0;
+    float compareSplit    = 0.5f; // 0..1 of the width that stays original
 
     int sweep = 0; // 1 = cycle Style 0..2 per window, 2 = Enabled freeze test
 
@@ -35,6 +65,16 @@ struct Nr {
     float transferStrength = 1.0f;
     float colourStrength   = 1.0f;
     float maxRatio         = 2.0f;
+    // TRP's "broad / detail" split of NR's change (in stops): the wide part of the
+    // change and its local contrast can be scaled independently. 1.0 / 1.0 leaves the
+    // result unchanged; only Replace=6 (ratio resolve) uses them.
+    float broad            = 1.0f;
+    float detail           = 1.0f;
+    // Adaptive exposure (docs/L 3.2): derive the white point from the scene's geometric
+    // mean luminance instead of the constant above, so indoor and outdoor scenes reach
+    // NR at a similar brightness. The bias is in EV (+ brightens NR's view).
+    bool  adaptiveExposure = false;
+    float exposureBias     = 0.0f;
 
     bool resetEveryFrame = false;   // NRReset: kills NR temporal history, diagnostic only
     bool srResetEveryFrame = false; // SRReset: wipes the engine DLSS history every frame, diagnostic only
@@ -68,6 +108,11 @@ struct Config;
 struct Ui {
     // Virtual-key code of the panel hotkey. 0x23 = VK_END.
     int openKey = 0x23;
+
+    // In-game NR hotkeys, live while the panel is closed. 0xDB / 0xDD are '[' / ']'
+    // on a US layout (VK_OEM_4 / VK_OEM_6); 0 disables one.
+    int nrKey    = 0xDB; // NR on/off
+    int resetKey = 0xDD; // wipe NR + engine DLSS temporal history once
 };
 
 struct Config {

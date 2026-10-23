@@ -788,6 +788,15 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // The panel's "Apply" can flip this without a restart, and the flag gates both
     // NR itself and the diagnostic window schedule, so read it per frame.
     gNrEnabled      = config::get().nr.enabled;
+    // Turning NR off (panel Apply or the in-game hotkey) has to give the engine its own
+    // Color back: the parameter object may still be handing out our composited
+    // texture. One call on the falling edge, using the resource remembered at the first
+    // swap (docs/L 1.5).
+    static bool nrWasEnabled = false;
+    if (!gNrEnabled && nrWasEnabled) {
+        nr::nrRestoreEngineColor(const_cast<void*>(params), nullptr);
+    }
+    nrWasEnabled = gNrEnabled;
     void*    color  = nullptr;
     void*    depth  = nullptr;
     void*    mv     = nullptr;
@@ -953,7 +962,8 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                     1,
                     reset,
                     replaceNow ? const_cast<void*>(params) : nullptr,
-                    const_cast<void*>(out)
+                    const_cast<void*>(out),
+                    n
                 );
                 if (timed) {
                     nr::nrStampEnd(cmdList, n, 0);

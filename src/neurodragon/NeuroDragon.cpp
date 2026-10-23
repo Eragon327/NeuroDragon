@@ -1,6 +1,7 @@
 #include "neurodragon/NeuroDragon.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/Log.h"
 #include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
@@ -8,6 +9,8 @@
 #include "ll/api/i18n/I18n.h"
 #include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
+
+#include <filesystem>
 
 namespace neurodragon {
 
@@ -27,6 +30,14 @@ bool NeuroDragon::load() {
     // the loader's log thread, never on the render thread, so it cannot hitch a
     // frame.
     getSelf().getLogger().setFlushLevel(ll::io::LogLevel::Info);
+#ifdef TEST
+    // The diagnostic build's whole point is its probe lines, and they are written at
+    // debug level (NR_DEBUG / ND_DEBUG). LeviLamina's logger drops debug at its default
+    // level, which made every probe invisible in latest.log - the reason P2/P4 could not
+    // be answered from a run. Release builds keep the default level and flush policy.
+    getSelf().getLogger().setLevel(ll::io::LogLevel::Debug);
+    getSelf().getLogger().setFlushLevel(ll::io::LogLevel::Debug);
+#endif
 
     // Everything the release build prints goes through lang/<locale>.json, so the
     // catalogue must be in place before the first message (the model bootstrap
@@ -50,9 +61,24 @@ bool NeuroDragon::load() {
     //
     // So the model travels inside the mod folder and is materialised next to the
     // executable at load time: hard link (same volume: no bytes copied, no extra
-    // disk use) -> copy -> a message that says exactly what to do by hand. An
-    // existing file is never overwritten: whichever build the user put there wins.
-    if (!utils::ensureApplicationModel(getSelf(), kModelFileName)) {
+    // disk use) -> copy -> a message that says exactly what to do by hand. Without a
+    // panel pick an existing file is left alone (whichever build the user put there
+    // wins); with a pick the picked build replaces it, so the panel switch works.
+    auto const& configured = config::get().nr.modelFile;
+    std::filesystem::path sourceName = std::filesystem::path(kModelFileName);
+    bool                  replaceExisting = false;
+    if (!configured.empty()) {
+        std::error_code error;
+        if (std::filesystem::exists(std::filesystem::path(getSelf().getModDir()) / std::filesystem::u8path(configured), error)) {
+            sourceName      = std::filesystem::u8path(configured);
+            replaceExisting = true;
+        } else {
+            // A stale pick must not stop the mod from loading: say so and use the
+            // canonical file instead.
+            log::writeKey(1, "nr.warn.modelPickMissing", configured);
+        }
+    }
+    if (!utils::ensureApplicationModel(getSelf(), sourceName, replaceExisting)) {
         return false;
     }
 

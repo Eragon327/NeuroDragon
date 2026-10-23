@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace neurodragon::utils {
 
@@ -27,6 +28,18 @@ std::wstring applicationDirectory();
 
 std::string fileSizeText(std::filesystem::path const& path);
 
-bool ensureApplicationModel(ll::mod::NativeMod& mod, wchar_t const* fileName);
+// Materialises the NR model next to the game executable under the name the NGX core
+// looks for (`nvngx_dlssnr.dll`). 'sourceName' is the file in the mod directory (the
+// panel can pick among several builds); 'replaceExisting' replaces an already
+// materialised copy so a different pick takes effect on the next start.
+bool ensureApplicationModel(
+    ll::mod::NativeMod&          mod,
+    std::filesystem::path const& sourceName,
+    bool                         replaceExisting
+);
+
+// File names in the mod directory that look like NR model builds
+// (`nvngx_dlssnr*.dll`), UTF-8, sorted. Used by the panel's runtime picker.
+std::vector<std::string> listNrModelFiles();
 
 } // namespace neurodragon::utils

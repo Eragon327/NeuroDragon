@@ -2,6 +2,7 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
+#include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/ui/InputGuard.h"
 #include "neurodragon/ui/Menu.h"
 #include "neurodragon/ui/Theme.h"
@@ -119,6 +120,10 @@ int gWarmupFrames{};
 // synthesise the matching releases instead of leaving the player walking forward.
 bool                  gToggleKeyDown{};
 bool                  gConsumeEscapeRelease{};
+// In-game NR hotkeys (docs/L 1.5): one-shot edges so auto-repeat cannot toggle the
+// renderer every 30 ms while a key is held.
+bool                  gNrKeyDown{};
+bool                  gResetKeyDown{};
 std::array<bool, 256> gGameKeysDown{};
 std::array<bool, 5>   gGameMouseButtonsDown{};
 
@@ -314,6 +319,8 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && wParam == FALSE)) {
         gToggleKeyDown        = false;
         gConsumeEscapeRelease = false;
+        gNrKeyDown            = false;
+        gResetKeyDown         = false;
         ClipCursor(nullptr);
     }
 
@@ -342,6 +349,37 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         } else if (message == WM_KEYUP || message == WM_SYSKEYUP) {
             if (wParam == hotkey) {
                 gToggleKeyDown = false;
+                return 1;
+            }
+        }
+
+        // In-game NR hotkeys (docs/L 1.5): NR on/off and a one-shot history wipe.
+        // Both edges are swallowed - forwarding only the key-up leaves the game with
+        // a key it never saw pressed.
+        bool const keyEdge =
+            message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP;
+        if (keyEdge) {
+            bool const down       = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+            auto const nrKey      = static_cast<WPARAM>(config::get().ui.nrKey);
+            auto const resetKey   = static_cast<WPARAM>(config::get().ui.resetKey);
+            if (nrKey != 0 && wParam == nrKey) {
+                if (down && !gNrKeyDown) {
+                    gNrKeyDown               = true;
+                    config::get().nr.enabled = !config::get().nr.enabled;
+                    log::writeKey(0, config::get().nr.enabled ? "nr.info.hotkeyOn" : "nr.info.hotkeyOff");
+                } else if (!down) {
+                    gNrKeyDown = false;
+                }
+                return 1;
+            }
+            if (resetKey != 0 && wParam == resetKey) {
+                if (down && !gResetKeyDown) {
+                    gResetKeyDown = true;
+                    nr::nrRequestReset();
+                    log::writeKey(0, "nr.info.hotkeyReset");
+                } else if (!down) {
+                    gResetKeyDown = false;
+                }
                 return 1;
             }
         }

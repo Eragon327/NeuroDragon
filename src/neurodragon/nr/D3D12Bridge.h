@@ -137,6 +137,18 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // one-shot Reset=1 is sent to its parameter object at the first swap after a load.
 void nrNotifyLevelLoaded();
 
+// One-shot temporal wipe for both sides (NR's DLSSNR.Reset and the engine DLSS's
+// unprefixed Reset). Bound to ui.resetKey by default; the next evaluation consumes
+// it, so holding the key does not erase the history every frame.
+void nrRequestReset();
+
+// Gives the engine's own Color resource back to its parameter object. Called when NR
+// is switched off (panel Apply / hotkey) and before unloading: the object can still
+// be pointing at our texture, which is a frozen picture at best and a released
+// resource at worst. `engineParams` / `engineColor` may be null: the values from the
+// last swap are used then.
+void nrRestoreEngineColor(void* engineParams, void* engineColor);
+
 // Keeps the feature on the engine's current render size.
 //
 // The engine configures its own DLSS per resolution: when the window size or the
@@ -165,10 +177,14 @@ void nrSetGameQueue(void* queue);
 
 // Records one evaluation on the game's command list. Handles every resource
 // state transition around the NGX call. `engineParams` (may be null) is the
-// engine's own NGX parameter object: when config.json asks for Replace=5 it is
+// engine's own NGX parameter object: when config.json asks for Replace=5/6 it is
 // pointed at our gain-composited texture (docs/D §6.16).
 //
 // NR stays 1:1 at the render resolution; it never upscales.
+//
+// `frame` is the engine frame counter the probe uses for its own brackets; the
+// stage timestamps inside this function (encode / evaluate / composite) use the
+// same ring, so the three lines the panel shows belong to the same frame.
 bool nrRecord(
     void*    commandList,
     void*    color,
@@ -181,7 +197,8 @@ bool nrRecord(
     int      depthInverted,
     bool     reset,
     void*    engineParams,
-    void*    engineOutput
+    void*    engineOutput,
+    std::uint64_t frame
 );
 
 // Releases the feature and every GPU object this translation unit owns. Called
@@ -229,6 +246,7 @@ struct PanelStats {
     bool     featureCreated = false;
     bool     stampsActive   = false; // false = GPU timing unavailable this run
     unsigned evalCount      = 0;
+    unsigned evalFailures   = 0; // telemetry (docs/L 3.3)
     int      lastError      = 0;
     unsigned renderWidth    = 0; // NR render size (1:1 with the engine's Color)
     unsigned renderHeight   = 0;
@@ -240,7 +258,61 @@ struct PanelStats {
     bool     hasEngine      = false;
     double   nrMs           = 0.0;
     double   engineMs       = 0.0;
+
+    // Stage split inside nrMs (batch 1, docs/L 1.7). encode + evaluate + composite
+    // are measured with their own timestamp pairs on the same frame as nrMs, so
+    // the three should add up to roughly nrMs (the rest is our own bookkeeping).
+    bool     hasEncode      = false;
+    bool     hasEvaluate    = false;
+    bool     hasComposite   = false;
+    unsigned encodeSamples  = 0;
+    unsigned evaluateSamples = 0;
+    unsigned compositeSamples = 0;
+    double   encodeMs       = 0.0;
+    double   evaluateMs     = 0.0;
+    double   compositeMs    = 0.0;
 };
+
+// What the last evaluation actually wrote into the NGX parameter object, plus the
+// composite mode it picked (batch 1, docs/L 1.2). This is a read-back, not a
+// guess: the panel shows these numbers next to the knobs so a switch that does
+// nothing is visible immediately.
+struct NrFrameParams {
+    bool  valid        = false;
+    int   replace      = 0;  // config value used for this frame
+    int   compositeMode = -1; // 2/4 = gain/ratio at native size, 5/6 = the same when
+                              // the network ran at a smaller extent, -1 = no composite
+    int   encodeMode   = -1;  // 0/1/2/3, -1 = raw linear HDR (no encode)
+    int   style        = 0;
+    int   networkPreset = 0; // 0 = default network, 1 = previous (P2 probe)
+    float intensity    = 0.0f;
+    float localTone    = 0.0f;
+    float localStructure = 0.0f;
+    float skinStructure = 0.0f;
+    int   reset        = 0;
+    float mvScaleX     = 0.0f;
+    float mvScaleY     = 0.0f;
+    bool  compare      = false;
+    float compareSplit = 0.0f;
+    // Broad/detail weights of the ratio resolve (1.0 = unchanged).
+    float broad        = 1.0f;
+    float detail       = 1.0f;
+    // Adaptive exposure (docs/L 3.2): the switch and its EV bias. The white point
+    // itself is computed on the GPU and is not read back.
+    bool  adaptiveExposure = false;
+    float exposureBias     = 0.0f;
+    // Input scaling (docs/L 2.1): the percentage actually in effect (100 = native)
+    // and the two extents, so the panel shows the fallback when a scaled create was
+    // refused instead of echoing the requested value.
+    int      inputPercent  = 100;
+    unsigned featureWidth  = 0;
+    unsigned featureHeight = 0;
+    unsigned renderWidth   = 0;
+    unsigned renderHeight  = 0;
+    bool  rendered     = false; // false until the first completed evaluation
+};
+
+[[nodiscard]] NrFrameParams nrFrameParams();
 
 // Engine SR (DLSS feature 1) read-back for the "SR" tab. Everything here is
 // observed, never applied: the callback wrapper forwards the engine's own

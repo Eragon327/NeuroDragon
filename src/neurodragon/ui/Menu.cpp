@@ -6,6 +6,7 @@
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/ui/Widgets.h"
+#include "neurodragon/utils/Utils.h"
 
 #include "ll/api/i18n/I18n.h"
 
@@ -17,6 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 namespace neurodragon::ui::menu {
 namespace {
@@ -57,6 +59,12 @@ config::Sr sanitizedSr(config::Sr sr) {
 }
 
 int         gDraftKey{VK_END};
+// In-game NR hotkeys (docs/L 1.5), staged like the panel key.
+int         gDraftNrKey{VK_OEM_4};    // '['
+int         gDraftResetKey{VK_OEM_6}; // ']'
+// Model builds listed from the mod directory. Scanned once per panel open instead of
+// per frame: the pick only matters on the next start anyway.
+std::vector<std::string> gModelFiles;
 int         gActiveTab{};
 bool        gDirty{};
 std::string gStatus;
@@ -78,10 +86,33 @@ void at(ImVec2 position) { ImGui::SetCursorScreenPos(position); }
 
 // Readable name for a virtual-key code.
 std::string keyLabel(int virtualKey) {
+    if (virtualKey == 0) return "0";
     if (virtualKey >= 'A' && virtualKey <= 'Z') return std::string(1, static_cast<char>(virtualKey));
     if (virtualKey >= '0' && virtualKey <= '9') return std::string(1, static_cast<char>(virtualKey));
     if (virtualKey >= VK_F1 && virtualKey <= VK_F12) return "F" + std::to_string(virtualKey - VK_F1 + 1);
     switch (virtualKey) {
+    case VK_OEM_1:
+        return ";";
+    case VK_OEM_2:
+        return "/";
+    case VK_OEM_3:
+        return "`";
+    case VK_OEM_4:
+        return "[";
+    case VK_OEM_5:
+        return "\\";
+    case VK_OEM_6:
+        return "]";
+    case VK_OEM_7:
+        return "'";
+    case VK_OEM_COMMA:
+        return ",";
+    case VK_OEM_PERIOD:
+        return ".";
+    case VK_OEM_MINUS:
+        return "-";
+    case VK_OEM_PLUS:
+        return "=";
     case VK_END:
         return "End";
     case VK_HOME:
@@ -136,14 +167,12 @@ std::string replaceName(int mode) {
 
 std::string replaceHint(int mode) {
     switch (mode) {
-    case 0:
-        return "ui.replace.hint0"_tr();
     case 5:
         return "ui.replace.hint5"_tr();
     case 6:
         return "ui.replace.hint6"_tr();
     default:
-        return "ui.replace.hintOther"_tr();
+        return "ui.replace.hint6"_tr();
     }
 }
 
@@ -289,10 +318,9 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
     } else if (!live.enabled) {
         stateText  = "ui.state.off"_tr();
         stateColor = kTextDim;
-    } else if (live.replace != 5) {
-        stateText  = "ui.state.notOnScreen"_tr();
-        stateColor = kAmber;
     } else {
+        // Every reachable mode now composites (the "evaluate only" mode is gone), so a
+        // created feature that is enabled is always on screen.
         stateText = "ui.state.healthy"_tr();
     }
 
@@ -375,7 +403,7 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
         std::snprintf(dlssLine, sizeof(dlssLine), "%s", "ui.pipeline.waiting"_tr().c_str());
     }
 
-    bool const nrActive   = live.enabled && live.replace == 5;
+    bool const nrActive   = live.enabled;
     // The upscaler is part of the engine and keeps running with NR off, so its node
     // lights up whenever its cost is actually being measured.
     bool const dlssActive = stats.stampsActive || stats.hasEngine;
@@ -518,17 +546,24 @@ void drawTabNeural() {
 
     if (!gDraft.enabled) ImGui::BeginDisabled();
 
-    std::string const replaceItems[3] = {
-        "ui.replace.item0"_tr(),
-        "ui.replace.item5"_tr(),
+    // Only the two on-screen composites are offered: "evaluate only" (0) is a
+    // diagnostic mode with no entrance any more (docs/L), and the config loader maps a
+    // stale 0 to 6. The panel is a staging area, so a draft can never be 0 either.
+    std::string const replaceItems[2] = {
         "ui.replace.item6"_tr(),
+        "ui.replace.item5"_tr(),
     };
-    char const* itemPointers[3]  = {replaceItems[0].c_str(), replaceItems[1].c_str(), replaceItems[2].c_str()};
-    int const   replaceValues[3] = {0, 5, 6};
-    if (mappedCombo("ui.neural.replace"_tr().c_str(), &gDraft.replace, itemPointers, replaceValues, 3)) markDirty();
+    char const* itemPointers[2]  = {replaceItems[0].c_str(), replaceItems[1].c_str()};
+    int const   replaceValues[2] = {6, 5};
+    if (gDraft.replace != 5 && gDraft.replace != 6) gDraft.replace = 6;
+    if (mappedCombo("ui.neural.replace"_tr().c_str(), &gDraft.replace, itemPointers, replaceValues, 2)) markDirty();
     widgets::hint(replaceHint(gDraft.replace).c_str());
 
-    if (widgets::slider("ui.neural.gain"_tr().c_str(), &gDraft.gainBoost, 0.5f, 8.0f, "%.2f", "x")) markDirty();
+    // The gain boost only exists in the bounded-gain composite; hiding it in the ratio
+    // mode keeps the default screen free of knobs that do nothing.
+    if (gDraft.replace == 5) {
+        if (widgets::slider("ui.neural.gain"_tr().c_str(), &gDraft.gainBoost, 0.5f, 8.0f, "%.2f", "x")) markDirty();
+    }
 
     if (!gDraft.enabled) ImGui::EndDisabled();
 
@@ -544,6 +579,14 @@ void drawTabNeural() {
     if (widgets::slider("ui.style.localStructure"_tr().c_str(), &gDraft.localStructureStrength, 0.0f, 2.0f, "%.2f")) {
         markDirty();
     }
+#ifdef TEST
+    // Probe only: no visible difference was measurable at -1/0/1 on Minecraft content
+    // (docs/L P1), and TRP ties this knob to its automatic skin mask, which needs skin
+    // classification our inputs cannot carry. A release build does not offer a knob
+    // that does nothing; the parameter keeps its old default of 1.0.
+    if (widgets::slider("ui.style.skin"_tr().c_str(), &gDraft.skinStructure, -1.0f, 2.0f, "%.2f")) markDirty();
+    widgets::hint("ui.style.skinHint"_tr().c_str());
+#endif
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.neural.input"_tr().c_str());
@@ -568,6 +611,60 @@ void drawTabNeural() {
     }
 
     ImGui::Spacing();
+    widgets::sectionHeader("ui.neural.scale"_tr().c_str());
+    // Only the ratios that keep the feature inside the engine's native slot sizes and
+    // are worth the image cost (docs/L 2.1); a refused percentage falls back to 100%
+    // with a log line, so the panel cannot leave NR broken.
+    std::string const scaleItems[3] = {
+        "ui.neural.scale100"_tr(),
+        "ui.neural.scale66"_tr(),
+        "ui.neural.scale50"_tr(),
+    };
+    char const* scalePointers[3] = {scaleItems[0].c_str(), scaleItems[1].c_str(), scaleItems[2].c_str()};
+    int const   scaleValues[3]    = {100, 66, 50};
+    if (mappedCombo("ui.neural.scalePercent"_tr().c_str(), &gDraft.inputPercent, scalePointers, scaleValues, 3)) {
+        markDirty();
+    }
+    widgets::hint("ui.neural.scaleHint"_tr().c_str());
+
+    // Runtime picker (docs/L 3.1): the build in the mod directory that is materialised
+    // next to the game executable at load. Read at load, so it says "restart".
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.neural.model"_tr().c_str());
+    {
+        std::vector<std::string> items;
+        std::vector<std::string> values;
+        items.push_back("ui.neural.modelDefault"_tr());
+        values.emplace_back();
+        for (auto const& name : gModelFiles) {
+            items.push_back(name);
+            values.push_back(name);
+        }
+        int index = 0;
+        for (std::size_t i = 0; i < values.size(); ++i) {
+            if (values[i] == gDraft.modelFile) {
+                index = static_cast<int>(i);
+                break;
+            }
+        }
+        std::vector<char const*> pointers;
+        pointers.reserve(items.size());
+        for (auto const& item : items) {
+            pointers.push_back(item.c_str());
+        }
+        if (widgets::combo(
+                "ui.neural.modelFile"_tr().c_str(),
+                &index,
+                pointers.data(),
+                static_cast<int>(pointers.size())
+            )) {
+            gDraft.modelFile = values[static_cast<std::size_t>(index)];
+            markDirty();
+        }
+        widgets::hint("ui.neural.modelHint"_tr().c_str());
+    }
+
+    ImGui::Spacing();
     widgets::sectionHeader("ui.neural.encode"_tr().c_str());
 
     std::string const encodeItems[3] = {
@@ -580,12 +677,55 @@ void drawTabNeural() {
     if (mappedCombo("ui.neural.encode"_tr().c_str(), &gDraft.nrEncode, encodePointers, encodeValues, 3)) markDirty();
     widgets::hint("ui.neural.encodeHint"_tr().c_str());
 
+    // Network preset is read at CreateFeature only, so the hint has to say that a
+    // change needs a restart - offering a switch that silently does nothing is the
+    // class of bug this batch exists to remove (docs/L 1.4).
+    std::string const networkItems[2] = {
+        "ui.neural.networkDefault"_tr(),
+        "ui.neural.networkPrevious"_tr(),
+    };
+    char const* networkPointers[2] = {networkItems[0].c_str(), networkItems[1].c_str()};
+    int const   networkValues[2]   = {0, 1};
+    if (mappedCombo("ui.neural.network"_tr().c_str(), &gDraft.networkPreset, networkPointers, networkValues, 2)) {
+        markDirty();
+    }
+    widgets::hint("ui.neural.networkHint"_tr().c_str());
+
     ImGui::Spacing();
     widgets::sectionHeader("ui.neural.ratio"_tr().c_str());
     if (widgets::slider("ui.neural.white"_tr().c_str(), &gDraft.whitePoint, 0.05f, 4.0f, "%.3f")) markDirty();
     if (widgets::slider("ui.neural.transfer"_tr().c_str(), &gDraft.transferStrength, 0.0f, 2.0f, "%.2f")) markDirty();
     if (widgets::slider("ui.neural.colour"_tr().c_str(), &gDraft.colourStrength, 0.0f, 2.0f, "%.2f")) markDirty();
     if (widgets::slider("ui.neural.maxRatio"_tr().c_str(), &gDraft.maxRatio, 1.0f, 8.0f, "%.2f")) markDirty();
+    // TRP's broad/detail split of NR's change: 1.0 / 1.0 leaves the result unchanged.
+    if (widgets::slider("ui.neural.broad"_tr().c_str(), &gDraft.broad, 0.0f, 2.0f, "%.2f")) markDirty();
+    if (widgets::slider("ui.neural.detail"_tr().c_str(), &gDraft.detail, 0.0f, 2.0f, "%.2f")) markDirty();
+    widgets::hint("ui.neural.toneHint"_tr().c_str());
+
+    // Adaptive exposure (docs/L 3.2): the white point comes from the scene instead of
+    // the constant above. Only Replace=6 normalises against it in the resolve; both
+    // encoders read it.
+    if (widgets::toggle("ui.neural.adaptiveExposure"_tr().c_str(), &gDraft.adaptiveExposure)) markDirty();
+    if (gDraft.adaptiveExposure) {
+        if (widgets::slider("ui.neural.exposureBias"_tr().c_str(), &gDraft.exposureBias, -2.0f, 2.0f, "%+.2f", "EV")) {
+            markDirty();
+        }
+    }
+    widgets::hint("ui.neural.exposureHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.neural.compare"_tr().c_str());
+    bool compare = gDraft.compare != 0;
+    if (widgets::toggle("ui.neural.compareToggle"_tr().c_str(), &compare)) {
+        gDraft.compare = compare ? 1 : 0;
+        markDirty();
+    }
+    if (gDraft.compare != 0) {
+        if (widgets::slider("ui.neural.compareSplit"_tr().c_str(), &gDraft.compareSplit, 0.05f, 0.95f, "%.2f")) {
+            markDirty();
+        }
+    }
+    widgets::hint("ui.neural.compareHint"_tr().c_str());
 }
 
 void drawTabSr() {
@@ -777,10 +917,32 @@ void drawTabDiagnostics() {
         std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(stats.lastError));
         widgets::statRow("ui.diag.lastError"_tr().c_str(), buffer, kRed);
     }
+    // Telemetry (docs/L 3.3): a failed evaluation is skipped by the composite, so a
+    // rising counter explains "NR stopped affecting some frames" without digging logs.
+    std::snprintf(buffer, sizeof(buffer), "%u", stats.evalFailures);
+    widgets::statRow("ui.diag.evalFailures"_tr().c_str(), buffer, stats.evalFailures ? kAmber : kTextDim);
     std::string clearLabel  = "ui.diag.clear"_tr();
     clearLabel             += "##clearSamples";
     if (ImGui::Button(clearLabel.c_str())) nr::nrStampClearReported();
     widgets::hint("ui.diag.hint"_tr().c_str());
+
+    // Stage split (docs/L 1.7): measured on the same frames as the NR row above, so
+    // encode + evaluate + composite should add up to roughly that number. A stage
+    // that reads 0.000 with samples is a real measurement, not "timing off".
+    auto stageRow = [&](std::string const& label, bool has, double ms, unsigned samples) {
+        char value[96]{};
+        if (!stats.stampsActive) {
+            widgets::statRow(label.c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
+        } else if (has) {
+            std::snprintf(value, sizeof(value), "%.3f ms  %s", ms, "ui.diag.sample"_tr(samples).c_str());
+            widgets::statRow(label.c_str(), value);
+        } else {
+            widgets::statRow(label.c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+        }
+    };
+    stageRow("ui.diag.encode"_tr(), stats.hasEncode, stats.encodeMs, stats.encodeSamples);
+    stageRow("ui.diag.evaluate"_tr(), stats.hasEvaluate, stats.evaluateMs, stats.evaluateSamples);
+    stageRow("ui.diag.composite"_tr(), stats.hasComposite, stats.compositeMs, stats.compositeSamples);
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.diag.switches"_tr().c_str());
@@ -792,6 +954,76 @@ void drawTabDiagnostics() {
     if (widgets::toggle("ui.diag.paramLog"_tr().c_str(), &gDraft.paramLog)) markDirty();
 #endif
     widgets::hint("ui.diag.warnHint"_tr().c_str());
+
+    // What the last evaluation actually wrote (docs/L 1.2). This is the answer to
+    // "did my change reach the runtime": the numbers come from the same variables
+    // the parameter writes used, not from the draft in the panel.
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.diag.written"_tr().c_str());
+    auto const written = nr::nrFrameParams();
+    if (!written.valid) {
+        widgets::hint("ui.diag.writtenNone"_tr().c_str());
+        return;
+    }
+    std::snprintf(buffer, sizeof(buffer), "%d", written.replace);
+    widgets::statRow("ui.diag.wReplace"_tr().c_str(), buffer);
+    std::string const compositeName = (written.compositeMode == 4 || written.compositeMode == 6) ? "ui.diag.modeRatio"_tr()
+                                      : (written.compositeMode == 2 || written.compositeMode == 5) ? "ui.diag.modeGain"_tr()
+                                                                                                    : "ui.diag.modeOff"_tr();
+    widgets::statRow("ui.diag.wComposite"_tr().c_str(), compositeName.c_str());
+    if (written.encodeMode < 0) {
+        widgets::statRow("ui.diag.wEncode"_tr().c_str(), "ui.diag.modeRaw"_tr().c_str());
+    } else if (written.encodeMode == 3) {
+        widgets::statRow("ui.diag.wEncode"_tr().c_str(), "ui.neural.encodeTrp"_tr().c_str());
+    } else if (written.encodeMode == 0) {
+        widgets::statRow("ui.diag.wEncode"_tr().c_str(), "ui.neural.encodeReinhard"_tr().c_str());
+    } else {
+        std::snprintf(buffer, sizeof(buffer), "#%d", written.encodeMode);
+        widgets::statRow("ui.diag.wEncode"_tr().c_str(), buffer);
+    }
+    std::snprintf(buffer, sizeof(buffer), "%d", written.style);
+    widgets::statRow("ui.diag.wStyle"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%d", written.networkPreset);
+    widgets::statRow("ui.diag.wPreset"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(written.intensity));
+    widgets::statRow("ui.diag.wIntensity"_tr().c_str(), buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%.2f / %.2f",
+        static_cast<double>(written.localTone),
+        static_cast<double>(written.localStructure)
+    );
+    widgets::statRow("ui.diag.wLocal"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(written.skinStructure));
+    widgets::statRow("ui.diag.wSkin"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%d", written.reset);
+    widgets::statRow("ui.diag.wReset"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%.0f x %.0f", static_cast<double>(written.mvScaleX), static_cast<double>(written.mvScaleY));
+    widgets::statRow("ui.diag.wMv"_tr().c_str(), buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%d%%  %u x %u",
+        written.inputPercent,
+        written.featureWidth,
+        written.featureHeight
+    );
+    widgets::statRow("ui.diag.wScale"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%.2f / %.2f", static_cast<double>(written.broad), static_cast<double>(written.detail));
+    widgets::statRow("ui.diag.wTone"_tr().c_str(), buffer);
+    if (written.adaptiveExposure) {
+        std::snprintf(buffer, sizeof(buffer), "%+.2f EV", static_cast<double>(written.exposureBias));
+        widgets::statRow("ui.diag.wExposure"_tr().c_str(), buffer);
+    } else {
+        widgets::statRow("ui.diag.wExposure"_tr().c_str(), "ui.diag.modeOff"_tr().c_str());
+    }
+    if (written.compare) {
+        std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(written.compareSplit));
+        widgets::statRow("ui.diag.wCompare"_tr().c_str(), buffer);
+    } else {
+        widgets::statRow("ui.diag.wCompare"_tr().c_str(), "ui.diag.modeOff"_tr().c_str());
+    }
 }
 
 void drawTabAdvanced() {
@@ -806,19 +1038,36 @@ void drawTabAdvanced() {
 
     auto& overlay = Overlay::getInstance();
 
-    widgets::beginRow();
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", "ui.adv.open"_tr().c_str());
+    // The capture mechanism is global (one key at a time); this only remembers which
+    // row started it so the captured code lands in the right field.
+    static int pendingTarget = 0; // 0 = panel, 1 = NR on/off, 2 = reset
 
-    std::string const label = overlay.isCapturingHotkey() ? "ui.adv.capturing"_tr() : keyLabel(gDraftKey);
-    float const       width = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
-    ImGui::SameLine();
-    ImGui::SetCursorPosX(widgets::rowRight() - width);
-    if (ImGui::Button((label + "##rebind").c_str())) overlay.beginHotkeyCapture();
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "ui.adv.rebindHint"_tr().c_str());
+    auto hotkeyRow = [&](std::string const& labelText, std::string const& hintText, int* value, int target) {
+        widgets::beginRow();
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", labelText.c_str());
+        std::string const label =
+            overlay.isCapturingHotkey() && pendingTarget == target ? "ui.adv.capturing"_tr() : keyLabel(*value);
+        float const width = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(widgets::rowRight() - width);
+        if (ImGui::Button((label + "##hk" + std::to_string(target)).c_str())) {
+            pendingTarget = target;
+            overlay.beginHotkeyCapture();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", hintText.c_str());
+    };
 
-    if (int const captured = overlay.takeCapturedHotkey(); captured != 0 && captured != gDraftKey) {
-        gDraftKey = captured;
-        markDirty();
+    hotkeyRow("ui.adv.open"_tr(), "ui.adv.rebindHint"_tr(), &gDraftKey, 0);
+    hotkeyRow("ui.adv.nrKey"_tr(), "ui.adv.nrKeyHint"_tr(), &gDraftNrKey, 1);
+    hotkeyRow("ui.adv.resetKey"_tr(), "ui.adv.resetKeyHint"_tr(), &gDraftResetKey, 2);
+
+    if (int const captured = overlay.takeCapturedHotkey(); captured != 0) {
+        int* target = pendingTarget == 1 ? &gDraftNrKey : (pendingTarget == 2 ? &gDraftResetKey : &gDraftKey);
+        if (*target != captured) {
+            *target = captured;
+            markDirty();
+        }
+        pendingTarget = 0;
     }
 
     widgets::statRow("ui.adv.close"_tr().c_str(), "Esc");
@@ -839,6 +1088,8 @@ void applyDraft(bool persist) {
     config::get().nr         = gDraft;
     config::get().sr         = gDraftSr;
     config::get().ui.openKey = gDraftKey;
+    config::get().ui.nrKey   = gDraftNrKey;
+    config::get().ui.resetKey = gDraftResetKey;
     Overlay::getInstance().refreshHotkey();
     gDirty = false;
 
@@ -1044,6 +1295,9 @@ void onOpened() {
     gDraft    = config::get().nr;
     gDraftSr  = sanitizedSr(config::get().sr);
     gDraftKey = config::get().ui.openKey;
+    gDraftNrKey    = config::get().ui.nrKey;
+    gDraftResetKey = config::get().ui.resetKey;
+    gModelFiles    = utils::listNrModelFiles();
     gDirty    = false;
     gStatus.clear();
 }

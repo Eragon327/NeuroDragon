@@ -27,7 +27,9 @@ bool loadOrCreate() {
     auto const path = configPath();
 
     // A malformed file makes loadConfig throw (it parses json eagerly); keep the
-    // defaults and rewrite in that case instead of taking the mod down.
+    // defaults and rewrite in that case instead of taking the mod down. There is no
+    // migration for old values: the renderer treats everything except 5 as the ratio
+    // resolve, so a stale config cannot silently leave NR off-screen.
     try {
         if (!ll::config::loadConfig(gConfig, path)) {
             utils::logger().warn("config.json is incomplete, saving defaults");

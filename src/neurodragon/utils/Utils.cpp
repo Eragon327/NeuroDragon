@@ -5,6 +5,7 @@
 
 #include "ll/api/i18n/I18n.h"
 
+#include <algorithm>
 #include <system_error>
 
 namespace neurodragon::log {
@@ -86,22 +87,72 @@ std::string fileSizeText(std::filesystem::path const& path) {
     return std::to_string(size / (1024 * 1024)) + " MB";
 }
 
-bool ensureApplicationModel(ll::mod::NativeMod& mod, wchar_t const* fileName) {
+namespace {
+// The one file name the NGX core looks for next to the executable (docs/D §6.17):
+// whatever build the user picks is materialised under this name.
+constexpr wchar_t const* kTargetModelName = L"nvngx_dlssnr.dll";
+} // namespace
+
+std::vector<std::string> listNrModelFiles() {
+    std::vector<std::string>    out;
+    auto const                  current = ll::mod::NativeMod::current();
+    if (!current) {
+        return out;
+    }
+    std::error_code error;
+    for (auto const& entry : std::filesystem::directory_iterator(current->getModDir(), error)) {
+        if (error || !entry.is_regular_file(error)) {
+            continue;
+        }
+        auto const name = entry.path().filename().wstring();
+        if (name.rfind(L"nvngx_dlssnr", 0) != 0 || entry.path().extension() != L".dll") {
+            continue;
+        }
+        // The canonical name is the picker's "default" entry already; listing it twice
+        // would just be a duplicate row.
+        if (name == kTargetModelName) {
+            continue;
+        }
+        int const needed = ::WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        std::string utf8(needed > 1 ? static_cast<std::size_t>(needed - 1) : 0, '\0');
+        if (needed > 1) {
+            ::WideCharToMultiByte(CP_UTF8, 0, name.c_str(), -1, utf8.data(), needed, nullptr, nullptr);
+        }
+        out.push_back(std::move(utf8));
+    }
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
+bool ensureApplicationModel(
+    ll::mod::NativeMod&          mod,
+    std::filesystem::path const& sourceName,
+    bool                         replaceExisting
+) {
     std::error_code             error;
     auto const                  modDir    = std::filesystem::absolute(mod.getModDir(), error);
     std::filesystem::path const directory = error ? mod.getModDir() : modDir;
-    auto const                  source    = directory / fileName;
+    auto const                  source    = directory / sourceName;
 
     std::wstring const appDir = applicationDirectory();
     if (appDir.empty()) {
         log::write(2, "nr.error.noExeDir"_tr());
         return false;
     }
-    auto const target = std::filesystem::path(appDir) / fileName;
+    auto const target = std::filesystem::path(appDir) / kTargetModelName;
 
     if (::GetFileAttributesW(target.c_str()) != INVALID_FILE_ATTRIBUTES) {
-        ND_DEBUG("NR model already in place, skipping ({} , {})", target.string(), fileSizeText(target));
-        return true;
+        if (!replaceExisting) {
+            ND_DEBUG("NR model already in place, skipping ({} , {})", target.string(), fileSizeText(target));
+            return true;
+        }
+        // The user picked another build in the panel: the pick wins over whatever is
+        // already materialised. If the file cannot be removed, the existing one stays
+        // in use instead of failing the whole mod.
+        if (!::DeleteFileW(target.c_str())) {
+            log::write(1, "nr.warn.modelReplaceFailed"_tr(::GetLastError(), target.string()));
+            return true;
+        }
     }
 
     if (::GetFileAttributesW(source.c_str()) == INVALID_FILE_ATTRIBUTES) {

@@ -33,8 +33,11 @@
 | C. 工程骨架（xmake + ImGui + 探针） | ✅ xmake 工程 + 探针/钩子 + **面板已实现并部署**（4 页签、`End` 开关，见 [docs/F](docs/F-ui-plan.md)） | `src/neurodragon/probe/`、`src/neurodragon/ui/` |
 | D. NR 接入（NGX feature 0x12） | ✅ **跑通并上屏**：core 建 feature + 逐帧 evaluate（**~3.5 ms**，1485×835）+ HDR→LDR 编码 + 增益合成，`Replace=5` 时结果进引擎 DLSS 放大到 2560×1440。2026-10-22 修掉“编码纹理被描述符堆竞争冻结”的根因（§6.16） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
 | E. 超分（DLSS SR/DLAA） | ✅ 引擎自带 + **内部分辨率 33/50/58/66/100、DLSS 模型预设、应用即重建**已实现；78% 与锐化未做（原因见 J §4/§5） | [docs/J-sr-implementation.md](docs/J-sr-implementation.md) |
-| F. UI 分层 + DLSS-G | —（不排期）Bedrock 没有帧生成；UI 分层已由面板的 Present 方案覆盖 | — |
-| 下一步优先级 | 见 TRP 对照与代价评估 | [docs/K-trp-feature-gap.md](docs/K-trp-feature-gap.md) |
+| F. UI 分层 + FG | 🕓 第三阶段（原判「不排期」，2026-10-24 排进路线，见 [docs/M](docs/M-roadmap.md) §4）；UI 分层已由面板的 Present 方案覆盖 | — |
+| 下一步优先级 | 四阶段顺序与完成度见 [docs/M](docs/M-roadmap.md)；功能对照与代价见 [docs/K](docs/K-trp-feature-gap.md) | — |
+
+> **阶段顺序与完成度以 [docs/M](docs/M-roadmap.md) 为准**：阶段 1（NR + SR 主体）用户判定为
+> **「一半」**，之后是 VV 接管 TAAU → FG → RR。上面这张表是取证/实现里程碑，不等于阶段完成度。
 
 ## 驱动要求
 
@@ -97,7 +100,7 @@ xmake f --test=n && xmake build -y      # 发布构建（默认）
 硬链接到游戏根目录（core 只在那儿找，见 docs/D §6.17）。
 
 开关与参数在 `mods/NeuroDragon/config/config.json`（`ll::config`，首次运行自动生成）：
-`nr.enabled` 是总开关，`nr.replace` 选上屏模式（5 = 增益合成），其余见 [src/neurodragon/Config.h](src/neurodragon/Config.h)。
+`nr.enabled` 是总开关，`nr.replace` 选上屏模式（**6 = TRP Ratio，默认**；5 = 增益合成；旧的 0「只求值」已从面板移除），其余见 [src/neurodragon/Config.h](src/neurodragon/Config.h)。
 
 细节、判据与边界见 [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) §6.16。
 
@@ -135,3 +138,5 @@ xmake f --test=n && xmake build -y      # 发布构建（默认）
 | [docs/I-sr-final-plan.md](docs/I-sr-final-plan.md) | 部分有效 | 控制层 L1–L6、R_in/R_sr/R_out、VV 迁移 TAAU（未开始部分仍权威） |
 | [docs/J-sr-implementation.md](docs/J-sr-implementation.md) | **SR 权威** | 内部分辨率、模型预设、重建的实现、证据与坑 |
 | [docs/K-trp-feature-gap.md](docs/K-trp-feature-gap.md) | **路线权威** | TRP 0.5.3 的 SR/NR 全量对照、可做项、代价与排期 |
+| [docs/L-nr-remaining-plan.md](docs/L-nr-remaining-plan.md) | **执行权威** | NR 剩余功能的批次、验收判据、探针记录与约定 |
+| [docs/M-roadmap.md](docs/M-roadmap.md) | **阶段路线权威** | 四阶段顺序（NR/SR → VV 接管 TAAU → FG → RR）、每阶段状态与开工前必答的未知 |
