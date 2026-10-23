@@ -59,17 +59,28 @@ std::string keyLabel(int virtualKey) {
     if (virtualKey >= '0' && virtualKey <= '9') return std::string(1, static_cast<char>(virtualKey));
     if (virtualKey >= VK_F1 && virtualKey <= VK_F12) return "F" + std::to_string(virtualKey - VK_F1 + 1);
     switch (virtualKey) {
-    case VK_END: return "End";
-    case VK_HOME: return "Home";
-    case VK_INSERT: return "Insert";
-    case VK_DELETE: return "Delete";
-    case VK_PRIOR: return "PageUp";
-    case VK_NEXT: return "PageDown";
-    case VK_TAB: return "Tab";
-    case VK_SPACE: return "Space";
-    case VK_RETURN: return "Enter";
-    case VK_ESCAPE: return "Esc";
-    default: return "ui.key.unknown"_tr(virtualKey);
+    case VK_END:
+        return "End";
+    case VK_HOME:
+        return "Home";
+    case VK_INSERT:
+        return "Insert";
+    case VK_DELETE:
+        return "Delete";
+    case VK_PRIOR:
+        return "PageUp";
+    case VK_NEXT:
+        return "PageDown";
+    case VK_TAB:
+        return "Tab";
+    case VK_SPACE:
+        return "Space";
+    case VK_RETURN:
+        return "Enter";
+    case VK_ESCAPE:
+        return "Esc";
+    default:
+        return "ui.key.unknown"_tr(virtualKey);
     }
 }
 
@@ -89,19 +100,27 @@ bool mappedCombo(char const* label, int* value, char const* const* items, int co
 
 std::string replaceName(int mode) {
     switch (mode) {
-    case 0: return "ui.replace.0"_tr();
-    case 5: return "ui.replace.5"_tr();
-    case 6: return "ui.replace.6"_tr();
-    default: return "ui.replace.other"_tr();
+    case 0:
+        return "ui.replace.0"_tr();
+    case 5:
+        return "ui.replace.5"_tr();
+    case 6:
+        return "ui.replace.6"_tr();
+    default:
+        return "ui.replace.other"_tr();
     }
 }
 
 std::string replaceHint(int mode) {
     switch (mode) {
-    case 0: return "ui.replace.hint0"_tr();
-    case 5: return "ui.replace.hint5"_tr();
-    case 6: return "ui.replace.hint6"_tr();
-    default: return "ui.replace.hintOther"_tr();
+    case 0:
+        return "ui.replace.hint0"_tr();
+    case 5:
+        return "ui.replace.hint5"_tr();
+    case 6:
+        return "ui.replace.hint6"_tr();
+    default:
+        return "ui.replace.hintOther"_tr();
     }
 }
 
@@ -149,7 +168,7 @@ Layout computeLayout(ImVec2 pos, ImVec2 size) {
     layout.size  = size;
     layout.scale = theme::scale();
 
-    float const s = layout.scale;
+    float const s         = layout.scale;
     layout.pad            = 18.0f * s;
     layout.headerHeight   = 54.0f * s; // title strip, also the drag handle
     layout.pipelineHeight = 90.0f * s;
@@ -160,7 +179,7 @@ Layout computeLayout(ImVec2 pos, ImVec2 size) {
     layout.bodyHeight = pos.y + size.y - layout.pad - layout.footerHeight - layout.bodyTop;
     layout.bodyHeight = std::max(layout.bodyHeight, 70.0f * s);
 
-    layout.gutter    = 18.0f * s;
+    layout.gutter = 18.0f * s;
     // Fixed columns: the window is sized from them, and the stats column has to be
     // wide enough for "label ... value" on one line at this font size.
     layout.leftWidth = std::min(330.0f * s, size.x - layout.pad * 2.0f - 240.0f * s);
@@ -170,9 +189,9 @@ Layout computeLayout(ImVec2 pos, ImVec2 size) {
 // Header (title strip; the whole strip is the drag handle) -------------------
 
 void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
-    auto*      drawList = ImGui::GetWindowDrawList();
-    auto const s        = layout.scale;
-    auto const& live    = config::get().nr;
+    auto*       drawList = ImGui::GetWindowDrawList();
+    auto const  s        = layout.scale;
+    auto const& live     = config::get().nr;
 
     ImVec2 const titlePos{layout.pos.x + layout.pad, layout.pos.y + layout.pad * 0.42f};
 
@@ -181,11 +200,7 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
     ImGui::TextUnformatted("NeuroDragon");
     ImGui::PopFont();
 
-    drawList->AddText(
-        ImVec2(titlePos.x + 1.0f * s, titlePos.y + 26.0f * s),
-        kTextFaint,
-        "ui.subtitle"_tr().c_str()
-    );
+    drawList->AddText(ImVec2(titlePos.x + 1.0f * s, titlePos.y + 26.0f * s), kTextFaint, "ui.subtitle"_tr().c_str());
 
     float const right = layout.pos.x + layout.size.x - layout.pad;
 
@@ -210,10 +225,10 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
         stateText = "ui.state.healthy"_tr();
     }
 
-    auto const stateSize  = ImGui::CalcTextSize(stateText.c_str());
-    auto const stateWidth = stateSize.x + 20.0f * s;
-    float const stateX    = right - stateWidth;
-    float const dotRadius = 4.0f * s;
+    auto const  stateSize  = ImGui::CalcTextSize(stateText.c_str());
+    auto const  stateWidth = stateSize.x + 20.0f * s;
+    float const stateX     = right - stateWidth;
+    float const dotRadius  = 4.0f * s;
 
     float const zoomWidth = ImGui::CalcTextSize(zoomText).x + 10.0f * s;
     float const zoomX     = stateX - 18.0f * s - zoomWidth - button * 2.0f - gap * 2.0f;
@@ -228,11 +243,7 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
     {
         ImVec2 const itemMin = ImGui::GetItemRectMin();
         ImVec2 const itemMax = ImGui::GetItemRectMax();
-        drawList->AddCircleFilled(
-            ImVec2(stateX + dotRadius, (itemMin.y + itemMax.y) * 0.5f),
-            dotRadius,
-            stateColor
-        );
+        drawList->AddCircleFilled(ImVec2(stateX + dotRadius, (itemMin.y + itemMax.y) * 0.5f), dotRadius, stateColor);
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f * s, 1.0f * s));
@@ -314,10 +325,10 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
         bool        active{};
     };
     Node const nodes[4] = {
-        {titles[0].c_str(), render, rasterSub.c_str(), true},
-        {titles[1].c_str(), nrTitle.c_str(), nrLine, nrActive},
-        {titles[2].c_str(), upscaleSub.c_str(), dlssLine, dlssActive},
-        {titles[3].c_str(), output, outSub.c_str(), true},
+        {titles[0].c_str(), render,             rasterSub.c_str(), true      },
+        {titles[1].c_str(), nrTitle.c_str(),    nrLine,            nrActive  },
+        {titles[2].c_str(), upscaleSub.c_str(), dlssLine,          dlssActive},
+        {titles[3].c_str(), output,             outSub.c_str(),    true      },
     };
 
     for (int index = 0; index < 4; ++index) {
@@ -368,10 +379,10 @@ void drawTabs(Layout const& layout) {
 // Stats column --------------------------------------------------------------
 
 void drawStatsColumn(Layout const& layout, nr::PanelStats const& stats) {
-    auto const s       = layout.scale;
-    auto const frame   = Overlay::getInstance().frameStats();
-    auto const history = Overlay::getInstance().recentFrameMs();
-    auto const& live   = config::get().nr;
+    auto const  s       = layout.scale;
+    auto const  frame   = Overlay::getInstance().frameStats();
+    auto const  history = Overlay::getInstance().recentFrameMs();
+    auto const& live    = config::get().nr;
 
     widgets::sectionHeader("ui.stats.frames"_tr().c_str());
 
@@ -452,13 +463,7 @@ void drawTabNeural() {
     if (mappedCombo("ui.style.style"_tr().c_str(), &gDraft.style, kStyleItems, kStyleValues, 3)) markDirty();
     if (widgets::slider("ui.style.intensity"_tr().c_str(), &gDraft.intensity, 0.0f, 2.0f, "%.2f")) markDirty();
     if (widgets::slider("ui.style.localTone"_tr().c_str(), &gDraft.localToneStrength, 0.0f, 2.0f, "%.2f")) markDirty();
-    if (widgets::slider(
-            "ui.style.localStructure"_tr().c_str(),
-            &gDraft.localStructureStrength,
-            0.0f,
-            2.0f,
-            "%.2f"
-        )) {
+    if (widgets::slider("ui.style.localStructure"_tr().c_str(), &gDraft.localStructureStrength, 0.0f, 2.0f, "%.2f")) {
         markDirty();
     }
 
@@ -516,7 +521,13 @@ void drawTabDiagnostics() {
         widgets::statRow("ui.diag.dlss"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
     } else {
         if (stats.hasNr) {
-            std::snprintf(buffer, sizeof(buffer), "%.3f ms  %s", stats.nrMs, "ui.diag.sample"_tr(stats.nrSamples).c_str());
+            std::snprintf(
+                buffer,
+                sizeof(buffer),
+                "%.3f ms  %s",
+                stats.nrMs,
+                "ui.diag.sample"_tr(stats.nrSamples).c_str()
+            );
             widgets::statRow("ui.diag.nr"_tr().c_str(), buffer, kAccent);
         } else {
             widgets::statRow("ui.diag.nr"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
@@ -538,8 +549,8 @@ void drawTabDiagnostics() {
         std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(stats.lastError));
         widgets::statRow("ui.diag.lastError"_tr().c_str(), buffer, kRed);
     }
-    std::string clearLabel = "ui.diag.clear"_tr();
-    clearLabel += "##clearSamples";
+    std::string clearLabel  = "ui.diag.clear"_tr();
+    clearLabel             += "##clearSamples";
     if (ImGui::Button(clearLabel.c_str())) nr::nrStampClearReported();
     widgets::hint("ui.diag.hint"_tr().c_str());
 
@@ -677,9 +688,9 @@ void render() {
     // columns are then all laid out at the same position. Applying it after Begin
     // (SetWindowPos mid-frame) moved the frame but not the already-positioned
     // children, which is exactly the "elements lag behind the window" symptom.
-    auto const& io      = ImGui::GetIO();
-    float const minX    = 120.0f * s;
-    float const minY    = 40.0f * s;
+    auto const& io   = ImGui::GetIO();
+    float const minX = 120.0f * s;
+    float const minY = 40.0f * s;
     if (gDragging) {
         gPos.x += io.MouseDelta.x;
         gPos.y += io.MouseDelta.y;
@@ -711,14 +722,7 @@ void render() {
 
         auto* drawList = ImGui::GetWindowDrawList();
         drawList->AddRectFilled(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kPanel, 6.0f * s);
-        drawList->AddRect(
-            gPos,
-            ImVec2(gPos.x + size.x, gPos.y + size.y),
-            kBorder,
-            6.0f * s,
-            0,
-            std::max(1.0f, s)
-        );
+        drawList->AddRect(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kBorder, 6.0f * s, 0, std::max(1.0f, s));
 
         drawHeader(layout, stats);
 
@@ -726,8 +730,7 @@ void render() {
         // zoom buttons). Checked after the header so IsAnyItemHovered() already
         // knows about them.
         ImVec2 const stripMax{gPos.x + size.x, gPos.y + layout.pad + layout.headerHeight};
-        bool const   overStrip =
-            ImGui::IsMouseHoveringRect(gPos, stripMax) && !ImGui::IsAnyItemHovered();
+        bool const   overStrip = ImGui::IsMouseHoveringRect(gPos, stripMax) && !ImGui::IsAnyItemHovered();
         if (overStrip && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) gDragging = true;
         if (overStrip || gDragging) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
 
@@ -767,9 +770,15 @@ void render() {
                 ImGuiChildFlags_AlwaysUseWindowPadding
             )) {
             switch (gActiveTab) {
-            case 0: drawTabNeural(); break;
-            case 1: drawTabDiagnostics(); break;
-            default: drawTabAdvanced(); break;
+            case 0:
+                drawTabNeural();
+                break;
+            case 1:
+                drawTabDiagnostics();
+                break;
+            default:
+                drawTabAdvanced();
+                break;
             }
         }
         ImGui::EndChild();

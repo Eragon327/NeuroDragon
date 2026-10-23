@@ -5,28 +5,31 @@
 #include "neurodragon/Test.h"
 #include "neurodragon/utils/Utils.h"
 
-#include "neurodragon/NeuroDragon.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/ui/Overlay.h"
 
-#include "ll/api/i18n/I18n.h"
-#include "ll/api/memory/Hook.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
 #include "ll/api/event/client/ClientJoinLevelEvent.h"
+#include "ll/api/i18n/I18n.h"
+#include "ll/api/memory/Hook.h"
 
 #include <Windows.h>
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <thread>
+
+#ifdef TEST
+#include "neurodragon/NeuroDragon.h"
+#include <array>
 #include <filesystem>
 #include <map>
 #include <string>
-#include <thread>
+#endif
 
 // Read-only NGX/DLSS probe for the RT pipeline.
 //
@@ -60,11 +63,11 @@ struct HookRecord {
     void* target = nullptr;
     void* detour = nullptr;
 };
-HookRecord gHookRecords[4];
-int        gHookCount   = 0;
-std::thread gWatcherThread;
-std::atomic_bool           gNgxHooked{false};
-std::atomic_bool           gActive{true};
+HookRecord       gHookRecords[4];
+int              gHookCount = 0;
+std::thread      gWatcherThread;
+std::atomic_bool gNgxHooked{false};
+std::atomic_bool gActive{true};
 
 // ---------------------------------------------------------------------------
 // Parameter object helpers. The vtable slot table is measured, not copied from
@@ -160,12 +163,14 @@ struct ResourceWatch {
     bool        described = false;
 };
 
-std::array<ResourceWatch, 4> gResourceWatch{{
-    {"Color"},
-    {"Depth"},
-    {"MotionVectors"},
-    {"Output"},
-}};
+std::array<ResourceWatch, 4> gResourceWatch{
+    {
+     {"Color"},
+     {"Depth"},
+     {"MotionVectors"},
+     {"Output"},
+     }
+};
 
 void watchResource(char const* name, void* value) {
     auto&      log   = utils::logger();
@@ -175,7 +180,7 @@ void watchResource(char const* name, void* value) {
             continue;
         }
         if (!w.described && value) {
-            w.described = true;
+            w.described     = true;
             auto const info = nr::describe(value);
             log.debug(
                 "[res] {} f={} p={:#x} dev={:#x} fmt={} {}x{} arr={} mips={} flags={:#x}",
@@ -212,8 +217,7 @@ void watchResource(char const* name, void* value) {
 // ---------------------------------------------------------------------------
 using NgxInitFn        = int (*)(unsigned long long, wchar_t const*, void*, int);
 using NgxInitExtFn     = int (*)(unsigned long long, wchar_t const*, void*, int, void const*);
-using NgxInitProjectFn = int (*)(
-    char const*, int, char const*, wchar_t const*, void*, void const*, int);
+using NgxInitProjectFn = int (*)(char const*, int, char const*, wchar_t const*, void*, void const*, int);
 
 NgxInitFn        gInitOriginal        = nullptr;
 NgxInitExtFn     gInitExtOriginal     = nullptr;
@@ -225,31 +229,46 @@ int ngxInitDetour(unsigned long long appId, wchar_t const* dataPath, void* devic
     utils::logger().info("[init] Init appId={:#x} api={:#x}", appId, static_cast<unsigned>(apiVersion));
 #endif
     nr::nrSetEngineInit(appId, dataPath);
-    return gInitOriginal ? gInitOriginal(appId, dataPath, device, apiVersion) : 0xBAD00007;
+    return gInitOriginal ? gInitOriginal(appId, dataPath, device, apiVersion) : static_cast<int>(0xBAD00007u);
 }
 
-int ngxInitExtDetour(unsigned long long appId, wchar_t const* dataPath, void* device,
-                     int apiVersion, void const* params) {
+int ngxInitExtDetour(
+    unsigned long long appId,
+    wchar_t const*     dataPath,
+    void*              device,
+    int                apiVersion,
+    void const*        params
+) {
 #ifdef TEST
     utils::logger().info("[init] Init_Ext appId={:#x} api={:#x}", appId, static_cast<unsigned>(apiVersion));
 #endif
     nr::nrSetEngineInit(appId, dataPath);
     return gInitExtOriginal ? gInitExtOriginal(appId, dataPath, device, apiVersion, params)
-                            : 0xBAD00007;
+                            : static_cast<int>(0xBAD00007u);
 }
 
-int ngxInitProjectDetour(char const* projectId, int engineType, char const* engineVersion,
-                         wchar_t const* dataPath, void* device, void const* info, int apiVersion) {
+int ngxInitProjectDetour(
+    char const*    projectId,
+    int            engineType,
+    char const*    engineVersion,
+    wchar_t const* dataPath,
+    void*          device,
+    void const*    info,
+    int            apiVersion
+) {
 #ifdef TEST
     utils::logger().info(
         "[init] Init_ProjectID project={} engineType={} engineVersion={} api={:#x}",
-        projectId ? projectId : "?", engineType, engineVersion ? engineVersion : "?",
-        static_cast<unsigned>(apiVersion));
+        projectId ? projectId : "?",
+        engineType,
+        engineVersion ? engineVersion : "?",
+        static_cast<unsigned>(apiVersion)
+    );
 #endif
     nr::nrSetEngineInit(0x0876232Cu, dataPath);
     return gInitProjectOriginal
-         ? gInitProjectOriginal(projectId, engineType, engineVersion, dataPath, device, info, apiVersion)
-         : 0xBAD00007;
+             ? gInitProjectOriginal(projectId, engineType, engineVersion, dataPath, device, info, apiVersion)
+             : 0xBAD00007;
 }
 
 void hookInitOn(HMODULE module, [[maybe_unused]] char const* which) {
@@ -262,14 +281,16 @@ void hookInitOn(HMODULE module, [[maybe_unused]] char const* which) {
         void**      original;
     };
     Entry const entries[] = {
-        {"NVSDK_NGX_D3D12_Init", reinterpret_cast<void*>(&ngxInitDetour),
-         reinterpret_cast<void**>(&gInitOriginal)},
-        {"NVSDK_NGX_D3D12_Init_Ext", reinterpret_cast<void*>(&ngxInitExtDetour),
-         reinterpret_cast<void**>(&gInitExtOriginal)},
-        {"NVSDK_NGX_D3D12_Init_ProjectID", reinterpret_cast<void*>(&ngxInitProjectDetour),
-         reinterpret_cast<void**>(&gInitProjectOriginal)},
-        {"NVSDK_NGX_D3D12_Init_with_ProjectID", reinterpret_cast<void*>(&ngxInitProjectDetour),
-         reinterpret_cast<void**>(&gInitProjectOriginal)},
+        {"NVSDK_NGX_D3D12_Init",                reinterpret_cast<void*>(&ngxInitDetour), reinterpret_cast<void**>(&gInitOriginal)},
+        {"NVSDK_NGX_D3D12_Init_Ext",
+         reinterpret_cast<void*>(&ngxInitExtDetour),
+         reinterpret_cast<void**>(&gInitExtOriginal)                                                                             },
+        {"NVSDK_NGX_D3D12_Init_ProjectID",
+         reinterpret_cast<void*>(&ngxInitProjectDetour),
+         reinterpret_cast<void**>(&gInitProjectOriginal)                                                                         },
+        {"NVSDK_NGX_D3D12_Init_with_ProjectID",
+         reinterpret_cast<void*>(&ngxInitProjectDetour),
+         reinterpret_cast<void**>(&gInitProjectOriginal)                                                                         },
     };
     for (auto const& e : entries) {
         auto* target = reinterpret_cast<void*>(GetProcAddress(module, e.name));
@@ -308,18 +329,15 @@ void hookInitOn(HMODULE module, [[maybe_unused]] char const* which) {
 // NR never upscales - the engine's DLSS still does the upscaling).
 // ---------------------------------------------------------------------------
 
-bool          gNrEnabled      = false;
-bool          gNrStartTried   = false;
-bool          gNrWindowOpen   = false;
-int           gNrWindowIndex  = -1;
-bool          gNrSizeWarned   = false;
-unsigned      gNrCreateWidth  = 0;
-unsigned      gNrCreateHeight = 0;
-std::uint64_t gWindowAnchor   = 0;
-std::uint64_t gNrWindowStart  = 0;
-std::uint64_t gNrWindowEnd    = 0;
-std::uint64_t gNrDumpFrame    = 0;
-std::uint64_t gNrReportAt     = 0;
+bool          gNrEnabled     = false;
+bool          gNrStartTried  = false;
+bool          gNrWindowOpen  = false;
+int           gNrWindowIndex = -1;
+std::uint64_t gWindowAnchor  = 0;
+std::uint64_t gNrWindowStart = 0;
+std::uint64_t gNrWindowEnd   = 0;
+std::uint64_t gNrDumpFrame   = 0;
+std::uint64_t gNrReportAt    = 0;
 
 // Short windows spaced far apart: the first ones run in the menu (no ray
 // tracing, Color is black), later ones land inside a world and after the world
@@ -342,12 +360,12 @@ void nrDumpName(char* buffer, std::size_t size, char const* stem, int index) {
 // the first real frame, and any window spent there would only dump black.
 // A level change only resets temporal history and restarts the dump/timing
 // window schedule; it never delays NR (that gate was removed on purpose).
-std::atomic_bool gRestartWindows{false};
+std::atomic_bool       gRestartWindows{false};
 ll::event::ListenerPtr gJoinLevelListener;
 ll::event::ListenerPtr gExitLevelListener;
 
 void registerLevelListeners() {
-    auto& bus = ll::event::EventBus::getInstance();
+    auto& bus          = ll::event::EventBus::getInstance();
     gJoinLevelListener = bus.emplaceListener<ll::event::client::ClientJoinLevelEvent>([](auto&) {
         nr::nrNotifyLevelLoaded();
         gRestartWindows.store(true, std::memory_order_relaxed);
@@ -355,13 +373,8 @@ void registerLevelListeners() {
     gExitLevelListener = bus.emplaceListener<ll::event::client::ClientExitLevelEvent>([](auto&) {
         gRestartWindows.store(true, std::memory_order_relaxed);
     });
-    ND_DEBUG(
-        "[nr] level 监听 join={} exit={}",
-        gJoinLevelListener != nullptr,
-        gExitLevelListener != nullptr
-    );
+    ND_DEBUG("[nr] level 监听 join={} exit={}", gJoinLevelListener != nullptr, gExitLevelListener != nullptr);
 }
-
 
 
 // ---------------------------------------------------------------------------
@@ -378,11 +391,23 @@ void registerLevelListeners() {
 // SignatureView, which is the form resolveIdentifier() accepts.
 // ---------------------------------------------------------------------------
 namespace sig {
-inline ll::memory::Signature const kSigSetPtr = ll::memory::Signature::parse("48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4C 8B F1 49 8B F8 48 8B F2 48 8B 58 08 48 8B CB");
-inline ll::memory::Signature const kSigSetF = ll::memory::Signature::parse("48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 48 8B 01 48 8B F1 0F 29 74 24 20 48 8B FA 0F 28 F2");
-inline ll::memory::Signature const kSigSetUI = ll::memory::Signature::parse("48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4C 8B F1 41 8B F8 48 8B F2 48 8B 58 18 48 8B CB");
-inline ll::memory::Signature const kSigSet4 = ll::memory::Signature::parse("48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4C 8B F1 41 8B F8 48 8B F2 48 8B 58 20");
-inline ll::memory::Signature const kSigCreateWrapper = ll::memory::Signature::parse("48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 48 83 3D ?? ?? ?? ?? 00");
+inline ll::memory::Signature const kSigSetPtr = ll::memory::Signature::parse(
+    "48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4C 8B F1 49 8B F8 48 8B F2 48 8B 58 08 48 "
+    "8B CB"
+);
+inline ll::memory::Signature const kSigSetF = ll::memory::Signature::parse(
+    "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 48 8B 01 48 8B F1 0F 29 74 24 20 48 8B FA 0F 28 F2"
+);
+inline ll::memory::Signature const kSigSetUI = ll::memory::Signature::parse(
+    "48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4C 8B F1 41 8B F8 48 8B F2 48 8B 58 18 48 "
+    "8B CB"
+);
+inline ll::memory::Signature const kSigSet4 = ll::memory::Signature::parse(
+    "48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4C 8B F1 41 8B F8 48 8B F2 48 8B 58 20"
+);
+inline ll::memory::Signature const kSigCreateWrapper = ll::memory::Signature::parse(
+    "48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 48 83 3D ?? ?? ?? ?? 00"
+);
 } // namespace sig
 
 // ---------------------------------------------------------------------------
@@ -421,12 +446,7 @@ void recordParam(char const* name, char const* text) {
     if (gParamBudget.fetch_sub(1, std::memory_order_relaxed) <= 0) {
         return;
     }
-    utils::logger().info(
-        "[ngxset] {} = {} f={}",
-        name,
-        text,
-        gFrame.load(std::memory_order_relaxed)
-    );
+    utils::logger().info("[ngxset] {} = {} f={}", name, text, gFrame.load(std::memory_order_relaxed));
 }
 
 // SetPtr(param, name, value): the resource overload.
@@ -444,8 +464,12 @@ LL_AUTO_STATIC_HOOK(
         return;
     }
     char text[32];
-    std::snprintf(text, sizeof(text), "%#llx", static_cast<unsigned long long>(
-        reinterpret_cast<std::uintptr_t>(value)));
+    std::snprintf(
+        text,
+        sizeof(text),
+        "%#llx",
+        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(value))
+    );
     recordParam(name, text);
     // The engine rewrites Color/Output every frame (Output alternates between two
     // textures), so log the first frames only and then sparsely.
@@ -515,12 +539,7 @@ LL_AUTO_STATIC_HOOK(
     static std::atomic<std::uint64_t> calls{0};
     auto const                        n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
     if (n <= 200) {
-        utils::logger().info(
-            "[param4] {} f={} = {}",
-            name ? name : "?",
-            gFrame.load(std::memory_order_relaxed),
-            value
-        );
+        utils::logger().info("[param4] {} f={} = {}", name ? name : "?", gFrame.load(std::memory_order_relaxed), value);
     }
 }
 
@@ -559,20 +578,20 @@ using NgxCreateFn = int (*)(void* cmdList, int feature, void* params, void** han
 
 NgxEvalFn   gNgxEvalOriginal   = nullptr;
 NgxCreateFn gNgxCreateOriginal = nullptr;
-int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* callback, void* userData) {
+int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* callback, void* userData) {
     if (!gActive.load(std::memory_order_relaxed)) {
         return gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
     }
-    auto const n      = gFrame.fetch_add(1, std::memory_order_relaxed) + 1;
+    auto const n = gFrame.fetch_add(1, std::memory_order_relaxed) + 1;
     // The panel's "Apply" can flip this without a restart, and the flag gates both
     // NR itself and the diagnostic window schedule, so read it per frame.
-    gNrEnabled        = config::get().nr.enabled;
-    void*      color  = nullptr;
-    void*      depth  = nullptr;
-    void*      mv     = nullptr;
-    void*      out    = nullptr;
-    unsigned   width  = 0;
-    unsigned   height = 0;
+    gNrEnabled      = config::get().nr.enabled;
+    void*    color  = nullptr;
+    void*    depth  = nullptr;
+    void*    mv     = nullptr;
+    void*    out    = nullptr;
+    unsigned width  = 0;
+    unsigned height = 0;
 
     if (validParamObj(const_cast<void*>(params))) {
         NgxParamProbe probe{const_cast<void*>(params)};
@@ -621,6 +640,16 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     // ---- stage 2: NR in front of the engine's DLSS -------------------------
     bool inWindow    = false;
     bool replaceMode = false;
+    // Needed both to rebuild (fence before releasing the old feature) and to unload,
+    // so it is refreshed every frame whether NR is enabled or not.
+    nr::nrSetGameQueue(ui::overlayGameQueue());
+    if (!gNrEnabled) {
+        // "off" means unloaded, not merely skipped: an idle feature keeps the 264 MB
+        // model and its history buffers resident. Re-enabling creates everything
+        // again through the normal creation path below.
+        nr::nrUnload();
+        gNrStartTried = false;
+    }
     if (gNrEnabled && validParamObj(const_cast<void*>(params))) {
         // Entering/leaving a world only restarts the window schedule: the menu's
         // frames must not consume the ten slots.
@@ -629,17 +658,14 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             gNrWindowIndex = -1;
             gNrWindowOpen  = false;
             gNrReportAt    = 0;
-            gNrSizeWarned  = false;
             ND_DEBUG("[nr] 窗口重新锚定 f={}（此前窗口全部作废）", n);
         }
 
         // No "wait until the level settles" gate: the moment the engine hands over
         // real Color/Depth/MV/Output resources, NR is created.
         if (!gNrStartTried && color && depth && mv && out && width && height) {
-            gNrStartTried   = true;
-            gNrCreateWidth  = width;
-            gNrCreateHeight = height;
-            gWindowAnchor   = n;
+            gNrStartTried = true;
+            gWindowAnchor = n;
             nr::nrCreate(
                 cmdList,
                 color,
@@ -653,8 +679,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
 
         if (gNrStartTried) {
             if (!gNrWindowOpen && gNrWindowIndex + 1 < kNrWindows
-                && n >= gWindowAnchor
-                        + static_cast<std::uint64_t>(gNrWindowIndex + 1) * kNrWindowSpacing) {
+                && n >= gWindowAnchor + static_cast<std::uint64_t>(gNrWindowIndex + 1) * kNrWindowSpacing) {
                 ++gNrWindowIndex;
                 gNrWindowOpen  = true;
                 gNrWindowStart = n;
@@ -676,58 +701,54 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
             // machinery stays windowed (a 60-frame burst every 900 frames is
             // useless for judging image quality by eye).
             replaceMode = nr::nrReplaceContinuous();
-            if ((inWindow || replaceMode) && nr::nrIsCreated()) {
-                if (width != gNrCreateWidth || height != gNrCreateHeight) {
-                    if (!gNrSizeWarned) {
-                        gNrSizeWarned = true;
-                        neurodragon::log::write(
-                            1,
-                            "nr.warn.sizeChanged"_tr(gNrCreateWidth, gNrCreateHeight, width, height)
-                        );
-                    }
-                } else {
-                    auto const     mvInfo = nr::describe(mv);
-                    unsigned const guideWidth =
-                        mvInfo.width ? static_cast<unsigned>(mvInfo.width) : width;
-                    unsigned const guideHeight =
-                        mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
-                    bool const reset     = n == gNrWindowStart;
-                    bool const replaceNow = replaceMode;
-                    // The panel wants live GPU numbers in the mode people actually
-                    // use for tuning, so Replace also stamps outside the windows.
-                    bool const timed = inWindow || replaceMode;
-                    if (timed) {
-                        nr::nrStampBegin(cmdList, n, 0);
-                    }
-                    [[maybe_unused]] bool const recorded = nr::nrRecord(
-                        cmdList,
-                        color,
-                        depth,
-                        mv,
+            // Follow the engine's render size before doing anything else: a window
+            // resize or an upscaling-quality change makes the engine hand over a new
+            // Width/Height, and the feature is rebuilt for it here (no-op on ordinary
+            // frames). NR only gets created once a world is actually rendering.
+            bool sizeOk = false;
+            if (nr::nrIsCreated()) {
+                sizeOk = nr::nrEnsureRenderSize(cmdList, color, width, height);
+            }
+            if ((inWindow || replaceMode) && sizeOk) {
+                auto const     mvInfo      = nr::describe(mv);
+                unsigned const guideWidth  = mvInfo.width ? static_cast<unsigned>(mvInfo.width) : width;
+                unsigned const guideHeight = mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
+                bool const     reset       = n == gNrWindowStart;
+                bool const     replaceNow  = replaceMode;
+                // The panel wants live GPU numbers in the mode people actually
+                // use for tuning, so Replace also stamps outside the windows.
+                bool const timed = inWindow || replaceMode;
+                if (timed) {
+                    nr::nrStampBegin(cmdList, n, 0);
+                }
+                [[maybe_unused]] bool const recorded = nr::nrRecord(
+                    cmdList,
+                    color,
+                    depth,
+                    mv,
+                    guideWidth,
+                    guideHeight,
+                    static_cast<float>(width),
+                    static_cast<float>(height),
+                    1,
+                    reset,
+                    replaceNow ? const_cast<void*>(params) : nullptr,
+                    const_cast<void*>(out)
+                );
+                if (timed) {
+                    nr::nrStampEnd(cmdList, n, 0);
+                }
+                if (reset) {
+                    ND_DEBUG(
+                        "[nr] 窗口 #{} 首帧 f={} 指南={}x{} 特征={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
+                        gNrWindowIndex,
+                        n,
                         guideWidth,
                         guideHeight,
-                        static_cast<float>(width),
-                        static_cast<float>(height),
-                        1,
-                        reset,
-                        replaceNow ? const_cast<void*>(params) : nullptr,
-                        const_cast<void*>(out)
+                        width,
+                        height,
+                        recorded
                     );
-                    if (timed) {
-                        nr::nrStampEnd(cmdList, n, 0);
-                    }
-                    if (reset) {
-                        ND_DEBUG(
-                            "[nr] 窗口 #{} 首帧 f={} 指南={}x{} 特征={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
-                            gNrWindowIndex,
-                            n,
-                            guideWidth,
-                            guideHeight,
-                            width,
-                            height,
-                            recorded
-                        );
-                    }
                 }
             }
 
@@ -765,8 +786,8 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 nr::queueColorDumpN(3, cmdList, const_cast<void*>(color), name, 0);
             } else if (inWindow && n == gNrDumpFrame + 4) {
                 char          name[64];
-                float         peak = -1.0f;
-                std::uint32_t nz   = 0;
+                float         peak    = -1.0f;
+                std::uint32_t nz      = 0;
                 char const*   tags[4] = {"color_ref", "nr2", "fed", "base"};
                 for (int slot = 0; slot < 4; ++slot) {
                     peak = -1.0f;
@@ -813,8 +834,8 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
                 nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
             } else if (inWindow && n == gNrDumpFrame + 36) {
                 char          name[64];
-                float         peak = -1.0f;
-                std::uint32_t nz   = 0;
+                float         peak    = -1.0f;
+                std::uint32_t nz      = 0;
                 char const*   tags[2] = {"color_ref2", "nr3"};
                 for (int slot = 0; slot < 2; ++slot) {
                     peak = -1.0f;
@@ -845,8 +866,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
     if (measureBaseline) {
         nr::nrStampBegin(cmdList, n, 1);
     }
-    int const result =
-        gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
+    int const result = gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
 #ifdef TEST
     if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 4) {
         // The engine's own Output, right after its DLSS ran: this is the proof
@@ -854,8 +874,7 @@ int ngxEvaluateDetour(void* cmdList, void* handle, void const* params, void* cal
         char name[64];
         nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
         nr::queueColorDumpLinear(cmdList, const_cast<void*>(out), name);
-    } else if (gNrEnabled && gNrWindowOpen
-               && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 8) {
+    } else if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 8) {
         // Second sample a few frames later: if it is identical to out_after the
         // engine stopped refreshing its Output (frozen picture).
         char name[64];
@@ -920,7 +939,7 @@ void hookNgxExports() {
     Entry const entries[] = {
         {"NVSDK_NGX_D3D12_EvaluateFeature",
          reinterpret_cast<void*>(&ngxEvaluateDetour),
-         reinterpret_cast<void**>(&gNgxEvalOriginal)},
+         reinterpret_cast<void**>(&gNgxEvalOriginal)  },
         {"NVSDK_NGX_D3D12_CreateFeature",
          reinterpret_cast<void*>(&ngxCreateDetour),
          reinterpret_cast<void**>(&gNgxCreateOriginal)},
@@ -1023,10 +1042,10 @@ bool install() {
 #ifdef TEST
     // Only the dump writer needs the mod directory; the NR model itself is
     // materialised next to the executable by utils::ensureApplicationModel.
-    auto const      modDir      = NeuroDragon::getInstance().getSelf().getModDir();
+    auto const      modDir = NeuroDragon::getInstance().getSelf().getModDir();
     std::error_code modDirError;
-    auto const      modDirAbs   = std::filesystem::absolute(modDir, modDirError);
-    std::wstring    modDirFull  = (modDirError ? modDir : modDirAbs).wstring();
+    auto const      modDirAbs  = std::filesystem::absolute(modDir, modDirError);
+    std::wstring    modDirFull = (modDirError ? modDir : modDirAbs).wstring();
     nr::nrSetModDirectory(modDirFull.c_str());
 #endif
     neurodragon::log::write(0, gNrEnabled ? "nr.info.enabled"_tr() : "nr.info.disabled"_tr());

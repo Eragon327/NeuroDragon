@@ -42,7 +42,7 @@ void queueColorDump(void* commandList, void* color, char const* fileName);
 // Same, but the stored values are already display-encoded (no transform on write).
 void queueColorDumpEncoded(void* commandList, void* color, char const* fileName);
 // Stored values are linear but already in [0,1] (gamma only, no tone map).
-void queueColorDumpLinear(void* commandList, void* color, char const* fileName);
+void               queueColorDumpLinear(void* commandList, void* color, char const* fileName);
 [[nodiscard]] bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords);
 
 // Second independent dump slot: queue/flush one more resource on the very same
@@ -61,11 +61,12 @@ void               queueColorDumpN(int slot, void* commandList, void* resource, 
 // Stage 2: NR (NGX feature 0x12) at the engine's render resolution.
 //
 // Contract, from TRP and the stage-1 measurements (docs/D §6):
-//   * DLSSNR.Width/Height are the feature's OUTPUT size, and the Color subrect
-//     must match them 1:1 - so this is a same-resolution pass at 1485x835,
-//     written into the top-left corner of a 2560x1440 allocation that can later
-//     be handed to the engine's DLSS as "Color".
-//   * Depth/MV are guides: their subrect is the full texture (1485x836).
+//   * DLSSNR.Width/Height are the feature's working size and the Color subrect must
+//     match them 1:1 - so this is a same-resolution pass at the engine's current
+//     render size (1485x835 on a 2560x1440 output, but that is just one sample of
+//     it), written into the top-left corner of a Color-sized allocation that can
+//     later be handed to the engine's DLSS as "Color".
+//   * Depth/MV are guides: their subrect is the full texture.
 //   * Jitter/exposure are not part of the NR parameter table.
 // ---------------------------------------------------------------------------
 
@@ -136,6 +137,23 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // one-shot Reset=1 is sent to its parameter object at the first swap after a load.
 void nrNotifyLevelLoaded();
 
+// Keeps the feature on the engine's current render size.
+//
+// The engine configures its own DLSS per resolution: when the window size or the
+// upscaling quality changes it hands NR a different Width/Height (1485x835 was only
+// the first size ever measured). An NGX feature is created for one size, so the
+// only way to follow is to build a replacement: this creates it first (releasing the
+// last feature would make the driver unload the 264 MB model), swaps the textures in
+// when they no longer fit, and shows the picture once the new feature exists.
+// Retired objects are only released after the GPU is idle. Cheap when the size has
+// not changed (two compares), so the probe can call it every in-world frame.
+bool nrEnsureRenderSize(void* commandList, void* color, unsigned width, unsigned height);
+
+// The game's D3D12 direct queue, captured by the overlay's ExecuteCommandLists
+// hook. Only used to wait for the GPU before releasing retired objects; when it is
+// null those objects are kept instead (a leak is cheaper than a driver crash).
+void nrSetGameQueue(void* queue);
+
 // Records one evaluation on the game's command list. Handles every resource
 // state transition around the NGX call. `engineParams` (may be null) is the
 // engine's own NGX parameter object: when config.json asks for Replace=5 it is
@@ -161,6 +179,13 @@ bool nrRecord(
 // from the probe's uninstall(): a detour or a live D3D12 object left behind by an
 // unloaded module is what crashed the client on disable (2026-10-21).
 void nrShutdown();
+
+// Switches NR off until it is enabled again: the feature, the output texture and the
+// HDR<->LDR textures are retired (released once the GPU is idle) and creation is
+// re-armed, so the next enabled frame builds everything again. Called when
+// nr.enabled turns false - an idle feature keeps the 264 MB model and its history
+// buffers resident, so merely skipping the evaluation is not "off".
+void nrUnload();
 
 // GPU timestamps. id 0 brackets our NR evaluation, id 1 the engine's DLSS, so
 // both numbers come from the same run. Timing is harvested a few frames later:

@@ -11,9 +11,9 @@ namespace neurodragon::ui::widgets {
 // Row layout: label on the left, control right-aligned inside the same row. The
 // row's right edge is captured by beginRow() so callers do not have to repeat the
 // available-width maths.
-void                   beginRow();
-void                   labelRow(std::string_view label);
-[[nodiscard]] float    rowRight();
+void                beginRow();
+void                labelRow(std::string_view label);
+[[nodiscard]] float rowRight();
 
 // A section title with a rule, like the reference panel's group headers.
 void sectionHeader(char const* label);
@@ -55,7 +55,7 @@ void frameGraph(ImVec2 pos, ImVec2 size, std::vector<float> const& values, float
 bool footerButton(char const* label, ImVec2 size, bool primary);
 
 // Text helper for the draw-list laid-out parts.
-void text(ImVec2 pos, ImU32 color, char const* value);
+void                text(ImVec2 pos, ImU32 color, char const* value);
 [[nodiscard]] float textWidth(char const* value);
 
 } // namespace neurodragon::ui::widgets

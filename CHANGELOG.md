@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added（2026-10-23：关掉「启用神经渲染」= 卸载 NR）
+
+- `nr.enabled = false` 以前只跳过求值，feature 与 264 MB 模型继续常驻；现在 probe 每帧检查配置，
+  关闭即调 `nrUnload()`：feature + output + 编码/解码纹理进退役队列，等游戏直接队列的 fence 之后
+  真正释放（队列未知则保留，不冒险），`created/attempted` 复位。重新启用自动走正常创建路径重建
+  （模型重新载入 ~0.3 s）。
+- 编码 PSO / 根签名 / 描述符堆不随卸载销毁：`ensureEncoder` 拆成「管线」与「两张纹理」两段
+  （新增 `ensureEncodeTextures`），重建时只补纹理。
+- 触发点是配置值本身：面板「应用」和「保存为默认」都会卸载，只改复选框不会。发布版不写日志。
+
+### Changed（2026-10-23：NR 创建的启动日志压成一首一尾；面板在小分辨率下不再缩小）
+
+- 「创建 NR 功能」一次操作原来写四行（父阶段首/尾 + 内层「加载 NR 模型」首/尾 +「NR 已就绪」）。
+  现在只有父阶段的一首一尾：`创建 NR 功能（纹理、着色器、模型）：开始…` →
+  `…：完成，用时 386 ms`（不带尺寸）。`log.stage.nrModel`、`nr.info.ready` 两个键退役。
+- 分辨率变化不再写任何日志（`nr.info.resized` 退役，只在 TEST 构建留 debug 行），面板也不显示
+  重建次数（`PanelStats.rebuilds`、`ui.stats.rebuilds` 删除）；重建失败与达上限的两条 warn 保留。
+- 面板缩放下限从 0.7 改成 1.0：视口高度不足 1080p 时保持 1080p 的物理尺寸（更大的视口照旧按比例
+  放大，`[-] 100% [+]` 仍是用户自己的覆盖）。原因：720p 下 0.7 倍文字看不清，且 ImGui 软件光标
+  按字号绘制，只剩 ~10 px 几乎看不见；软件光标另加 `style.MouseCursorScale = 1.3`。
+- `src/neurodragon/ui/Glyphs.h` 重新生成（300 个非 ASCII 字形），docs/F 的缩放与坑同步。
+
+### Added（2026-10-23：NR 跟随任意分辨率——尺寸变化即重建 feature）
+
+- 之前只在 1485×835 上验证过（= 2560×1440 输出 + Balanced 档），检测到尺寸变化会跳过并告警；
+  现在窗口尺寸、全屏、游戏内超分质量档改变引起的渲染分辨率变化，NR 会**当场重建**并继续上屏。
+- 离线先确认了前提（`tools/ngx_probe.cpp` 新增 `--sizes=` / `--keep-alive`）：core 的
+  `CreateFeature(0x12)` 在 640×360 / 1280×720 / 1115×627 / 1485×835 / 1920×1080 / 2560×1440 /
+  3840×2160 **全部 0x1**，三个不同尺寸的 feature 可**同时存活**。
+- 实现要点：先建新 feature 再退役旧的（反过来 `ReleaseFeature` 会卸载 264 MB 模型，每次改分辨率都要
+  重载一次）；output/encoded/decoded 纹理只增不减（变小只改子矩形，省下每次 ~90 MB 分配）；退役对象在
+  游戏直接队列上 Signal 一个 fence、等 GPU 空闲后释放（队列未知时留着，下次重建再试）；重建后合成增益
+  从 0 渐入；每会话上限 64 次、两次重建至少隔 20 次求值，同一尺寸失败只记一次。
+- 日志：只有重建失败 warn（`nr.warn.rebuildFailed`）与达上限 warn（`nr.warn.rebuildLimit`），
+  成功不写行；`nr.warn.sizeChanged`、`nr.info.resized` 退役。重建次数既不进日志也不上面板
+  （按作者要求）。文档 docs/D §6.19。
+
 ### Fixed（2026-10-23：启动时那 3.5–4.9 秒不是建设备，是销毁临时 D3D11 设备）
 
 - **安装游戏内面板 3774 → 523 ms**，其中「创建临时设备与交换链」那一步

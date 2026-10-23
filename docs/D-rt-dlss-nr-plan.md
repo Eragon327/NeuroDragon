@@ -457,7 +457,7 @@ encode 步骤。NR 的 62 个参数里**没有** HDR/色彩空间开关（已从
 | NR 输出偏暗 | 直接当图像用会暗、偏灰；TRP 是「NR 结果 + 原色」自己 resolve，还做 HDR→LDR encode | 决定观感，必须先解决 |
 | `DepthInverted` | 暂按 `1`（反向 Z）写死，未验证 | 影响深度相关的细节 |
 | 参数调优 | `Style=0 / Intensity=1.0 / Local*Strength=1.0` 用的是 TRP 默认 | 影响风格强度 |
-| 尺寸变化 | 只测过 1485×835；换分辨率需重建 feature（现在会跳过并告警） | 全屏/改分辨率要处理 |
+| 尺寸变化 | **已解决（§6.19，2026-10-23）**：检测到尺寸变化即重建 feature（先建后拆、纹理只增不减、退役对象等 GPU 空闲再释放） | — |
 
 **下一步三条路线（成本递增）**
 
@@ -651,6 +651,60 @@ TRP 能把它那份放在自己模组目录里、还带版本名，正是因为�
 - 文件缺失/缺键/版本不符 → 自动补默认并回写；文件写坏 → 记 error 后重写默认，不崩；
 - 实时调参：渲染线程每 ~2 s `reload()`，`replace` / `gainBoost` 变化会打 debug；
 - 字段语义见 [src/neurodragon/Config.h](../../src/neurodragon/Config.h)。
+
+### 6.19 任意分辨率：尺寸变化时重建 feature（2026-10-23）
+
+**起因**：之前只测过 1485×835，检测到尺寸变化就跳过并告警（§6.14 表最后一行）。窗口尺寸、
+全屏、游戏内「超分质量」档都会改变引擎的渲染分辨率——1485×835 只是「2560×1440 输出 +
+Balanced 档」这一次采样的结果，不是常量。
+
+**离线先答两个问题**（`D:\Documents\NeuroDragonWorkSpace\tools\ngx_probe.cpp` 新增
+`--sizes=WxH,...` / `--keep-alive`，走 core 的 `CreateFeature(0x12)`）:
+
+| 问题 | 结果 |
+|---|---|
+| 任意尺寸能否建 NR feature | 640×360 / 1280×720 / 1115×627 / 1485×835 / 1920×1080 / 2560×1440 / 3840×2160 **全部 0x1**（含奇数边长） |
+| 旧 feature 活着时能否再建一个 | 1920×1080 / 2560×1440 / 1115×627 **三个同时存活**，全部 0x1 |
+
+⇒ 重建可以「先建新的、再收旧的」，不需要「先释放再建」那种会让模型重载 264 MB 的顺序。
+
+**实现**（`nr::nrEnsureRenderSize`，probe 每个入世帧调用一次，尺寸没变时两次比较即返回）：
+
+1. `Width/Height` 与 feature 当前尺寸不同 → 重建。
+2. **先建后拆**：新 feature 建成功后才把旧的移进退役队列。`ReleaseFeature` 掉最后一个 feature 会让
+   驱动卸载 264 MB 模型，顺序反了每次改分辨率都要重载一次。
+3. 纹理**只增不减**：引擎的 Color 是「显示分辨率大小、内容在左上渲染子矩形」，我们照 Color 的 desc
+   分配 output/encoded/decoded；只有新尺寸更大才重分配，变小只改子矩形（省下每次 ~90 MB 的分配，
+   也不产生一堆退役纹理）。
+4. **退役对象等 GPU 空闲再释放**：overlay 的 `ExecuteCommandLists` 钩子本来就拿到了游戏的直接队列
+   （新增 `ui::overlayGameQueue()`），重建时在那条队列上 Signal 一个 fence、最多等 3 s；成功就
+   `ReleaseFeature` / `ID3D12Resource::Release` 真正释放。队列未知或超时就留着，下次重建再试——
+   泄漏一次远比「GPU 还在用就释放」安全。
+5. 重建后 `gCompositeRamp = 0`：新 feature 没有历史，替换上屏的第一帧从 gain=1 渐入，不闪。
+6. 每会话最多 64 次（`kMaxRebuilds`），且两次重建之间至少隔 20 次求值（`kMinEvalsBetweenRebuilds`）：
+   动态分辨率真在每帧变时，宁可不跟随也不每帧重建（`nr.warn.rebuildLimit`）。同一个尺寸建失败只记
+   一次（`failedWidth/Height`），不每帧重试。
+
+**日志/面板**：重建成功**不写日志**（作者 2026-10-23 明确不要分辨率提示，只在 TEST 构建留 debug 行）；
+失败 warn `nr.warn.rebuildFailed`、达上限 warn `nr.warn.rebuildLimit` 保留。面板的渲染尺寸/输出尺寸
+随实际值更新，但**不显示重建次数**（同一要求）。
+
+**待实机确认**：改分辨率时引擎自己是否也重建 DLSS feature（`CreateWrapperHook` 的日志会给出答案），
+以及新 feature 第一帧的观感（预期 1–2 帧轻微跳变）。
+
+### 6.20 关闭 NR 会真正卸载（2026-10-23）
+
+`nr.enabled = false` 时，probe 以前只是「跳过求值」——feature 还活着，264 MB 模型和它的历史
+缓冲一直占着资源。现在每个入世帧先看配置，一旦关闭就调 `nr::nrUnload()`：
+
+- feature、`output`、编码/解码两张纹理一起进退役队列，在游戏直接队列上 fence 之后真正 Release
+  （队列未知就留在队列里，不冒险）；`created/attempted` 复位、尺寸与重建计数清零；
+- 编码 **PSO / 根签名 / 描述符堆保留**：`ensureEncoder` 拆成「管线」与「两张纹理」两段
+  （`ensureEncodeTextures`），重新创建时只补纹理；
+- 重新启用时走正常创建路径（probe 把 `gNrStartTried` 复位），代价是模型重新载入（~0.3 s）。
+
+触发点是**配置值本身**：面板的「应用」和「保存为默认」都会把 draft 写进 `config::get()`，所以两者都会
+卸载；只勾/取消勾选、不按这两个按钮不会。发布版不写日志（TEST 构建有 debug 行）。
 
 ## 7. RR 地基：`doAllRayTracing`（第二阶段，不在当前范围）
 

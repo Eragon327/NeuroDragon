@@ -35,10 +35,10 @@
 |---|---|
 | `ui/Overlay.{h,cpp}` | Present/Resize/队列钩子、11on12 设备、窗口过程子类化、帧计时、提示条、卸载 |
 | `ui/InputGuard.{h,cpp}` | 拦引擎自己的输入通路（`MouseDevice::feed`、`HIDControllerGameCoreDesktop::$onKeyDown/$onKeyUp`），F11 放行 |
-| `ui/Theme.{h,cpp}` | TRP 风格配色、微软雅黑 2x 图集（按实际用字构建）、按 1080p 高度缩放 |
+| `ui/Theme.{h,cpp}` | TRP 风格配色、微软雅黑 2x 图集（按实际用字构建）、按视口高度缩放（**下限 1.0**，小分辨率不再缩小） |
 | `ui/Menu.{h,cpp}` | 顶部管线图 + 四页签 + 左统计栏 + 右设置栏 + 底部按钮条 |
 | `ui/Widgets.{h,cpp}` | 自绘勾选框、滑条、下拉、管线节点/箭头、帧时间折线、页脚按钮 |
-| `ui/Glyphs.h` | **生成物**：`scripts/collect_glyphs.py` 从 `src/lang/*.json` 抽出的汉字集（现 284 个） |
+| `ui/Glyphs.h` | **生成物**：`scripts/collect_glyphs.py` 从 `src/lang/*.json` 抽出的非 ASCII 字集（现 300 个） |
 | `src/lang/*.json` | 面板文案（`ui.*`，`zh_CN` / `en_US` 各 106 个键，占位符一致） |
 | `nr/D3D12Bridge` | 新增只读 `nrPanelStats()`：尺寸、状态、错误码、两张 GPU 中位数 |
 
@@ -48,6 +48,8 @@
 ## 3. 界面
 
 **可拖动浮窗**，默认 850×700 逻辑单位（1440p ≈ 1133×933），左上角 (26,26) 逻辑；
+视口高度不足 1080p 时**不再缩小**（2026-10-23：0.7 倍下字看不清、ImGui 软件光标只剩 ~10 px，
+小分辨率下整个面板不可用），更大的视口仍按高度比例放大，`[-] 100% [+]` 是用户自己的覆盖；
 **只有标题条**（渲染管线图上方那一条）能拖，和 Windows 窗口一个逻辑。窗口是 `NoMove`，
 拖拽是自绘状态机：
 
@@ -130,10 +132,13 @@
 - `D3D11On12CreateDevice` 必须拿到游戏**自己的** direct queue，否则画面不同步；
   队列只能从 `ExecuteCommandLists` 钩子里取第一个 DIRECT 队列。
 - `ResizeBuffers*` 之前必须先拆掉 11on12 侧所有引用，否则 Size mismatch。
-- 字体图集：2 万字全表会拉出几十 MB 纹理 + 明显卡顿，所以只按实际用字建（294 个字形）；
+- 字体图集：2 万字全表会拉出几十 MB 纹理 + 明显卡顿，所以只按实际用字建（300 个字形）；
   字表由 `scripts/collect_glyphs.py` 从 `src/lang/*.json` 生成，**收的是所有非 ASCII 字符**
   （只收 `4E00-9FFF` 会让 `，（）：…` 这类全角标点缺失、在界面上显示成 `?`）。
   **改文案（含英文稿）后要重跑**，否则新字会缺字形。
+- 缩放与软件光标：`io.MouseDrawCursor` 的箭头是**按当前字号**画的，`FontGlobalScale = s * 0.45`
+  会把它一起缩小 —— 720p 下旧的 0.7 倍只剩 ~10 px，鼠标几乎看不见（2026-10-23 用户反馈）。
+  现在 `scale` 下限 1.0（小分辨率不缩小），并把 `style.MouseCursorScale` 抬到 1.3。
 - GPU 计时与面板：`nrStampReset()` 只清原始样本，**不要**在里面清已发布的中位数 ——
   测量窗口每 60 帧结束一次就会调它，清了面板就永远读「无样本」。要清已发布值请用
   `nrStampClearReported()`（面板按钮）。中位数每 30 帧发布一次，`Replace != 0` 时每帧打点。

@@ -117,17 +117,17 @@ int gWarmupFrames{};
 
 // Input bookkeeping: what the game has been told is down, so opening the panel can
 // synthesise the matching releases instead of leaving the player walking forward.
-bool gToggleKeyDown{};
-bool gConsumeEscapeRelease{};
+bool                  gToggleKeyDown{};
+bool                  gConsumeEscapeRelease{};
 std::array<bool, 256> gGameKeysDown{};
 std::array<bool, 5>   gGameMouseButtonsDown{};
 
 // Panel hotkey and its one-shot rebinding capture. The window thread reads the
 // key and writes the capture result; the render thread (panel) starts the capture
 // and takes the result. Atomics keep both sides free of locks.
-std::atomic<int>  gHotkey{VK_END};
-std::atomic_bool  gCapturingHotkey{false};
-std::atomic<int>  gCapturedHotkey{0};
+std::atomic<int> gHotkey{VK_END};
+std::atomic_bool gCapturingHotkey{false};
+std::atomic<int> gCapturedHotkey{0};
 
 // Toast.
 std::mutex  gToastMutex;
@@ -135,11 +135,11 @@ std::string gToastText;
 ULONGLONG   gToastExpireAt{};
 
 // Frame timing (published to the panel).
-std::mutex         gFrameHistoryMutex;
-std::vector<float> gFrameHistory;
-double             gLastPresentSeconds{};
-double             gAccumulatedSeconds{};
-unsigned           gAccumulatedFrames{};
+std::mutex                 gFrameHistoryMutex;
+std::vector<float>         gFrameHistory;
+double                     gLastPresentSeconds{};
+double                     gAccumulatedSeconds{};
+unsigned                   gAccumulatedFrames{};
 std::atomic<double>        gFps{0.0};
 std::atomic<double>        gFrameMs{0.0};
 std::atomic<std::uint64_t> gFrameCount{0};
@@ -362,10 +362,9 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
                 return 1;
             }
             // A bare modifier is not a useful "open the panel" key.
-            bool const modifier =
-                code == VK_SHIFT || code == VK_LSHIFT || code == VK_RSHIFT || code == VK_CONTROL || code == VK_LCONTROL
-                || code == VK_RCONTROL || code == VK_MENU || code == VK_LMENU || code == VK_RMENU || code == VK_LWIN
-                || code == VK_RWIN;
+            bool const modifier = code == VK_SHIFT || code == VK_LSHIFT || code == VK_RSHIFT || code == VK_CONTROL
+                               || code == VK_LCONTROL || code == VK_RCONTROL || code == VK_MENU || code == VK_LMENU
+                               || code == VK_RMENU || code == VK_LWIN || code == VK_RWIN;
             if (!modifier) {
                 gCapturedHotkey.store(code, std::memory_order_release);
                 gCapturingHotkey.store(false, std::memory_order_release);
@@ -377,8 +376,8 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 
     // F11 is a window action, not game input: if the panel ever draws wrong at the
     // current resolution, F11 must stay available.
-    bool const keyMessage = message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP
-                         || message == WM_SYSKEYUP;
+    bool const keyMessage =
+        message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP;
     if (keyMessage && wParam == VK_F11) return forwardToGame(window, message, wParam, lParam);
 
     // The panel hotkey also closes the panel. The key-up has to clear the held flag
@@ -593,7 +592,11 @@ void drawToasts() {
                                       | ImGuiWindowFlags_AlwaysAutoResize;
 
     auto const viewport = ImGui::GetIO().DisplaySize;
-    ImGui::SetNextWindowPos(ImVec2(viewport.x * 0.5f, viewport.y - 84.0f * theme::scale()), ImGuiCond_Always, ImVec2(0.5f, 1.0f));
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport.x * 0.5f, viewport.y - 84.0f * theme::scale()),
+        ImGuiCond_Always,
+        ImVec2(0.5f, 1.0f)
+    );
     ImGui::SetNextWindowBgAlpha(0.82f);
     if (ImGui::Begin("##neurodragonToast", nullptr, kFlags)) ImGui::TextUnformatted(text.c_str());
     ImGui::End();
@@ -793,7 +796,7 @@ struct TempSwapChain {
     ID3D11DeviceContext* context{};
     IDXGISwapChain*      swapChain{};
 
-    TempSwapChain()                                = default;
+    TempSwapChain() = default;
     ~TempSwapChain() { release(); }
     TempSwapChain(TempSwapChain const&)            = delete;
     TempSwapChain& operator=(TempSwapChain const&) = delete;
@@ -819,9 +822,18 @@ bool createTempSwapChain(HWND outputWindow, TempSwapChain& temp) {
 
     D3D_FEATURE_LEVEL featureLevels[]{D3D_FEATURE_LEVEL_11_0};
 
-    auto const deviceResult
-        = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, featureLevels, 1, D3D11_SDK_VERSION,
-                            &temp.device, nullptr, &temp.context);
+    auto const deviceResult = D3D11CreateDevice(
+        nullptr,
+        D3D_DRIVER_TYPE_HARDWARE,
+        nullptr,
+        0,
+        featureLevels,
+        1,
+        D3D11_SDK_VERSION,
+        &temp.device,
+        nullptr,
+        &temp.context
+    );
     if (FAILED(deviceResult) || !temp.device) {
         temp.release();
         return false;
@@ -859,7 +871,7 @@ struct TempD3D12 {
     ID3D12Device*       device{};
     ID3D12CommandQueue* queue{};
 
-    TempD3D12()                            = default;
+    TempD3D12() = default;
     ~TempD3D12() { release(); }
     TempD3D12(TempD3D12 const&)            = delete;
     TempD3D12& operator=(TempD3D12 const&) = delete;
@@ -929,7 +941,8 @@ bool createTempFlipChain(ID3D12CommandQueue* queue, HWND outputWindow, IDXGISwap
     description.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
     IDXGISwapChain1* swapChain1{};
-    auto const       result = factory->CreateSwapChainForHwnd(queue, outputWindow, &description, nullptr, nullptr, &swapChain1);
+    auto const       result =
+        factory->CreateSwapChainForHwnd(queue, outputWindow, &description, nullptr, nullptr, &swapChain1);
     factory->Release();
     if (FAILED(result) || !swapChain1) return false;
     *chain = swapChain1;
@@ -1015,7 +1028,7 @@ bool hookSwapChainEntryPoints(HWND gameWindow) {
     // step cost seconds on 2026-10-23, so it only runs when D3D12 or the hidden flip
     // chain is unavailable.
     TempSwapChain temp{};
-    bool const     onOwnWindow = output.get() && createTempSwapChain(output.get(), temp);
+    bool const    onOwnWindow = output.get() && createTempSwapChain(output.get(), temp);
     if (!onOwnWindow && (!gameWindow || !createTempSwapChain(gameWindow, temp))) {
         logger().warn("overlay: temporary swap chain creation failed; retry on the next frame");
         return false;
@@ -1082,6 +1095,8 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
 // ---------------------------------------------------------------------------
 // Overlay
 // ---------------------------------------------------------------------------
+
+void* overlayGameQueue() { return gGameQueue; }
 
 Overlay& Overlay::getInstance() {
     static Overlay instance;
@@ -1248,7 +1263,7 @@ FrameStats Overlay::frameStats() const {
 }
 
 std::vector<float> Overlay::recentFrameMs() const {
-    std::lock_guard    lock(gFrameHistoryMutex);
+    std::lock_guard lock(gFrameHistoryMutex);
     return gFrameHistory;
 }
 

@@ -13,6 +13,13 @@ struct FrameStats {
     std::uint64_t frames{};
 };
 
+// The game's D3D12 direct queue, captured by the present hook's
+// ExecuteCommandLists detour (the same queue D3D11On12 renders through). Null until
+// the first submitted frame and again after uninstall(). NR reads it once per frame
+// and uses it only to wait for the GPU before releasing objects a resolution change
+// replaced.
+[[nodiscard]] void* overlayGameQueue();
+
 // Top-layer ImGui overlay.
 //
 // A client mod cannot draw into Minecraft's own UI stack (ll::form / DDUI are
@@ -31,7 +38,6 @@ struct FrameStats {
 class Overlay {
 public:
     static Overlay& getInstance();
-
     Overlay(Overlay const&)            = delete;
     Overlay& operator=(Overlay const&) = delete;
 
@@ -58,8 +64,8 @@ public:
     // The key that opens/closes the panel. Comes from config.json (ui.openKey),
     // imported at load; the panel's Advanced tab stages a new one and calls
     // refreshHotkey() when it is applied.
-    [[nodiscard]] int  hotkey() const;
-    void               refreshHotkey();
+    [[nodiscard]] int hotkey() const;
+    void              refreshHotkey();
 
     // One-shot rebinding: the next key press (Esc cancels) becomes the new hotkey.
     void               beginHotkeyCapture();

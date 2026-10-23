@@ -3,11 +3,11 @@
         "info": {
             "enabled": "NR enabled (config/config.json: nr.enabled = true)",
             "disabled": "NR disabled: nr.enabled is false in config/config.json",
-            "ready": "NR ready: {0}x{1}, first creation took {2:.0f} ms",
             "modelCopied": "NR model copied next to the game executable: {0} ({1})"
         },
         "warn": {
-            "sizeChanged": "Resolution changed: NR was created for {0}x{1}, now {2}x{3}; skipping this window (NR is not rebuilt)",
+            "rebuildFailed": "Resolution changed: NR rebuild failed ({0:#x}: {1}); {2}x{3} is not applied",
+            "rebuildLimit": "Resolution changed too often; NR stops following it (already rebuilt {0} times)",
             "hardlinkFailed": "Hard link failed (error {0}); copying {1} into the game directory instead..."
         },
         "error": {
@@ -179,8 +179,7 @@
             "done": "{0}: done in {1:.0f} ms",
             "failed": "{0}: failed after {1:.0f} ms",
             "overlay": "installing the in-game panel",
-            "nrCreate": "creating the NR feature (textures, shaders, model)",
-            "nrModel": "loading the NR model (the core loads the 264 MB nvngx_dlssnr.dll)"
+            "nrCreate": "creating the NR feature (textures, shaders, model)"
         }
     }
 }

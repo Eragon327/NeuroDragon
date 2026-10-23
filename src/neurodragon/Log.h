@@ -63,9 +63,8 @@ public:
     ~Stage() { finish(failed_); }
 
     // Ends the stage now (writing the end line) and returns how long the work took
-    // in milliseconds. Used where the duration is also needed as a value - the NR
-    // creation time goes into the "ready" message. The duration is measured even
-    // when the stage body is silent.
+    // in milliseconds. Used where the duration is also needed as a value. The
+    // duration is measured even when the stage body is silent.
     double finish(bool failed = false) {
         if (ended_) return 0.0;
         ended_          = true;

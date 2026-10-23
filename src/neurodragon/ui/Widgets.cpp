@@ -42,9 +42,13 @@ std::string ellipsize(char const* text, float maxWidth) {
     char const*       best         = text;
 
     for (char const* it = text; it < end;) {
-        unsigned char const lead  = static_cast<unsigned char>(*it);
-        int const           bytes = lead < 0x80 ? 1 : (lead >> 5) == 0x6 ? 2 : (lead >> 4) == 0xE ? 3 : (lead >> 3) == 0x1E ? 4 : 1;
-        it += bytes;
+        unsigned char const lead   = static_cast<unsigned char>(*it);
+        int const           bytes  = lead < 0x80         ? 1
+                                   : (lead >> 5) == 0x6  ? 2
+                                   : (lead >> 4) == 0xE  ? 3
+                                   : (lead >> 3) == 0x1E ? 4
+                                                         : 1;
+        it                        += bytes;
         if (it > end) break;
         if (ImGui::CalcTextSize(text, it).x + ellipsisSize > maxWidth) break;
         best = it;
@@ -66,9 +70,7 @@ void beginRow() {
 
 float rowRight() { return gRowRight; }
 
-void text(ImVec2 pos, ImU32 color, char const* value) {
-    ImGui::GetWindowDrawList()->AddText(pos, color, value);
-}
+void text(ImVec2 pos, ImU32 color, char const* value) { ImGui::GetWindowDrawList()->AddText(pos, color, value); }
 
 float textWidth(char const* value) { return ImGui::CalcTextSize(value).x; }
 
@@ -109,8 +111,8 @@ bool toggle(char const* label, bool* value) {
     auto const s = theme::scale();
 
     ImGui::PushID(label);
-    float const box      = scaled(17.0f);
-    float const gap      = scaled(9.0f);
+    float const box       = scaled(17.0f);
+    float const gap       = scaled(9.0f);
     auto const  labelSize = ImGui::CalcTextSize(label);
     float const rowHeight = std::max(box, lineHeight());
 
@@ -185,7 +187,7 @@ bool slider(
     float const handleHeight = scaled(17.0f);
     // The value text above moved the cursor to the far right; the track must start
     // at the row's left edge and span the whole row.
-    float const width        = gRowRight - gRowLeft;
+    float const width = gRowRight - gRowLeft;
 
     ImGui::SetCursorPosX(gRowLeft);
     ImVec2 const pos = ImGui::GetCursorScreenPos();
@@ -193,9 +195,8 @@ bool slider(
 
     bool changed = false;
     if (enabled && ImGui::IsItemActive()) {
-        auto const relative =
-            std::clamp((ImGui::GetIO().MousePos.x - pos.x) / std::max(1.0f, width), 0.0f, 1.0f);
-        float const next = min + relative * (max - min);
+        auto const  relative = std::clamp((ImGui::GetIO().MousePos.x - pos.x) / std::max(1.0f, width), 0.0f, 1.0f);
+        float const next     = min + relative * (max - min);
         if (std::abs(next - *value) > 1e-6f) {
             *value  = next;
             changed = true;
@@ -204,9 +205,8 @@ bool slider(
     if (enabled && ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
     auto*       drawList = ImGui::GetWindowDrawList();
-    float const fraction =
-        (max > min) ? std::clamp((*value - min) / (max - min), 0.0f, 1.0f) : 0.0f;
-    float const centerY = pos.y + handleHeight * 0.5f + scaled(2.0f);
+    float const fraction = (max > min) ? std::clamp((*value - min) / (max - min), 0.0f, 1.0f) : 0.0f;
+    float const centerY  = pos.y + handleHeight * 0.5f + scaled(2.0f);
 
     drawList->AddRectFilled(
         ImVec2(pos.x, centerY - trackHeight * 0.5f),
@@ -225,11 +225,8 @@ bool slider(
 
     // The handle is inset by half its width at both ends: at fraction 0 or 1 a
     // centred handle would stick out of the track and get clipped by the column.
-    float const handleX = std::clamp(
-        pos.x + width * fraction,
-        pos.x + handleWidth * 0.5f,
-        pos.x + width - handleWidth * 0.5f
-    );
+    float const handleX =
+        std::clamp(pos.x + width * fraction, pos.x + handleWidth * 0.5f, pos.x + width - handleWidth * 0.5f);
     drawList->AddRectFilled(
         ImVec2(handleX - handleWidth * 0.5f, centerY - handleHeight * 0.5f),
         ImVec2(handleX + handleWidth * 0.5f, centerY + handleHeight * 0.5f),
@@ -243,9 +240,9 @@ bool slider(
 
 bool sliderInt(char const* label, int* value, int min, int max, char const* suffix) {
     if (!value) return false;
-    float asFloat  = static_cast<float>(*value);
-    bool  changed  = slider(label, &asFloat, static_cast<float>(min), static_cast<float>(max), "%.0f", suffix);
-    auto  rounded  = static_cast<int>(std::lround(asFloat));
+    float asFloat = static_cast<float>(*value);
+    bool  changed = slider(label, &asFloat, static_cast<float>(min), static_cast<float>(max), "%.0f", suffix);
+    auto  rounded = static_cast<int>(std::lround(asFloat));
     if (changed && rounded != *value) {
         *value = rounded;
         return true;
@@ -269,7 +266,8 @@ void nodeBox(ImVec2 pos, ImVec2 size, char const* title, char const* line1, char
     auto const s        = theme::scale();
     auto*      drawList = ImGui::GetWindowDrawList();
 
-    drawList->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), active ? kPanelRaised : kPanelDeep, scaled(4.0f));
+    drawList
+        ->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), active ? kPanelRaised : kPanelDeep, scaled(4.0f));
     drawList->AddRect(
         pos,
         ImVec2(pos.x + size.x, pos.y + size.y),
@@ -295,8 +293,8 @@ void nodeBox(ImVec2 pos, ImVec2 size, char const* title, char const* line1, char
 }
 
 void nodeArrow(ImVec2 from, ImVec2 to, bool accent) {
-    auto*       drawList = ImGui::GetWindowDrawList();
-    ImU32 const color    = accent ? kAccent : kBorder;
+    auto*       drawList  = ImGui::GetWindowDrawList();
+    ImU32 const color     = accent ? kAccent : kBorder;
     float const thickness = std::max(1.0f, theme::scale() * 1.2f);
 
     drawList->AddLine(from, ImVec2(to.x - scaled(5.0f), to.y), color, thickness);
@@ -338,9 +336,9 @@ void frameGraph(ImVec2 pos, ImVec2 size, std::vector<float> const& values, float
 
     if (values.size() < 2) return;
 
-    auto const count    = static_cast<int>(values.size());
-    auto const step     = size.x / static_cast<float>(count - 1);
-    float const usable  = size.y - scaled(8.0f);
+    auto const  count  = static_cast<int>(values.size());
+    auto const  step   = size.x / static_cast<float>(count - 1);
+    float const usable = size.y - scaled(8.0f);
 
     ImVector<ImVec2> points;
     points.reserve(count);

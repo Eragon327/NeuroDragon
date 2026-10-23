@@ -12,16 +12,20 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cmath>
+#include <chrono>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#ifdef TEST
+#include <cmath>
+#include <filesystem>
+#endif
 
 namespace neurodragon::nr {
 namespace {
@@ -44,9 +48,9 @@ void nrLog(int level, char const* format, ...) {
 // macro evaluates none of its arguments, so a release build does not format
 // diagnostics that only a ticket would ever read.
 #ifdef TEST
-#    define NR_DEBUG(...) nrLog(3, __VA_ARGS__)
+#define NR_DEBUG(...) nrLog(3, __VA_ARGS__)
 #else
-#    define NR_DEBUG(...) ((void) 0)
+#define NR_DEBUG(...) ((void)0)
 #endif
 
 // NGX result codes as user-visible text: the catalogue lives in
@@ -446,15 +450,7 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
     if (path.empty()) {
         return false;
     }
-    HANDLE file = ::CreateFileW(
-        path.c_str(),
-        GENERIC_WRITE,
-        0,
-        nullptr,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    );
+    HANDLE file = ::CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) {
         return false;
     }
@@ -669,7 +665,7 @@ void transition(
 // a Reinhard + gamma 2.2 copy of the 1485x835 region into its own texture; the
 // feature reads that instead of the engine's Color.
 // ---------------------------------------------------------------------------
-int         gWindowIndex = -1;
+int gWindowIndex = -1;
 
 #ifdef TEST
 // The resource we most recently handed the engine's own DLSS as "Color", and
@@ -839,9 +835,50 @@ using D3DCompileFn =
     HRESULT (*)(LPCVOID, SIZE_T, LPCSTR, void const*, void*, LPCSTR, LPCSTR, UINT, UINT, void**, void**);
 using SerializeRootFn = HRESULT (*)(D3D12_ROOT_SIGNATURE_DESC const*, int, void**, void**);
 
+// One texture sized exactly like the engine's Color. The engine's DLSS reads its
+// input through a subrect anyway (its own Color is display-sized while the scene
+// lives in the top-left render rect), so an identically sized allocation is a
+// drop-in replacement at every resolution.
+HRESULT createColorSizedTexture(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc, ID3D12Resource** out) {
+    D3D12_RESOURCE_DESC desc = colorDesc;
+    desc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    desc.MipLevels           = 1;
+    desc.DepthOrArraySize    = 1;
+    D3D12_HEAP_PROPERTIES heap{};
+    heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+    return device->CreateCommittedResource(
+        &heap,
+        D3D12_HEAP_FLAG_NONE,
+        &desc,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(out)
+    );
+}
+
+// The two HDR<->LDR textures the encode/composite passes need. Separated from the
+// pipeline below because NR can be unloaded and created again in one session (the
+// feature switch): the PSO, heap and root signature survive an unload, the textures
+// do not.
+bool ensureEncodeTextures(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
+    if (!gEncodedColor && FAILED(createColorSizedTexture(device, colorDesc, &gEncodedColor))) {
+        nrLog(1, "[nr] encoded colour allocation failed");
+        return false;
+    }
+    // Route A needs the way back: the NR result is display-referred, engine Color
+    // is linear HDR, so the copy-back goes through the inverse of this pass.
+    if (!gDecodedColor && FAILED(createColorSizedTexture(device, colorDesc, &gDecodedColor))) {
+        nrLog(1, "[nr] decoded colour allocation failed (straight-copy fallback)");
+        gDecodedColor = nullptr; // tolerated: Replace falls back to the raw colour
+    }
+    return true;
+}
+
 bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
     if (gEncodePso) {
-        return true;
+        // Pipeline from an earlier load (NR was switched off and on again): only the
+        // two textures have to come back.
+        return ensureEncodeTextures(device, colorDesc);
     }
     // D3DCompile plus the pipeline state measured 44 ms on 2026-10-23 - below the
     // stage-marker bar, and covered by the enclosing nrCreate pair anyway.
@@ -959,33 +996,8 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
     }
     gEncodeStride = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-    D3D12_RESOURCE_DESC encodedDesc = colorDesc;
-    encodedDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    D3D12_HEAP_PROPERTIES heap{};
-    heap.Type = D3D12_HEAP_TYPE_DEFAULT;
-    if (FAILED(device->CreateCommittedResource(
-            &heap,
-            D3D12_HEAP_FLAG_NONE,
-            &encodedDesc,
-            D3D12_RESOURCE_STATE_COMMON,
-            nullptr,
-            IID_PPV_ARGS(&gEncodedColor)
-        ))) {
-        nrLog(1, "[nr] encoded colour allocation failed");
+    if (!ensureEncodeTextures(device, colorDesc)) {
         return false;
-    }
-    // Route A needs the way back: the NR result is display-referred, engine Color
-    // is linear HDR, so the copy-back goes through the inverse of this pass.
-    if (FAILED(device->CreateCommittedResource(
-            &heap,
-            D3D12_HEAP_FLAG_NONE,
-            &encodedDesc,
-            D3D12_RESOURCE_STATE_COMMON,
-            nullptr,
-            IID_PPV_ARGS(&gDecodedColor)
-        ))) {
-        nrLog(1, "[nr] decoded colour allocation failed (straight-copy fallback)");
-        gDecodedColor = nullptr;
     }
     NR_DEBUG("[nr] HDR↔LDR shader 就绪（Reinhard + gamma 2.2 / 反变换）");
     return true;
@@ -1053,28 +1065,122 @@ void setPassConstants(
 }
 
 struct NrState {
-    void*             params                   = nullptr;
-    void*             feature                  = nullptr;
-    CreateFeatureFn   create                   = nullptr;
-    EvaluateFeatureFn evaluate                 = nullptr;
-    ReleaseFeatureFn  release                  = nullptr;
-    ID3D12Resource*   output                   = nullptr;
-    unsigned          width                    = 0;
-    unsigned          height                   = 0;
-    bool              created                  = false;
-    bool              attempted                = false;
-    bool              outputWasSrv             = false;
-    bool              shutdown                 = false;
-    bool              resourceRoundtripChecked = false;
-    unsigned          evalCount                = 0;
-    int               lastError                = 0;
+    void*             params   = nullptr;
+    void*             feature  = nullptr;
+    CreateFeatureFn   create   = nullptr;
+    EvaluateFeatureFn evaluate = nullptr;
+    ReleaseFeatureFn  release  = nullptr;
+    ID3D12Resource*   output   = nullptr;
+    unsigned          width    = 0;
+    unsigned          height   = 0;
+    // Allocation size of output/encoded/decoded. Grow-only: a smaller render size
+    // only narrows the subrects, so reallocating on every downscale would burn VRAM
+    // for nothing.
+    unsigned texWidth                 = 0;
+    unsigned texHeight                = 0;
+    unsigned rebuilds                 = 0; // resolution changes followed
+    unsigned lastRebuildEval          = 0; // evalCount when the last one ran
+    bool     rebuildLimitLogged       = false;
+    unsigned failedWidth              = 0; // new size that failed once
+    unsigned failedHeight             = 0;
+    bool     created                  = false;
+    bool     attempted                = false;
+    bool     outputWasSrv             = false;
+    bool     shutdown                 = false;
+    bool     resourceRoundtripChecked = false;
+    unsigned evalCount                = 0;
+    int      lastError                = 0;
     // The engine's own DLSS output (the texture the panel calls "Output"). Purely
     // for display; 0 until the first frame that handed us one.
-    unsigned          engineOutputWidth        = 0;
-    unsigned          engineOutputHeight       = 0;
+    unsigned engineOutputWidth  = 0;
+    unsigned engineOutputHeight = 0;
 };
 
 NrState gNr;
+
+// One resolution change is one rebuild. The cap bounds a session that flips sizes
+// constantly (a dynamic-resolution setting): beyond it NR stays on the size it has
+// instead of building features forever.
+constexpr unsigned kMaxRebuilds = 64;
+// Menu <-> world transitions can legitimately change the size twice in a row; a
+// per-frame size change is thrash, and rebuilding on every frame of it would be
+// worse than the stale size.
+constexpr unsigned kMinEvalsBetweenRebuilds = 20;
+
+// Objects a rebuild replaced. They may still be referenced by command lists the GPU
+// has not finished, so they are released only after a fence says the queue is idle;
+// when the queue is unknown they are kept, because a leak costs memory once while a
+// release-while-busy costs the whole session (docs/D §6.16).
+void*                        gGameQueue = nullptr;
+std::vector<void*>           gRetiredFeatures;
+std::vector<ID3D12Resource*> gRetiredResources;
+
+// The composite's fade-in counter, reset by a rebuild so a feature without history
+// is not multiplied in at full strength on its first frame.
+unsigned gCompositeRamp = 0;
+
+bool gpuIsIdle(ID3D12Device* device) {
+    auto* queue = static_cast<ID3D12CommandQueue*>(gGameQueue);
+    if (!device || !queue) {
+        return false;
+    }
+    ID3D12Fence* fence = nullptr;
+    if (FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))) || !fence) {
+        return false;
+    }
+    HANDLE event = ::CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    bool   idle  = false;
+    // 3 s: the render thread is blocked here, so a removed device must not turn a
+    // resolution change into a frozen client.
+    if (event && SUCCEEDED(queue->Signal(fence, 1))) {
+        if (fence->GetCompletedValue() >= 1) {
+            idle = true;
+        } else if (SUCCEEDED(fence->SetEventOnCompletion(1, event))) {
+            idle = ::WaitForSingleObject(event, 3000) == WAIT_OBJECT_0;
+        }
+    }
+    if (event) {
+        ::CloseHandle(event);
+    }
+    fence->Release();
+    return idle;
+}
+
+void releaseRetired(ID3D12Device* device) {
+    if (gRetiredFeatures.empty() && gRetiredResources.empty()) {
+        return;
+    }
+    if (!gpuIsIdle(device)) {
+        NR_DEBUG(
+            "[nr] 退役对象暂不释放（queue=%p，%zu feature / %zu 纹理仍持有）",
+            gGameQueue,
+            gRetiredFeatures.size(),
+            gRetiredResources.size()
+        );
+        return;
+    }
+    for (void* feature : gRetiredFeatures) {
+        if (gNr.release) {
+            gNr.release(feature);
+        }
+    }
+    for (ID3D12Resource* resource : gRetiredResources) {
+        resource->Release();
+    }
+    gRetiredFeatures.clear();
+    gRetiredResources.clear();
+}
+
+void retire(void* feature, ID3D12Resource* output, ID3D12Resource* encoded, ID3D12Resource* decoded) {
+    if (feature) {
+        gRetiredFeatures.push_back(feature);
+    }
+    for (ID3D12Resource* resource : {output, encoded, decoded}) {
+        if (resource) {
+            gRetiredResources.push_back(resource);
+        }
+    }
+}
 
 // Timestamps: kSlots distinct frame slots, two brackets (NR / engine DLSS) per
 // slot. A pair is harvested kHarvestDelay frames later, because nothing in this
@@ -1385,14 +1491,7 @@ bool nrCreate(
     }
     gNr.attempted = true;
     if (!commandList || !colorResource || !width || !height) {
-        nrLog(
-            2,
-            "[nr] create: incomplete arguments (cl=%p color=%p %ux%u)",
-            commandList,
-            colorResource,
-            width,
-            height
-        );
+        nrLog(2, "[nr] create: incomplete arguments (cl=%p color=%p %ux%u)", commandList, colorResource, width, height);
         return false;
     }
     if (!createFeature || !evaluateFeature) {
@@ -1414,20 +1513,8 @@ bool nrCreate(
         return false;
     }
 
-    D3D12_RESOURCE_DESC outDesc = color->GetDesc();
-    outDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    outDesc.MipLevels           = 1;
-    outDesc.DepthOrArraySize    = 1;
-    D3D12_HEAP_PROPERTIES heap{};
-    heap.Type              = D3D12_HEAP_TYPE_DEFAULT;
-    HRESULT const createHr = device->CreateCommittedResource(
-        &heap,
-        D3D12_HEAP_FLAG_NONE,
-        &outDesc,
-        D3D12_RESOURCE_STATE_COMMON,
-        nullptr,
-        IID_PPV_ARGS(&gNr.output)
-    );
+    D3D12_RESOURCE_DESC outDesc  = color->GetDesc();
+    HRESULT const       createHr = createColorSizedTexture(device, outDesc, &gNr.output);
     if (FAILED(createHr)) {
         nrLog(
             2,
@@ -1440,8 +1527,10 @@ bool nrCreate(
         createStage.markFailed();
         return false;
     }
-    gNr.width  = width;
-    gNr.height = height;
+    gNr.width     = width;
+    gNr.height    = height;
+    gNr.texWidth  = static_cast<unsigned>(outDesc.Width);
+    gNr.texHeight = static_cast<unsigned>(outDesc.Height);
 
     ensureEncoder(device, outDesc);
 
@@ -1575,17 +1664,14 @@ bool nrCreate(
         }
         void* handle = nullptr;
         // The core loads the ~264 MB NR model inside this call, so the first
-        // CreateFeature of a session can stall for seconds. The stage is written
-        // before the call, so a frozen picture has a line naming the load; the
-        // timing it returns feeds the "NR ready" message.
-        //
-        // Only the core attempt announces itself: the runtime rungs below are a
-        // fallback whose return codes are debug-only, and three identical "loading
-        // the model" pairs would read like three loads.
-        log::Stage   modelStage{"log.stage.nrModel", std::string_view(api.name) == "core"};
-        int const    ret     = api.create(commandList, 0x12, params, &handle);
-        bool const   created = ret == 1 && handle != nullptr;
-        double const ms      = modelStage.finish(!created);
+        // CreateFeature of a session can stall for seconds. The duration only feeds
+        // the debug line: the creation step has one start/end pair and a nested pair
+        // for the model load read like two separate steps (2026-10-23).
+        auto const                    started = std::chrono::steady_clock::now();
+        int const                     ret     = api.create(commandList, 0x12, params, &handle);
+        bool const                    created = ret == 1 && handle != nullptr;
+        [[maybe_unused]] double const ms =
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
         if (created) {
             gNr.params   = params;
             gNr.feature  = handle;
@@ -1599,7 +1685,6 @@ bool nrCreate(
                     reinterpret_cast<ReleaseFeatureFn>(GetProcAddress(core, "NVSDK_NGX_D3D12_ReleaseFeature"));
             }
             gNr.created = true;
-            neurodragon::log::writeKey(0, "nr.info.ready", width, height, ms);
             return true;
         }
         gNr.lastError = ret;
@@ -1637,7 +1722,8 @@ bool nrCreate(
         if (runtimeInitExt) {
             unsigned long long const appId       = gEngineAppId ? gEngineAppId : kNrGenericCmsId;
             wchar_t const* const     appDataPath = gEngineDataPath.empty() ? dataDir.c_str() : gEngineDataPath.c_str();
-            [[maybe_unused]] int const initRet = runtimeInitExt(appId, appDataPath, device, kNrFeatureApiVersion, nullptr);
+            [[maybe_unused]] int const initRet =
+                runtimeInitExt(appId, appDataPath, device, kNrFeatureApiVersion, nullptr);
             NR_DEBUG(
                 "[nr] runtime Init_Ext(appId=%#llx) ret=0x%08X",
                 static_cast<unsigned long long>(appId),
@@ -1661,6 +1747,132 @@ bool nrCreate(
 
 bool nrIsCreated() { return gNr.created; }
 
+void nrSetGameQueue(void* queue) { gGameQueue = queue; }
+
+bool nrEnsureRenderSize(void* commandList, void* color, unsigned width, unsigned height) {
+    if (!gNr.created || !commandList || !color || !width || !height) {
+        return false;
+    }
+    if (width == gNr.width && height == gNr.height) {
+        return true;
+    }
+    if (width == gNr.failedWidth && height == gNr.failedHeight) {
+        return false; // this exact size already failed; do not retry it every frame
+    }
+    if (gNr.rebuilds >= kMaxRebuilds) {
+        if (!gNr.rebuildLimitLogged) {
+            gNr.rebuildLimitLogged = true;
+            neurodragon::log::writeKey(1, "nr.warn.rebuildLimit", gNr.rebuilds);
+        }
+        return false;
+    }
+    if (gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
+        return false; // the size is still moving; try again once it settles
+    }
+
+    auto*         colorRes = static_cast<ID3D12Resource*>(color);
+    ID3D12Device* device   = nullptr;
+    if (FAILED(colorRes->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device))) || !device) {
+        return false;
+    }
+
+    D3D12_RESOURCE_DESC const colorDesc = colorRes->GetDesc();
+    // Only grow: a smaller size is served by narrowing the subrects, and allocating
+    // a full set of textures per downscale would cost ~90 MB at 1440p for nothing.
+    bool const      needTextures = !gNr.output || colorDesc.Width > gNr.texWidth || colorDesc.Height > gNr.texHeight;
+    ID3D12Resource* newOutput    = nullptr;
+    ID3D12Resource* newEncoded   = nullptr;
+    ID3D12Resource* newDecoded   = nullptr;
+    if (needTextures) {
+        bool ok = SUCCEEDED(createColorSizedTexture(device, colorDesc, &newOutput));
+        if (ok) {
+            ok = SUCCEEDED(createColorSizedTexture(device, colorDesc, &newEncoded));
+        }
+        if (ok) {
+            ok = SUCCEEDED(createColorSizedTexture(device, colorDesc, &newDecoded));
+        }
+        if (!ok) {
+            nrLog(2, "[nr] 重建 %ux%u：纹理创建失败，保持 %ux%u", width, height, gNr.width, gNr.height);
+            for (ID3D12Resource* resource : {newOutput, newEncoded, newDecoded}) {
+                if (resource) {
+                    resource->Release(); // never bound to a command list, safe to drop
+                }
+            }
+            device->Release();
+            gNr.failedWidth  = width;
+            gNr.failedHeight = height;
+            return false;
+        }
+    }
+
+    paramSetU32(gNr.params, "DLSSNR.Width", width);
+    paramSetU32(gNr.params, "DLSSNR.Height", height);
+    // Create before releasing. Releasing the last feature makes the driver unload the
+    // 264 MB model, so the replacement has to exist first or every resolution change
+    // costs a model reload.
+    void*     handle = nullptr;
+    int const ret    = gNr.create(commandList, 0x12, gNr.params, &handle);
+    if (ret != 1 || !handle) {
+        gNr.lastError    = ret;
+        gNr.failedWidth  = width;
+        gNr.failedHeight = height;
+        neurodragon::log::writeKey(
+            1,
+            "nr.warn.rebuildFailed",
+            static_cast<unsigned>(ret),
+            getReason(static_cast<std::uint32_t>(ret)),
+            width,
+            height
+        );
+        for (ID3D12Resource* resource : {newOutput, newEncoded, newDecoded}) {
+            if (resource) {
+                resource->Release();
+            }
+        }
+        device->Release();
+        return false;
+    }
+
+    [[maybe_unused]] unsigned const oldWidth  = gNr.width;
+    [[maybe_unused]] unsigned const oldHeight = gNr.height;
+    retire(
+        gNr.feature,
+        needTextures ? gNr.output : nullptr,
+        needTextures ? gEncodedColor : nullptr,
+        needTextures ? gDecodedColor : nullptr
+    );
+    if (needTextures) {
+        gNr.output    = newOutput;
+        gEncodedColor = newEncoded;
+        gDecodedColor = newDecoded;
+        gNr.texWidth  = static_cast<unsigned>(colorDesc.Width);
+        gNr.texHeight = static_cast<unsigned>(colorDesc.Height);
+        // Fresh resources start in COMMON, so every "was a shader resource" flag
+        // that the transition helpers rely on has to be cleared.
+        gNr.outputWasSrv = false;
+        gEncodedIsSrv    = false;
+        gDecodedIsSrv    = false;
+    }
+    gNr.feature                  = handle;
+    gNr.width                    = width;
+    gNr.height                   = height;
+    gNr.resourceRoundtripChecked = false;
+    gNr.engineOutputWidth        = 0; // re-measured from the next frame's Output
+    gNr.engineOutputHeight       = 0;
+    gCompositeRamp               = 0; // no history yet: fade the new feature in
+    ++gNr.rebuilds;
+    gNr.lastRebuildEval = gNr.evalCount;
+    // Diagnostic builds only: a resolution change is routine once NR follows the
+    // engine's render size, so the release log stays quiet (the panel's rebuild
+    // counter is the user-visible trace).
+    NR_DEBUG("[nr] 分辨率变化 %ux%u → %ux%u（第 %u 次重建）", oldWidth, oldHeight, width, height, gNr.rebuilds);
+    // Try to free the replaced objects now; if the queue is unknown they stay alive
+    // and the next rebuild tries again.
+    releaseRetired(device);
+    device->Release();
+    return true;
+}
+
 void nrShutdown() {
     // Teardown on this path is what killed Windows (bugcheck 0x6
     // when the game exited with Replace=5 active): releasing the NGX feature (which
@@ -1672,6 +1884,50 @@ void nrShutdown() {
     gNr.shutdown = true;
     gNr.created  = false; // hooks pass through from here on
     NR_DEBUG("[nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）");
+}
+
+void nrUnload() {
+    if (!gNr.created && !gNr.attempted) {
+        return;
+    }
+    ID3D12Device* device = nullptr;
+    if (gNr.output && FAILED(gNr.output->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device)))) {
+        device = nullptr;
+    }
+    // Retire instead of releasing in place: the GPU may still be reading these, and
+    // the retired list is released after a fence. If the queue is unknown they stay
+    // in that list for a later attempt rather than risking a driver fault.
+    retire(gNr.feature, gNr.output, gEncodedColor, gDecodedColor);
+    if (device) {
+        releaseRetired(device);
+        device->Release();
+    }
+
+    // Logically off either way: nothing below evaluates or swaps again until the
+    // feature is enabled and nrCreate runs afresh.
+    gNr.feature                  = nullptr;
+    gNr.output                   = nullptr;
+    gNr.created                  = false;
+    gNr.attempted                = false; // re-arm creation for the next enable
+    gNr.width                    = 0;
+    gNr.height                   = 0;
+    gNr.texWidth                 = 0;
+    gNr.texHeight                = 0;
+    gNr.outputWasSrv             = false;
+    gNr.resourceRoundtripChecked = false;
+    gNr.rebuilds                 = 0;
+    gNr.lastRebuildEval          = 0;
+    gNr.failedWidth              = 0;
+    gNr.failedHeight             = 0;
+    gNr.rebuildLimitLogged       = false;
+    gNr.engineOutputWidth        = 0;
+    gNr.engineOutputHeight       = 0;
+    gCompositeRamp               = 0;
+    gEncodedColor                = nullptr;
+    gDecodedColor                = nullptr;
+    gEncodedIsSrv                = false;
+    gDecodedIsSrv                = false;
+    NR_DEBUG("[nr] 已卸载：feature 与纹理退役，模型随最后一个 feature 离开驱动");
 }
 
 #ifdef TEST
@@ -1724,22 +1980,21 @@ void compositeGain(
     if (FAILED(color->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device))) || !device) {
         return;
     }
-    // Fade the effect in over the first frames of the process. Switching the
-    // upscaler's input in one step leaves the previous frame burned into DLSS's
-    // history ("第一帧轮廓残留", ); starting at gain = 1 lets the history
-    // converge instead of being overwritten.
-    static unsigned composed = 0;
-    float const     ramp     = composed >= 24u ? 1.0f : static_cast<float>(composed) / 24.0f;
-    if (composed < 24u) {
-        ++composed;
+    // Fade the effect in over the first frames of the process, and again after every
+    // rebuild. Switching the upscaler's input in one step leaves the previous frame
+    // burned into DLSS's history ("第一帧轮廓残留", ); starting at gain = 1 lets the
+    // history converge instead of being overwritten.
+    float const ramp = gCompositeRamp >= 24u ? 1.0f : static_cast<float>(gCompositeRamp) / 24.0f;
+    if (gCompositeRamp < 24u) {
+        ++gCompositeRamp;
     }
     // Replace=6 uses TRP's "Ratio" resolve: rebase the network's result onto the
     // original luminance instead of multiplying by a raw gain. Replace=5 keeps the
     // earlier bounded-gain experiment for comparison.
-    unsigned const mode = config::get().nr.replace == 6 ? 4u : 2u;
-    float const    strength =
-        mode == 4u ? config::get().nr.transferStrength : (config::get().nr.gainBoost > 0.0f ? config::get().nr.gainBoost : 1.0f);
-    float const strengthRamped = strength * ramp;
+    unsigned const mode           = config::get().nr.replace == 6 ? 4u : 2u;
+    float const    strength       = mode == 4u ? config::get().nr.transferStrength
+                                               : (config::get().nr.gainBoost > 0.0f ? config::get().nr.gainBoost : 1.0f);
+    float const    strengthRamped = strength * ramp;
     setPassConstants(
         cmd,
         w,
@@ -1845,7 +2100,8 @@ bool nrRecord(
         }
     }
 
-    bool const useEncoded = (config::get().nr.replace != 4 || config::get().nr.nrEncode >= 0) && gEncodePso && gEncodedColor;
+    bool const useEncoded =
+        (config::get().nr.replace != 4 || config::get().nr.nrEncode >= 0) && gEncodePso && gEncodedColor;
     paramSetPtr(params, "DLSSNR.Color", useEncoded ? static_cast<void*>(gEncodedColor) : color);
     paramSetPtr(params, "DLSSNR.Depth", depth);
     paramSetPtr(params, "DLSSNR.MVec", motionVectors);
@@ -1910,10 +2166,12 @@ bool nrRecord(
     // setup: MV.Scale.X=1485 / MV.Scale.Y=835, Width/Height/OutWidth/OutHeight).
     // Without them the feature sees a zero motion-vector scale, i.e. "the camera
     // never moves": history sticks to the screen (ghost clouds/silhouettes).
-    unsigned const mvX =
-        static_cast<unsigned>(config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : static_cast<float>(guideWidth));
-    unsigned const mvY =
-        static_cast<unsigned>(config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : static_cast<float>(guideHeight));
+    unsigned const mvX = static_cast<unsigned>(
+        config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : static_cast<float>(guideWidth)
+    );
+    unsigned const mvY = static_cast<unsigned>(
+        config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : static_cast<float>(guideHeight)
+    );
     paramSetU32(params, "MV.Scale.X", mvX);
     paramSetU32(params, "MV.Scale.Y", mvY);
     // Deliberately NOT touching Width/Height/OutWidth/OutHeight here: if this
@@ -1944,7 +2202,11 @@ bool nrRecord(
     paramSetI32(params, "DLSS.Indicator.Invert.X.Axis", 0);
     paramSetI32(params, "DLSS.Indicator.Invert.Y.Axis", 0);
     paramSetF32(params, "DLSSNR.Intensity", config::get().nr.intensity >= 0.0f ? config::get().nr.intensity : 1.0f);
-    paramSetF32(params, "DLSSNR.LocalToneStrength", config::get().nr.localToneStrength >= 0.0f ? config::get().nr.localToneStrength : 1.0f);
+    paramSetF32(
+        params,
+        "DLSSNR.LocalToneStrength",
+        config::get().nr.localToneStrength >= 0.0f ? config::get().nr.localToneStrength : 1.0f
+    );
     paramSetF32(
         params,
         "DLSSNR.LocalStructureStrength",
@@ -1964,7 +2226,9 @@ bool nrRecord(
             static_cast<double>(config::get().nr.intensity >= 0.0f ? config::get().nr.intensity : 1.0f),
             inverted,
             config::get().nr.replace,
-            useEncoded ? (config::get().nr.nrEncode >= 0 ? config::get().nr.nrEncode : (config::get().nr.replace == 6 ? 3 : 0)) : -1,
+            useEncoded
+                ? (config::get().nr.nrEncode >= 0 ? config::get().nr.nrEncode : (config::get().nr.replace == 6 ? 3 : 0))
+                : -1,
             config::get().nr.resetEveryFrame,
             gWindowIndex
         );
@@ -2024,7 +2288,7 @@ bool nrRecord(
             // the other modes keep the earlier Reinhard encode for A/B. NrEncode
             // overrides both so the input domain can be tested on any mode.
             unsigned const encMode = config::get().nr.nrEncode >= 0 ? static_cast<unsigned>(config::get().nr.nrEncode)
-                                                              : (config::get().nr.replace == 6 ? 3u : 0u);
+                                                                    : (config::get().nr.replace == 6 ? 3u : 0u);
             setPassConstants(cmd, w, h, encMode, config::get().nr.whitePoint, 1.0f, 1.0f, config::get().nr.maxRatio);
             cmd->Dispatch((w + 7u) / 8u, (h + 7u) / 8u, 1);
             D3D12_RESOURCE_BARRIER uavBarrier{};
@@ -2139,7 +2403,8 @@ bool nrRecord(
             paramSetI32(static_cast<void*>(engineParams), "Reset", 1);
         }
     }
-    if (engineParams && config::get().nr.replace == 5 && gEncodePso && gEncodedColor && gDecodedColor && gNr.evalCount > 2) {
+    if (engineParams && config::get().nr.replace == 5 && gEncodePso && gEncodedColor && gDecodedColor
+        && gNr.evalCount > 2) {
         compositeGain(
             cmd,
             static_cast<ID3D12Resource*>(color),
@@ -2283,11 +2548,11 @@ PanelStats nrPanelStats() {
     stats.nrSamples     = gStampMedianCount[0].load(std::memory_order_relaxed);
     stats.engineSamples = gStampMedianCount[1].load(std::memory_order_relaxed);
     if (stats.nrSamples != 0) {
-        stats.nrMs   = gStampMedianMs[0].load(std::memory_order_relaxed);
+        stats.nrMs  = gStampMedianMs[0].load(std::memory_order_relaxed);
         stats.hasNr = true;
     }
     if (stats.engineSamples != 0) {
-        stats.engineMs   = gStampMedianMs[1].load(std::memory_order_relaxed);
+        stats.engineMs  = gStampMedianMs[1].load(std::memory_order_relaxed);
         stats.hasEngine = true;
     }
     return stats;

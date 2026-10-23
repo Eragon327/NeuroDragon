@@ -24,7 +24,7 @@ struct InputGuardStatus {
 void setOverlayInputCapture(bool capture);
 
 [[nodiscard]] InputGuardStatus installInputGuard();
-void                       uninstallInputGuard();
+void                           uninstallInputGuard();
 
 // Re-injecting synthetic events (the "release everything the game thinks is held"
 // pass) must not be eaten by our own hooks. Instantiate this in that scope.

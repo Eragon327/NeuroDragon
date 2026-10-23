@@ -3,11 +3,11 @@
         "info": {
             "enabled": "NR 已启用（config/config.json：nr.enabled = true）",
             "disabled": "NR 未启用：config/config.json 里 nr.enabled = false",
-            "ready": "NR 已就绪：{0}x{1}，首次创建耗时 {2:.0f} ms",
             "modelCopied": "NR 模型已复制到游戏目录：{0}（{1}）"
         },
         "warn": {
-            "sizeChanged": "分辨率变了：NR 建在 {0}x{1}，当前 {2}x{3}，本窗口跳过（NR 不重建）",
+            "rebuildFailed": "分辨率变化：NR 重建失败（{0:#x}：{1}），{2}x{3} 暂不生效",
+            "rebuildLimit": "分辨率变化过于频繁，NR 停止跟随（已重建 {0} 次）",
             "hardlinkFailed": "硬链接失败（错误码 {0}），改为复制 {1} 到游戏目录…"
         },
         "error": {
@@ -179,8 +179,7 @@
             "done": "{0}：完成，用时 {1:.0f} ms",
             "failed": "{0}：失败，用时 {1:.0f} ms",
             "overlay": "安装游戏内面板",
-            "nrCreate": "创建 NR 功能（纹理、着色器、模型）",
-            "nrModel": "加载 NR 模型（core 载入 264 MB 的 nvngx_dlssnr.dll）"
+            "nrCreate": "创建 NR 功能（纹理、着色器、模型）"
         }
     }
 }
