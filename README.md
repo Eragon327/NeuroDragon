@@ -32,7 +32,7 @@
 | B. Windows 侧符号/钩子落点确认 | ✅ 无 PDB 定位链 + RT 路径定位完成 | [docs/B-windows-probe.md](docs/B-windows-probe.md) |
 | C. 工程骨架（xmake + ImGui + 探针） | ✅ xmake 工程 + 探针/钩子 + **面板已实现并部署**（4 页签、`End` 开关，见 [docs/F](docs/F-ui-plan.md)） | `src/neurodragon/probe/`、`src/neurodragon/ui/` |
 | D. NR 接入（NGX feature 0x12） | ✅ **跑通并上屏**：core 建 feature + 逐帧 evaluate（**~3.5 ms**，1485×835）+ HDR→LDR 编码 + 增益合成，`Replace=5` 时结果进引擎 DLSS 放大到 2560×1440。2026-10-22 修掉“编码纹理被描述符堆竞争冻结”的根因（§6.16） | [docs/D-rt-dlss-nr-plan.md](docs/D-rt-dlss-nr-plan.md) |
-| E. 超分（DLSS SR/DLAA） | ✅ 引擎自带 + **内部分辨率 33/50/58/66/100、DLSS 模型预设、应用即重建**已实现；78% 与锐化未做（原因见 J §4/§5） | [docs/J-sr-implementation.md](docs/J-sr-implementation.md) |
+| E. 超分（DLSS SR/DLAA） | ✅ 引擎自带 + **内部分辨率 33/50/58/66/100、DLSS 模型预设、应用即重建**已实现；**自建 RCAS 锐化已实现（待实机，见 J §9）**；78% 未做（原因见 J §4） | [docs/J-sr-implementation.md](docs/J-sr-implementation.md) |
 | F. UI 分层 + FG | 🕓 第三阶段（原判「不排期」，2026-10-24 排进路线，见 [docs/M](docs/M-roadmap.md) §4）；UI 分层已由面板的 Present 方案覆盖 | — |
 | 下一步优先级 | 四阶段顺序与完成度见 [docs/M](docs/M-roadmap.md)；功能对照与代价见 [docs/K](docs/K-trp-feature-gap.md) | — |
 

@@ -67,6 +67,12 @@ public:
     [[nodiscard]] int hotkey() const;
     void              refreshHotkey();
 
+    // Screenshot key (config ui.screenshotKey, F2 by default) and where the PNGs go
+    // (<mod>/screenshots). The capture runs at the next Present, before the panel is
+    // drawn, so the file holds the finished frame without the overlay.
+    [[nodiscard]] int  screenshotKey() const;
+    void               setScreenshotDirectory(std::wstring directory);
+
     // One-shot rebinding: the next key press (Esc cancels) becomes the new hotkey.
     void               beginHotkeyCapture();
     void               cancelHotkeyCapture();

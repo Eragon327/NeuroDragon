@@ -1524,14 +1524,14 @@ void retire(void* feature, ID3D12Resource* output, ID3D12Resource* encoded, ID3D
     }
 }
 
-// Timestamps: kSlots distinct frame slots, five brackets per slot (docs/L 1.7):
+// Timestamps: kSlots distinct frame slots, six brackets per slot (docs/L 1.7):
 //   0 = our whole NR evaluation   1 = the engine's own DLSS
 //   2 = the HDR->LDR encode       3 = the network evaluate
-//   4 = the composite pass
+//   4 = the composite pass        5 = RCAS sharpening (src/neurodragon/sr)
 // A pair is harvested kHarvestDelay frames later, because nothing in this process
 // can signal a fence on the game's queue.
 constexpr int           kStampSlots   = 8;
-constexpr int           kStampKinds   = 5;
+constexpr int           kStampKinds   = 6;
 constexpr int           kStampPerSlot = kStampKinds * 2;
 constexpr std::uint64_t kHarvestDelay = 3;
 
@@ -3231,6 +3231,7 @@ void nrStampReport() {
     reportOne(2, "encode");
     reportOne(3, "evaluate");
     reportOne(4, "composite");
+    reportOne(5, "rcas");
 }
 
 void nrStampReset() {
@@ -3928,6 +3929,7 @@ PanelStats nrPanelStats() {
     readStage(2, stats.encodeSamples, stats.encodeMs, stats.hasEncode);
     readStage(3, stats.evaluateSamples, stats.evaluateMs, stats.hasEvaluate);
     readStage(4, stats.compositeSamples, stats.compositeMs, stats.hasComposite);
+    readStage(5, stats.rcasSamples, stats.rcasMs, stats.hasRcas);
     return stats;
 }
 

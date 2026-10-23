@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Test.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/ui/Widgets.h"
@@ -55,6 +56,11 @@ int sanitizedSrPercent(int percent) {
 
 config::Sr sanitizedSr(config::Sr sr) {
     sr.scalePercent = sanitizedSrPercent(sr.scalePercent);
+    // A hand-edited config can carry anything; the render thread reads the strength
+    // every frame, so keep one sanitised copy at the panel boundary as well.
+    if (!std::isfinite(sr.sharpness) || sr.sharpness < 0.0f || sr.sharpness > 1.0f) {
+        sr.sharpness = std::clamp(std::isfinite(sr.sharpness) ? sr.sharpness : 0.672f, 0.0f, 1.0f);
+    }
     return sr;
 }
 
@@ -751,8 +757,6 @@ void drawTabSr() {
     }
     widgets::statRow("ui.sr.quality"_tr().c_str(), qualityName(sr.quality).c_str());
     widgets::statRow("ui.sr.preset"_tr().c_str(), presetName(sr.preset).c_str());
-    std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(sr.sharpness));
-    widgets::statRow("ui.sr.sharpness"_tr().c_str(), buffer);
     std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
     widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
     widgets::hint("ui.sr.readOnlyHint"_tr().c_str());
@@ -810,6 +814,62 @@ void drawTabSr() {
         markDirty();
     }
     widgets::hint("ui.sr.modelHint"_tr().c_str());
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.sharpSection"_tr().c_str());
+    // The DLSS "Sharpness" parameter is dead (docs/J §5), so sharpening is our own
+    // RCAS pass after the engine's upscale. Live: the render thread reads the config
+    // every evaluation, so Apply is enough - no feature rebuild, no restart.
+    {
+        auto const sharp = neurodragon::sr::sharpStats();
+        if (widgets::toggle("ui.sr.sharpEnable"_tr().c_str(), &gDraftSr.sharpening)) {
+            markDirty();
+        }
+        if (!gDraftSr.sharpening) {
+            ImGui::BeginDisabled();
+        }
+        if (widgets::slider("ui.sr.sharpStrength"_tr().c_str(), &gDraftSr.sharpness, 0.0f, 1.0f, "%.3f")) {
+            markDirty();
+        }
+        if (widgets::toggle("ui.sr.compareEnable"_tr().c_str(), &gDraftSr.compare)) {
+            markDirty();
+        }
+        if (!gDraftSr.compare) {
+            ImGui::BeginDisabled();
+        }
+        if (widgets::slider("ui.sr.compareSplit"_tr().c_str(), &gDraftSr.compareSplit, 0.02f, 0.98f, "%.2f")) {
+            markDirty();
+        }
+        if (!gDraftSr.compare) {
+            ImGui::EndDisabled();
+        }
+        if (!gDraftSr.sharpening) {
+            ImGui::EndDisabled();
+        }
+        widgets::hint("ui.sr.sharpHint"_tr().c_str());
+        widgets::hint("ui.sr.compareHint"_tr().c_str());
+
+        // Read-back (docs/L §0.7): what the render thread actually recorded, not
+        // what the draft says. "Applied" is dim until a frame has gone through.
+        if (sharp.enabled && sharp.strength > 0.0f) {
+            std::snprintf(buffer, sizeof(buffer), "%.3f", static_cast<double>(sharp.strength));
+            widgets::statRow("ui.sr.sharpApplied"_tr().c_str(), buffer, sharp.active ? kAccent : kTextDim);
+            std::snprintf(buffer, sizeof(buffer), "%u", sharp.frames);
+            widgets::statRow("ui.sr.sharpFrames"_tr().c_str(), buffer);
+            if (ps.hasRcas) {
+                std::snprintf(buffer, sizeof(buffer), "%.3f ms", ps.rcasMs);
+                widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), buffer);
+            } else {
+                widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+            }
+            if (sharp.failures != 0) {
+                std::snprintf(buffer, sizeof(buffer), "%u", sharp.failures);
+                widgets::statRow("ui.sr.sharpFailures"_tr().c_str(), buffer, kRed);
+            }
+        } else {
+            widgets::hint(sharp.enabled ? "ui.sr.sharpZeroHint"_tr().c_str() : "ui.sr.sharpOffHint"_tr().c_str());
+        }
+    }
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.ctx"_tr().c_str());
@@ -1071,6 +1131,10 @@ void drawTabAdvanced() {
     }
 
     widgets::statRow("ui.adv.close"_tr().c_str(), "Esc");
+    // Read-only for now: the key comes from config.json (ui.screenshotKey). A
+    // rebinding row can reuse beginHotkeyCapture once a second capture target exists.
+    widgets::statRow("ui.adv.screenshot"_tr().c_str(), keyLabel(overlay.screenshotKey()).c_str());
+    widgets::hint("ui.adv.screenshotHint"_tr().c_str());
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.adv.config"_tr().c_str());

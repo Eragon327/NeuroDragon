@@ -99,6 +99,24 @@ struct Sr {
     // sets. 0 is written too, so "driver default" actually clears a previous
     // choice (the parameter object is reused across feature builds).
     int preset = 0;
+
+    // RCAS sharpening of the frame the engine's DLSS produced (docs/K §2.2 ①,
+    // docs/J §5: the DLSS "Sharpness" parameter is dead, so this is a real pass).
+    // Runs after DLSS and before the engine's colour grading/UI, in a Reinhard-
+    // encoded domain because the DLSS output is linear HDR (src/neurodragon/sr/
+    // SrSharpening.h). Off by default: an image-changing post-process is opt-in.
+    bool sharpening = false;
+    // 0..1, TRP's default. Ignored while `sharpening` is false; 0 also records
+    // nothing, so "on but 0" costs exactly what "off" costs. The value scales the
+    // RCAS delta by 0..4x (see sr/SrSharpening.h), not only the lobe: the first
+    // version scaled the lobe like TRP and measured 0.38/255 mean change.
+    float sharpness = 0.672f;
+
+    // Split compare: left of the line keeps the untouched frame, right is
+    // sharpened, so one frame shows both sides. Diagnostic only (it is not a
+    // normal play mode); the panel can move the line.
+    bool  compare      = false;
+    float compareSplit = 0.5f;
 };
 
 struct Config;
@@ -113,6 +131,10 @@ struct Ui {
     // on a US layout (VK_OEM_4 / VK_OEM_6); 0 disables one.
     int nrKey    = 0xDB; // NR on/off
     int resetKey = 0xDD; // wipe NR + engine DLSS temporal history once
+
+    // Virtual-key code of the "save the finished frame" screenshot key.
+    // 0x71 = VK_F2 (Bedrock does not use it). The PNG goes to <mod>/screenshots/.
+    int screenshotKey = 0x71;
 };
 
 struct Config {

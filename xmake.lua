@@ -61,7 +61,9 @@ target("NeuroDragon") -- Change this to your mod name.
         set_toolchains("clang-cl")
     end
     add_packages("levilamina", "imgui", "minhook")
-    add_syslinks("user32", "d3d11", "d3d12", "dxgi")
+    -- windowscodecs: PNG encoder for the screenshot key (ui/Screenshot.cpp);
+    -- ole32: CoInitializeEx / CoCreateInstance for the WIC factory.
+    add_syslinks("user32", "d3d11", "d3d12", "dxgi", "windowscodecs", "ole32")
     set_kind("shared")
     set_languages("c++20")
     set_symbols("debug")

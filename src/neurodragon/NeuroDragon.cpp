@@ -89,6 +89,11 @@ bool NeuroDragon::enable() {
     // Locate + hook dragon::framerenderer::modules::taau without any PDB.
     probe::install();
 
+    // Screenshots go next to the mod, not next to the executable: the mod folder is
+    // the one place a user can find without knowing how LeviLauncher lays out a
+    // version directory.
+    ui::Overlay::getInstance().setScreenshotDirectory((getSelf().getModDir() / "screenshots").wstring());
+
     // The panel is not essential to NR: if the game window is not up yet the probe
     // watcher retries it in the background. install() writes its own stage pair - the
     // temporary objects that find Present are the slow part of enable(), but since

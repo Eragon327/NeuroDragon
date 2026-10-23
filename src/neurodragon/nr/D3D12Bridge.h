@@ -271,6 +271,12 @@ struct PanelStats {
     double   encodeMs       = 0.0;
     double   evaluateMs     = 0.0;
     double   compositeMs    = 0.0;
+
+    // RCAS sharpening (src/neurodragon/sr). Recorded only while it is on, so these
+    // stay empty when the panel shows the switch off.
+    unsigned rcasSamples    = 0;
+    bool     hasRcas        = false;
+    double   rcasMs         = 0.0;
 };
 
 // What the last evaluation actually wrote into the NGX parameter object, plus the
