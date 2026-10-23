@@ -1,6 +1,7 @@
 #include "neurodragon/utils/Utils.h"
 
 #include "neurodragon/Log.h"
+#include "neurodragon/Test.h"
 
 #include "ll/api/i18n/I18n.h"
 
@@ -12,7 +13,12 @@ void write(int level, std::string_view message) {
     auto& log = utils::logger();
     switch (level) {
     case 3:
+        // Diagnostics never reach a release build (src/neurodragon/Test.h). The
+        // call sites are already compiled out; this is the choke point that keeps
+        // an accidental level-3 write out of a shipped log too.
+#ifdef TEST
         log.debug("{}", message);
+#endif
         break;
     case 2:
         log.error("{}", message);
@@ -81,8 +87,6 @@ std::string fileSizeText(std::filesystem::path const& path) {
 }
 
 bool ensureApplicationModel(ll::mod::NativeMod& mod, wchar_t const* fileName) {
-    auto& log = mod.getLogger();
-
     std::error_code             error;
     auto const                  modDir    = std::filesystem::absolute(mod.getModDir(), error);
     std::filesystem::path const directory = error ? mod.getModDir() : modDir;
@@ -96,7 +100,7 @@ bool ensureApplicationModel(ll::mod::NativeMod& mod, wchar_t const* fileName) {
     auto const target = std::filesystem::path(appDir) / fileName;
 
     if (::GetFileAttributesW(target.c_str()) != INVALID_FILE_ATTRIBUTES) {
-        log.debug("NR model already in place, skipping ({} , {})", target.string(), fileSizeText(target));
+        ND_DEBUG("NR model already in place, skipping ({} , {})", target.string(), fileSizeText(target));
         return true;
     }
 
@@ -106,7 +110,7 @@ bool ensureApplicationModel(ll::mod::NativeMod& mod, wchar_t const* fileName) {
     }
 
     if (::CreateHardLinkW(target.c_str(), source.c_str(), nullptr)) {
-        log.debug("NR model hard-linked next to the executable: {} -> {}", target.string(), source.string());
+        ND_DEBUG("NR model hard-linked next to the executable: {} -> {}", target.string(), source.string());
         return true;
     }
     DWORD const linkError = ::GetLastError();

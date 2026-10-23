@@ -285,7 +285,8 @@ mov r8,rdi / mov rdx,rsi / mov rcx,r14 / jmp rax
 5. 窗口：~~以「客户端进存档」为锚~~（2026-10-22 晚已改）——**不再有“进世界才建 / 等 120 帧”的门**：
    引擎一旦交出真实的 Color/Depth/MV/Output，当帧就建 feature 并开始求值。事件监听只保留两个效果：
    给引擎 DLSS 发一次 `Reset=1`，以及把 dump/计时窗口计划重新锚定到当前帧（`gWindowAnchor`）；
-   窗口仍是每 900 帧开 60 帧、共 10 个，每窗第 30/32 帧 dump 到 `<模组目录>/dump/`。
+   窗口仍是每 900 帧开 60 帧、共 10 个，每窗第 30/32 帧 dump 到 `<模组目录>/dump/`
+   （dump 本身只在 `TEST` 构建里编译，发布版窗口只留计时）。
 
 **写入的参数**（全部经实测槽位：1=指针/资源、3=uint、6=float；读回 11=uint）
 
@@ -445,7 +446,9 @@ encode 步骤。NR 的 62 个参数里**没有** HDR/色彩空间开关（已从
 - feature 建起来了（`core CreateFeature(0x12)=0x1`），每帧 evaluate 成功，GPU 计时闭环；
 - 三个窗口实测：NR **3.52 / 3.49 / 3.57 ms**，同帧引擎 DLSS 1.64 / 1.68 / 1.72 ms（n=60/窗）；
 - 生命周期干净：软禁用 + 模块 PIN，`ReleaseFeature=0x1`，禁用/退出不再崩；
-- 计时装置、`nr_swap.txt` 开关、`nr_runtime.txt`（已不需要）、BMP dump 都在。
+- 计时装置、`nr_swap.txt` 开关、`nr_runtime.txt`（已不需要）、BMP dump 都在——但 dump 与
+  `nr.paramLog` 只在 `TEST` 构建里编译（`xmake f --test=y`，见 README「诊断构建」与
+  `src/neurodragon/Test.h`），发布版不产生 `dump/` 目录。
 
 **未解**
 

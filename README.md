@@ -78,6 +78,19 @@ grep -E "NR 已启用|NR 就绪|NR 创建失败|：开始|：完成|：失败" "
 现在只有四处——临时 D3D11 设备与交换链（3.5 s）、面板安装、NR 创建、core 加载模型。
 游戏卡死时日志的最后一行就是卡住的那一步。
 
+### 诊断构建（TEST）
+
+BMP dump、NGX 参数追踪（`nr.paramLog`）、`[res]/[desc]/[eval]` 等诊断日志和所有 debug 级
+输出都只在定义了 `TEST` 的构建里存在（[src/neurodragon/Test.h](src/neurodragon/Test.h)）。
+默认构建是发布版：不写 `dump/`、不钩引擎的 NGX 参数 setter、不含任何 debug 行。
+
+```bash
+xmake f --test=y && xmake build -y      # 诊断构建（TEST 已定义）
+xmake f --test=n && xmake build -y      # 发布构建（默认）
+```
+
+发布版保留：info/warn/error 行、`log::Stage` 阶段标记、NR 创建/求值/合成、面板与 GPU 计时。
+
 打包器是 `scripts/after_build.lua`（替换 `@levibuildscript/modpacker`，多拷一个 `lang/`）。
 **NR 模型（266 MB）不进包**：手动放到 `mods/NeuroDragon/nvngx_dlssnr.dll`，模组在 load 时
 硬链接到游戏根目录（core 只在那儿找，见 docs/D §6.17）。

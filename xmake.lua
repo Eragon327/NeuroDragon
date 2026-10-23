@@ -8,6 +8,16 @@ option("target_type")
     set_values("client")
 option_end()
 
+-- Diagnostics build (src/neurodragon/Test.h): defines TEST, which compiles in
+-- the BMP colour dumps, the NGX parameter trace (nr.paramLog), the resource/eval
+-- diagnostics and every debug-level line. Off by default, so a release DLL
+-- contains none of that code.
+option("test")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Compile in diagnostic dumps and debug logging (TEST)")
+option_end()
+
 -- add_requires("levilamina x.x.x") for a specific version
 -- add_requires("levilamina develop") to use develop version
 -- please note that you should add bdslibrary yourself if using dev version
@@ -30,6 +40,9 @@ target("NeuroDragon") -- Change this to your mod name.
     add_rules("@levibuildscript/linkrule")
     if is_plat("windows") then
         add_defines("NOMINMAX", "UNICODE", "_HAS_CXX23=1")
+        if get_config("test") then
+            add_defines("TEST")
+        end
         set_exceptions("none") -- To avoid conflicts with /EHa.
         add_cxflags( "/EHa", "/utf-8", "/W4", "/w44265", "/w44289", "/w44296", "/w45263", "/w44738", "/w45204")
         add_cxflags(

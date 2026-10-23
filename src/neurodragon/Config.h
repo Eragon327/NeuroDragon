@@ -38,7 +38,7 @@ struct Nr {
 
     bool resetEveryFrame = false;   // NRReset: kills NR temporal history, diagnostic only
     bool srResetEveryFrame = false; // SRReset: wipes the engine DLSS history every frame, diagnostic only
-    bool paramLog        = false; // log every engine NGX parameter write
+    bool paramLog        = false; // TEST builds only: log every engine NGX parameter write
 };
 
 struct Config;

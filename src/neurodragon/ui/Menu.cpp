@@ -1,6 +1,7 @@
 #include "neurodragon/ui/Menu.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/Test.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
@@ -546,7 +547,11 @@ void drawTabDiagnostics() {
     widgets::sectionHeader("ui.diag.switches"_tr().c_str());
     if (widgets::toggle("ui.diag.resetNr"_tr().c_str(), &gDraft.resetEveryFrame)) markDirty();
     if (widgets::toggle("ui.diag.resetSr"_tr().c_str(), &gDraft.srResetEveryFrame)) markDirty();
+#ifdef TEST
+    // The parameter trace only exists in a TEST build (src/neurodragon/Test.h),
+    // so the release panel must not offer a switch that would do nothing.
     if (widgets::toggle("ui.diag.paramLog"_tr().c_str(), &gDraft.paramLog)) markDirty();
+#endif
     widgets::hint("ui.diag.warnHint"_tr().c_str());
 }
 

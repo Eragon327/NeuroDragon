@@ -29,9 +29,15 @@ struct ResourceInfo {
 // not look like a COM object backed by an image mapping.
 [[nodiscard]] ResourceInfo describe(void* resource);
 
+// ---------------------------------------------------------------------------
+// Colour dumps - TEST build only (src/neurodragon/Test.h).
+//
 // Diagnostic readback: records a full copy of 'color' into an internal readback
 // buffer on the given command list (one shot). flushColorDump() then maps that
-// buffer on a later frame and writes a BMP next to the game executable.
+// buffer on a later frame and writes a BMP next to the game executable. None of
+// this exists in a release DLL.
+// ---------------------------------------------------------------------------
+#ifdef TEST
 void queueColorDump(void* commandList, void* color, char const* fileName);
 // Same, but the stored values are already display-encoded (no transform on write).
 void queueColorDumpEncoded(void* commandList, void* color, char const* fileName);
@@ -49,6 +55,7 @@ void               queueColorDumpEncoded2(void* commandList, void* resource, cha
 // 0 = linear HDR, 1 = display-encoded, 2 = linear in [0,1].
 void               queueColorDumpN(int slot, void* commandList, void* resource, char const* fileName, int domain);
 [[nodiscard]] bool flushColorDumpN(int slot, float* maxValue, std::uint32_t* nonZeroWords);
+#endif
 
 // ---------------------------------------------------------------------------
 // Stage 2: NR (NGX feature 0x12) at the engine's render resolution.
@@ -66,10 +73,12 @@ void               queueColorDumpN(int slot, void* commandList, void* resource, 
 // parameter sweep can vary one knob per window (docs/D §6.14 experiment).
 void nrSetWindowIndex(int index);
 
+#ifdef TEST
 // Directory that holds this mod's DLL (LeviLamina's Mod::getModDir(), passed in
-// by the probe so this translation unit stays free of engine headers). The NR
-// runtime is loaded from here under its original file name.
+// by the probe so this translation unit stays free of engine headers). Only the
+// dump writer reads it.
 void nrSetModDirectory(wchar_t const* directory);
+#endif
 
 // Creates the private output texture, the timestamp ring and feature 0x12.
 // 'engineParams' is only used to prove that our capability parameter object has
@@ -94,6 +103,11 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 
 [[nodiscard]] bool nrIsCreated();
 
+#ifdef TEST
+// ---------------------------------------------------------------------------
+// Diagnostic accessors - TEST build only, used by the dump schedule.
+// ---------------------------------------------------------------------------
+
 // The private 2560x1440 output texture; only the top-left width x height is
 // written by the feature.
 [[nodiscard]] void* nrOutputResource();
@@ -109,13 +123,15 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // "HDR -> LDR encode"). Null until nrCreate has built the encoder.
 [[nodiscard]] void* nrEncodedColorResource();
 
+// nr.paramLog in config.json: the probe logs every engine NGX parameter write.
+[[nodiscard]] bool nrParamLogEnabled();
+#endif
+
 // True when config.json asks for Replace (route A). The probe then evaluates
 // NR on every in-world frame instead of only inside the measurement windows, so
 // the picture can actually be judged by eye.
 [[nodiscard]] bool nrReplaceContinuous();
 
-// nr.paramLog in config.json: the probe logs every engine NGX parameter write.
-[[nodiscard]] bool nrParamLogEnabled();
 // Called on entering a world: the engine never resets its own DLSS, so one
 // one-shot Reset=1 is sent to its parameter object at the first swap after a load.
 void nrNotifyLevelLoaded();

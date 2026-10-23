@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed（2026-10-23：dump、参数追踪与 debug 输出收进 TEST 构建）
+
+- **诊断代码只在 `TEST` 构建里存在**（`xmake f --test=y`，开关与说明见
+  `src/neurodragon/Test.h`）。发布构建（默认 `--test=n`）不产生 `<模组目录>/dump/*.bmp`、
+  不分配 dump 回读缓冲，也不安装引擎 NGX 参数 setter 的四个 detour 与 CreateFeature wrapper——
+  `[param]/[param4]/[ngxset]/[res]/[desc]/[eval]/[dump]/[init]` 这些行随之消失；
+  `log::write` 的 level 3 在发布版直接丢弃，debug 参数也不再被求值。
+- 保留：info/warn/error（含 i18n）、`log::Stage` 阶段标记、NR 创建/求值/增益合成、面板与
+  GPU 计时。测量窗口本身还在，发布版只留计时、不再 dump；面板「诊断」页的
+  `参数日志` 开关只在 `TEST` 构建显示。
+- 验证：11 个 TU 在带 `-DTEST` 与不带 `-DTEST` 两种配置下均编译通过
+  （clang-cl 22.1.7 + MSVC 14.51 / Windows SDK 10.0.26100）；两种配置下剩余警告相同，
+  都是原有的死代码（`findAdapter` 等），没有新增警告。
+
 ### Added（2026-10-23：启动阶段的成对 info 标记，卡住时能说出卡在哪）
 
 - 「可能卡一下」的步骤在开始前写一行 info、结束后写一行带毫秒的 info（`log::Stage`，

@@ -2,6 +2,7 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
+#include "neurodragon/Test.h"
 
 #include <Windows.h>
 
@@ -38,6 +39,15 @@ void nrLog(int level, char const* format, ...) {
 
     neurodragon::log::write(level, buffer);
 }
+
+// Debug line, printf style: TEST build only (src/neurodragon/Test.h). A dropped
+// macro evaluates none of its arguments, so a release build does not format
+// diagnostics that only a ticket would ever read.
+#ifdef TEST
+#    define NR_DEBUG(...) nrLog(3, __VA_ARGS__)
+#else
+#    define NR_DEBUG(...) ((void) 0)
+#endif
 
 // NGX result codes as user-visible text: the catalogue lives in
 // lang/<locale>.json under "nr.result.*", so a release build speaks the user's
@@ -151,6 +161,7 @@ ResourceInfo describe(void* resource) {
 
 namespace {
 
+#ifdef TEST
 struct ColorDump {
     Microsoft::WRL::ComPtr<ID3D12Resource> staging;
     bool                                   recorded = false;
@@ -201,11 +212,13 @@ std::uint8_t toSrgb8(float v) {
     float const s = std::pow(v, 1.0f / 2.2f) * 255.0f;
     return static_cast<std::uint8_t>(s);
 }
+#endif
 
 } // namespace
 
 namespace {
 
+#ifdef TEST
 // Directory of this mod's DLL, supplied by nrSetModDirectory() (LeviLamina's
 // Mod::getModDir). Declared up here because the dump writer needs it before the
 // NGX section below.
@@ -303,9 +316,11 @@ void queueDump(void* commandList, void* resource, char const* fileName, int doma
     gDumpTarget->domain   = domain;
     gDumpTarget->recorded = true;
 }
+#endif
 
 } // namespace
 
+#ifdef TEST
 void queueColorDump(void* commandList, void* color, char const* fileName) {
     queueDump(commandList, color, fileName, 0);
 }
@@ -494,6 +509,7 @@ bool flushColorDumpN(int slot, float* maxValue, std::uint32_t* nonZeroWords) {
     gDumpTarget   = &gDumps[0];
     return ok;
 }
+#endif
 
 // ---------------------------------------------------------------------------
 // Stage 2: NR (NGX feature 0x12) at the engine's render resolution.
@@ -655,12 +671,14 @@ void transition(
 // ---------------------------------------------------------------------------
 int         gWindowIndex = -1;
 
+#ifdef TEST
 // The resource we most recently handed the engine's own DLSS as "Color", and
 // which domain its pixels are in. Dumped once per measurement window so a frozen
 // picture can be attributed: stale here = our write stopped; fresh here but the
 // engine's Output is stale = the upscaler is the one not updating.
 void* gFedResource = nullptr;
 int   gFedDomain   = 0; // 0 = linear HDR, 1 = display-encoded
+#endif
 
 // The engine writes "Color" into its parameter object ONCE (docs/D §6.16), so from
 // the first swap onwards the object keeps handing back OUR texture. Compositing
@@ -924,7 +942,7 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
     if (FAILED(psoHr)) {
         nrLog(1, "[nr] encode PSO failed 0x%08X", static_cast<unsigned>(psoHr));
     } else {
-        nrLog(3, "[nr] encode PSO ok (%llu bytes)", static_cast<unsigned long long>(codeBlob->GetBufferSize()));
+        NR_DEBUG("[nr] encode PSO ok (%llu bytes)", static_cast<unsigned long long>(codeBlob->GetBufferSize()));
     }
     codeBlob->Release();
     if (FAILED(psoHr)) {
@@ -969,7 +987,7 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
         nrLog(1, "[nr] decoded colour allocation failed (straight-copy fallback)");
         gDecodedColor = nullptr;
     }
-    nrLog(3, "[nr] HDR↔LDR shader 就绪（Reinhard + gamma 2.2 / 反变换）");
+    NR_DEBUG("[nr] HDR↔LDR shader 就绪（Reinhard + gamma 2.2 / 反变换）");
     return true;
 }
 
@@ -1105,7 +1123,7 @@ bool ensureStamps(ID3D12Device* device) {
     query.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
     query.Count = static_cast<UINT>(kStampSlots * kStampPerSlot);
     if (FAILED(device->CreateQueryHeap(&query, IID_PPV_ARGS(&gStamps.heap)))) {
-        nrLog(3, "[nr] timestamp heap 创建失败，计时关闭");
+        NR_DEBUG("[nr] timestamp heap 创建失败，计时关闭");
         return false;
     }
     D3D12_HEAP_PROPERTIES heap{};
@@ -1126,12 +1144,12 @@ bool ensureStamps(ID3D12Device* device) {
             nullptr,
             IID_PPV_ARGS(&gStamps.readback)
         ))) {
-        nrLog(3, "[nr] timestamp readback 分配失败，计时关闭");
+        NR_DEBUG("[nr] timestamp readback 分配失败，计时关闭");
         return false;
     }
     D3D12_RANGE readRange{0, static_cast<SIZE_T>(buffer.Width)};
     if (FAILED(gStamps.readback->Map(0, &readRange, reinterpret_cast<void**>(&gStamps.mapped))) || !gStamps.mapped) {
-        nrLog(3, "[nr] timestamp readback map 失败，计时关闭");
+        NR_DEBUG("[nr] timestamp readback map 失败，计时关闭");
         return false;
     }
     D3D12_COMMAND_QUEUE_DESC queueDesc{};
@@ -1142,20 +1160,22 @@ bool ensureStamps(ID3D12Device* device) {
         queue->Release();
     }
     if (!gStamps.frequency) {
-        nrLog(3, "[nr] 取不到 timestamp frequency，计时关闭");
+        NR_DEBUG("[nr] 取不到 timestamp frequency，计时关闭");
         return false;
     }
     gStamps.active = true;
-    nrLog(3, "[nr] timestamp 频率 %llu", static_cast<unsigned long long>(gStamps.frequency));
+    NR_DEBUG("[nr] timestamp 频率 %llu", static_cast<unsigned long long>(gStamps.frequency));
     return true;
 }
 
-void reportOne(int id, char const* name) {
+void reportOne(int id, [[maybe_unused]] char const* name) {
     auto const& values = gStamps.samples[id];
     if (values.empty()) {
-        nrLog(3, "[nr] gpu %s: 没有可用样本 (recorded=%u dropped=%u)", name, gStamps.recorded[id], gStamps.dropped[id]);
+        NR_DEBUG("[nr] gpu %s: 没有可用样本 (recorded=%u dropped=%u)", name, gStamps.recorded[id], gStamps.dropped[id]);
         return;
     }
+    publishMedian(id);
+#ifdef TEST
     std::vector<double> sorted = values;
     std::sort(sorted.begin(), sorted.end());
     double sum = 0.0;
@@ -1163,9 +1183,7 @@ void reportOne(int id, char const* name) {
         sum += v;
     }
     double const median = sorted[sorted.size() / 2];
-    publishMedian(id);
-    nrLog(
-        3,
+    NR_DEBUG(
         "[nr] gpu %s ms median=%.3f mean=%.3f min=%.3f max=%.3f n=%zu dropped=%u",
         name,
         median,
@@ -1175,6 +1193,7 @@ void reportOne(int id, char const* name) {
         sorted.size(),
         gStamps.dropped[id]
     );
+#endif
 }
 
 } // namespace
@@ -1228,8 +1247,9 @@ IDXGIAdapter1* findAdapter(ID3D12Device* device) {
 // ---------------------------------------------------------------------------
 // "Why is feature 0x12 rejected?" - NVSDK_NGX_D3D12_GetFeatureRequirements.
 // The structs below mirror nvsdk_ngx_defs.h; the NGX headers themselves stay out
-// of this translation unit (docs/D §4 pitfall 5).
+// of this translation unit (docs/D §4 pitfall 5). Diagnostics only, TEST build.
 // ---------------------------------------------------------------------------
+#ifdef TEST
 namespace {
 
 struct NgxProjectIdDesc {
@@ -1265,7 +1285,7 @@ using GetFeatureRequirementsFn = int (*)(void*, NgxDiscoveryInfo const*, NgxFeat
 void logFeatureRequirementsFrom(void* function, ID3D12Device* device, wchar_t const* dataPath, char const* tag) {
     auto const fn = reinterpret_cast<GetFeatureRequirementsFn>(function);
     if (!fn) {
-        nrLog(3, "[nr] %s 没有 GetFeatureRequirements", tag);
+        NR_DEBUG("[nr] %s 没有 GetFeatureRequirements", tag);
         return;
     }
 
@@ -1325,16 +1345,19 @@ void logFeatureRequirementsFrom(void* function, ID3D12Device* device, wchar_t co
 }
 
 } // namespace
+#endif
 
 
 void nrSetWindowIndex(int index) { gWindowIndex = index; }
 
+#ifdef TEST
 void nrSetModDirectory(wchar_t const* directory) {
     gModDirectory = directory ? directory : L"";
     if (!gModDirectory.empty() && gModDirectory.back() != L'\\' && gModDirectory.back() != L'/') {
         gModDirectory.push_back(L'\\');
     }
 }
+#endif
 
 void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath) {
     if (appId) {
@@ -1442,7 +1465,7 @@ bool nrCreate(
         createStage.markFailed();
         return false;
     }
-    nrLog(3, "[nr] core module=%p", static_cast<void*>(core));
+    NR_DEBUG("[nr] core module=%p", static_cast<void*>(core));
 
     // Shared application data path (NGX wants a writable directory here).
     wchar_t dataPath[MAX_PATH]{};
@@ -1452,20 +1475,21 @@ bool nrCreate(
     dataDir += L"\\NGX";
     CreateDirectoryW(dataDir.c_str(), nullptr);
 
+#ifdef TEST
     logFeatureRequirementsFrom(
         reinterpret_cast<void*>(GetProcAddress(core, "NVSDK_NGX_D3D12_GetFeatureRequirements")),
         device,
         dataDir.c_str(),
         "core"
     );
+#endif
 
     // TRP owns the process' NGX session because it is the first (only) consumer,
     // so its runtime Init_Ext names the id the core was initialised with. Here the
     // engine owns the session; instead of re-initialising the core (which would
     // risk the engine's own DLSS feature), reuse the app id captured from the
     // engine's Init call - that is the id this core will accept.
-    nrLog(
-        3,
+    NR_DEBUG(
         "[nr] 引擎初始化上下文 appId=%#llx dataPath=%ls（0/空 表示没抓到）",
         static_cast<unsigned long long>(gEngineAppId),
         gEngineDataPath.empty() ? L"<none>" : gEngineDataPath.c_str()
@@ -1475,7 +1499,7 @@ bool nrCreate(
     // must be named nvngx_dlssnr.dll and sit in the application directory. Do not
     // preload it here - that only creates a second 266 MB copy.
     HMODULE runtime = GetModuleHandleW(L"nvngx_dlssnr.dll");
-    nrLog(3, "[nr] runtime module=%p（由 core 自己从应用目录加载）", static_cast<void*>(runtime));
+    NR_DEBUG("[nr] runtime module=%p（由 core 自己从应用目录加载）", static_cast<void*>(runtime));
 
     RuntimeApi runtimeApi{};
     RuntimeApi coreApi{};
@@ -1511,13 +1535,22 @@ bool nrCreate(
     }
     if (engineParams) {
         bool const sameTable = *reinterpret_cast<void***>(params) == *reinterpret_cast<void***>(engineParams);
-        nrLog(
-            sameTable ? 3 : 1,
-            "[nr] params vtable ours=%p engine=%p same=%d",
-            *reinterpret_cast<void**>(params),
-            engineParams ? *reinterpret_cast<void**>(engineParams) : nullptr,
-            sameTable ? 1 : 0
-        );
+        // A different vtable is a real warning (the object we write is not the one
+        // the engine writes through); equality is only worth a debug line.
+        if (sameTable) {
+            NR_DEBUG(
+                "[nr] params vtable ours=%p engine=%p same=1",
+                *reinterpret_cast<void**>(params),
+                *reinterpret_cast<void**>(engineParams)
+            );
+        } else {
+            nrLog(
+                1,
+                "[nr] params vtable ours=%p engine=%p same=0",
+                *reinterpret_cast<void**>(params),
+                *reinterpret_cast<void**>(engineParams)
+            );
+        }
     }
 
     paramSetU32(params, "CreationNodeMask", 1);
@@ -1528,16 +1561,16 @@ bool nrCreate(
     paramSetU32(params, "DLSSNR.Width", width);
     paramSetU32(params, "DLSSNR.Height", height);
     paramSetI32(params, "DLSSNR.Enabled", 1);
-    nrLog(
-        paramGetU32(params, "DLSSNR.Width") == width ? 3 : 1,
-        "[nr] 参数往返 DLSSNR.Width=%u 期望=%u",
-        paramGetU32(params, "DLSSNR.Width"),
-        width
-    );
+    unsigned const widthBack = paramGetU32(params, "DLSSNR.Width");
+    if (widthBack == width) {
+        NR_DEBUG("[nr] 参数往返 DLSSNR.Width=%u 期望=%u", widthBack, width);
+    } else {
+        nrLog(1, "[nr] 参数往返 DLSSNR.Width=%u 期望=%u", widthBack, width);
+    }
 
-    auto createWith = [&](RuntimeApi const& api, char const* tag) -> bool {
+    auto createWith = [&](RuntimeApi const& api, [[maybe_unused]] char const* tag) -> bool {
         if (!api.create || !api.evaluate) {
-            nrLog(3, "[nr] %s 不可用（create=%d eval=%d）", tag, api.create ? 1 : 0, api.evaluate ? 1 : 0);
+            NR_DEBUG("[nr] %s 不可用（create=%d eval=%d）", tag, api.create ? 1 : 0, api.evaluate ? 1 : 0);
             return false;
         }
         void* handle = nullptr;
@@ -1570,8 +1603,7 @@ bool nrCreate(
             return true;
         }
         gNr.lastError = ret;
-        nrLog(
-            3,
+        NR_DEBUG(
             "[nr] %s CreateFeature(0x12) ret=0x%08X %s (%.0f ms)",
             tag,
             static_cast<unsigned>(ret),
@@ -1590,12 +1622,14 @@ bool nrCreate(
         return true;
     }
     if (runtimeApi.create) {
+#ifdef TEST
         logFeatureRequirementsFrom(
             reinterpret_cast<void*>(GetProcAddress(runtime, "NVSDK_NGX_D3D12_GetFeatureRequirements")),
             device,
             dataDir.c_str(),
             "runtime"
         );
+#endif
         if (createWith(runtimeApi, "runtime/未Init")) {
             device->Release();
             return true;
@@ -1603,9 +1637,8 @@ bool nrCreate(
         if (runtimeInitExt) {
             unsigned long long const appId       = gEngineAppId ? gEngineAppId : kNrGenericCmsId;
             wchar_t const* const     appDataPath = gEngineDataPath.empty() ? dataDir.c_str() : gEngineDataPath.c_str();
-            int const initRet = runtimeInitExt(appId, appDataPath, device, kNrFeatureApiVersion, nullptr);
-            nrLog(
-                3,
+            [[maybe_unused]] int const initRet = runtimeInitExt(appId, appDataPath, device, kNrFeatureApiVersion, nullptr);
+            NR_DEBUG(
                 "[nr] runtime Init_Ext(appId=%#llx) ret=0x%08X",
                 static_cast<unsigned long long>(appId),
                 static_cast<unsigned>(initRet)
@@ -1638,9 +1671,10 @@ void nrShutdown() {
     // hundred MB once is strictly better than taking the machine down.
     gNr.shutdown = true;
     gNr.created  = false; // hooks pass through from here on
-    nrLog(3, "[nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）");
+    NR_DEBUG("[nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）");
 }
 
+#ifdef TEST
 void* nrOutputResource() { return gNr.output; }
 
 void* nrFedResource() { return gFedResource; }
@@ -1650,6 +1684,7 @@ int nrFedDomain() { return gFedDomain; }
 void* nrEncodedColorResource() { return gEncodedColor; }
 
 bool nrParamLogEnabled() { return config::get().nr.paramLog != 0; }
+#endif
 
 bool nrReplaceContinuous() { return config::get().nr.replace != 0; }
 namespace {
@@ -1750,14 +1785,16 @@ void compositeGain(
     // DLSS untouched: our own SR consumes the composite instead.
     if (config::get().nr.replace != 7) {
         paramSetPtr(engineParams, "Color", gDecodedColor);
+#ifdef TEST
         gFedResource = gDecodedColor;
         gFedDomain   = 0;
+#endif
     }
+#ifdef TEST
     static bool logged = false;
     if (!logged) {
         logged = true;
-        nrLog(
-            3,
+        NR_DEBUG(
             "[nr] Replace=%d 生效：%s（用上一帧 NR 结果，strength=%.2f white=%.2f colour=%.2f maxRatio=%.2f）",
             config::get().nr.replace,
             mode == 4u ? "TRP Ratio 合成" : "增益合成",
@@ -1767,6 +1804,7 @@ void compositeGain(
             static_cast<double>(config::get().nr.maxRatio)
         );
     }
+#endif
 }
 
 } // namespace
@@ -1914,11 +1952,11 @@ bool nrRecord(
     );
     paramSetF32(params, "DLSSNR.SkinStructureStrength", 1.0f);
 
+#ifdef TEST
     static int loggedWindow = -2;
     if (loggedWindow != gWindowIndex) {
         loggedWindow = gWindowIndex;
-        nrLog(
-            3,
+        NR_DEBUG(
             "[nr] 本窗参数 Style=%d Enabled=%d Intensity=%.2f DepthInverted=%d Replace=%d "
             "NrEncode=%d NRReset=%d（窗口 #%d）",
             style,
@@ -1931,18 +1969,17 @@ bool nrRecord(
             gWindowIndex
         );
     }
+#endif
 
     if (!gNr.resourceRoundtripChecked) {
         gNr.resourceRoundtripChecked = true;
         void* const expected         = useEncoded ? static_cast<void*>(gEncodedColor) : color;
         void* const readBack         = paramGetResource(params, "DLSSNR.Color");
-        nrLog(
-            readBack == expected ? 3 : 1,
-            "[nr] 资源往返校验 DLSSNR.Color=%p 写入=%p %s",
-            readBack,
-            expected,
-            readBack == expected ? "ok" : "MISMATCH"
-        );
+        if (readBack == expected) {
+            NR_DEBUG("[nr] 资源往返校验 DLSSNR.Color=%p 写入=%p ok", readBack, expected);
+        } else {
+            nrLog(1, "[nr] 资源往返校验 DLSSNR.Color=%p 写入=%p MISMATCH", readBack, expected);
+        }
     }
 
     D3D12_RESOURCE_STATES const outputBefore =
@@ -2090,7 +2127,7 @@ bool nrRecord(
         if (gEngineResetPending.exchange(false, std::memory_order_relaxed)) {
             paramSetI32(static_cast<void*>(engineParams), "Reset", 1);
             clearEngineReset = true;
-            nrLog(3, "[nr] 进存档：给引擎 DLSS 发一次 Reset=1");
+            NR_DEBUG("[nr] 进存档：给引擎 DLSS 发一次 Reset=1");
         } else if (clearEngineReset) {
             clearEngineReset = false;
             paramSetI32(static_cast<void*>(engineParams), "Reset", 0);
