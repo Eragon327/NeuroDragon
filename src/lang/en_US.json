@@ -156,6 +156,8 @@
             "close": "Close panel",
             "rebindHint": "Click the button, then press the key you want (Esc cancels).",
             "capturing": "Press a key…",
+            "screenshot": "Screenshot key",
+            "screenshotHint": "Saves the finished frame (HUD included, panel excluded) as PNG in mods/NeuroDragon/screenshots/. Rebind with ui.screenshotKey in config.json.",
             "config": "Config file",
             "configHint": "The config is imported at startup only; Apply affects this run, Save as default also writes config/config.json.",
             "about": "About",
@@ -175,6 +177,10 @@
         "key": {
             "unknown": "Key 0x{0:02X}"
         },
+        "toast": {
+            "shotSaved": "Screenshot saved",
+            "shotFailed": "Screenshot failed (see log)"
+        },
         "sr": {
             "engine": "Engine SR (read-only)",
             "renderSize": "Render size",
@@ -182,7 +188,6 @@
             "ratio": "Render scale",
             "quality": "Quality slot (PerfQualityValue)",
             "preset": "Network preset",
-            "sharpness": "Sharpness",
             "flags": "Create flags",
             "readOnlyHint": "These are the engine's current values; Internal resolution rewrites both the DLSS size and the scene size.",
             "callback": "Engine sizing callback (read-only)",
@@ -210,6 +215,19 @@
             "presetL": "L",
             "presetM": "M",
             "modelHint": "Writes all six DLSS.Hint.Render.Preset quality hints (keeping the high bit the engine sets). It only applies at CreateFeature, so it needs one rebuild: change the internal resolution or re-enter the world.",
+            "sharpSection": "Sharpening",
+            "sharpEnable": "RCAS sharpening",
+            "sharpStrength": "Strength",
+            "sharpHint": "Runs RCAS (AMD contrast-adaptive sharpening) on the finished frame, after the engine's DLSS and before its colour grading and UI composition. Strength scales the sharpening delta by 0-4x (default 0.672 is about 2.7x; the top can show halos). The HUD and text are never sharpened. The image is linear HDR, so the pass maps through Reinhard to 0-1 first. Applies immediately; no DLSS rebuild.",
+            "compareEnable": "Split compare",
+            "compareSplit": "Split position",
+            "compareHint": "Left half keeps the original frame, right half is sharpened, with a 2px black line between them. For judging the effect on any screen; turn it off for normal play.",
+            "sharpApplied": "Applied strength",
+            "sharpFrames": "Frames sharpened",
+            "sharpGpu": "Sharpening GPU",
+            "sharpFailures": "Failures",
+            "sharpZeroHint": "Strength 0 records no pass; same as off.",
+            "sharpOffHint": "Off records no pass: zero cost.",
             "ctx": "Engine upscaling config (measured)",
             "ctxCtx": "Frame context  quality / factor",
             "ctxEngine": "Renderer  requested q / factor",

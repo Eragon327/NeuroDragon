@@ -4,6 +4,7 @@
 #include "neurodragon/Log.h"
 #include "neurodragon/ui/InputGuard.h"
 #include "neurodragon/ui/Menu.h"
+#include "neurodragon/ui/Screenshot.h"
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/utils/Utils.h"
 
@@ -128,6 +129,14 @@ std::array<bool, 5>   gGameMouseButtonsDown{};
 std::atomic<int> gHotkey{VK_END};
 std::atomic_bool gCapturingHotkey{false};
 std::atomic<int> gCapturedHotkey{0};
+
+// Screenshot hotkey (config ui.screenshotKey, F2 by default). The window thread
+// raises the request, the render thread consumes it at the next Present and copies
+// the frame *before* drawing the panel, so the PNG never contains the overlay.
+std::atomic<int>  gScreenshotKey{VK_F2};
+std::atomic_bool  gScreenshotRequested{false};
+bool              gScreenshotKeyDown{};
+std::wstring      gScreenshotDirectory;
 
 // Toast.
 std::mutex  gToastMutex;
@@ -304,6 +313,26 @@ LRESULT consumeMenuInputMessage(HWND window, UINT message, WPARAM wParam, LPARAM
     return 1;
 }
 
+// Screenshot key, handled in both panel states. Swallowing the key pair keeps the
+// game from also reacting to it (F2 is unused by Bedrock, but a rebound key might
+// not be).
+bool handleScreenshotKey(UINT message, WPARAM wParam) {
+    auto const key = static_cast<WPARAM>(gScreenshotKey.load(std::memory_order_relaxed));
+    if (key == 0 || wParam != key) return false;
+    if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) {
+        if (!gScreenshotKeyDown) {
+            gScreenshotKeyDown = true;
+            gScreenshotRequested.store(true, std::memory_order_release);
+        }
+        return true;
+    }
+    if (message == WM_KEYUP || message == WM_SYSKEYUP) {
+        gScreenshotKeyDown = false;
+        return true;
+    }
+    return false;
+}
+
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
     if (message == kMsgRestoreGameMouse) {
         ::SetCursor(::LoadCursorW(nullptr, IDC_ARROW));
@@ -314,11 +343,18 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && wParam == FALSE)) {
         gToggleKeyDown        = false;
         gConsumeEscapeRelease = false;
+        gScreenshotKeyDown    = false;
         ClipCursor(nullptr);
     }
 
     auto const imguiReady = gImGuiReady.load(std::memory_order_acquire);
     if (!imguiReady) return forwardToGame(window, message, wParam, lParam);
+
+    // Before the panel branches: a screenshot must work whether the panel is open
+    // or closed, and the key must not leak into the panel's own hotkey capture.
+    if (!gCapturingHotkey.load(std::memory_order_acquire) && handleScreenshotKey(message, wParam)) {
+        return 1;
+    }
 
     bool const visible = Overlay::getInstance().isVisible();
 
@@ -623,9 +659,19 @@ void drawFrame(ID3D11RenderTargetView* target) {
     gDeviceContext->OMSetRenderTargets(1, &empty, nullptr);
 }
 
-void drawOnSwapChain(IDXGISwapChain* swapChain) {
+void drawOnSwapChain(IDXGISwapChain* swapChain, bool screenshot) {
     ID3D11Texture2D* backBuffer{};
     if (FAILED(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer)))) return;
+
+    // Capture before anything of ours is drawn, so the file is the game's finished
+    // frame (docs/K §2.2 ②). The toast is the only feedback the key has: the encode
+    // itself runs on a worker thread.
+    if (screenshot) {
+        auto const path = screenshot::save(gDevice, gDeviceContext, backBuffer, gScreenshotDirectory);
+        Overlay::getInstance().notify(
+            neurodragon::log::text(path.empty() ? "ui.toast.shotFailed" : "ui.toast.shotSaved")
+        );
+    }
 
     ID3D11RenderTargetView* target{};
     auto const              result = gDevice->CreateRenderTargetView(backBuffer, nullptr, &target);
@@ -637,7 +683,7 @@ void drawOnSwapChain(IDXGISwapChain* swapChain) {
 }
 
 // Bedrock's case: wrap the current flip-model back buffer for D3D11 use.
-void drawOnWrappedBackBuffer(IDXGISwapChain* swapChain) {
+void drawOnWrappedBackBuffer(IDXGISwapChain* swapChain, bool screenshot) {
     UINT             index{};
     IDXGISwapChain3* swapChain3{};
     if (SUCCEEDED(swapChain->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain3)))) {
@@ -664,6 +710,22 @@ void drawOnWrappedBackBuffer(IDXGISwapChain* swapChain) {
     ID3D11RenderTargetView* target{};
     if (SUCCEEDED(gDevice->CreateRenderTargetView(wrappedBuffer, nullptr, &target)) && target) {
         gDevice11On12->AcquireWrappedResources(&wrappedBuffer, 1);
+        if (screenshot) {
+            ID3D11Texture2D* frame = nullptr;
+            if (SUCCEEDED(wrappedBuffer->QueryInterface(
+                    __uuidof(ID3D11Texture2D),
+                    reinterpret_cast<void**>(&frame)
+                ))
+                && frame) {
+                auto const path = screenshot::save(gDevice, gDeviceContext, frame, gScreenshotDirectory);
+                Overlay::getInstance().notify(
+                    neurodragon::log::text(path.empty() ? "ui.toast.shotFailed" : "ui.toast.shotSaved")
+                );
+                frame->Release();
+            } else {
+                Overlay::getInstance().notify(neurodragon::log::text("ui.toast.shotFailed"));
+            }
+        }
         drawFrame(target);
         gDevice11On12->ReleaseWrappedResources(&wrappedBuffer, 1);
         gDeviceContext->Flush();
@@ -687,14 +749,20 @@ void render(IDXGISwapChain* swapChain) {
 
     bool const visible = Overlay::getInstance().isVisible();
 
+    // Consumed here (not in the window proc): the render thread is the one that can
+    // read the back buffer, and doing it before drawFrame keeps the panel out of
+    // the file.
+    bool const screenshot = gScreenshotRequested.exchange(false, std::memory_order_acq_rel);
+
     if (gVisibleLastFrame && !visible) releaseImGuiInputState();
     gVisibleLastFrame = visible;
 
     // Panel hidden and nothing to show: no ImGui frame at all (except the warm-up
-    // frames that pay for the font atlas).
+    // frames that pay for the font atlas, and a screenshot request, which must not
+    // be dropped just because the panel is closed).
     if (gWarmupFrames > 0) {
         --gWarmupFrames;
-    } else if (!visible && !toastAlive()) {
+    } else if (!visible && !toastAlive() && !screenshot) {
         return;
     }
 
@@ -705,9 +773,9 @@ void render(IDXGISwapChain* swapChain) {
     // measured 16 ms on 2026-10-23, so no stage marker: start-up's one large stall is
     // the temporary objects in hookSwapChainEntryPoints(), which has its own stage.
     if (gDevice11On12) {
-        drawOnWrappedBackBuffer(swapChain);
+        drawOnWrappedBackBuffer(swapChain, screenshot);
     } else {
-        drawOnSwapChain(swapChain);
+        drawOnSwapChain(swapChain, screenshot);
     }
 }
 
@@ -1200,6 +1268,9 @@ void Overlay::uninstall() {
     gVisibleLastFrame     = false;
     gConsumeEscapeRelease = false;
     gToggleKeyDown        = false;
+    gScreenshotKeyDown    = false;
+    gScreenshotRequested.store(false, std::memory_order_release);
+    screenshot::releaseCache();
     gGameKeysDown.fill(false);
     gGameMouseButtonsDown.fill(false);
 
@@ -1241,7 +1312,15 @@ void Overlay::refreshHotkey() {
     int key = config::get().ui.openKey;
     if (key <= 0 || key > 0xFF) key = VK_END;
     gHotkey.store(key, std::memory_order_release);
+
+    int shot = config::get().ui.screenshotKey;
+    if (shot <= 0 || shot > 0xFF) shot = VK_F2;
+    gScreenshotKey.store(shot, std::memory_order_release);
 }
+
+int Overlay::screenshotKey() const { return gScreenshotKey.load(std::memory_order_relaxed); }
+
+void Overlay::setScreenshotDirectory(std::wstring directory) { gScreenshotDirectory = std::move(directory); }
 
 void Overlay::beginHotkeyCapture() {
     gCapturedHotkey.store(0, std::memory_order_release);

@@ -75,8 +75,8 @@
 
 | 功能 | 我们现状 | 代价 | 风险 / 说明 |
 |---|---|---|---|
-| ① RCAS 锐化 | 无；面板 `Sharpness` 是死读数（NGX 已废弃，docs/J §5） | 2–3 天 | 读 `Output` → 写 scratch → 拷回，或两段 dispatch；在 evaluate 之后同 cmdlist 追加，与 NR 写 Color 对称。D3DCompile + PSO 设施在 encode pass 里现成 |
-| ② 成品帧截图 | 只有 TEST 的 `output_dump.bmp` | 0.5–1 天 | Present 钩子现成（`ui/Overlay.cpp` vtable 8/22）；抓后缓冲 = 同帧精确，比 TRP 的「下一帧覆盖」更准；PNG 用 WIC 或 stb |
+| ① RCAS 锐化 | **已实现（2026-10-24，见 [J §9](J-sr-implementation.md#L101-L131)），待实机** | 2–2.5 天 | 不能直抄：引擎 `Output` 是线性 HDR，RCAS 只对 [0,1] 有解，得先过 Reinhard 域 |
+| ② 成品帧截图 | **已实现（2026-10-24，见 [J §10](J-sr-implementation.md#L139-L170)），待实机**：Present 里抓后缓冲 → WIC PNG，F2，不含面板 | 0.5–1 天 | Bedrock 没有「引擎截图函数」可钩，所以是自家按键而不是替换游戏截图 |
 | ③ 遥测补齐 | 缺输入格式/HDR 标志/jitter 相位/成败计数 | 0.5 天 | 只读，零风险 |
 | ④ 换 `nvngx_dlss.dll` | 游戏自带 **310.5.3** | 0.5 小时实验 | TRP 自己随包发运行时。换 310.9.x 可能有新模型，也可能被引擎拒；失败删文件即回滚 |
 | ⑤ 78% / 任意比例 | 不做（docs/J §4） | 0.5–1 天实验 | 见 §5：否掉 75% 时只试了 q=5/q=3，**q=1/q=2 的动态范围覆盖 1920×1080**，且因子表里本来就有 0.75 |

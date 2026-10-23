@@ -156,6 +156,8 @@
             "close": "关闭面板",
             "rebindHint": "点一下按钮，再按你要用的键（Esc 取消）。",
             "capturing": "按键中…",
+            "screenshot": "截图键",
+            "screenshotHint": "按一下把当前成品帧（含 HUD、不含面板）存成 PNG 到 mods/NeuroDragon/screenshots/；改键在 config.json 的 ui.screenshotKey。",
             "config": "配置文件",
             "configHint": "配置只在启动时读取；「应用」只作用于本次运行，「保存为默认」才会写入 config/config.json。",
             "about": "关于",
@@ -175,6 +177,10 @@
         "key": {
             "unknown": "按键 0x{0:02X}"
         },
+        "toast": {
+            "shotSaved": "截图已保存",
+            "shotFailed": "截图失败（见日志）"
+        },
         "sr": {
             "engine": "引擎超分（只读）",
             "renderSize": "渲染尺寸",
@@ -182,7 +188,6 @@
             "ratio": "渲染比例",
             "quality": "质量档（PerfQualityValue）",
             "preset": "网络预设",
-            "sharpness": "锐化值（Sharpness）",
             "flags": "创建标志",
             "readOnlyHint": "这些是引擎当前的实际值；下面的「内部分辨率」会同时改写 DLSS 尺寸与场景尺寸。",
             "callback": "引擎尺寸回调（只读）",
@@ -210,6 +215,19 @@
             "presetL": "L",
             "presetM": "M",
             "modelHint": "写入 DLSS.Hint.Render.Preset 的六个质量档（保留引擎设置的高位）。只在创建 feature 时生效，所以改完需要一次重建：换一档内部分辨率，或重进世界。",
+            "sharpSection": "锐化",
+            "sharpEnable": "RCAS 锐化",
+            "sharpStrength": "强度",
+            "sharpHint": "在引擎 DLSS 之后、调色与 UI 合成之前对成品帧做 RCAS（AMD 对比度自适应锐化），强度把锐化增量放大 0–4 倍（默认 0.672 ≈ 2.7 倍；拉满可能出现白边）。HUD 与文字不会被锐化；画面是线性 HDR，内部先按 Reinhard 映射到 0–1 再锐化。应用后立即生效，不需要重建 DLSS。",
+            "compareEnable": "分屏对比",
+            "compareSplit": "分割位置",
+            "compareHint": "左半保留原图、右半是锐化后的画面，中间 2 像素黑线；用于在任意屏幕上辨认效果，正常游玩请关掉。",
+            "sharpApplied": "已写入强度",
+            "sharpFrames": "锐化帧数",
+            "sharpGpu": "锐化 GPU",
+            "sharpFailures": "失败次数",
+            "sharpZeroHint": "强度为 0：不记录任何 pass，与关闭等价。",
+            "sharpOffHint": "关闭时不记录任何 pass，零开销。",
             "ctx": "引擎上采样配置（实测）",
             "ctxCtx": "帧上下文 质量 / 因子",
             "ctxEngine": "渲染器 请求 q / 请求因子",

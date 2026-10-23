@@ -240,6 +240,11 @@ struct PanelStats {
     bool     hasEngine      = false;
     double   nrMs           = 0.0;
     double   engineMs       = 0.0;
+    // RCAS sharpening (src/neurodragon/sr). Recorded only while it is on, so these
+    // stay empty when the panel shows the switch off.
+    unsigned rcasSamples    = 0;
+    bool     hasRcas        = false;
+    double   rcasMs         = 0.0;
 };
 
 // Engine SR (DLSS feature 1) read-back for the "SR" tab. Everything here is

@@ -1206,11 +1206,11 @@ void retire(void* feature, ID3D12Resource* output, ID3D12Resource* encoded, ID3D
     }
 }
 
-// Timestamps: kSlots distinct frame slots, two brackets (NR / engine DLSS) per
-// slot. A pair is harvested kHarvestDelay frames later, because nothing in this
+// Timestamps: kSlots distinct frame slots, two brackets (NR / engine DLSS / RCAS)
+// per slot. A pair is harvested kHarvestDelay frames later, because nothing in this
 // process can signal a fence on the game's queue.
 constexpr int           kStampSlots   = 8;
-constexpr int           kStampKinds   = 2;
+constexpr int           kStampKinds   = 3;
 constexpr int           kStampPerSlot = kStampKinds * 2;
 constexpr std::uint64_t kHarvestDelay = 3;
 
@@ -2574,6 +2574,7 @@ void nrStampTick(std::uint64_t frame) {
     if (frame % 30 == 0) {
         publishMedian(0);
         publishMedian(1);
+        publishMedian(2);
     }
 }
 
@@ -2583,6 +2584,7 @@ void nrStampReport() {
     }
     reportOne(0, "nr");
     reportOne(1, "engine-dlss");
+    reportOne(2, "rcas");
 }
 
 void nrStampReset() {
@@ -3261,6 +3263,7 @@ PanelStats nrPanelStats() {
 
     stats.nrSamples     = gStampMedianCount[0].load(std::memory_order_relaxed);
     stats.engineSamples = gStampMedianCount[1].load(std::memory_order_relaxed);
+    stats.rcasSamples   = gStampMedianCount[2].load(std::memory_order_relaxed);
     if (stats.nrSamples != 0) {
         stats.nrMs  = gStampMedianMs[0].load(std::memory_order_relaxed);
         stats.hasNr = true;
@@ -3268,6 +3271,10 @@ PanelStats nrPanelStats() {
     if (stats.engineSamples != 0) {
         stats.engineMs  = gStampMedianMs[1].load(std::memory_order_relaxed);
         stats.hasEngine = true;
+    }
+    if (stats.rcasSamples != 0) {
+        stats.rcasMs  = gStampMedianMs[2].load(std::memory_order_relaxed);
+        stats.hasRcas = true;
     }
     return stats;
 }

@@ -6,6 +6,7 @@
 #include "neurodragon/utils/Utils.h"
 
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/ui/Overlay.h"
 
 // Engine frame builder (read-only): its upscaling factor is the one the scene
@@ -1113,6 +1114,15 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // to NR being enabled, because the engine's own samples still have to be read.
     nr::nrStampTick(n);
 
+    // Engine SR post-process (docs/K §2.2 ①): RCAS sharpening of the frame the
+    // engine's DLSS just wrote, recorded on the same command list so it lands after
+    // the upscale and before the engine's colour grading/UI composition. Only on a
+    // successful evaluation: a failed one leaves the previous Output in place, and
+    // sharpening that every frame would stack artifacts.
+    if (result == 1 && out) {
+        sr::recordSharpening(cmdList, out, n);
+    }
+
     if (n <= 3 || n % 600 == 0) {
         ND_DEBUG(
             "[eval] f={} tid={} cl={:#x} h={:#x} {}x{} c={:#x} d={:#x} mv={:#x} o={:#x} ret={:#x}",
@@ -1402,6 +1412,7 @@ void uninstall() {
         gWatcherThread.join();
     }
     nr::nrShutdown();
+    sr::shutdown();
     auto& bus = ll::event::EventBus::getInstance();
     if (gJoinLevelListener) {
         bus.removeListener<ll::event::client::ClientJoinLevelEvent>(gJoinLevelListener);
