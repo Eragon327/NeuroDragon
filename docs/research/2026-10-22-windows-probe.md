@@ -1,5 +1,9 @@
-# B. Windows 侧定位与探针（无 PDB）
+# Windows 侧定位与探针（无 PDB）
 
+> **迁移记录（2026-10-24）**：本文原为 `docs/B-windows-probe.md`，文档改版后迁入 `research/`，
+> 正文未改。文内的 `A/B/C…` 链接指向旧字母文档（D–N 在 `docs/archive/2026-10/`，A–C 已迁到 `research/`）；
+> **现行设计看 [specs/renderdragon.md](../specs/renderdragon.md)**，本文只作为证据。
+>
 > 目标：不依赖 PDB / 符号表，在运行时把 `dragon::framerenderer::modules::taau` 找出来并挂钩，
 > 顺便把 W1-4 剩下的「到底跑 Taau 还是 Bilinear」用一行日志钉死。
 

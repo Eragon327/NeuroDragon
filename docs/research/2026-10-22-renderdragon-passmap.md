@@ -1,5 +1,9 @@
-# A. RenderDragon 通道图与接入点（白盒取证）
+# RenderDragon 通道图与接入点（白盒取证）
 
+> **迁移记录（2026-10-24）**：本文原为 `docs/A-renderdragon-passmap.md`，文档改版后迁入 `research/`，
+> 正文未改。文内的 `A/B/C…` 链接指向旧字母文档（D–N 在 `docs/archive/2026-10/`，A–C 已迁到 `research/`）；
+> **现行设计看 [specs/renderdragon.md](../specs/renderdragon.md)**，本文只作为证据。
+>
 > 目标：在不碰 Windows 二进制的前提下，先从 **Minecraft Education 1.26.32.0 (macOS/Metal)** 的符号化 IDB 里把
 > RenderDragon 的帧结构、上采样模块契约、UI 边界读清楚，作为 Windows 26.51 接线的依据。
 >

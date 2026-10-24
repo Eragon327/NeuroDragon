@@ -1,5 +1,9 @@
-# C. LeviLamina API 速查（本项目实际用到的部分）
+# LeviLamina API 速查（本项目实际用到的部分）
 
+> **迁移记录（2026-10-24）**：本文原为 `docs/C-levilamina-api-notes.md`，文档改版后迁入 `research/`，
+> 正文未改；文内提到的 `docs/...` 路径是旧位置。代码约定已单独成文：
+> [decisions/0004-code-conventions.md](../decisions/0004-code-conventions.md)。
+>
 > 权威文档在 `D:\Documents\LeviLamina\docs\main\contents\api_reference`（随 LL 版本走，别在这里抄全）。
 > 本文只沉淀：**本项目用到的 API + 签名 + 踩坑**，方便写代码时不用再翻源码。
 > 目标 LL：`levilamina 26.51.*`，`target_type = client`。
