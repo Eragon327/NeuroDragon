@@ -4,6 +4,7 @@
 #include "neurodragon/Test.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/VvInject.h"
 #include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
@@ -1004,6 +1005,110 @@ void drawTabSr() {
     widgets::hint("ui.sr.resetHint"_tr().c_str());
 }
 
+// ---------------------------------------------------------------------------
+// VV injection experiment (docs/specs/vv.md §12 A)
+//
+// The engine submits a whole frame in one ExecuteCommandLists call; the probe can
+// cut it at a list boundary and clear the back buffer in between. The panel only
+// picks the boundary - everything else happens on the render thread - and the
+// answers are read off the screen, not out of a number:
+//
+//   clear colour + UI still drawn  -> the cut is before the UI
+//   the whole screen is clear colour -> the cut is after the UI
+//   nothing changed                -> a later list overwrote the buffer (too early)
+// ---------------------------------------------------------------------------
+
+std::string skipReasonText(probe::vv::inject::SkipReason reason) {
+    switch (reason) {
+    case probe::vv::inject::SkipReason::NoDevice:
+        return "ui.diag.vvReasonDevice"_tr();
+    case probe::vv::inject::SkipReason::NoSwapChain:
+        return "ui.diag.vvReasonChain"_tr();
+    case probe::vv::inject::SkipReason::FenceBusy:
+        return "ui.diag.vvReasonFence"_tr();
+    case probe::vv::inject::SkipReason::NoBackBuffer:
+        return "ui.diag.vvReasonBuffer"_tr();
+    case probe::vv::inject::SkipReason::PipelineFailed:
+        return "ui.diag.vvReasonPipeline"_tr();
+    case probe::vv::inject::SkipReason::RecordFailed:
+        return "ui.diag.vvReasonRecord"_tr();
+    default:
+        return {};
+    }
+}
+
+void drawVvInjection() {
+    widgets::sectionHeader("ui.diag.vv"_tr().c_str());
+
+    static int  mode     = static_cast<int>(probe::vv::inject::Mode::Off);
+    static int  boundary = 1;
+    static int  hold     = 20;
+    static int  applied  = -1;
+    static bool tail     = false;
+
+    std::string const names[3] = {
+        "ui.diag.vvOff"_tr(),
+        "ui.diag.vvFixed"_tr(),
+        "ui.diag.vvSweep"_tr(),
+    };
+    char const* items[3] = {names[0].c_str(), names[1].c_str(), names[2].c_str()};
+    widgets::combo("ui.diag.vvMode"_tr().c_str(), &mode, items, 3);
+    if (mode != applied) {
+        probe::vv::inject::setMode(static_cast<probe::vv::inject::Mode>(mode));
+        applied = mode;
+    }
+
+    // The engine's list count is not constant (a world frame is 48-51 lists, the
+    // main-menu dressing room 69, and single frames reach 74/81/107), so a boundary
+    // counted from the head moves whenever the frame changes shape. Counting from the
+    // tail is the only way to ask "is the UI always the last list?" without the number
+    // drifting underneath the experiment.
+    if (widgets::toggle("ui.diag.vvTail"_tr().c_str(), &tail)) {
+        probe::vv::inject::setFromTail(tail);
+        boundary = 1;
+    }
+
+    auto const stats = probe::vv::inject::stats();
+    char       buffer[96]{};
+
+    if (mode == static_cast<int>(probe::vv::inject::Mode::Fixed)) {
+        int const limit = tail ? 16 : 128;
+        if (widgets::sliderInt("ui.diag.vvK"_tr().c_str(), &boundary, 1, limit)) {
+            probe::vv::inject::setK(static_cast<unsigned>(boundary));
+        }
+    } else if (mode == static_cast<int>(probe::vv::inject::Mode::Sweep)) {
+        if (widgets::sliderInt("ui.diag.vvHold"_tr().c_str(), &hold, 1, 60)) {
+            probe::vv::inject::setHoldFrames(static_cast<unsigned>(hold));
+        }
+    }
+    if (mode != static_cast<int>(probe::vv::inject::Mode::Off)) {
+        std::snprintf(buffer, sizeof(buffer), "%u / %u", stats.split, stats.listsPerSubmit);
+        widgets::statRow("ui.diag.vvAt"_tr().c_str(), buffer);
+    }
+    if (stats.minLists) {
+        std::snprintf(buffer, sizeof(buffer), "%u .. %u", stats.minLists, stats.maxLists);
+        widgets::statRow("ui.diag.vvRange"_tr().c_str(), buffer);
+    }
+
+    if (!stats.ready) {
+        widgets::statRow("ui.diag.vvState"_tr().c_str(), "ui.diag.vvNotReady"_tr().c_str(), kTextDim);
+    } else if (stats.reason != probe::vv::inject::SkipReason::None) {
+        widgets::statRow("ui.diag.vvState"_tr().c_str(), skipReasonText(stats.reason).c_str(), kAmber);
+    } else {
+        widgets::statRow("ui.diag.vvState"_tr().c_str(), "ui.diag.vvRunning"_tr().c_str(), kAccent);
+    }
+
+    std::snprintf(buffer, sizeof(buffer), "%u", stats.listsPerSubmit);
+    widgets::statRow("ui.diag.vvLists"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u", stats.injected);
+    widgets::statRow("ui.diag.vvInjected"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u", stats.skipped);
+    widgets::statRow("ui.diag.vvSkipped"_tr().c_str(), buffer, stats.skipped ? kAmber : kTextDim);
+    std::snprintf(buffer, sizeof(buffer), "%u", stats.sweeps);
+    widgets::statRow("ui.diag.vvPass"_tr().c_str(), buffer);
+    widgets::hint("ui.diag.vvHint"_tr().c_str());
+}
+
 void drawTabDiagnostics() {
     auto const stats = nr::nrPanelStats();
 
@@ -1080,6 +1185,9 @@ void drawTabDiagnostics() {
     if (widgets::toggle("ui.diag.paramLog"_tr().c_str(), &gDraft.paramLog)) markDirty();
 #endif
     widgets::hint("ui.diag.warnHint"_tr().c_str());
+
+    ImGui::Spacing();
+    drawVvInjection();
 
     // What the last evaluation actually wrote (docs/L 1.2). This is the answer to
     // "did my change reach the runtime": the numbers come from the same variables

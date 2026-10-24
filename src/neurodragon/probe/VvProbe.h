@@ -44,6 +44,11 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount);
 // only to turn the counters above into "per frame" numbers.
 void onPresent();
 
+// Called when the game reports that a world was joined (PlayerJoinEvent). One semantic
+// dump is taken a few seconds later, which is the only point where the render-resolution
+// textures hold a real rendered world instead of the main-menu panorama.
+void noteWorldEntered();
+
 // Called once from the overlay's present hook: the swap chain is the only way to
 // learn which render targets are back buffers, and those must not be transitioned by
 // the BMP dump (they live in PRESENT, not COMMON).

@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/ui/GameNotice.h"
 #include "neurodragon/ui/InputGuard.h"
@@ -1354,6 +1355,25 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     }
     probe::vv::setGameQueue(queue);
     probe::vv::onExecuteCommandLists(reinterpret_cast<void* const*>(lists), count);
+
+    // Boundary experiment (docs/specs/vv.md §12 A): cut the engine's single
+    // per-frame submission into "prefix + our clear + suffix" on the same queue. The
+    // order of the three calls is the frame's order - a command queue executes
+    // submissions in the order they arrive - so this is exactly "insert GPU work
+    // between two passes". Off by default; prepare() returns 0 and the call below
+    // forwards everything unchanged.
+    unsigned const splitAt = probe::vv::inject::prepare(queue, count);
+    if (splitAt != 0 && splitAt <= count) {
+        if (ID3D12CommandList* const ours = static_cast<ID3D12CommandList*>(probe::vv::inject::list())) {
+            gOriginalExecuteCommandLists(queue, splitAt, lists);
+            gOriginalExecuteCommandLists(queue, 1, &ours);
+            if (count > splitAt) {
+                gOriginalExecuteCommandLists(queue, count - splitAt, lists + splitAt);
+            }
+            probe::vv::inject::submitted(splitAt, count);
+            return;
+        }
+    }
     gOriginalExecuteCommandLists(queue, count, lists);
 }
 

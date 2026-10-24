@@ -2,6 +2,7 @@
 
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/probe/VvCalibrate.h"
+#include "neurodragon/probe/VvInject.h"
 #include "neurodragon/utils/Utils.h"
 
 #include <MinHook.h>
@@ -14,6 +15,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <cwchar>
+#include <filesystem>
 #include <string>
 
 namespace neurodragon::probe::vv {
@@ -152,6 +155,34 @@ unsigned           gDumpPasses = 0;
 void*    gSeen[256]{};
 unsigned gSeenCount = 0;
 
+// The render resolution the TAAU pass upscales FROM: display viewport x the engine's
+// factor. It is the key that turns the render-target inventory into named inputs
+// (docs/specs/vv.md §6): 373x239 fmt=10 is the HDR colour, fmt=12 the motion vectors,
+// fmt=54 the depth. Filled by taauDetour, which is the only place both numbers exist.
+std::atomic<unsigned> gRenderWidth{0};
+std::atomic<unsigned> gRenderHeight{0};
+// Bit per candidate that has been dumped successfully: the inventory is not always
+// complete (a rebuild may create only part of the render-resolution group), so the
+// dump retries until every format has been captured once.
+std::atomic<unsigned> gSemanticsMask{0};
+// Dumps are taken in batches: the main menu also has content, so a single dump
+// can easily be the menu instead of a rendered world. Five batches of ~10 s apart
+// cover any menu -> world transition; each file carries its batch number.
+std::atomic<unsigned> gDumpBatch{0};
+// Tick at which a world was entered; the dump waits a few seconds for the world
+// to finish loading. Zero means no pending dump.
+std::atomic<unsigned> gWorldEnteredTick{0};
+// Tick of the last render-target view creation. The engine only creates these when it
+// (re)builds the render graph - a fresh start reuses the previous process' layout and
+// the views are created before mods load, so the inventory stays empty until something
+// changes the window. The dump only runs a few seconds after the last creation, which
+// is exactly the "quiet window" the crash of 2026-10-24 22:58 was missing.
+std::atomic<unsigned> gLastRtvTick{0};
+// Kept only to dump one back buffer as a control: its state is known (PRESENT after
+// the flip), so if that dump has content and a render-resolution one does not, the
+// problem is the guessed StateBefore, not the copy path.
+std::atomic<void*> gSwapChain{nullptr};
+
 void hookDevice(void* device);
 void hookCommandList(void* list);
 class ID3D12GraphicsCommandList;
@@ -176,6 +207,12 @@ void* lookupRtv(std::uintptr_t handle) {
 }
 
 void createRtvDetour(void* device, void* resource, void const* desc, std::uintptr_t handle) {
+    // The boundary experiment creates a view of the back buffer on this same device;
+    // the back buffer is not part of the frame graph this hook inventories.
+    if (inject::recordingOwnView()) {
+        gOriginalCreateRtv(device, resource, desc, handle);
+        return;
+    }
     recordRtv(handle, resource);
     // The first render-target view names a real ID3D12Resource, so its vtable is the
     // resource vtable. Matching against it is what makes the texture scan safe: a
@@ -196,7 +233,13 @@ void createRtvDetour(void* device, void* resource, void const* desc, std::uintpt
         }
     }
     if (isNew && gSeenCount < 256) {
+        // Hold a reference: the engine rebuilds the whole render graph on a resize and
+        // frees the previous textures, and the inventory must survive that to be usable
+        // later (the semantic dump runs seconds after the rebuild). The cost is that the
+        // old textures stay alive until uninstall - tens of MB, and never a back buffer.
+        addRefComObject(resource);
         gSeen[gSeenCount++] = resource;
+        gLastRtvTick.store(GetTickCount(), std::memory_order_relaxed);
         auto const info = nr::describe(resource);
         utils::logger().info(
             "[vv] rtv res={:#x} {}x{} fmt={} flags={:#x}",
@@ -212,6 +255,12 @@ void createRtvDetour(void* device, void* resource, void const* desc, std::uintpt
 
 void closeDetour(void* list) {
     gOriginalClose(list);
+    // Recording the injection list calls Close too; it is not part of the engine's
+    // frame, so it must not be counted as a boundary (docs/specs/vv.md §3 measures
+    // the engine's ~48 lists per frame).
+    if (inject::isOwnList(list)) {
+        return;
+    }
     if (!gDumpFrame.load(std::memory_order_relaxed)) {
         return;
     }
@@ -263,6 +312,145 @@ void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int 
     gOriginalOmSetRtv(list, count, rtvs, single, dsv);
 }
 
+
+// ---------------------------------------------------------------------------
+// Resource creation: every texture, not just the render targets
+// ---------------------------------------------------------------------------
+//
+// The render-target inventory was enough for the colour and the normals but not for
+// the motion vectors or the depth (2026-10-25): those are bgfx transients and depth
+// views, and never get a render-target view. Hooking the two creation entry points
+// catches everything the engine (and bgfx) builds - and a resize rebuilds all of it,
+// so the inventory is complete right after one.
+//
+// Both detours forward immediately; the only added work is one GetDesc per created
+// texture, filtered to 64x64 and up.
+
+using CreateCommittedFn = long (*)(
+    void*       device,
+    void const* heapProperties,
+    unsigned    heapFlags,
+    void const* desc,
+    unsigned    initialState,
+    void const* optimizedClearValue,
+    void const* riidResource,
+    void**      resource
+);
+using CreatePlacedFn = long (*)(
+    void*              device,
+    void*              heap,
+    unsigned long long heapOffset,
+    void const*        desc,
+    unsigned           initialState,
+    void const*        optimizedClearValue,
+    void const*        riidResource,
+    void**             resource
+);
+
+CreateCommittedFn gOriginalCommitted{};
+CreatePlacedFn    gOriginalPlaced{};
+void*             gHookedCreateTargets[2]{};
+unsigned          gHookedCreateCount = 0;
+
+struct TextureRecord {
+    void*    resource;
+    unsigned width;
+    unsigned height;
+    unsigned format;
+    unsigned source; // 1 = committed, 2 = placed
+};
+constexpr unsigned kTextureSlots = 4096;
+TextureRecord gTextures[kTextureSlots]{};
+unsigned      gTextureCount = 0;
+
+void recordTexture(void* resource, unsigned source) {
+    if (!resource) {
+        return;
+    }
+    auto const info = nr::describe(resource);
+    if (info.dimension != 3 || info.width < 64 || info.height < 64 || info.mips > 2) {
+        return;
+    }
+    for (unsigned i = 0; i < gTextureCount; ++i) {
+        if (gTextures[i].resource == resource) {
+            return;
+        }
+    }
+    if (gTextureCount >= kTextureSlots) {
+        return;
+    }
+    // Same reason as the render-target inventory: hold a reference so a later rebuild
+    // cannot free the texture out from under a dump.
+    addRefComObject(resource);
+    gTextures[gTextureCount++] = TextureRecord{
+        resource,
+        static_cast<unsigned>(info.width),
+        static_cast<unsigned>(info.height),
+        info.format,
+        source
+    };
+    utils::logger().info(
+        "[vv] tex res={:#x} {}x{} fmt={} src={}",
+        reinterpret_cast<std::uintptr_t>(resource),
+        static_cast<unsigned>(info.width),
+        static_cast<unsigned>(info.height),
+        info.format,
+        source == 1 ? "committed" : "placed"
+    );
+}
+
+long createCommittedDetour(
+    void*       device,
+    void const* heapProperties,
+    unsigned    heapFlags,
+    void const* desc,
+    unsigned    initialState,
+    void const* optimizedClearValue,
+    void const* riidResource,
+    void**      resource
+) {
+    long const result = gOriginalCommitted(
+        device,
+        heapProperties,
+        heapFlags,
+        desc,
+        initialState,
+        optimizedClearValue,
+        riidResource,
+        resource
+    );
+    if (result >= 0 && resource && *resource) {
+        recordTexture(*resource, 1);
+    }
+    return result;
+}
+
+long createPlacedDetour(
+    void*              device,
+    void*              heap,
+    unsigned long long heapOffset,
+    void const*        desc,
+    unsigned           initialState,
+    void const*        optimizedClearValue,
+    void const*        riidResource,
+    void**             resource
+) {
+    long const result = gOriginalPlaced(
+        device,
+        heap,
+        heapOffset,
+        desc,
+        initialState,
+        optimizedClearValue,
+        riidResource,
+        resource
+    );
+    if (result >= 0 && resource && *resource) {
+        recordTexture(*resource, 2);
+    }
+    return result;
+}
+
 void hookDevice(void* device) {
     if (!device) {
         return;
@@ -276,7 +464,7 @@ void hookDevice(void* device) {
         gEngineDevice.store(device, std::memory_order_relaxed);
     }
     auto* const* vtbl = *reinterpret_cast<void* const* const*>(device);
-    if (!vtbl || !readable(vtbl, 21 * sizeof(void*))) {
+    if (!vtbl || !readable(vtbl, 30 * sizeof(void*))) {
         utils::logger().warn("[vv] device vtable unreadable; render targets will not resolve");
         return;
     }
@@ -301,9 +489,54 @@ void hookDevice(void* device) {
         utils::logger().warn("[vv] could not hook CreateRenderTargetView for device {:#x}", reinterpret_cast<std::uintptr_t>(device));
     }
 
-    // Slot calibration is disabled: driving 32 recording detours on a live client
-    // crashed it inside nvwgf2umx (AV at 0x2b88, 2026-10-24 21:54). What is left is
-    // the safe half - identity only, no hooks (see hookCommandList).
+    // Resource creation: slots 27 (CreateCommittedResource) and 29
+    // (CreatePlacedResource). Slot 20 is proven, and these are core device methods that
+    // have not moved since D3D12 shipped; if a future runtime reorders them the first
+    // call faults, which is why the probe logs the hook result instead of assuming it.
+    auto* const committedTarget = const_cast<void*>(vtbl[27]);
+    auto* const placedTarget    = const_cast<void*>(vtbl[29]);
+    bool        committedHooked = false;
+    bool        placedHooked    = false;
+    for (unsigned i = 0; i < gHookedCreateCount; ++i) {
+        if (gHookedCreateTargets[i] == committedTarget) {
+            committedHooked = true;
+        }
+        if (gHookedCreateTargets[i] == placedTarget) {
+            placedHooked = true;
+        }
+    }
+    if (!committedHooked
+        && MH_CreateHook(
+               committedTarget,
+               reinterpret_cast<void*>(&createCommittedDetour),
+               reinterpret_cast<void**>(&gOriginalCommitted)
+           )
+               == MH_OK
+        && MH_EnableHook(committedTarget) == MH_OK) {
+        if (gHookedCreateCount < 2) {
+            gHookedCreateTargets[gHookedCreateCount++] = committedTarget;
+        }
+        committedHooked = true;
+        utils::logger().info("[vv] CreateCommittedResource hooked");
+    } else if (!committedHooked) {
+        utils::logger().warn("[vv] CreateCommittedResource not hooked; textures stay partial");
+    }
+    if (!placedHooked
+        && MH_CreateHook(
+               placedTarget,
+               reinterpret_cast<void*>(&createPlacedDetour),
+               reinterpret_cast<void**>(&gOriginalPlaced)
+           )
+               == MH_OK
+        && MH_EnableHook(placedTarget) == MH_OK) {
+        if (gHookedCreateCount < 2) {
+            gHookedCreateTargets[gHookedCreateCount++] = placedTarget;
+        }
+        placedHooked = true;
+        utils::logger().info("[vv] CreatePlacedResource hooked");
+    } else if (!placedHooked) {
+        utils::logger().warn("[vv] CreatePlacedResource not hooked; textures stay partial");
+    }
 }
 
 void drawInstancedDetour(void* list, unsigned vertexCount, unsigned instanceCount, unsigned startVertex, unsigned startInstance) {
@@ -378,6 +611,9 @@ void hookCommandList(void* list) {
         if (void* const device = engineDeviceFromCommandList(list)) {
             utils::logger().info("[vv] engine device {:#x}", reinterpret_cast<std::uintptr_t>(device));
             hookDevice(device);
+            // The boundary experiment records on the engine's device too; it only
+            // needs to be told which one that is (docs/specs/vv.md §12 A).
+            inject::setDevice(device);
         }
     }
 
@@ -645,6 +881,66 @@ void scanForTextures(char const* tag, std::uint64_t index, char const* slot, voi
     }
 }
 
+// The dependency's +0x8 is NOT a resource and NOT a bgfx handle: it is a framegraph
+// node (it has its own vtable and carries pass names like "DoDeferredShadingPhase"
+// in its first 0x100 bytes). Looking for a resource *at* that level can never hit -
+// which is what docs/specs/vv.md §4.1 measured ("no ID3D12Resource in the dependency
+// object"). What the graph actually holds is a handful of pointers inside the node,
+// so the productive question is: does any qword in this small object graph equal a
+// render target we already know?
+//
+// That comparison needs no guess about vtables or layouts, and it cannot fault: only
+// pointers into committed memory are followed, and the walk has a node budget.
+constexpr unsigned kNodeBytes  = 0x100;
+constexpr unsigned kNodeBudget = 96;
+
+void scanForKnownTargets(
+    char const* tag,
+    std::uint64_t index,
+    char const*   slot,
+    void const*   node,
+    unsigned      depth,
+    unsigned&     budget
+) {
+    if (!node || depth == 0 || budget == 0 || !readable(node, 8)) {
+        return;
+    }
+    --budget;
+    for (std::size_t offset = 0; offset + 8 <= kNodeBytes; offset += 8) {
+        std::uint64_t value = 0;
+        if (!peek(node, offset, value)) {
+            return;
+        }
+        auto* const candidate = reinterpret_cast<void*>(value);
+        if (!candidate) {
+            continue;
+        }
+        for (unsigned i = 0; i < gSeenCount; ++i) {
+            if (gSeen[i] != candidate) {
+                continue;
+            }
+            auto const info = nr::describe(candidate);
+            utils::logger().info(
+                "[vv] taau #{} {}.{} node+{:#x} -> render target {:#x} {}x{} fmt={} flags={:#x}",
+                index,
+                tag,
+                slot,
+                offset,
+                reinterpret_cast<std::uintptr_t>(candidate),
+                static_cast<unsigned>(info.width),
+                static_cast<unsigned>(info.height),
+                info.format,
+                info.flags
+            );
+            break;
+        }
+        auto const address = reinterpret_cast<std::uintptr_t>(candidate);
+        if (depth > 1 && address > 0x10000 && address < 0x7fff00000000ULL) {
+            scanForKnownTargets(tag, index, slot, candidate, depth - 1, budget);
+        }
+    }
+}
+
 // BindFramebufferColor<RenderContext> is opaque (the SDK header is an empty
 // struct). Disassembling the shipped `taau` shows exactly what it reads: one qword
 // at **+0x8** per dependency, handed to the material as the texture override value
@@ -684,6 +980,10 @@ void logDependencies(char const* tag, std::uint64_t index, void* d0, void* d1, v
         scanForTextures(tag, index, names[i], deps[i], 0x40);
         scanForTextures(tag, index, names[i], resolved, 0x200);
         scanForTextures(tag, index, names[i], reinterpret_cast<void const*>(head[2]), 0x100);
+        // And the question that actually matters for M6: is any render target we
+        // already know reachable from this node by one to three pointer hops?
+        unsigned budget = kNodeBudget;
+        scanForKnownTargets(tag, index, names[i], deps[i], 3, budget);
         utils::logger().info(
             "[vv] taau #{} {}.{} this={:#x} id={:#x} res={:#x} +10={:#x} head={:#x},{:#x},{:#x},{:#x}"
             " resText=[{}] mod0={} secondText=[{}]",
@@ -730,6 +1030,12 @@ void taauDetour(
         height = rect[3];
     }
     auto const up = readUpscaling(upscaling);
+    if (width && height && up.factor > 0.0f && up.factor <= 1.0f) {
+        // The engine truncates (1131 x 0.33 -> 373x239, not 373x240), so this must
+        // truncate too; findTarget still allows a two-pixel tolerance.
+        gRenderWidth.store(static_cast<unsigned>(static_cast<float>(width) * up.factor), std::memory_order_relaxed);
+        gRenderHeight.store(static_cast<unsigned>(static_cast<float>(height) * up.factor), std::memory_order_relaxed);
+    }
 
     bool const verbose = index <= 4 || index % 300 == 0;
     if (verbose) {
@@ -789,6 +1095,117 @@ void taauDetour(
     }
 }
 
+// The macOS decompile of taau's declarator is explicit about where the four textures
+// live: every dependency is read as `*(dep + 0x10)` and stored into the pass' own
+// `TAAContext`, next to the uniform names InputFinalColor / InputTAAHistory /
+// InputBufferMotionVectors. In the Windows log the same field is exactly the one that
+// differs per dependency (colour = a heap pointer, motion = 0x5242, history/output = 0
+// while the pass is only *declared*), so the declared values are not the resolved ones.
+//
+// The resolved set is in the TAAContext handed to the draw callback - our hook's third
+// argument - which is why the dump happens there and not in the declarator. Nothing is
+// dereferenced unless a qword's own vtable is a known ID3D12Resource, so a heap block
+// that happens to look like a pointer cannot fault the render thread.
+void logTaaContext(unsigned frame, void const* object, unsigned words) {
+    if (!object || !readable(object, static_cast<std::size_t>(words) * 8)) {
+        utils::logger().warn("[vv] taa ctx not readable at {:#x}", reinterpret_cast<std::uintptr_t>(object));
+        return;
+    }
+    auto const vtable = gResourceVtable.load(std::memory_order_relaxed);
+    utils::logger().info(
+        "[vv] taa ctx #{} base={:#x} words={}",
+        frame,
+        reinterpret_cast<std::uintptr_t>(object),
+        words
+    );
+    for (unsigned i = 0; i < words; ++i) {
+        std::uint64_t value = 0;
+        if (!peek(object, static_cast<std::size_t>(i) * 8, value)) {
+            return;
+        }
+        if (!value) {
+            continue;
+        }
+        auto const  module = moduleOf(value);
+        std::string texture;
+        auto* const candidate = reinterpret_cast<void*>(value);
+        if (vtable && readable(candidate, 8) && *static_cast<void* const*>(candidate) == vtable) {
+            auto const info = nr::describe(candidate);
+            if (info.dimension == 3 && info.width >= 16 && info.height >= 16) {
+                char text[96]{};
+                std::snprintf(
+                    text,
+                    sizeof(text),
+                    " -> texture {:#x} {}x{} fmt={}",
+                    reinterpret_cast<std::uintptr_t>(candidate),
+                    static_cast<unsigned>(info.width),
+                    static_cast<unsigned>(info.height),
+                    info.format
+                );
+                texture = text;
+            }
+        }
+        utils::logger().info(
+            "[vv] taa ctx #{} +{:#x} = {:#x} mod={}{}",
+            frame,
+            i * 8,
+            value,
+            module,
+            texture
+        );
+    }
+}
+
+
+// The macOS decompile of taau's draw callback settles what the motion vectors are:
+// there is no MV texture. The callback uploads
+//   PreviousViewProjectionMatrixUniform / CurrentViewProjectionMatrixUniform,
+//   CurrentWorldOrigin / PreviousWorldOrigin, SubPixelJitterAndValidHistory
+// and the shader therefore reconstructs reprojection from depth + those matrices
+// (standard TAA). M6 has to do the same, which means it needs those matrices - and the
+// callback's second argument (the ExecutionContext) is where they live.
+//
+// On macOS they sit at +520 and +584; the Windows layout is its own, so the probe scans
+// the context for the two 4x4 float matrices instead of hardcoding an offset. A
+// projection/view-projection matrix ends in (x, y, 0, 1) with a non-zero x/y, which is a
+// cheap and reliable filter.
+// The macOS decompile settles what the motion vectors are: there is no MV texture. The
+// callback uploads PreviousViewProjectionMatrixUniform / CurrentViewProjectionMatrixUniform,
+// CurrentWorldOrigin / PreviousWorldOrigin and SubPixelJitterAndValidHistory, so the
+// shader reconstructs reprojection from depth + those matrices (standard TAA). M6 needs
+// the same matrices, so find where Windows keeps them.
+//
+// macOS puts them at +520 / +584 of the callback's third argument; on Windows that area
+// is empty, and a "last column is (x,0,0,1)" filter finds nothing (a projection matrix
+// ends in (0,0,1,0)). So print the raw floats around there and read the layout off the
+// numbers instead of guessing a predicate.
+void dumpContextFloats(void const* object) {
+    if (!object || !readable(object, 0x2C0)) {
+        utils::logger().warn("[vv] ctxf: not readable");
+        return;
+    }
+    auto const* const bytes = static_cast<unsigned char const*>(object);
+    for (std::size_t offset = 0; offset + 32 <= 0x2C0; offset += 32) {
+        float v[8]{};
+        if (!readable(bytes + offset, sizeof(v))) {
+            return;
+        }
+        std::memcpy(v, bytes + offset, sizeof(v));
+        utils::logger().info(
+            "[vv] ctxf +{:#04x}: {:+.4f} {:+.4f} {:+.4f} {:+.4f} | {:+.4f} {:+.4f} {:+.4f} {:+.4f}",
+            offset,
+            static_cast<double>(v[0]),
+            static_cast<double>(v[1]),
+            static_cast<double>(v[2]),
+            static_cast<double>(v[3]),
+            static_cast<double>(v[4]),
+            static_cast<double>(v[5]),
+            static_cast<double>(v[6]),
+            static_cast<double>(v[7])
+        );
+    }
+}
+
 void drawDetour(void* self, void* context, void* third, void* fourth) {
     auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
     if (index <= 12 || index % 600 == 0) {
@@ -801,6 +1218,10 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
             GetCurrentThreadId(),
             now.QuadPart
         );
+    }
+    if (index <= 2) {
+        logTaaContext(static_cast<unsigned>(index), third, 0x60);
+        dumpContextFloats(third);
     }
     gOriginalDraw(self, context, third, fourth);
 }
@@ -859,6 +1280,123 @@ void dumpCandidates() {
     utils::logger().info("[vv] dump done, {} file(s) in {}", written, "the game directory");
 }
 
+// The render target whose description matches (width, height, format). A resource is
+// logged once, when its first view is created, so this is a stable lookup: the engine
+// reuses these textures instead of recreating them per frame.
+// Newest first: a resize rebuilds the whole render graph, so the same size/format can
+// appear several times in the inventory and only the last generation is live. Reading
+// the first one returns a released resource whose bytes are whatever the allocator left
+// behind (observed as all zeros on 2026-10-25 01:27).
+void* findTarget(unsigned width, unsigned height, unsigned format) {
+    for (unsigned i = gSeenCount; i > 0; --i) {
+        auto const info = nr::describe(gSeen[i - 1]);
+        auto const w = static_cast<unsigned>(info.width);
+        auto const h = static_cast<unsigned>(info.height);
+        // The render size is computed from viewport x factor, and the engine rounds it
+        // its own way; a two-pixel tolerance keeps that from hiding every input.
+        // (Not named `near`: <Windows.h> still defines that as a macro.)
+        auto const withinTwo = [](unsigned a, unsigned b) {
+            return (a > b ? a - b : b - a) <= 2;
+        };
+        if (withinTwo(w, width) && withinTwo(h, height) && info.format == format) {
+            return gSeen[i - 1];
+        }
+    }
+    return nullptr;
+}
+
+// One-shot: write the raw bytes of the render-resolution group to <game dir>. The
+// motion vectors are UINT there, and whether those uint16 pairs are half floats or
+// fixed point cannot be answered by looking at the D3D12 format - only by decoding the
+// bytes both ways offline. Same for the depth: two candidates are dumped so the right
+// one is picked from data, not from a guess.
+// Whether the dumped file contains anything but zeros. At the main menu the world
+// textures exist but are never written, so a dump there is all zeros and tells us
+// nothing: the probe retries until the frame graph actually rendered (i.e. in a world).
+bool dumpHasContent(wchar_t const* path) {
+    HANDLE const file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (file == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    SetFilePointer(file, 32, nullptr, FILE_BEGIN); // past the "NDRW" header
+    unsigned char buffer[4096]{};
+    DWORD         read = 0;
+    ReadFile(file, buffer, static_cast<DWORD>(sizeof(buffer)), &read, nullptr);
+    CloseHandle(file);
+    for (DWORD i = 0; i < read; ++i) {
+        if (buffer[i] != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A dump is requested by creating <game dir>/vv_dump_now.txt. The probe removes the
+// marker and takes one batch, which makes the capture exact: it happens in whatever
+// state the game is in at that moment, instead of guessing from a frame counter (the
+// automatic version burned all its batches while the world was still loading).
+bool takeDumpRequest() {
+    auto const marker = utils::applicationDirectory() + L"\\vv_dump_now.txt";
+    std::error_code error;
+    if (!std::filesystem::exists(marker, error)) {
+        return false;
+    }
+    std::filesystem::remove(marker, error);
+    return true;
+}
+
+unsigned dumpSemantics(unsigned batch) {
+    auto* const device = gEngineDevice.load(std::memory_order_relaxed);
+    auto* const queue  = gGameQueue.load(std::memory_order_relaxed);
+    unsigned const w   = gRenderWidth.load(std::memory_order_relaxed);
+    unsigned const h   = gRenderHeight.load(std::memory_order_relaxed);
+    if (!device || !queue || !w || !h) {
+        utils::logger().warn("[vv] semantics: no device/queue/render size yet ({}x{})", w, h);
+        return 0;
+    }
+    auto const directory = utils::applicationDirectory();
+    auto const withinTwo = [](unsigned a, unsigned b) {
+        return (a > b ? a - b : b - a) <= 2;
+    };
+
+    // The render-resolution group is small (a handful of textures), and which format
+    // carries what turned out to be counter-intuitive: fmt=10 is the world-space NORMALS,
+    // fmt=12 is the scene COLOUR, and the motion vectors are not a render target at all
+    // (2026-10-25). So dump everything at this size instead of a guessed format list and
+    // let the offline tool identify them.
+    unsigned written = 0;
+    unsigned index   = 0;
+    for (unsigned i = 0; i < gTextureCount; ++i) {
+        auto const& record = gTextures[i];
+        if (!withinTwo(record.width, w) || !withinTwo(record.height, h)) {
+            continue;
+        }
+        wchar_t name[96]{};
+        std::swprintf(name, std::size(name), L"vv_b%u_res_%02u_%ux%u_fmt%u.bin", batch, index++, w, h, record.format);
+        auto const path = directory + L"\\" + name;
+        if (dumpTextureRawAs(device, queue, record.resource, path.c_str(), DumpState::Common)) {
+            ++written;
+            utils::logger().info("[vv] semantics: res fmt={} src={} written", record.format, record.source);
+        }
+    }
+    utils::logger().info("[vv] semantics: {} render-resolution target(s) dumped", written);
+
+    // "Did it render" is answered by the files themselves: a world frame writes them, the
+    // main menu leaves them empty.
+    bool hasContent = false;
+    for (auto const& entry : std::filesystem::directory_iterator(directory)) {
+        auto const filename = entry.path().filename().wstring();
+        if (filename.rfind(L"vv_", 0) != 0 || filename.find(L"_res_") == std::wstring::npos != 0) {
+            continue;
+        }
+        if (dumpHasContent(entry.path().c_str())) {
+            hasContent = true;
+            break;
+        }
+    }
+    return hasContent ? 0x1Fu : 0u;
+}
+
 void logSubmitRate(std::uint64_t presents) {
     auto const submits = gSubmits.load(std::memory_order_relaxed);
     auto const lists   = gSubmittedLists.load(std::memory_order_relaxed);
@@ -883,6 +1421,11 @@ void logSubmitRate(std::uint64_t presents) {
 }
 
 } // namespace
+
+void noteWorldEntered() {
+    gWorldEnteredTick.store(GetTickCount(), std::memory_order_relaxed);
+    utils::logger().info("[vv] semantics: world entered; dump queued");
+}
 
 bool install() {
     if (gInstalled.load(std::memory_order_acquire)) {
@@ -962,6 +1505,20 @@ bool install() {
 }
 
 void uninstall() {
+    // The boundary experiment created objects on the engine's device, so it has to
+    // let go of them before the probe's own hooks come down.
+    inject::release();
+    // The inventory holds one reference per recorded render target (see createRtvDetour).
+    for (unsigned i = 0; i < gSeenCount; ++i) {
+        releaseComObject(gSeen[i]);
+        gSeen[i] = nullptr;
+    }
+    gSeenCount = 0;
+    for (unsigned i = 0; i < gTextureCount; ++i) {
+        releaseComObject(gTextures[i].resource);
+        gTextures[i].resource = nullptr;
+    }
+    gTextureCount = 0;
     if (gDrawTarget) {
         MH_DisableHook(gDrawTarget);
         MH_RemoveHook(gDrawTarget);
@@ -1054,7 +1611,41 @@ void onPresent() {
     // fullscreen toggle - nvwgf2umx AV at test byte [r10+0x3C]. A texture copy has to
     // happen when nothing can resize, so the dump is only ever started explicitly
     // (see dumpCandidates) once a trigger that cannot race a resize exists.
-    (void)presents;
+    // One shot, as soon as the inventory actually contains the render-resolution
+    // colour (fmt=10) and nothing has been created for three seconds. The engine only
+    // creates those views when it rebuilds the render graph, so this waits for a real
+    // rebuild instead of firing at a fixed frame - and it never fires while a rebuild
+    // is still in progress.
+    // All five candidates captured once = done. The inventory can be incomplete right
+    // after a resize (only part of the render-resolution group gets a new view), so this
+    // keeps retrying instead of stopping at the first partial success.
+    // World-entered trigger: one batch, three seconds after the join event (the world is
+    // still streaming in before that).
+    unsigned const entered = gWorldEnteredTick.load(std::memory_order_relaxed);
+    if (entered != 0 && GetTickCount() - entered > 3000) {
+        gWorldEnteredTick.store(0, std::memory_order_relaxed);
+        unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
+        unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
+        if (w && h) {
+            unsigned const batch = gDumpBatch.fetch_add(1, std::memory_order_acq_rel);
+            utils::logger().info("[vv] semantics: batch {} requested by world-enter", batch);
+            dumpSemantics(batch);
+        }
+    }
+    if (presents % 30 == 0 && takeDumpRequest()) {
+        unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
+        unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
+        if (w && h) {
+            unsigned const batch = gDumpBatch.fetch_add(1, std::memory_order_acq_rel);
+            if (dumpSemantics(batch)) {
+                utils::logger().info("[vv] semantics: batch {} captured (requested)", batch);
+            } else {
+                utils::logger().warn("[vv] semantics: batch {} empty", batch);
+            }
+        } else {
+            utils::logger().warn("[vv] semantics: requested but the render size is unknown");
+        }
+    }
     (void)gSeenCount;
     (void)gLastSeenCount;
     (void)gSeenStableSince;
@@ -1065,6 +1656,10 @@ void noteSwapChain(void* swapChain) {
     if (!swapChain) {
         return;
     }
+    gSwapChain.store(swapChain, std::memory_order_relaxed);
+    // The injection experiment reads the current back buffer from the same chain, so
+    // it is handed the pointer before the per-present bookkeeping below.
+    inject::noteSwapChain(swapChain);
     // Re-read every present: a resize replaces the buffers, and a stale exclusion
     // list would let the dump touch a back buffer (which lives in PRESENT).
     void*    buffers[2]{};

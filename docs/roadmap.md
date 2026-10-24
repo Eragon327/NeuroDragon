@@ -81,6 +81,10 @@ B. 认纹理           A 通过后，把 dumpTextureBmp 接到显式触发（面
 C. bgfx 桥          仅当 B 对不上 taau 的输入/输出时才做
 ```
 
+A 已实现（面板「诊断 → VV 注入」，代码 `probe/VvInject.*`，细节见 [specs/vv.md](specs/vv.md) §12 A），
+**暂停界面已验收通过**（k=66/69：世界变洋红、UI 仍在 ⇒ pre-UI 插入成立）；**世界内 HUD 的边界还没测**。
+B/C 未动。
+
 两个必须记住的崩溃前提：交换链后缓冲引用要当场 `Release`（否则 `ResizeBuffers` 失败 → 引擎 `abort`），
 以及任何碰引擎纹理的拷贝都不能和「引擎重建资源」并发（否则驱动 AV）。两次现场见
 [research §8](research/2026-10-24-vv-path.md)。

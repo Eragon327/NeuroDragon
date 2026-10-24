@@ -7,6 +7,8 @@
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
 
+#include "ll/api/event/EventBus.h"
+#include "ll/api/event/player/PlayerJoinEvent.h"
 #include "ll/api/i18n/I18n.h"
 #include "ll/api/io/Logger.h"
 #include "ll/api/mod/RegisterHelper.h"
@@ -97,6 +99,13 @@ bool NeuroDragon::enable() {
     // that shows whether the VV upscaler is live and with which numbers
     // (docs/O-vv-path.md). It touches nothing the game owns.
     probe::vv::install();
+
+    // The semantic dump is only meaningful inside a world (the main menu leaves the
+    // render-resolution textures empty), so it is armed by the join event instead of a
+    // frame counter.
+    ll::event::EventBus::getInstance().emplaceListener<ll::event::PlayerJoinEvent>(
+        [](ll::event::PlayerJoinEvent&) { probe::vv::noteWorldEntered(); }
+    );
 
     // Screenshots go to the game root (`<version>/screenshots`, a sibling of `mods/`
     // and `logs/`) rather than inside the mod folder: that top-level folder is where

@@ -27,6 +27,25 @@ void* engineDeviceFromCommandList(void* list);
 // submitted, not a half-written texture.
 bool dumpTextureBmp(void* device, void* queue, void* resource, wchar_t const* path);
 
+// Same copy, but the file keeps the resource's own bytes: a small "NDRW" header
+// (width / height / DXGI_FORMAT / pitch / bytes per pixel) followed by the mapped
+// rows. That is what makes the motion vector decidable offline - the same uint16
+// pairs can be read as half floats or as int16 fixed point, and only one of the two
+// produces the numbers DLSS wants. Tools: NeuroDragonWorkSpace\tools\vv_mv_decode.py.
+bool dumpTextureRaw(void* device, void* queue, void* resource, wchar_t const* path);
+
+// The state a resource is declared to be in when the copy starts. D3D12 never checks
+// StateBefore, but the driver uses it: a wrong value can read stale bytes (the VV
+// textures came back as all zeros with the obvious guess). The probe dumps the same
+// resource once per plausible state and the one that yields real data wins.
+enum class DumpState : unsigned {
+    Common         = 0,    // D3D12_RESOURCE_STATE_COMMON / PRESENT
+    RenderTarget   = 4,    // D3D12_RESOURCE_STATE_RENDER_TARGET
+    ShaderResource = 0x80, // D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+};
+
+bool dumpTextureRawAs(void* device, void* queue, void* resource, wchar_t const* path, DumpState state);
+
 // Back-buffer resources of a swap chain (2 for a flip-model chain). Used only to keep
 // the BMP dump away from resources that live in PRESENT.
 unsigned swapChainBuffers(void* swapChain, void** out, unsigned max);
@@ -36,5 +55,11 @@ unsigned swapChainBuffers(void* swapChain, void** out, unsigned max);
 // answers that with abort() - which is exactly the 0xC0000409 the client showed when
 // the window was toggled. Every buffer handed out must go through this.
 void releaseComObject(void* object);
+
+// Takes a reference so a recorded render target stays alive after the engine rebuilds
+// its render graph. Without it the inventory only holds raw pointers: a resize frees the
+// old textures and the next allocation reuses the address, so a dump then reads a
+// different resource (observed 2026-10-25: requested fmt=10, file header said fmt=28).
+void addRefComObject(void* object);
 
 } // namespace neurodragon::probe::vv
