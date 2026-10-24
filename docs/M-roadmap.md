@@ -54,6 +54,7 @@
 | SR：33/50/58/66/100 档位、模型预设 J/K/L/M、应用即重建、FrameBuilder 因子表 + 质量槽双写 | L 批 3：⑧运行时选择、⑤自适应曝光、遥测补齐 |
 | SR：读数层（渲染/输出尺寸、回调统计、Reset） | SR：组合预设包（I 的 M2 剩余）；78% 与锐化**判定不做**，不是未完成 |
 | 面板 / i18n / `ll::config` / TEST 构建 / 部署链 | 面板「超分」页只读区的删除（J §8 待办）；监控与 NR 的拆分（F §9，未实施） |
+| — | **位置轴**：NR 放到放大器前/后两档（Before / After upscaling），路线与判据见 [N](N-nr-placement-plan.md)；2026-10-24 排入阶段 1，**P0 未开工** |
 
 **注**：「一半」是用户对**阶段 1 整体**的判定，不是对某一项的测量。上面两列是按文档里的
 待办清单对出来的映射，若口径不同，以用户为准，并回来改这张表。
@@ -135,6 +136,7 @@ TRP 的 `.trpk` 内核包、INT8 量化、MFG 解锁——[G §4](G-nr-customiza
 | 「帧生成 / MFG / XeSS / XeFG …… 不在本项目范围」 | [G §4](G-nr-customization-plan.md#L110-L123) | 同上 | G 是历史文档，原文保留；**FG 的排期以本文为准**（G 里「不碰 .trpk / INT8」的结论仍有效） |
 | RR「第二阶段，不在当前范围」 | [D §7 标题](D-rt-dlss-nr-plan.md#L716) | 现在排第四阶段 | 顺序变了，D §7 的技术结论不变；改动只落在顺序上 |
 | 「路线/优先级 → K」 | [docs/README 更新约定](README.md) | 阶段顺序与完成度 → M | M 新增为「阶段路线权威」；K 继续管「做什么/代价」，L 继续管 NR 执行 |
+| 「NR 放在 DLSS 之后 = 不做」 | [K §3.5](K-trp-feature-gap.md)、[G §4](G-nr-customization-plan.md) | 位置轴（Before / After upscaling）排入阶段 1 | 以 [N](N-nr-placement-plan.md) 为准；G 是历史文档，原文保留 |
 
 ## 7. 沿用不变的约定
 
@@ -146,3 +148,5 @@ TRP 的 `.trpk` 内核包、INT8 量化、MFG 解锁——[G §4](G-nr-customiza
 
 - 2026-10-24：首版。据用户口述的四阶段顺序；阶段 2 对齐 I 的 M4–M7；FG 由「不排期」改为第三阶段
   并登记被取代的说法；RR 由「不在当前范围」改为第四阶段（顺序变，判据不变）。
+- 2026-10-24：**位置轴**（NR 的 Before / After upscaling 两档）排入阶段 1，路线见
+  [N](N-nr-placement-plan.md)；同时登记「NR 放在 DLSS 之后 = 不做」这条旧结论的裁定变化。本阶段其余待办不变。

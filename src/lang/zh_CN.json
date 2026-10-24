@@ -215,7 +215,7 @@
             "nrKeyHint": "面板关闭时生效；改完先点「应用」。",
             "resetKeyHint": "面板关闭时生效；同时擦掉 NR 与引擎 DLSS 的时序历史。",
             "screenshot": "截图键",
-            "screenshotHint": "按一下把当前成品帧（含 HUD、不含面板）存成 PNG 到 mods/NeuroDragon/screenshots/；改键在 config.json 的 ui.screenshotKey。",
+            "screenshotHint": "点一下按钮再按新键（Esc 取消）。成品帧（含 HUD、不含面板）存成 PNG，落到游戏目录下的 screenshots/。",
             "config": "配置文件",
             "configHint": "配置只在启动时读取；「应用」只作用于本次运行，「保存为默认」才会写入 config/config.json。",
             "about": "关于",
@@ -236,7 +236,7 @@
             "unknown": "按键 0x{0:02X}"
         },
         "toast": {
-            "shotSaved": "截图已保存",
+            "shotSaved": "截图已保存：{}",
             "shotFailed": "截图失败（见日志）"
         },
         "sr": {

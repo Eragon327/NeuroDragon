@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed（2026-10-24：截图反馈进聊天栏、文件落游戏根目录、截图键可改）
+
+- 截图结果的反馈从屏幕底部 2.2 s 的 ImGui 小条改为**游戏原生聊天栏**一行（`ui::notice::chat` →
+  `ClientInstance::getGuiData()->displayClientMessage`，纯客户端消息、不发包），并**带绝对路径**：
+  原提示太不明显，而且「已保存」不告诉人存到哪。
+- PNG 落盘目录从 `mods/NeuroDragon/screenshots/` 改为**游戏根目录** `<version>/screenshots/`
+  （与 `mods/`、`logs/` 同级、随 exe）。路径在 `Screenshot.cpp::makePath()` 里就做
+  `std::filesystem::absolute`——`getModDir()` 返回的是相对路径（旧日志是 `./mods/…`）。
+- 「高级」页的**截图键改为可改**（与面板键 / NR 键共用同一个一次性捕获机制，改完点「应用」）。
+
 ### Changed（2026-10-24：分屏对比只留一个，且不再跨会话保留）
 
 - 删掉「超分 → 锐化」里的**分屏对比**（`sr.compare` / `sr.compareSplit`、RCAS shader 的 `Split` 分支、

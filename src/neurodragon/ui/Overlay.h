@@ -53,8 +53,10 @@ public:
     void setVisible(bool visible);
     void toggle();
 
-    // Short transient line at the bottom of the screen (drawn even while the panel
-    // is closed, so hotkey feedback is visible).
+    // Short transient line at the bottom of the screen. Only the panel's own
+    // feedback uses it now (a discarded edit); player-facing notices - the
+    // screenshot key - go through ui::notice::chat instead, because at 2.2 s and
+    // one small line they were too easy to miss.
     void notify(std::string message);
 
     // -----------------------------------------------------------------------
@@ -67,13 +69,16 @@ public:
     [[nodiscard]] int hotkey() const;
     void              refreshHotkey();
 
-    // Screenshot key (config ui.screenshotKey, F2 by default) and where the PNGs go
-    // (<mod>/screenshots). The capture runs at the next Present, before the panel is
-    // drawn, so the file holds the finished frame without the overlay.
+    // Screenshot key (config ui.screenshotKey, F2 by default, rebindable in the
+    // panel's Advanced tab) and where the PNGs go (<version>/screenshots, the game
+    // root). The capture runs at the next Present, before the panel is drawn, so the
+    // file holds the finished frame without the overlay.
     [[nodiscard]] int  screenshotKey() const;
     void               setScreenshotDirectory(std::wstring directory);
 
-    // One-shot rebinding: the next key press (Esc cancels) becomes the new hotkey.
+    // One-shot rebinding: the next key press (Esc cancels) becomes the new key. The
+    // capture is global (one key at a time); the panel decides which field the
+    // result lands in, so the same mechanism serves every rebindable key.
     void               beginHotkeyCapture();
     void               cancelHotkeyCapture();
     [[nodiscard]] bool isCapturingHotkey() const;

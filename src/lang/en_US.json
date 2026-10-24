@@ -215,7 +215,7 @@
             "nrKeyHint": "Works while the panel is closed; press Apply first.",
             "resetKeyHint": "Works while the panel is closed; wipes NR and engine DLSS history together.",
             "screenshot": "Screenshot key",
-            "screenshotHint": "Saves the finished frame (HUD included, panel excluded) as PNG in mods/NeuroDragon/screenshots/. Rebind with ui.screenshotKey in config.json.",
+            "screenshotHint": "Click the button, then press the key you want (Esc cancels). The finished frame (HUD included, panel excluded) is saved as PNG under the game folder's screenshots/.",
             "config": "Config file",
             "configHint": "The config is imported at startup only; Apply affects this run, Save as default also writes config/config.json.",
             "about": "About",
@@ -236,7 +236,7 @@
             "unknown": "Key 0x{0:02X}"
         },
         "toast": {
-            "shotSaved": "Screenshot saved",
+            "shotSaved": "Screenshot saved: {}",
             "shotFailed": "Screenshot failed (see log)"
         },
         "sr": {

@@ -28,6 +28,18 @@ void writeKey(int level, std::string_view key, Args&&... args) {
 // Localised text without arguments (e.g. one NGX result code -> its name).
 std::string text(std::string_view key);
 
+// Localised text with arguments: the same lookup and formatting as
+// `"key"_tr(args...)`, for call sites that need the string itself rather than a log
+// line - the screenshot notice carries the file's path. Declared here and defined in
+// Utils.cpp for the same reason as writeKey: the template cannot include the i18n
+// header (it pulls the engine headers in, docs/D §4 pitfall 5).
+std::string textArgs(std::string_view key, fmt::format_args args);
+
+template <class... Args>
+std::string text(std::string_view key, Args&&... args) {
+    return textArgs(key, fmt::make_format_args(args...));
+}
+
 // ---------------------------------------------------------------------------
 // Startup stage markers
 // ---------------------------------------------------------------------------

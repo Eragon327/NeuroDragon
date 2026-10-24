@@ -128,7 +128,9 @@ struct Ui {
     int resetKey = 0xDD; // wipe NR + engine DLSS temporal history once
 
     // Virtual-key code of the "save the finished frame" screenshot key.
-    // 0x71 = VK_F2 (Bedrock does not use it). The PNG goes to <mod>/screenshots/.
+    // 0x71 = VK_F2 (Bedrock does not use it). The PNG goes to <version>/screenshots/
+    // (the game root, next to the executable). The panel's Advanced tab rebinds it
+    // like the other keys; 0 disables the key.
     int screenshotKey = 0x71;
 };
 

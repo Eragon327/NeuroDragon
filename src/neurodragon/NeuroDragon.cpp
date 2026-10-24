@@ -89,10 +89,14 @@ bool NeuroDragon::enable() {
     // Locate + hook dragon::framerenderer::modules::taau without any PDB.
     probe::install();
 
-    // Screenshots go next to the mod, not next to the executable: the mod folder is
-    // the one place a user can find without knowing how LeviLauncher lays out a
-    // version directory.
-    ui::Overlay::getInstance().setScreenshotDirectory((getSelf().getModDir() / "screenshots").wstring());
+    // Screenshots go to the game root (`<version>/screenshots`, a sibling of `mods/`
+    // and `logs/`) rather than inside the mod folder: that top-level folder is where
+    // a player already looks for the game's own output, and the mod directory stays
+    // the mod's. applicationDirectory() is the executable's folder, so the path is
+    // absolute - the same string the chat notice shows and latest.log records.
+    ui::Overlay::getInstance().setScreenshotDirectory(
+        (std::filesystem::path(utils::applicationDirectory()) / "screenshots").wstring()
+    );
 
     // The panel is not essential to NR: if the game window is not up yet the probe
     // watcher retries it in the background. install() writes its own stage pair - the

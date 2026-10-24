@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/ui/GameNotice.h"
 #include "neurodragon/ui/InputGuard.h"
 #include "neurodragon/ui/Menu.h"
 #include "neurodragon/ui/Screenshot.h"
@@ -697,18 +698,38 @@ void drawFrame(ID3D11RenderTargetView* target) {
     gDeviceContext->OMSetRenderTargets(1, &empty, nullptr);
 }
 
+// The chat line carries the written file's path, and the screenshot code keeps
+// paths as UTF-16 (WIC wants that) while everything player-facing is UTF-8.
+std::string toUtf8(std::wstring const& wide) {
+    if (wide.empty()) return {};
+    int const length = static_cast<int>(wide.size());
+    int const size = ::WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), length, nullptr, 0, nullptr, nullptr);
+    if (size <= 0) return {};
+    std::string utf8(static_cast<size_t>(size), '\0');
+    ::WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), length, utf8.data(), size, nullptr, nullptr);
+    return utf8;
+}
+
+// What the screenshot key tells the player. The path is part of it: "saved" alone
+// does not say where, and latest.log is not a place a player looks.
+void notifyScreenshot(std::wstring const& path) {
+    if (path.empty()) {
+        notice::chat(neurodragon::log::text("ui.toast.shotFailed"));
+        return;
+    }
+    notice::chat(neurodragon::log::text("ui.toast.shotSaved", toUtf8(path)));
+}
+
 void drawOnSwapChain(IDXGISwapChain* swapChain, bool screenshot) {
     ID3D11Texture2D* backBuffer{};
     if (FAILED(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer)))) return;
 
     // Capture before anything of ours is drawn, so the file is the game's finished
-    // frame (docs/K §2.2 ②). The toast is the only feedback the key has: the encode
-    // itself runs on a worker thread.
+    // frame (docs/K §2.2 ②). The chat line is the only feedback the key has: the
+    // encode itself runs on a worker thread.
     if (screenshot) {
         auto const path = screenshot::save(gDevice, gDeviceContext, backBuffer, gScreenshotDirectory);
-        Overlay::getInstance().notify(
-            neurodragon::log::text(path.empty() ? "ui.toast.shotFailed" : "ui.toast.shotSaved")
-        );
+        notifyScreenshot(path);
     }
 
     ID3D11RenderTargetView* target{};
@@ -756,12 +777,10 @@ void drawOnWrappedBackBuffer(IDXGISwapChain* swapChain, bool screenshot) {
                 ))
                 && frame) {
                 auto const path = screenshot::save(gDevice, gDeviceContext, frame, gScreenshotDirectory);
-                Overlay::getInstance().notify(
-                    neurodragon::log::text(path.empty() ? "ui.toast.shotFailed" : "ui.toast.shotSaved")
-                );
+                notifyScreenshot(path);
                 frame->Release();
             } else {
-                Overlay::getInstance().notify(neurodragon::log::text("ui.toast.shotFailed"));
+                notice::chat(neurodragon::log::text("ui.toast.shotFailed"));
             }
         }
         drawFrame(target);

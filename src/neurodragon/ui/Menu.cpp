@@ -68,6 +68,8 @@ int         gDraftKey{VK_END};
 // In-game NR hotkeys (docs/L 1.5), staged like the panel key.
 int         gDraftNrKey{VK_OEM_4};    // '['
 int         gDraftResetKey{VK_OEM_6}; // ']'
+// Screenshot key, staged like the others: same capture, same Apply.
+int         gDraftScreenshotKey{VK_F2};
 // Model builds listed from the mod directory. Scanned once per panel open instead of
 // per frame: the pick only matters on the next start anyway.
 std::vector<std::string> gModelFiles;
@@ -1087,7 +1089,7 @@ void drawTabAdvanced() {
 
     // The capture mechanism is global (one key at a time); this only remembers which
     // row started it so the captured code lands in the right field.
-    static int pendingTarget = 0; // 0 = panel, 1 = NR on/off, 2 = reset
+    static int pendingTarget = 0; // 0 = panel, 1 = NR on/off, 2 = reset, 3 = screenshot
 
     auto hotkeyRow = [&](std::string const& labelText, std::string const& hintText, int* value, int target) {
         widgets::beginRow();
@@ -1107,9 +1109,13 @@ void drawTabAdvanced() {
     hotkeyRow("ui.adv.open"_tr(), "ui.adv.rebindHint"_tr(), &gDraftKey, 0);
     hotkeyRow("ui.adv.nrKey"_tr(), "ui.adv.nrKeyHint"_tr(), &gDraftNrKey, 1);
     hotkeyRow("ui.adv.resetKey"_tr(), "ui.adv.resetKeyHint"_tr(), &gDraftResetKey, 2);
+    hotkeyRow("ui.adv.screenshot"_tr(), "ui.adv.screenshotHint"_tr(), &gDraftScreenshotKey, 3);
 
     if (int const captured = overlay.takeCapturedHotkey(); captured != 0) {
-        int* target = pendingTarget == 1 ? &gDraftNrKey : (pendingTarget == 2 ? &gDraftResetKey : &gDraftKey);
+        int* target = pendingTarget == 1   ? &gDraftNrKey
+                    : pendingTarget == 2   ? &gDraftResetKey
+                    : pendingTarget == 3   ? &gDraftScreenshotKey
+                                           : &gDraftKey;
         if (*target != captured) {
             *target = captured;
             markDirty();
@@ -1118,10 +1124,6 @@ void drawTabAdvanced() {
     }
 
     widgets::statRow("ui.adv.close"_tr().c_str(), "Esc");
-    // Read-only for now: the key comes from config.json (ui.screenshotKey). A
-    // rebinding row can reuse beginHotkeyCapture once a second capture target exists.
-    widgets::statRow("ui.adv.screenshot"_tr().c_str(), keyLabel(overlay.screenshotKey()).c_str());
-    widgets::hint("ui.adv.screenshotHint"_tr().c_str());
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.adv.config"_tr().c_str());
@@ -1141,6 +1143,7 @@ void applyDraft(bool persist) {
     config::get().ui.openKey = gDraftKey;
     config::get().ui.nrKey   = gDraftNrKey;
     config::get().ui.resetKey = gDraftResetKey;
+    config::get().ui.screenshotKey = gDraftScreenshotKey;
     Overlay::getInstance().refreshHotkey();
     gDirty = false;
 
@@ -1207,6 +1210,7 @@ void drawFooter(Layout const& layout) {
         gDraft    = config::get().nr;
         gDraftSr  = sanitizedSr(config::get().sr);
         gDraftKey = config::get().ui.openKey;
+        gDraftScreenshotKey = config::get().ui.screenshotKey;
         gDirty    = false;
         setStatus("ui.footer.discarded"_tr());
     }
@@ -1348,6 +1352,7 @@ void onOpened() {
     gDraftKey = config::get().ui.openKey;
     gDraftNrKey    = config::get().ui.nrKey;
     gDraftResetKey = config::get().ui.resetKey;
+    gDraftScreenshotKey = config::get().ui.screenshotKey;
     gModelFiles    = utils::listNrModelFiles();
     gDirty    = false;
     gStatus.clear();
