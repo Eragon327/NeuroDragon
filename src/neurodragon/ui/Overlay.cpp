@@ -1306,6 +1306,7 @@ bool hookSwapChainEntryPoints(HWND gameWindow) {
 // ---------------------------------------------------------------------------
 
 HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT flags) {
+    probe::vv::noteSwapChain(swapChain);
     probe::vv::onPresent();
     render(swapChain);
     return gOriginalPresent(swapChain, interval, flags);
@@ -1351,6 +1352,7 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
             gGameQueue->AddRef();
         }
     }
+    probe::vv::setGameQueue(queue);
     probe::vv::onExecuteCommandLists(reinterpret_cast<void* const*>(lists), count);
     gOriginalExecuteCommandLists(queue, count, lists);
 }

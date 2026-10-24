@@ -1,51 +1,79 @@
-# 文档索引
+# NeuroDragon 文档
 
-**规则：结论冲突时按「状态」列取权威。** 历史文档不删——里面的实测数据（地址、日志、反汇编、
-崩溃现场）还能查；但不要再按它们的结论做事。
+本目录只放**现在有效**的文档。历史文档不删除，移到 `archive/` 冻结；旧结论不再作为行动依据，
+但其中的实测数据（地址、日志、反汇编、崩溃现场）永远可以查。
 
-| 文档 | 状态 | 一句话 | 现在该看它的什么 |
-|---|---|---|---|
-| [A. RenderDragon 通道图](A-renderdragon-passmap.md) | 参考（数据有效） | Mac/Metal 全符号 IDB 里的帧结构与 taau 契约 | 地址、结构、UI 边界；「接入点 = taau」已被实际路线取代 |
-| [B. Windows 探针](B-windows-probe.md) | 参考 | 无 PDB 的「字符串 → xref → `.pdata`」定位链 | 定位方法本身 |
-| [C. LL API 速查](C-levilamina-api-notes.md) | 参考 | 本项目用到的 LeviLamina API + 坑 | 写代码时查签名/线程/日志 |
-| [D. NR 接入规划](D-rt-dlss-nr-plan.md) | **NR 事实权威** | RT 路线、引擎 DLSS 参数表、NR 接入全过程的实测 | §2 参数表、§6.12–6.20 的实测与坑；被后续推翻的结论见文首横幅 |
-| [F. UI 与设置系统](F-ui-plan.md) | 历史（已实现） | 面板为什么用 Present 钩子、输入吞噬、设置模型 | 设计理由 |
-| [G. NR 客制化对齐](G-nr-customization-plan.md) | 历史（被 K 取代） | 按 TRP **0.4.5** 面板逐项判定「能不能做」 | 逐项推理过程；最新对照看 K |
-| [H. SR 可行性与预设](H-sr-plan.md) | 历史（被 I/J 取代） | 三种「能」的划分、预设四层 | 可行性的判断框架；机制看 J |
-| [I. SR 最终规划](I-sr-final-plan.md) | 部分有效 | 控制层 L1–L6、R_in/R_sr/R_out、VV 迁移 TAAU | 未落地的 L3–L6 与 VV 迁移；M1/M3 已由 J 落地 |
-| [J. SR 实现](J-sr-implementation.md) | **SR 权威** | 内部分辨率、模型预设、重建的实现、证据与坑 | 要动 SR 先看这篇 |
-| [K. TRP 0.5.3 对照](K-trp-feature-gap.md) | **路线权威** | TRP 的 SR/NR 全量功能对照 + 可做项 + 代价 + 排期 | 决定下一步做什么 |
-| [L. NR 剩余功能](L-nr-remaining-plan.md) | **执行权威** | 批 1–3 的范围、验收判据、探针记录与工作约定（批 4「位置轴」见 N） | NR 剩余功能怎么做、做到哪了 |
-| [M. 阶段路线](M-roadmap.md) | **阶段路线权威** | 四阶段顺序（NR/SR → VV 接管 TAAU → FG → RR）、每阶段状态与开工前必答的未知 | 先做什么、某阶段到什么程度算完 |
-| [N. NR 位置轴](N-nr-placement-plan.md) | **位置轴路线** | NR 在放大器前/后两档（Before / After upscaling）的语义、P0–P4、判据与验收 | 要做「NR 放到放大之后」时先看这篇 |
+```
+docs/
+├── README.md          # 唯一索引 + 文档规则（本文件）
+├── roadmap.md         # 全局路线图，永远只有 1 份
+├── specs/             # 当前有效设计，每个主题最多 1 份
+│   ├── renderdragon.md
+│   ├── ui.md
+│   ├── nr.md
+│   ├── sr.md
+│   ├── trp.md
+│   └── vv.md
+├── decisions/         # ADR：稳定决策，少而精
+│   ├── 0001-taau-insertion-point.md
+│   ├── 0002-no-kernel-patching.md
+│   ├── 0003-docs-layout.md
+│   └── 0004-code-conventions.md
+├── research/          # 技术调研与实测笔记，文件名必须带日期
+│   ├── 2026-10-22-renderdragon-passmap.md
+│   ├── 2026-10-22-windows-probe.md
+│   ├── 2026-10-23-levilamina-api-notes.md
+│   └── 2026-10-24-vv-path.md
+└── archive/
+    └── 2026-10/       # 2026-10 改版前的旧字母文档（D–N；A–C 已迁入 research/），原文不动
+```
 
-## 读 TRP 源码
+## 索引（只列 active）
 
-- 仓库在 `D:\Documents\theosrp`，**工作树停在 0.4.5**，`origin/main` 是 0.5.3。
-- 读新版一律用 `git show origin/main:<path>`（例：`git show origin/main:CHANGELOG.md`），
-  不要在工作树里找 0.5.x 的代码。
-- 版本对不上的时候以 `CHANGELOG.md` 的版本号为准，别按文件名猜。
+| 文档 | 主题 | 一句话 |
+|---|---|---|
+| [roadmap.md](roadmap.md) | 路线 | 四阶段顺序（NR/SR → VV 接管 TAAU → FG → RR）、每阶段状态与开工前必答的未知 |
+| [specs/renderdragon.md](specs/renderdragon.md) | 宿主引擎 | 帧结构、VV 通道清单、`taau` 契约、接入点 P1–P6、资源与呈现、W1 结论 |
+| [specs/vv.md](specs/vv.md) | VV 路径（阶段 2） | 触发条件、插入点、命令流、已答/未答的未知、M4–M7 与 stop/go |
+| [specs/nr.md](specs/nr.md) | NR | NGX feature `0x12` 的契约、参数表、编码/合成、位置轴、尺寸与生命周期、剩余工作与探针结论 |
+| [specs/sr.md](specs/sr.md) | SR | 引擎 DLSS 的三层分辨率、内部分辨率、模型预设与重建、RCAS 锐化、截图、读数与待办 |
+| [specs/ui.md](specs/ui.md) | UI / 设置 | Present 钩子 + D3D11On12 面板、输入吞噬、draft 配置语义、监控与拆分计划 |
+| [specs/trp.md](specs/trp.md) | 对照与选型 | TRP 0.5.3 的 SR/NR 功能全表、我们已有/缺什么、代价、不做与原因 |
+| [decisions/0001-taau-insertion-point.md](decisions/0001-taau-insertion-point.md) | ADR | 接入点选「包住 `taau`」，不是「在帧图里找缝」 |
+| [decisions/0002-no-kernel-patching.md](decisions/0002-no-kernel-patching.md) | ADR | 不做 `.trpk` / INT8 / MFG 这类对驱动内核的逆向 patch |
+| [decisions/0003-docs-layout.md](decisions/0003-docs-layout.md) | ADR | 文档改版：specs / decisions / research / archive 与六条规则 |
+| [decisions/0004-code-conventions.md](decisions/0004-code-conventions.md) | ADR | 翻译一律 `_tr`、D3D12 与引擎头的 include 顺序、`log::text` 的边界 |
+| [research/2026-10-22-renderdragon-passmap.md](research/2026-10-22-renderdragon-passmap.md) | 取证 | Mac 符号化 IDB 读出的帧结构、`taau` 契约证据、W1 全文 |
+| [research/2026-10-22-windows-probe.md](research/2026-10-22-windows-probe.md) | 取证 | 无 PDB 的定位链（字符串 → xref → `.pdata`）、探针演进、NGX 参数读取的九次运行 |
+| [research/2026-10-23-levilamina-api-notes.md](research/2026-10-23-levilamina-api-notes.md) | 参考 | 本项目用到的 LeviLamina API、签名、线程/日志/配置约定与坑 |
+| [research/2026-10-24-vv-path.md](research/2026-10-24-vv-path.md) | 取证 | VV 路径侦察：RVA、参数基址、依赖语义、提交结构、渲染目标清单 |
 
-## 更新约定
+## 文档规则
 
-- 新结论写进**当前权威文档**（SR → J，NR 事实 → D，功能对照与代价 → K，NR 执行 → L，
-  **阶段顺序与完成度 → M**，**位置轴 → N**），不要只写进聊天。
-- 被取代的文档只在文首加横幅指向新文档，不删内容。
-- 新增文档后同时更新本索引与根 `README.md` 的文档表。
+1. **禁止在 `docs/` 根目录新建文件**；根目录只允许改 `README.md` 和 `roadmap.md`。
+2. **新建文档前先 `grep` `docs/specs/` 是否已有同主题文档**：有 → 追加到已有文档，不新建；
+   无 → 才允许在 `specs/` 下新建，且必须在本 README 登记。
+3. **计划、方案、remaining、placement 这类内容一律进对应主题的 specs**，不再单独建 plan 文件。
+4. **调研笔记放 `research/`**，文件名必须带日期（`YYYY-MM-DD-slug.md`）。
+5. **实现记录、会议记录、临时分析** → `research/` 或 `archive/`，不进 `specs/`。
+6. **不删除文档，只许移动**（`git mv`），归档目录按年月分（`archive/YYYY-MM/`）。
 
-## 代码约定
+补充约定：
 
-- **翻译一律写 `"key"_tr(args…)`**（`ll::i18n_literals::operator""_tr`），**没有例外**。
-  注意它**不**校验参数个数：`fmt::format_string` 校验的是键名本身，而键名里永远没有 `{}`，
-  参数对不上只会在运行时由 `fmt::vformat` 抛异常。
-- **要同时用 `<d3d12.h>` 和引擎头（`ll/*`、`mc/*`）时，按这个顺序 include**：
-  `<d3d12.h>` → `neurodragon/Macro.h` → 引擎头。`Macro.h` 用自引用宏把头文件里的
-  `#ifndef <类型名>` guard 判假，压掉 `mc/_HeaderOutputPredefine.h` 那三个空壳 D3D12 结构体
-  （`D3D12_FEATURE_DATA_D3D12_OPTIONS` / `…_ARCHITECTURE` / `D3D12_RAYTRACING_GEOMETRY_DESC`），
-  否则 `<d3d12.h>` 之后必报 `redefinition`。**根因与替换写法都在 `Macro.h` 的注释里**；
-  `docs/D §4 坑 5` 记的是这条坑的现状。仍建议能分开编译单元就分开。
-- `log::text` / `log::writeKey`（`Log.h` 声明、`Utils.cpp` 实现）**不是**第二种写法，只服务
-  `Stage` —— 它在头文件里、拉不了 i18n 头。新代码不要用它们。
-- **`_tr` 缺键时静默返回空串**（`ll::i18n::get` 缺键给空）。「键一定存在」得靠离线检查保证：
-  审计时按**字符串字面量**扫，**不要按调用形式扫**——2026-10-24 只扫 `_tr(` 就把当时走
-  `log::text` 的 `ui.toast.shotSaved` 误判成了死键。
+- `specs/` 每个主题**最多 1 份**。主题固定为 `renderdragon` / `ui` / `nr` / `sr` / `trp` / `vv`，
+  新增主题要在这里登记，并说明为什么不能追加到已有主题。
+- `decisions/` 只记**稳定的决策**（"为什么这样定"），编号 `0001` 起递增；计划与待办不写这里。
+- `research/` 是**证据**：实测日志、地址、反汇编、探针记录。可以带日期、可以互相矛盾（保留现场），
+  但不要把它当行动依据。
+- 归档的旧文档**不再维护**，文内链接可能仍指向旧字母文件名；需要找原文时按 `archive/2026-10/` 下的
+  文件名查（`A`–`O` 与主题的对应见各 spec 的「参考」一节）。
+
+## 结论冲突时听谁的
+
+1. **顺序与完成度** → [roadmap.md](roadmap.md)；
+2. **某个主题现在怎么做** → 对应的 `specs/*.md`；
+3. **为什么这样定** → `decisions/`；
+4. **原始实测数据、被推翻的中间假设** → `research/` 与 `archive/`（只作证据）。
+
+旧文档里的结论若与 `specs/` 冲突，一律以 `specs/` 为准；旧文档保留原文是为了保住证据，
+不是让它继续发号施令。

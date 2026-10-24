@@ -723,6 +723,42 @@ Balanced 档」这一次采样的结果，不是常量。
 要真正释放就按「保存为默认」。只勾/取消勾选、两个按钮都不按，什么都不发生。发布版只在卸载时写一行
 info（「NR 已卸载：feature、纹理与模型都已释放（重新启用会重建）」），创建/重建仍走阶段对。
 
+### 6.21 位置轴：After upscaling（2026-10-24，P1 代码完成、待实机验收）
+
+路线/判据/验收在 [N](N-nr-placement-plan.md)，这里只记 **NR 契约与实测事实**。
+
+**契约（P0 离线探针，`ngx_probe --after`）**：走 core 自己的 `CreateFeature(0x12)`（模组同路径），
+`R16G16B16A16_FLOAT` 纹理、两帧求值：
+
+| 变体 | color/output | guides | MVecScale | create / eval | 输出 mean | 跨帧 meanAbsDiff |
+|---|---|---|---|---|---|---|
+| before（对照） | 1485×835 | 1485×835 | 1485×835 | 1 / 1,1 | 0.802 → 0.825 | 0.130 |
+| after-guide | 2560×1440 | 1485×835 | 1485×835 | 1 / 1,1 | 0.768 → 0.793 | 0.169 |
+| after-output | 2560×1440 | 1485×835 | 2560×1440 | 1 / 1,1 | 0.768 → 0.787 | 0.166 |
+
+⇒ **`color > guide` 的 after 契约成立**；两档 `MVecScale` 的 frame1 输出不同（运行时确实消费它），
+默认取 **guide 尺寸**（TRP 的 310.x 契约同款），`nr.mvecScale` 可覆盖。**不需要 O1/O2。**
+
+**实现（模组）**
+
+- `nr.placement`：0 = 放大前（默认，行为不变）；1 = 放大后。两档互斥，同一帧只跑一个。
+- 后档：`DLSSNR.Color` = 引擎 `Output`（display 尺寸），`DLSSNR.Depth/MVec` = 渲染尺寸 guide；
+  `DLSSNR.Width/Height` = 输出尺寸 × 100%；`Color/Output/Backbuffer` subrect = 输出尺寸；
+  `Depth/MVec` subrect = guide；`MVecScale` = guide。求值在引擎 `EvaluateFeature` 返回 1 之后、
+  RCAS 之前；编码/合成沿用前档的 shader 与 Ratio 合成，结果写回引擎 `Output`。
+- 写回：`ALL → COPY_DEST → ALL`，用 **`CopyTextureRegion` + `D3D12_BOX`**（私有纹理只增不减，
+  窗口缩小时 `CopyResource` 的等尺寸约束不成立）。`Output` 写回后恢复 `ALL_SHADER_RESOURCE`，
+  RCAS 同一资源上的往返是这条状态契约的先验（J §9）。
+- 切位置：重建 feature（先建后拆，避免模型卸载）+ NR/引擎双侧 `Reset` + 合成渐入；0→1 前先把
+  引擎 `Color` 指针还回去，避免退役的 `gDecodedColor` 还挂在参数对象上。
+- 失败：after 创建/重建被拒 → `afterFallback`，回落到 before（core→runtime 完整梯子）并保持旧
+  feature；`Output` 缺失一帧时跳过该帧，不来回切档；`Output` 非 RGBA16F → 回落并写
+  `nr.warn.afterFallback`。回落是**本会话**的，重启后重试。
+- 面板：`nr.placement` + 成本提示；诊断页回读位置 / NR 处理尺寸 / 指南尺寸。i18n 中英对齐。
+
+**已知的实机前提**：引擎 `Output` 在 `EvaluateFeature` 返回时处于 `ALL_SHADER_RESOURCE`。
+RCAS 已在同一资源上用同一往返，但需要一次实机确认（N §6）。
+
 ## 7. RR 地基：`doAllRayTracing`（第二阶段，不在当前范围）
 
 > RR = NGX feature **13**（`0x0D`），runtime `nvngx_dlssd.dll`，参数 `DLSSD.*` +

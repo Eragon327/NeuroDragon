@@ -38,7 +38,7 @@
 | 阶段 | 内容 | 状态（2026-10-24） | 里程碑 | 当前权威文档 |
 |---|---|---|---|---|
 | 1 | NR 神经渲染 + SR 超分（RT 路线，复用引擎 DLSS） | 🟡 一半 | L 批 1–3；I 的 M0–M3 | L / K / J / D |
-| 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 **M4 侦察中**：taau 已实测命中（1 次/帧）、提交结构已量到，见 [O](O-vv-path.md) | I 的 M4–M7（M8 可选） | I / A / **O** |
+| 2 | NR + SR 接入 VV 管线，替代 TAAU | ⬜ 未开始 | I 的 M4–M7（M8 可选） | I / A |
 | 3 | FG 帧生成 | ⬜ 未开始（**排期变更**，见 §6） | 尚无里程碑，须先答 §4 的未知 | A（P3/P4/P6）/ F（Present 设施） |
 | 4 | RR 光线重建（尝试） | ⬜ 未开始，**可能不可做** | 先答 D §7 的决定性问题 | D §7 |
 
@@ -52,7 +52,7 @@
 | NR：建 feature、逐帧 evaluate、增益合成上屏、HDR→LDR 编码、任意尺寸重建、关闭即卸载；输入缩放 / 质量修正 / 运行时模型选择 / 自适应曝光 | NR：P6/P7 探针与暂缓项 ④隔帧、⑦稳态网格（批次进度与结论以 [L](L-nr-remaining-plan.md) 为准） |
 | SR：33/50/58/66/100 档位、模型预设 J/K/L/M、应用即重建、FrameBuilder 因子表 + 质量槽双写 | SR：75%（TRP 的 78%）实验与 mip LOD 偏置**未排期**（[K §2.2 ⑤⑥](K-trp-feature-gap.md#L74-L84)） |
 | SR：锐化（RCAS）、成品帧截图（F2）、读数层（尺寸链 / 创建时质量槽与预设 / 回调统计 / Reset）、自检与遥测、DLSS 运行时 310.9.1 已验 | SR：组合预设包**暂不做**（用户 2026-10-24 决定，后面再说）；锐化的 HDR 高光过冲见 J §9 的 dump 数据 |
-| 面板 / i18n / `ll::config` / TEST 构建 / 部署链 | **位置轴**：NR 放到放大器前/后两档（Before / After upscaling），路线与判据见 [N](N-nr-placement-plan.md)；2026-10-24 排入阶段 1，**P0 未开工** |
+| 面板 / i18n / `ll::config` / TEST 构建 / 部署链 | **位置轴**：NR 放到放大器前/后两档（Before / After upscaling），路线与判据见 [N](N-nr-placement-plan.md)；2026-10-24 排入阶段 1，**P0/P1 完成、实机主路径验收通过、release 已部署** |
 | — | 监控与 NR 的拆分（F §9，未实施） |
 
 **注**：NR 的批次进度（L 批 1–3 已交付、探针结论）以 L 为准，本表只记阶段级完成度；
@@ -69,7 +69,7 @@ M6 DLSS 替换 → M7 统一收尾，M8 可选），本文不重复，只记**�
 
 | # | 未知 | 为什么是前置 | 探针/判据 |
 |---|---|---|---|
-| 1 | VV 下 `taau` 是否命中、NGX 是否已被引擎 Init | 不命中就没有插入点；已 Init 则不能二次 Init | ✅ **已答（[O §3](O-vv-path.md)）**：`upscaling_mode=0` + `upscaling_percentage=33` + `graphics_mode=2` 时 taau 每帧 1 次声明 + 1 次 draw；VV 下引擎不调 NGX，feature 要自己建 |
+| 1 | VV 下 `taau` 是否命中、NGX 是否已被引擎 Init | 不命中就没有插入点；已 Init 则不能二次 Init | I 的 K4：`upscaling_mode=0` + `graphics_mode=2`，看 taau 命中次数 |
 | 2 | bgfx 句柄 → `ID3D12Resource` 的桥 | taau 输入只有 bgfx 句柄（[A §7.3](A-renderdragon-passmap.md#L237-L257)），拿不到资源就什么都做不了 | I 的 K6：钩 bgfx D3D12 纹理创建，拿到 1 张资源 |
 | 3 | 深度从哪来 | taau **不绑深度**（[A §7.1](A-renderdragon-passmap.md#L201-L222)），NR 要深度 | 钩延迟着色通道或自建深度拷贝 |
 | 4 | 写 taau 输出目标是否被后续 pass 依赖 | 写错就是花屏/崩溃 | I 的 M5：先「TAAU 照跑再覆盖」，不成立就放弃写入 |

@@ -44,4 +44,13 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount);
 // only to turn the counters above into "per frame" numbers.
 void onPresent();
 
+// Called once from the overlay's present hook: the swap chain is the only way to
+// learn which render targets are back buffers, and those must not be transitioned by
+// the BMP dump (they live in PRESENT, not COMMON).
+void noteSwapChain(void* swapChain);
+
+// The game's D3D12 direct queue, captured by the overlay's ExecuteCommandLists hook.
+// Only used by the one-shot BMP dump.
+void setGameQueue(void* queue);
+
 } // namespace neurodragon::probe::vv

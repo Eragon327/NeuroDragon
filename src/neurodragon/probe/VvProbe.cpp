@@ -138,6 +138,20 @@ std::atomic<bool> gDumpFrame{false};
 std::atomic<unsigned> gCloseInFrame{0};
 std::atomic<unsigned> gBigFrames{0};
 
+// Cached engine device and queue, filled when the first engine submission is seen.
+std::atomic<void*> gEngineDevice{nullptr};
+std::atomic<void*> gGameQueue{nullptr};
+void*              gExcluded[4]{};
+bool               gLoggedExclusion = false;
+unsigned           gExcludedCount = 0;
+unsigned           gLastSeenCount = 0;
+std::uint64_t      gSeenStableSince = 0;
+unsigned           gDumpPasses = 0;
+// Every resource that has ever been given a render-target view, so the one-shot dump
+// knows what to look at without depending on any unverified vtable slot.
+void*    gSeen[256]{};
+unsigned gSeenCount = 0;
+
 void hookDevice(void* device);
 void hookCommandList(void* list);
 class ID3D12GraphicsCommandList;
@@ -174,17 +188,15 @@ void createRtvDetour(void* device, void* resource, void const* desc, std::uintpt
     // ever created when a texture becomes a target, so this is the closest thing to
     // an inventory of the frame's render targets - and it stays readable because the
     // pool is reused and the same textures reappear.
-    static void*  seen[256]{};
-    static unsigned seenCount = 0;
     bool isNew = true;
-    for (unsigned i = 0; i < seenCount; ++i) {
-        if (seen[i] == resource) {
+    for (unsigned i = 0; i < gSeenCount; ++i) {
+        if (gSeen[i] == resource) {
             isNew = false;
             break;
         }
     }
-    if (isNew && seenCount < 256) {
-        seen[seenCount++] = resource;
+    if (isNew && gSeenCount < 256) {
+        gSeen[gSeenCount++] = resource;
         auto const info = nr::describe(resource);
         utils::logger().info(
             "[vv] rtv res={:#x} {}x{} fmt={} flags={:#x}",
@@ -260,6 +272,9 @@ void hookDevice(void* device) {
     // latching on the first device seen (that one) is why the engine's own render
     // targets never showed up.
     utils::logger().info("[vv] device created {:#x}", reinterpret_cast<std::uintptr_t>(device));
+    if (!gEngineDevice.load(std::memory_order_relaxed)) {
+        gEngineDevice.store(device, std::memory_order_relaxed);
+    }
     auto* const* vtbl = *reinterpret_cast<void* const* const*>(device);
     if (!vtbl || !readable(vtbl, 21 * sizeof(void*))) {
         utils::logger().warn("[vv] device vtable unreadable; render targets will not resolve");
@@ -790,13 +805,67 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
     gOriginalDraw(self, context, third, fourth);
 }
 
+// One-shot diagnostic: write every render target we have seen to a BMP, so the frame
+// graph can be identified by what the pixels look like instead of by guessing which
+// vtable slot sets which target. Back buffers are skipped - they live in PRESENT and
+// must not be transitioned by us.
+void dumpCandidates() {
+    auto* const device = gEngineDevice.load(std::memory_order_relaxed);
+    auto* const queue  = gGameQueue.load(std::memory_order_relaxed);
+    if (!device || !queue) {
+        utils::logger().warn("[vv] dump: no device/queue yet");
+        return;
+    }
+    auto const directory = utils::applicationDirectory();
+    unsigned   written   = 0;
+    for (unsigned i = 0; i < gSeenCount && written < 16; ++i) {
+        void* const resource = gSeen[i];
+        if (!resource) {
+            continue;
+        }
+        bool excluded = false;
+        for (unsigned k = 0; k < gExcludedCount; ++k) {
+            if (gExcluded[k] == resource) {
+                excluded = true;
+            }
+        }
+        if (excluded) {
+            continue;
+        }
+        auto const info = nr::describe(resource);
+        if (info.width < 16 || info.height < 16) {
+            continue;
+        }
+        wchar_t name[96]{};
+        std::swprintf(
+            name,
+            std::size(name),
+            L"vv_%ux%u_fmt%u.bmp",
+            static_cast<unsigned>(info.width),
+            static_cast<unsigned>(info.height),
+            info.format
+        );
+        auto const path = directory + L"\\" + name;
+        if (dumpTextureBmp(device, queue, resource, path.c_str())) {
+            utils::logger().info(
+                "[vv] dump {}x{} fmt={} written",
+                static_cast<unsigned>(info.width),
+                static_cast<unsigned>(info.height),
+                info.format
+            );
+            ++written;
+        }
+    }
+    utils::logger().info("[vv] dump done, {} file(s) in {}", written, "the game directory");
+}
+
 void logSubmitRate(std::uint64_t presents) {
     auto const submits = gSubmits.load(std::memory_order_relaxed);
     auto const lists   = gSubmittedLists.load(std::memory_order_relaxed);
     auto const taau    = gTaauHits.load(std::memory_order_relaxed);
     auto const draws   = gDrawHits.load(std::memory_order_relaxed);
     utils::logger().info(
-        "[vv] presents={} submits={} lists={} maxListsPerSubmit={} taau={} draws={} | submits/frame={:.2f} "
+        "[vv] presents={} submits={} lists={} maxListsPerSubmit={} taau={} draws={} seen={} dumps={} | submits/frame={:.2f} "
         "lists/frame={:.2f} taau/frame={:.2f} draws/frame={:.2f}",
         presents,
         submits,
@@ -804,6 +873,8 @@ void logSubmitRate(std::uint64_t presents) {
         gMaxListsPerSubmit.load(std::memory_order_relaxed),
         taau,
         draws,
+        gSeenCount,
+        gDumpPasses,
         presents ? static_cast<double>(submits) / static_cast<double>(presents) : 0.0,
         presents ? static_cast<double>(lists) / static_cast<double>(presents) : 0.0,
         presents ? static_cast<double>(taau) / static_cast<double>(presents) : 0.0,
@@ -972,6 +1043,45 @@ void onPresent() {
     if (presents <= 10 || presents % 600 == 0) {
         logSubmitRate(presents);
     }
+    // One shot, a few seconds in: by then the frame graph has been rebuilt at least
+    // once (the render targets only become visible after a rebuild, see the header).
+    // The render-target inventory is only complete after the engine rebuilt its
+    // resources (one fullscreen toggle), so the dump waits for it instead of firing at
+    // a fixed frame: three or more render targets besides the back buffers means the
+    // rebuild has happened.
+    // The automatic dump is disabled: the crash trace of 2026-10-24 22:58 shows
+    // dumpTextureBmp copying a render target while the engine was replacing it for a
+    // fullscreen toggle - nvwgf2umx AV at test byte [r10+0x3C]. A texture copy has to
+    // happen when nothing can resize, so the dump is only ever started explicitly
+    // (see dumpCandidates) once a trigger that cannot race a resize exists.
+    (void)presents;
+    (void)gSeenCount;
+    (void)gLastSeenCount;
+    (void)gSeenStableSince;
+    (void)gDumpPasses;
 }
+
+void noteSwapChain(void* swapChain) {
+    if (!swapChain) {
+        return;
+    }
+    // Re-read every present: a resize replaces the buffers, and a stale exclusion
+    // list would let the dump touch a back buffer (which lives in PRESENT).
+    void*    buffers[2]{};
+    unsigned const count = swapChainBuffers(swapChain, buffers, 2);
+    gExcludedCount       = 0;
+    for (unsigned i = 0; i < count && gExcludedCount < 4; ++i) {
+        gExcluded[gExcludedCount++] = buffers[i];
+        // The reference must go immediately: holding one makes the engine's
+        // ResizeBuffers fail, and that failure ends in abort() (0xC0000409).
+        releaseComObject(buffers[i]);
+    }
+    if (count && !gLoggedExclusion) {
+        gLoggedExclusion = true;
+        utils::logger().info("[vv] {} back buffer(s) excluded from the dump", count);
+    }
+}
+
+void setGameQueue(void* queue) { gGameQueue.store(queue, std::memory_order_relaxed); }
 
 } // namespace neurodragon::probe::vv
