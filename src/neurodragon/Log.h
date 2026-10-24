@@ -9,14 +9,16 @@
 namespace neurodragon::log {
 
 // 0 = info, 1 = warn, 2 = error, 3 = debug. Every line ends up in LeviLamina's
-// logger for this mod; declared without any ll/engine include because
-// D3D12Bridge.cpp must stay free of those headers (<d3d12.h> conflicts with
-// mc/_HeaderOutputPredefine.h, docs/D §4 pitfall 5 - the i18n header pulls those
-// same engine headers in, so even "_tr" cannot be used there).
+// logger for this mod; declared without any ll/engine include so that this header can be
+// included from every translation unit as-is (D3D12Bridge.cpp needs <d3d12.h>).
+//
+// `"key"_tr(args...)` is the project's one i18n idiom (docs/README.md 代码约定) and every
+// call site uses it. The key-taking helpers below are not a second idiom: they exist only
+// for Stage, which lives in this header and therefore cannot include the i18n header
+// itself. New code calls "key"_tr(...) directly.
 void write(int level, std::string_view message);
 
-// Release-build text from inside the D3D12 translation unit. Same lookup and
-// formatting as `"key"_tr(args...)`; a missing key logs the key itself so a
+// Localised log line with arguments, for Stage. A missing key logs the key itself so a
 // broken catalogue is visible instead of printing nothing.
 void writeKeyArgs(int level, std::string_view key, fmt::format_args args);
 
@@ -25,20 +27,9 @@ void writeKey(int level, std::string_view key, Args&&... args) {
     writeKeyArgs(level, key, fmt::make_format_args(args...));
 }
 
-// Localised text without arguments (e.g. one NGX result code -> its name).
+// Localised text without arguments, for Stage's name (e.g. one NGX result code -> its
+// name). "key"_tr() needs the i18n header, which this header cannot include.
 std::string text(std::string_view key);
-
-// Localised text with arguments: the same lookup and formatting as
-// `"key"_tr(args...)`, for call sites that need the string itself rather than a log
-// line - the screenshot notice carries the file's path. Declared here and defined in
-// Utils.cpp for the same reason as writeKey: the template cannot include the i18n
-// header (it pulls the engine headers in, docs/D §4 pitfall 5).
-std::string textArgs(std::string_view key, fmt::format_args args);
-
-template <class... Args>
-std::string text(std::string_view key, Args&&... args) {
-    return textArgs(key, fmt::make_format_args(args...));
-}
 
 // ---------------------------------------------------------------------------
 // Startup stage markers

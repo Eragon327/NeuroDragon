@@ -56,8 +56,7 @@
         "state": {
             "healthy": "Healthy",
             "notReady": "NR not ready",
-            "off": "Off",
-            "notOnScreen": "NR not on screen"
+            "off": "Off"
         },
         "tab": {
             "neural": "Neural Rendering",
@@ -101,8 +100,7 @@
                         "item5": "Gain composite (on screen)",
             "item6": "TRP Ratio",
             "hint5": "The network's relative gain is multiplied back onto the engine's linear HDR picture, then the engine's DLSS upscales it.",
-            "hint6": "TRP's Ratio composite: rebased onto the original luminance, highlights come from the original, and the four Ratio parameters below act on it.",
-            "hintOther": "This id is not implemented in this build; it behaves like evaluate-only."
+            "hint6": "TRP's Ratio composite: rebased onto the original luminance, highlights come from the original, and the four Ratio parameters below act on it."
         },
         "style": {
             "section": "Style",
@@ -209,7 +207,6 @@
             "open": "Open / close",
             "close": "Close panel",
             "openHint": "Click the button, then press and release the new key or combination, in order; Esc keeps the current binding (the panel key cannot be empty), Reset restores the default.",
-            "rebindHint": "Click the button, then press and release the keys you want, in order; Esc clears the binding, Reset restores the default.",
             "capturing": "Press keys…",
             "reset": "Reset",
             "resetHint": "Back to the default combination",
@@ -296,9 +293,6 @@
             "ctxRender": "Engine render size",
             "ctxExtra": "Second factor (+0xe8083c)",
             "ctxNone": "No engine frame context seen yet (it appears inside a world).",
-            "qualitySlot": "Engine quality slot (experimental)",
-            "factorSlot": "Scene factor (FrameBuilder)",
-            "slotHint": "The quality slot sets the DLSS size; the scene factor sets the size the scene really renders at. Use them together: 66% with quality 2, 100% with quality 5. Scene factor defaults to following the engine.",
             "selfCheck": "Self-check and telemetry",
             "checkOk": "ok",
             "checkFailed": "FAILED",

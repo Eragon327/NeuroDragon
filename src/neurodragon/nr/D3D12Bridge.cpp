@@ -29,6 +29,15 @@
 #include <filesystem>
 #endif
 
+// Both lines belong together: Macro.h makes the mc/ headers that the i18n header reaches
+// coexist with the <d3d12.h> above, and "key"_tr is the project's one i18n idiom
+// (docs/README.md 代码约定).
+#include "neurodragon/Macro.h"
+
+#include "ll/api/i18n/I18n.h"
+
+using ll::i18n_literals::operator""_tr;
+
 namespace neurodragon::nr {
 namespace {
 
@@ -61,47 +70,47 @@ void nrLog(int level, char const* format, ...) {
 std::string getReason(uint32_t exitCode) {
     switch (exitCode) {
     case 0x1u:
-        return neurodragon::log::text("nr.result.success");
+        return "nr.result.success"_tr();
     case 0xBAD00000u:
-        return neurodragon::log::text("nr.result.fail");
+        return "nr.result.fail"_tr();
     case 0xBAD00001u:
-        return neurodragon::log::text("nr.result.featureNotSupported");
+        return "nr.result.featureNotSupported"_tr();
     case 0xBAD00002u:
-        return neurodragon::log::text("nr.result.platformError");
+        return "nr.result.platformError"_tr();
     case 0xBAD00003u:
-        return neurodragon::log::text("nr.result.featureAlreadyExists");
+        return "nr.result.featureAlreadyExists"_tr();
     case 0xBAD00004u:
-        return neurodragon::log::text("nr.result.featureNotFound");
+        return "nr.result.featureNotFound"_tr();
     case 0xBAD00005u:
-        return neurodragon::log::text("nr.result.invalidParameter");
+        return "nr.result.invalidParameter"_tr();
     case 0xBAD00006u:
-        return neurodragon::log::text("nr.result.scratchBufferTooSmall");
+        return "nr.result.scratchBufferTooSmall"_tr();
     case 0xBAD00007u:
-        return neurodragon::log::text("nr.result.notInitialized");
+        return "nr.result.notInitialized"_tr();
     case 0xBAD00008u:
-        return neurodragon::log::text("nr.result.unsupportedInputFormat");
+        return "nr.result.unsupportedInputFormat"_tr();
     case 0xBAD00009u:
-        return neurodragon::log::text("nr.result.rwFlagMissing");
+        return "nr.result.rwFlagMissing"_tr();
     case 0xBAD0000Au:
-        return neurodragon::log::text("nr.result.missingInput");
+        return "nr.result.missingInput"_tr();
     case 0xBAD0000Bu:
-        return neurodragon::log::text("nr.result.unableToInitFeature");
+        return "nr.result.unableToInitFeature"_tr();
     case 0xBAD0000Cu:
-        return neurodragon::log::text("nr.result.outOfDate");
+        return "nr.result.outOfDate"_tr();
     case 0xBAD0000Du:
-        return neurodragon::log::text("nr.result.outOfGpuMemory");
+        return "nr.result.outOfGpuMemory"_tr();
     case 0xBAD0000Eu:
-        return neurodragon::log::text("nr.result.unsupportedFormat");
+        return "nr.result.unsupportedFormat"_tr();
     case 0xBAD0000Fu:
-        return neurodragon::log::text("nr.result.appDataPath");
+        return "nr.result.appDataPath"_tr();
     case 0xBAD00010u:
-        return neurodragon::log::text("nr.result.unsupportedParameter");
+        return "nr.result.unsupportedParameter"_tr();
     case 0xBAD00011u:
-        return neurodragon::log::text("nr.result.denied");
+        return "nr.result.denied"_tr();
     case 0xBAD00012u:
-        return neurodragon::log::text("nr.result.notImplemented");
+        return "nr.result.notImplemented"_tr();
     default:
-        return neurodragon::log::text("nr.result.unknown");
+        return "nr.result.unknown"_tr();
     }
 }
 
@@ -2117,17 +2126,18 @@ bool nrCreate(
         gNr.height = featureHeight;
         paramSetU32(params, "DLSSNR.Width", featureWidth);
         paramSetU32(params, "DLSSNR.Height", featureHeight);
-        neurodragon::log::writeKey(1, "nr.warn.scaleFailed", gNr.failedPercent);
+        neurodragon::log::write(1, "nr.warn.scaleFailed"_tr(gNr.failedPercent));
         NR_DEBUG("[nr] 回落到 100%%：特征 %ux%u", featureWidth, featureHeight);
         if (createWith(coreApi, "core/回落100%")) {
             return true;
         }
     }
-    neurodragon::log::writeKey(
+    neurodragon::log::write(
         2,
-        "nr.error.createFailed",
-        static_cast<unsigned>(gNr.lastError),
-        getReason(static_cast<std::uint32_t>(gNr.lastError))
+        "nr.error.createFailed"_tr(
+            static_cast<unsigned>(gNr.lastError),
+            getReason(static_cast<std::uint32_t>(gNr.lastError))
+        )
     );
     return false;
 }
@@ -2158,7 +2168,7 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
     if (gNr.rebuilds >= kMaxRebuilds) {
         if (!gNr.rebuildLimitLogged) {
             gNr.rebuildLimitLogged = true;
-            neurodragon::log::writeKey(1, "nr.warn.rebuildLimit", gNr.rebuilds);
+            neurodragon::log::write(1, "nr.warn.rebuildLimit"_tr(gNr.rebuilds));
         }
         return false;
     }
@@ -2212,13 +2222,14 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
         gNr.lastError    = ret;
         gNr.failedWidth  = featureWidth;
         gNr.failedHeight = featureHeight;
-        neurodragon::log::writeKey(
+        neurodragon::log::write(
             1,
-            "nr.warn.rebuildFailed",
-            static_cast<unsigned>(ret),
-            getReason(static_cast<std::uint32_t>(ret)),
-            featureWidth,
-            featureHeight
+            "nr.warn.rebuildFailed"_tr(
+                static_cast<unsigned>(ret),
+                getReason(static_cast<std::uint32_t>(ret)),
+                featureWidth,
+                featureHeight
+            )
         );
         for (ID3D12Resource* resource : {newOutput, newEncoded, newDecoded}) {
             if (resource) {
@@ -2234,7 +2245,7 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
             gNr.failedPercent = percent;
             gNr.failedWidth   = 0;
             gNr.failedHeight  = 0;
-            neurodragon::log::writeKey(1, "nr.warn.scaleFailed", percent);
+            neurodragon::log::write(1, "nr.warn.scaleFailed"_tr(percent));
         }
         return false;
     }
@@ -2373,7 +2384,7 @@ void nrUnload() {
     gDecodedIsSrv                = false;
     NR_DEBUG("[nr] 已卸载：feature 与纹理退役，模型随最后一个 feature 离开驱动");
     // The user asked for it explicitly ("保存为默认" with NR off): say that it happened.
-    neurodragon::log::write(0, neurodragon::log::text("nr.info.unloaded"));
+    neurodragon::log::write(0, "nr.info.unloaded"_tr());
 }
 
 namespace {
@@ -2995,12 +3006,13 @@ bool nrRecord(
         static int failed = 0;
         if (failed < 10) {
             ++failed;
-            neurodragon::log::writeKey(
+            neurodragon::log::write(
                 2,
-                "nr.error.evalFailed",
-                static_cast<unsigned>(evaluateRet),
-                getReason(static_cast<std::uint32_t>(evaluateRet)),
-                failed
+                "nr.error.evalFailed"_tr(
+                    static_cast<unsigned>(evaluateRet),
+                    getReason(static_cast<std::uint32_t>(evaluateRet)),
+                    failed
+                )
             );
         }
     }
@@ -3117,12 +3129,13 @@ bool nrRecord(
     static unsigned calls = 0;
     ++calls;
     if (evaluateRet != 1 && calls < 8) {
-        neurodragon::log::writeKey(
+        neurodragon::log::write(
             2,
-            "nr.error.engineEvalFailed",
-            static_cast<unsigned>(evaluateRet),
-            getReason(static_cast<std::uint32_t>(evaluateRet)),
-            calls
+            "nr.error.engineEvalFailed"_tr(
+                static_cast<unsigned>(evaluateRet),
+                getReason(static_cast<std::uint32_t>(evaluateRet)),
+                calls
+            )
         );
     }
     return evaluateRet == 1;

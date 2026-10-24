@@ -12,6 +12,9 @@
 
 #include <filesystem>
 
+// One i18n idiom for the whole project: "key"_tr(args...) (docs/README.md 代码约定).
+using ll::i18n_literals::operator""_tr;
+
 namespace neurodragon {
 
 NeuroDragon& NeuroDragon::getInstance() {
@@ -75,7 +78,7 @@ bool NeuroDragon::load() {
         } else {
             // A stale pick must not stop the mod from loading: say so and use the
             // canonical file instead.
-            log::writeKey(1, "nr.warn.modelPickMissing", configured);
+            log::write(1, "nr.warn.modelPickMissing"_tr(configured));
         }
     }
     if (!utils::ensureApplicationModel(getSelf(), sourceName, replaceExisting)) {

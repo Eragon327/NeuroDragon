@@ -15,7 +15,7 @@ namespace neurodragon::ui::notice {
 //
 // The line never goes to the server: no packet is sent and no chat filter sees it,
 // so it behaves identically in single player and on any server. The text is
-// already localised by the caller (neurodragon::log::text / "key"_tr).
+// already localised by the caller ("key"_tr, docs/README.md 代码约定).
 //
 // Safe to call from any thread - the message is handed to the client thread,
 // because GuiData belongs to the UI. Without a client instance (no world yet, or

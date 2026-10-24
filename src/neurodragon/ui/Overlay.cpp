@@ -26,6 +26,15 @@
 #undef D3D12_FEATURE_DATA_ARCHITECTURE
 #undef D3D12_RAYTRACING_GEOMETRY_DESC
 
+// Engine headers last, with the shim that lets them coexist with the <d3d12.h> above
+// (Macro.h explains the redefinition it suppresses). "key"_tr is the project's one i18n
+// idiom (docs/README.md 代码约定).
+#include "neurodragon/Macro.h"
+
+#include "ll/api/i18n/I18n.h"
+
+using ll::i18n_literals::operator""_tr;
+
 #include <MinHook.h>
 #include <backends/imgui_impl_dx11.h>
 #include <backends/imgui_impl_win32.h>
@@ -437,11 +446,11 @@ void performHotkeyAction(HWND window, HotkeyAction action) {
     }
     case HotkeyAction::NrToggle:
         config::get().nr.enabled = !config::get().nr.enabled;
-        log::writeKey(0, config::get().nr.enabled ? "nr.info.hotkeyOn" : "nr.info.hotkeyOff");
+        log::write(0, config::get().nr.enabled ? "nr.info.hotkeyOn"_tr() : "nr.info.hotkeyOff"_tr());
         break;
     case HotkeyAction::NrReset:
         nr::nrRequestReset();
-        log::writeKey(0, "nr.info.hotkeyReset");
+        log::write(0, "nr.info.hotkeyReset"_tr());
         break;
     case HotkeyAction::Screenshot:
         gScreenshotRequested.store(true, std::memory_order_release);
@@ -841,10 +850,10 @@ std::string toUtf8(std::wstring const& wide) {
 // does not say where, and latest.log is not a place a player looks.
 void notifyScreenshot(std::wstring const& path) {
     if (path.empty()) {
-        notice::chat(neurodragon::log::text("ui.toast.shotFailed"));
+        notice::chat("ui.toast.shotFailed"_tr());
         return;
     }
-    notice::chat(neurodragon::log::text("ui.toast.shotSaved", toUtf8(path)));
+    notice::chat("ui.toast.shotSaved"_tr(toUtf8(path)));
 }
 
 void drawOnSwapChain(IDXGISwapChain* swapChain, bool screenshot) {
@@ -907,7 +916,7 @@ void drawOnWrappedBackBuffer(IDXGISwapChain* swapChain, bool screenshot) {
                 notifyScreenshot(path);
                 frame->Release();
             } else {
-                notice::chat(neurodragon::log::text("ui.toast.shotFailed"));
+                notice::chat("ui.toast.shotFailed"_tr());
             }
         }
         drawFrame(target);

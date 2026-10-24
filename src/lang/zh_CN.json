@@ -56,8 +56,7 @@
         "state": {
             "healthy": "健康",
             "notReady": "NR 未就绪",
-            "off": "已关闭",
-            "notOnScreen": "NR 未上屏"
+            "off": "已关闭"
         },
         "tab": {
             "neural": "神经渲染",
@@ -101,8 +100,7 @@
                         "item5": "增益合成（上屏）",
             "item6": "TRP Ratio",
             "hint5": "网络算出的相对增益乘回引擎的线性 HDR 画面，再由引擎 DLSS 放大；高光不取自网络，所以不会压平。",
-            "hint6": "TRP 的 Ratio 合成：按原图亮度重基准、高光取自原图，下面的四个 Ratio 参数都作用于它。",
-            "hintOther": "这个编号在当前版本里没有实现，效果等同于只求值。"
+            "hint6": "TRP 的 Ratio 合成：按原图亮度重基准、高光取自原图，下面的四个 Ratio 参数都作用于它。"
         },
         "style": {
             "section": "Style",
@@ -209,7 +207,6 @@
             "open": "打开 / 关闭",
             "close": "关闭面板",
             "openHint": "点一下按钮，再按下并松开新的键或组合键（按顺序按）；Esc 保留当前绑定（面板键不能为空），点「重置」回到默认。",
-            "rebindHint": "点一下按钮，再按下并松开要用的键或组合键（按顺序按）；Esc 清空绑定，点「重置」回到默认。",
             "capturing": "按键中…",
             "reset": "重置",
             "resetHint": "回到默认组合",
@@ -296,9 +293,6 @@
             "ctxRender": "引擎渲染尺寸",
             "ctxExtra": "第二因子（+0xe8083c）",
             "ctxNone": "还没看到引擎的帧上下文（进世界后应出现）。",
-            "qualitySlot": "引擎质量槽（实验）",
-            "factorSlot": "场景因子（FrameBuilder）",
-            "slotHint": "质量槽决定 DLSS 的尺寸；场景因子决定场景真实渲染尺寸，两者要配套用：66% ↔ 质量 2，100% ↔ 质量 5。场景因子默认跟随。",
             "selfCheck": "自检与遥测",
             "checkOk": "正常",
             "checkFailed": "失败",

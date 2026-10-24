@@ -32,3 +32,20 @@
   **阶段顺序与完成度 → M**，**位置轴 → N**），不要只写进聊天。
 - 被取代的文档只在文首加横幅指向新文档，不删内容。
 - 新增文档后同时更新本索引与根 `README.md` 的文档表。
+
+## 代码约定
+
+- **翻译一律写 `"key"_tr(args…)`**（`ll::i18n_literals::operator""_tr`），**没有例外**。
+  注意它**不**校验参数个数：`fmt::format_string` 校验的是键名本身，而键名里永远没有 `{}`，
+  参数对不上只会在运行时由 `fmt::vformat` 抛异常。
+- **要同时用 `<d3d12.h>` 和引擎头（`ll/*`、`mc/*`）时，按这个顺序 include**：
+  `<d3d12.h>` → `neurodragon/Macro.h` → 引擎头。`Macro.h` 用自引用宏把头文件里的
+  `#ifndef <类型名>` guard 判假，压掉 `mc/_HeaderOutputPredefine.h` 那三个空壳 D3D12 结构体
+  （`D3D12_FEATURE_DATA_D3D12_OPTIONS` / `…_ARCHITECTURE` / `D3D12_RAYTRACING_GEOMETRY_DESC`），
+  否则 `<d3d12.h>` 之后必报 `redefinition`。**根因与替换写法都在 `Macro.h` 的注释里**；
+  `docs/D §4 坑 5` 记的是这条坑的现状。仍建议能分开编译单元就分开。
+- `log::text` / `log::writeKey`（`Log.h` 声明、`Utils.cpp` 实现）**不是**第二种写法，只服务
+  `Stage` —— 它在头文件里、拉不了 i18n 头。新代码不要用它们。
+- **`_tr` 缺键时静默返回空串**（`ll::i18n::get` 缺键给空）。「键一定存在」得靠离线检查保证：
+  审计时按**字符串字面量**扫，**不要按调用形式扫**——2026-10-24 只扫 `_tr(` 就把当时走
+  `log::text` 的 `ui.toast.shotSaved` 误判成了死键。

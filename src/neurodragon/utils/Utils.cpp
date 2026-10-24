@@ -48,14 +48,6 @@ std::string text(std::string_view key) {
     return pattern.empty() ? std::string{key} : std::string{pattern};
 }
 
-std::string textArgs(std::string_view key, fmt::format_args args) {
-    std::string_view const pattern = ll::i18n::getInstance().get(key, {});
-    // A missing key stays visible as the key itself, like text() above: the player
-    // then reads "ui.toast.shotSaved" in chat instead of an empty line, which is a
-    // catalogue bug that reports itself.
-    return pattern.empty() ? std::string{key} : fmt::vformat(pattern, args);
-}
-
 } // namespace neurodragon::log
 
 using namespace ll::i18n_literals;

@@ -87,8 +87,14 @@ SetUI  48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 41 56 48 83 EC 20 48 8B 01 4
 3. **不要在 `LoadLibraryW/ExW` 的 detour 里挂钩**：那时持有 loader lock，`ll::memory::hook` 挂起线程会死锁。
    正确做法：LoadLibrary 只记录，NGX 挂钩放到旁观线程，等两个模块就绪 + 150 ms 后再挂。
 4. `kernel32!GetTickCount64` 只是转发 stub，真实现在 `kernelbase.dll`（否则计数恒 0）。
-5. `#include <d3d12.h>` 与引擎自带头文件冲突（`D3D12_RAYTRACING_GEOMETRY_DESC` 重定义）
-   ⇒ D3D12 代码必须放**独立编译单元**，不与 LL/引擎头混编。
+5. `#include <d3d12.h>` 与引擎自带头文件冲突（`D3D12_RAYTRACING_GEOMETRY_DESC` 等 3 个重定义）
+   ⇒ 首选仍是把 D3D12 代码放**独立编译单元**、不与 LL/引擎头混编。**2026-10-24 补：根因已定位，
+   同一 TU 也能修**——`mc/_HeaderOutputPredefine.h` 用 `#ifndef <类型名>` 去 guard 那三个空壳
+   结构体，类型名永远不是宏，所以 guard 恒真、空壳恒被定义；而在 `<d3d12.h>` 之后它们与真
+   结构体撞名。写法：`<d3d12.h>` → `src/neurodragon/Macro.h`（自引用宏把头文件里的 guard 判假，
+   空壳不再生成，其余出现处展开成自身故无影响）→ 引擎头。实测 `D3D12Bridge.cpp` 用这条之后
+   可以直接 include `ll/api/i18n/I18n.h` 并写 `"key"_tr(...)`。细节见 `Macro.h` 注释与
+   `docs/README.md` 的「代码约定」。
 
 ## 5. 规划（NR 接入，按风险递增）
 
