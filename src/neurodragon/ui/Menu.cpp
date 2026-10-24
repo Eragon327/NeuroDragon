@@ -543,6 +543,34 @@ void drawTabNeural() {
 
     if (!gDraft.enabled) ImGui::BeginDisabled();
 
+    // Position axis (docs/N): the two sides are exclusive. The hint carries the cost
+    // difference so nobody mistakes the after side's ~9.6 ms for a regression.
+    widgets::sectionHeader("ui.neural.placementSection"_tr().c_str());
+    gDraft.placement = gDraft.placement == 1 ? 1 : 0;
+    {
+        std::string const placementItems[2] = {
+            "ui.neural.placementBefore"_tr(),
+            "ui.neural.placementAfter"_tr(),
+        };
+        char const* itemPointers[2]  = {placementItems[0].c_str(), placementItems[1].c_str()};
+        int const   placementValues[2] = {0, 1};
+        if (mappedCombo(
+                "ui.neural.placement"_tr().c_str(),
+                &gDraft.placement,
+                itemPointers,
+                placementValues,
+                2
+            )) {
+            markDirty();
+        }
+    }
+    widgets::hint(
+        gDraft.placement == 1 ? "ui.neural.placementAfterHint"_tr().c_str() : "ui.neural.placementHint"_tr().c_str()
+    );
+    if (gDraft.placement == 1 && nr::nrAfterFallback()) {
+        widgets::hint("ui.neural.afterFallbackHint"_tr().c_str());
+    }
+
     // Only the two on-screen composites are offered: "evaluate only" (0) is a
     // diagnostic mode with no entrance any more (docs/L), and the config loader maps a
     // stale 0 to 6. The panel is a staging area, so a draft can never be 0 either.
@@ -607,22 +635,26 @@ void drawTabNeural() {
         if (widgets::slider("ui.neural.mv"_tr().c_str(), &gDraft.mvecScale, 1.0f, 2048.0f, "%.0f")) markDirty();
     }
 
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.neural.scale"_tr().c_str());
-    // Only the ratios that keep the feature inside the engine's native slot sizes and
-    // are worth the image cost (docs/L 2.1); a refused percentage falls back to 100%
-    // with a log line, so the panel cannot leave NR broken.
-    std::string const scaleItems[3] = {
-        "ui.neural.scale100"_tr(),
-        "ui.neural.scale66"_tr(),
-        "ui.neural.scale50"_tr(),
-    };
-    char const* scalePointers[3] = {scaleItems[0].c_str(), scaleItems[1].c_str(), scaleItems[2].c_str()};
-    int const   scaleValues[3]    = {100, 66, 50};
-    if (mappedCombo("ui.neural.scalePercent"_tr().c_str(), &gDraft.inputPercent, scalePointers, scaleValues, 3)) {
-        markDirty();
+    if (gDraft.placement == 0) {
+        ImGui::Spacing();
+        widgets::sectionHeader("ui.neural.scale"_tr().c_str());
+        // Only the ratios that keep the feature inside the engine's native slot sizes and
+        // are worth the image cost (docs/L 2.1); a refused percentage falls back to 100%
+        // with a log line, so the panel cannot leave NR broken.
+        std::string const scaleItems[3] = {
+            "ui.neural.scale100"_tr(),
+            "ui.neural.scale66"_tr(),
+            "ui.neural.scale50"_tr(),
+        };
+        char const* scalePointers[3] = {scaleItems[0].c_str(), scaleItems[1].c_str(), scaleItems[2].c_str()};
+        int const   scaleValues[3]    = {100, 66, 50};
+        if (mappedCombo("ui.neural.scalePercent"_tr().c_str(), &gDraft.inputPercent, scalePointers, scaleValues, 3)) {
+            markDirty();
+        }
+        widgets::hint("ui.neural.scaleHint"_tr().c_str());
+    } else {
+        widgets::hint("ui.neural.scaleAfterHint"_tr().c_str());
     }
-    widgets::hint("ui.neural.scaleHint"_tr().c_str());
 
     // Runtime picker (docs/L 3.1): the build in the mod directory that is materialised
     // next to the game executable at load. Read at load, so it says "restart".
@@ -1061,6 +1093,19 @@ void drawTabDiagnostics() {
     }
     std::snprintf(buffer, sizeof(buffer), "%d", written.replace);
     widgets::statRow("ui.diag.wReplace"_tr().c_str(), buffer);
+    std::string placementName;
+    if (written.placement == 1) {
+        placementName = "ui.diag.placementAfter"_tr();
+    } else if (written.afterFallback) {
+        placementName = "ui.diag.placementFallback"_tr();
+    } else {
+        placementName = "ui.diag.placementBefore"_tr();
+    }
+    widgets::statRow("ui.diag.wPlacement"_tr().c_str(), placementName.c_str());
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", written.domainWidth, written.domainHeight);
+    widgets::statRow("ui.diag.wDomain"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", written.guideWidth, written.guideHeight);
+    widgets::statRow("ui.diag.wGuide"_tr().c_str(), buffer);
     std::string const compositeName = (written.compositeMode == 4 || written.compositeMode == 6) ? "ui.diag.modeRatio"_tr()
                                       : (written.compositeMode == 2 || written.compositeMode == 5) ? "ui.diag.modeGain"_tr()
                                                                                                     : "ui.diag.modeOff"_tr();

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added（2026-10-24：NR 位置轴——放大前 / 放大后）
+
+- 「神经渲染」页新增**位置（Placement）**两档：
+  - **放大前（默认）**：现有行为不变，NR 按渲染分辨率处理，结果交给引擎 DLSS 放大；
+  - **放大后**：NR 在引擎 DLSS 之后按输出分辨率处理，结果写回引擎 `Output`，成为调色与 UI 之前的
+    最终 HDR；调色 / UI / present 仍归引擎。成本约 9–10 ms（1440p 100%），面板有提示。
+- 切档会重建 NR feature（先建后拆，避免 264 MB 模型卸载）并重置 NR 与引擎 DLSS 两侧历史；
+  切回「放大前」画面与切换前一致。
+- 后档创建/重建被拒时**自动回落到放大前**并保留旧 feature（不会把 NR 整档关掉），日志与面板都提示；
+  回落是本会话的，重启后重试。`Output` 非 RGBA16F 或某帧不可读时同样回落/跳过，不花屏不冻结。
+- 诊断页「本帧实际写入」新增：NR 位置 / NR 处理尺寸 / 指南尺寸；位置回退时显示
+  「放大前（后档失败回落）」。
+- 后档写回使用 `CopyTextureRegion` + box（私有纹理只增不减，窗口缩小时 `CopyResource` 的等尺寸
+  约束不成立）。
+- 2026-10-24 21:46 实机验收：后档窗口 240 帧 NR median **9.78 ms**（evaluate 9.23 / encode 0.12 /
+  composite 0.43），无 evaluate 失败、无回落、无崩溃，写回成功。**release 已部署主目录**
+  （SHA-256 `fd90f578…`），TEST 备份 `.bak-test-placement`。P0 契约与验收记录见
+  `docs/N-nr-placement-plan.md` §3.1 / §3.2 / §6.1。
+- TEST 诊断修正：后档窗口的 `base` dump 改为**写回前**抓引擎 `Output`（原先抓到的是写回后的图，
+  会被误读成「合成没生效」）；`域/特征` 标签改为 `引擎渲染`。
+
 ### Added（2026-10-24：SR 自检与遥测）
 
 - 「超分」页新增「自检与遥测」：四项钩子自检（尺寸回调包装 / 帧上下文钩子 / 因子表定位 /

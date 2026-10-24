@@ -865,9 +865,176 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     driveFrameBuilderFactor();
     logFrameBuilderState();
 
-    // ---- stage 2: NR in front of the engine's DLSS -------------------------
-    bool inWindow    = false;
-    bool replaceMode = false;
+    // ---- stage 2: NR (docs/N placement axis) -------------------------------
+    // Two mutually exclusive sides: before the engine's upscaler (Color -> NR ->
+    // DLSS) and after it (DLSS -> NR -> Output). Only *recording* moves; creation,
+    // window bookkeeping and the dumps are shared.
+    bool     nrInWindow  = false;
+    bool     nrReplace   = false;
+    bool     nrReady     = false;
+    bool     nrReset     = false;
+    int      nrPlacement = 0;
+    unsigned nrGuideW    = 0;
+    unsigned nrGuideH    = 0;
+
+    // Record + TEST dumps + window report. Called before the engine's own
+    // EvaluateFeature for placement 0 and after it for placement 1.
+    auto recordNrFrame = [&]() {
+        bool const timed = nrInWindow || nrReplace;
+        if (timed) {
+            nr::nrStampBegin(cmdList, n, 0);
+        }
+#ifdef TEST
+        // After placement writes into the engine's Output inside nrRecord, so the
+        // dump block below would capture the *already composited* frame as "base".
+        // Take the pre-NR Output here; fed vs base is then a real same-frame diff.
+        if (nrPlacement == 1 && nrInWindow && n == gNrDumpFrame + 2) {
+            char name[64];
+            nrDumpName(name, sizeof(name), "base", gNrWindowIndex);
+            nr::queueColorDumpN(3, cmdList, const_cast<void*>(out), name, 0);
+        }
+#endif
+        [[maybe_unused]] bool const recorded = nr::nrRecord(
+            cmdList,
+            nrPlacement == 0 ? color : out,
+            depth,
+            mv,
+            nrGuideW,
+            nrGuideH,
+            static_cast<float>(width),
+            static_cast<float>(height),
+            1,
+            nrReset,
+            nrReplace ? const_cast<void*>(params) : nullptr,
+            const_cast<void*>(out),
+            n
+        );
+        if (timed) {
+            nr::nrStampEnd(cmdList, n, 0);
+        }
+        if (nrReset) {
+            ND_DEBUG(
+                "[nr] 窗口 #{} 首帧 f={} placement={} 指南={}x{} 引擎渲染={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
+                gNrWindowIndex,
+                n,
+                nrPlacement == 1 ? "after" : "before",
+                nrGuideW,
+                nrGuideH,
+                width,
+                height,
+                recorded
+            );
+        }
+
+#ifdef TEST
+            if (nrInWindow && n == gNrDumpFrame) {
+                char name[64];
+                nrDumpName(name, sizeof(name), "nr_dump", gNrWindowIndex);
+                if (nr::nrEncodedColorResource()) {
+                    // Encoder active: both images are display-referred already.
+                    nr::queueColorDumpEncoded(cmdList, nr::nrOutputResource(), name);
+                } else {
+                    nr::queueColorDumpLinear(cmdList, nr::nrOutputResource(), name);
+                }
+            } else if (nrInWindow && n == gNrDumpFrame + 2) {
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "nr_dump", gNrWindowIndex);
+                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
+                nrDumpName(name, sizeof(name), "color_ref", gNrWindowIndex);
+                nr::queueColorDumpEncoded(cmdList, nr::nrEncodedColorResource(), name);
+                // Everything the upscaler touches, captured on THIS ONE frame so the
+                // comparison does not silently depend on the camera standing still:
+                //   0 color_ref (network input)  1 nr2 (network output)
+                //   2 fed       (what DLSS reads) 3 base (engine's own Color)
+                nrDumpName(name, sizeof(name), "nr2", gNrWindowIndex);
+                nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
+                if (void* fed = nr::nrFedResource()) {
+                    nrDumpName(name, sizeof(name), "fed", gNrWindowIndex);
+                    nr::queueColorDumpN(2, cmdList, fed, name, nr::nrFedDomain() == 1 ? 1 : 0);
+                }
+                nrDumpName(name, sizeof(name), "base", gNrWindowIndex);
+                nr::queueColorDumpN(3, cmdList, nrPlacement == 0 ? const_cast<void*>(color) : const_cast<void*>(out), name, 0);
+            } else if (nrInWindow && n == gNrDumpFrame + 4) {
+                char          name[64];
+                float         peak    = -1.0f;
+                std::uint32_t nz      = 0;
+                char const*   tags[4] = {"color_ref", "nr2", "fed", "base"};
+                for (int slot = 0; slot < 4; ++slot) {
+                    peak = -1.0f;
+                    nz   = 0;
+                    if (nr::flushColorDumpN(slot, &peak, &nz)) {
+                        nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
+                        ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    }
+                }
+            } else if (nrInWindow && n == gNrDumpFrame + 6) {
+                // out_after was queued right after the engine's evaluate: if it
+                // equals nr_dump the upscaler really ran on the NR result.
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
+                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
+            } else if (nrInWindow && n == gNrDumpFrame + 10) {
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "out_b", gNrWindowIndex);
+                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
+            } else if (nrInWindow && n == gNrDumpFrame + 14) {
+                char          name[64];
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDump(&peak, &nz)) {
+                    nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
+                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
+                }
+            } else if (nrInWindow && n == gNrDumpFrame + 34) {
+                // Same two resources as the +2 pair, ~32 frames later. If the encoder
+                // output is identical here while the camera moved, the network's input
+                // is frozen - which is what "NR is not real time" would look like.
+                char name[64];
+                nrDumpName(name, sizeof(name), "color_ref2", gNrWindowIndex);
+                nr::queueColorDumpN(0, cmdList, nr::nrEncodedColorResource(), name, 1);
+                nrDumpName(name, sizeof(name), "nr3", gNrWindowIndex);
+                nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
+            } else if (nrInWindow && n == gNrDumpFrame + 36) {
+                char          name[64];
+                float         peak    = -1.0f;
+                std::uint32_t nz      = 0;
+                char const*   tags[2] = {"color_ref2", "nr3"};
+                for (int slot = 0; slot < 2; ++slot) {
+                    peak = -1.0f;
+                    nz   = 0;
+                    if (nr::flushColorDumpN(slot, &peak, &nz)) {
+                        nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
+                        ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
+                    }
+                }
+            }
+#endif
+
+        if (gNrWindowOpen && n >= gNrWindowEnd && !gNrReportAt) {
+            gNrReportAt = n + kNrReportTail;
+        }
+        if (gNrReportAt && n >= gNrReportAt) {
+            gNrReportAt   = 0;
+            gNrWindowOpen = false;
+            nr::nrStampTick(n);
+            ND_DEBUG("[nr] 窗口 #{} 统计：", gNrWindowIndex);
+            nr::nrStampReport();
+            nr::nrStampReset();
+        }
+    };
+
     // Needed both to rebuild (fence before releasing the old feature) and to unload,
     // so it is refreshed every frame whether NR is enabled or not.
     nr::nrSetGameQueue(ui::overlayGameQueue());
@@ -893,7 +1060,8 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         }
 
         // No "wait until the level settles" gate: the moment the engine hands over
-        // real Color/Depth/MV/Output resources, NR is created.
+        // real Color/Depth/MV/Output resources, NR is created. The configured
+        // placement decides which resource sizes the feature (docs/N).
         if (!gNrStartTried && color && depth && mv && out && width && height) {
             gNrStartTried = true;
             gWindowAnchor = n;
@@ -902,6 +1070,8 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 color,
                 width,
                 height,
+                out,
+                config::get().nr.placement,
                 const_cast<void*>(params),
                 reinterpret_cast<void*>(gNgxCreateOriginal),
                 reinterpret_cast<void*>(gNgxEvalOriginal)
@@ -918,7 +1088,7 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 gNrDumpFrame   = n + 30;
                 nr::nrSetWindowIndex(gNrWindowIndex);
                 ND_DEBUG(
-                    "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（Replace=1 时画面显示 NR 结果，否则不变）",
+                    "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（每次求值都合成，窗口只影响计时/dump）",
                     gNrWindowIndex,
                     gNrWindowStart,
                     gNrWindowEnd - 1,
@@ -926,170 +1096,44 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 );
             }
 
-            inWindow = gNrWindowOpen && n >= gNrWindowStart && n < gNrWindowEnd;
-            // Replace=1 is about looking at the picture, not sampling it, so in
-            // that mode NR runs on every in-world frame; only the timing/dump
-            // machinery stays windowed (a 60-frame burst every 900 frames is
-            // useless for judging image quality by eye).
-            replaceMode = nr::nrReplaceContinuous();
-            // Follow the engine's render size before doing anything else: a window
-            // resize or an upscaling-quality change makes the engine hand over a new
-            // Width/Height, and the feature is rebuilt for it here (no-op on ordinary
-            // frames). NR only gets created once a world is actually rendering.
+            nrInWindow = gNrWindowOpen && n >= gNrWindowStart && n < gNrWindowEnd;
+            // No "evaluate only" mode any more: NR records every in-world frame so
+            // the picture can be judged by eye; only timing/dump stay windowed.
+            nrReplace = nr::nrReplaceContinuous();
+            // Follow the engine's sizes and the configured placement before
+            // recording. A window resize, an upscaling-quality change or a
+            // placement switch rebuilds the feature here (no-op on ordinary frames).
             bool sizeOk = false;
             if (nr::nrIsCreated()) {
-                sizeOk = nr::nrEnsureRenderSize(cmdList, color, width, height);
+                sizeOk =
+                    nr::nrEnsureRenderSize(cmdList, color, width, height, out, config::get().nr.placement);
             }
-            if ((inWindow || replaceMode) && sizeOk) {
-                auto const     mvInfo      = nr::describe(mv);
-                unsigned const guideWidth  = mvInfo.width ? static_cast<unsigned>(mvInfo.width) : width;
-                unsigned const guideHeight = mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
-                bool const     reset       = n == gNrWindowStart;
-                bool const     replaceNow  = replaceMode;
-                // The panel wants live GPU numbers in the mode people actually
-                // use for tuning, so Replace also stamps outside the windows.
-                bool const timed = inWindow || replaceMode;
-                if (timed) {
-                    nr::nrStampBegin(cmdList, n, 0);
+            nrPlacement = nr::nrPlacement();
+            // A placement switch needs both temporal chains wiped: the feature was
+            // rebuilt for a different domain and the old history is meaningless. The
+            // before -> after direction also hands the engine's Color pointer back.
+            static int lastPlacement = -1;
+            if (nrPlacement != lastPlacement) {
+                if (lastPlacement == 0) {
+                    nr::nrRestoreEngineColor(const_cast<void*>(params), nullptr);
                 }
-                [[maybe_unused]] bool const recorded = nr::nrRecord(
-                    cmdList,
-                    color,
-                    depth,
-                    mv,
-                    guideWidth,
-                    guideHeight,
-                    static_cast<float>(width),
-                    static_cast<float>(height),
-                    1,
-                    reset,
-                    replaceNow ? const_cast<void*>(params) : nullptr,
-                    const_cast<void*>(out),
-                    n
+                nr::nrRequestReset();
+                nr::nrNotifyLevelLoaded();
+                lastPlacement = nrPlacement;
+                ND_DEBUG(
+                    "[nr] placement 切换 → {}（重建 + 双侧 Reset）",
+                    nrPlacement == 1 ? "after" : "before"
                 );
-                if (timed) {
-                    nr::nrStampEnd(cmdList, n, 0);
-                }
-                if (reset) {
-                    ND_DEBUG(
-                        "[nr] 窗口 #{} 首帧 f={} 指南={}x{} 特征={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
-                        gNrWindowIndex,
-                        n,
-                        guideWidth,
-                        guideHeight,
-                        width,
-                        height,
-                        recorded
-                    );
-                }
             }
-
-#ifdef TEST
-            if (inWindow && n == gNrDumpFrame) {
-                char name[64];
-                nrDumpName(name, sizeof(name), "nr_dump", gNrWindowIndex);
-                if (nr::nrEncodedColorResource()) {
-                    // Encoder active: both images are display-referred already.
-                    nr::queueColorDumpEncoded(cmdList, nr::nrOutputResource(), name);
-                } else {
-                    nr::queueColorDumpLinear(cmdList, nr::nrOutputResource(), name);
-                }
-            } else if (inWindow && n == gNrDumpFrame + 2) {
-                char          name[64];
-                float         peak = -1.0f;
-                std::uint32_t nz   = 0;
-                if (nr::flushColorDump(&peak, &nz)) {
-                    nrDumpName(name, sizeof(name), "nr_dump", gNrWindowIndex);
-                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
-                }
-                nrDumpName(name, sizeof(name), "color_ref", gNrWindowIndex);
-                nr::queueColorDumpEncoded(cmdList, nr::nrEncodedColorResource(), name);
-                // Everything the upscaler touches, captured on THIS ONE frame so the
-                // comparison does not silently depend on the camera standing still:
-                //   0 color_ref (network input)  1 nr2 (network output)
-                //   2 fed       (what DLSS reads) 3 base (engine's own Color)
-                nrDumpName(name, sizeof(name), "nr2", gNrWindowIndex);
-                nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
-                if (void* fed = nr::nrFedResource()) {
-                    nrDumpName(name, sizeof(name), "fed", gNrWindowIndex);
-                    nr::queueColorDumpN(2, cmdList, fed, name, nr::nrFedDomain() == 1 ? 1 : 0);
-                }
-                nrDumpName(name, sizeof(name), "base", gNrWindowIndex);
-                nr::queueColorDumpN(3, cmdList, const_cast<void*>(color), name, 0);
-            } else if (inWindow && n == gNrDumpFrame + 4) {
-                char          name[64];
-                float         peak    = -1.0f;
-                std::uint32_t nz      = 0;
-                char const*   tags[4] = {"color_ref", "nr2", "fed", "base"};
-                for (int slot = 0; slot < 4; ++slot) {
-                    peak = -1.0f;
-                    nz   = 0;
-                    if (nr::flushColorDumpN(slot, &peak, &nz)) {
-                        nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
-                        ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
-                    }
-                }
-            } else if (inWindow && n == gNrDumpFrame + 6) {
-                // out_after was queued right after the engine's evaluate: if it
-                // equals nr_dump the upscaler really ran on the NR result.
-                char          name[64];
-                float         peak = -1.0f;
-                std::uint32_t nz   = 0;
-                if (nr::flushColorDump(&peak, &nz)) {
-                    nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
-                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
-                }
-            } else if (inWindow && n == gNrDumpFrame + 10) {
-                char          name[64];
-                float         peak = -1.0f;
-                std::uint32_t nz   = 0;
-                if (nr::flushColorDump(&peak, &nz)) {
-                    nrDumpName(name, sizeof(name), "out_b", gNrWindowIndex);
-                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
-                }
-            } else if (inWindow && n == gNrDumpFrame + 14) {
-                char          name[64];
-                float         peak = -1.0f;
-                std::uint32_t nz   = 0;
-                if (nr::flushColorDump(&peak, &nz)) {
-                    nrDumpName(name, sizeof(name), "sr_dump", gNrWindowIndex);
-                    ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
-                }
-            } else if (inWindow && n == gNrDumpFrame + 34) {
-                // Same two resources as the +2 pair, ~32 frames later. If the encoder
-                // output is identical here while the camera moved, the network's input
-                // is frozen - which is what "NR is not real time" would look like.
-                char name[64];
-                nrDumpName(name, sizeof(name), "color_ref2", gNrWindowIndex);
-                nr::queueColorDumpN(0, cmdList, nr::nrEncodedColorResource(), name, 1);
-                nrDumpName(name, sizeof(name), "nr3", gNrWindowIndex);
-                nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
-            } else if (inWindow && n == gNrDumpFrame + 36) {
-                char          name[64];
-                float         peak    = -1.0f;
-                std::uint32_t nz      = 0;
-                char const*   tags[2] = {"color_ref2", "nr3"};
-                for (int slot = 0; slot < 2; ++slot) {
-                    peak = -1.0f;
-                    nz   = 0;
-                    if (nr::flushColorDumpN(slot, &peak, &nz)) {
-                        nrDumpName(name, sizeof(name), tags[slot], gNrWindowIndex);
-                        ND_DEBUG("[nr] dump {} written max={} nz={}", name, peak, nz);
-                    }
-                }
+            if ((nrInWindow || nrReplace) && sizeOk) {
+                auto const mvInfo = nr::describe(mv);
+                nrGuideW          = mvInfo.width ? static_cast<unsigned>(mvInfo.width) : width;
+                nrGuideH          = mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
+                nrReset           = n == gNrWindowStart;
+                nrReady           = true;
             }
-#endif
-
-            if (gNrWindowOpen && n >= gNrWindowEnd && !gNrReportAt) {
-                gNrReportAt = n + kNrReportTail;
-            }
-            if (gNrReportAt && n >= gNrReportAt) {
-                gNrReportAt   = 0;
-                gNrWindowOpen = false;
-                nr::nrStampTick(n);
-                ND_DEBUG("[nr] 窗口 #{} 统计：", gNrWindowIndex);
-                nr::nrStampReport();
-                nr::nrStampReset();
+            if (nrPlacement == 0 && nrReady) {
+                recordNrFrame();
             }
         }
     }
@@ -1097,7 +1141,7 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // The engine's DLSS runs whether NR does or not, and the panel shows its cost, so
     // measure it whenever a number can be seen: an NR window, Replace mode, or the
     // panel being open (the only place the numbers are displayed).
-    bool const measureBaseline = inWindow || replaceMode || ui::Overlay::getInstance().isVisible();
+    bool const measureBaseline = nrInWindow || nrReplace || ui::Overlay::getInstance().isVisible();
     if (measureBaseline) {
         nr::nrStampBegin(cmdList, n, 1);
     }
@@ -1105,10 +1149,21 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // Engine SR health (docs/K §2.2 ③): the panel counts evaluations and failures,
     // so "SR stopped running" has a number behind it instead of a log hunt.
     nr::srReportEvaluation(result);
+    // The engine's own DLSS timing ends before anything of ours is recorded after it.
+    if (measureBaseline) {
+        nr::nrStampEnd(cmdList, n, 1);
+    }
+    // After placement (docs/N): the engine's DLSS just wrote the display-sized
+    // Output, so this is the only correct point for NR to read it. Before
+    // placement already recorded inside the block above, ahead of this call.
+    if (nrPlacement == 1 && nrReady) {
+        recordNrFrame();
+    }
 #ifdef TEST
     if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 4) {
         // The engine's own Output, right after its DLSS ran: this is the proof
-        // that the swap reached the upscaler (route A).
+        // that the swap reached the upscaler (route A) - or, in the after
+        // placement, that NR's write-back landed on it.
         char name[64];
         nrDumpName(name, sizeof(name), "out_after", gNrWindowIndex);
         nr::queueColorDumpLinear(cmdList, const_cast<void*>(out), name);
@@ -1120,9 +1175,6 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         nr::queueColorDumpLinear(cmdList, const_cast<void*>(out), name);
     }
 #endif
-    if (measureBaseline) {
-        nr::nrStampEnd(cmdList, n, 1);
-    }
 
     // Harvests whatever was recorded (the ring is a no-op while inactive); not tied
     // to NR being enabled, because the engine's own samples still have to be read.

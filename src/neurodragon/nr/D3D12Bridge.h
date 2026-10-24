@@ -82,15 +82,20 @@ void nrSetModDirectory(wchar_t const* directory);
 #endif
 
 // Creates the private output texture, the timestamp ring and feature 0x12.
-// 'engineParams' is only used to prove that our capability parameter object has
+// `engineParams` is only used to prove that our capability parameter object has
 // the same vtable as the one the engine already writes through; 'createFeature'
 // and 'evaluateFeature' must be the *original* NGX exports (never our detours).
+// `outputResource` is the engine's own DLSS Output; `placement` (docs/N) selects
+// 0 = NR before the upscaler (Color/render size) or 1 = after it (Output/display
+// size). A refused after create falls back to before for the session.
 // Every NGX return code is logged with an [nr] tag.
 bool nrCreate(
     void*    commandList,
     void*    colorResource,
     unsigned width,
     unsigned height,
+    void*    outputResource,
+    int      placement,
     void*    engineParams,
     void*    createFeature,
     void*    evaluateFeature
@@ -103,6 +108,16 @@ bool nrCreate(
 void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 
 [[nodiscard]] bool nrIsCreated();
+
+// Effective placement (docs/N): 0 = before upscaling, 1 = after upscaling.
+// Returns the requested value before the first create; after a refused after
+// create it stays 0 for the session (query nrAfterFallback for the reason).
+[[nodiscard]] int nrPlacement();
+
+// True when the requested "after" placement was refused by the runtime and the
+// session fell back to "before". The panel shows this instead of pretending the
+// switch took effect.
+[[nodiscard]] bool nrAfterFallback();
 
 #ifdef TEST
 // ---------------------------------------------------------------------------
@@ -149,17 +164,25 @@ void nrRequestReset();
 // last swap are used then.
 void nrRestoreEngineColor(void* engineParams, void* engineColor);
 
-// Keeps the feature on the engine's current render size.
+// Keeps the feature on the engine's current sizes and on the configured placement.
 //
-// The engine configures its own DLSS per resolution: when the window size or the
-// upscaling quality changes it hands NR a different Width/Height (1485x835 was only
-// the first size ever measured). An NGX feature is created for one size, so the
-// only way to follow is to build a replacement: this creates it first (releasing the
-// last feature would make the driver unload the 264 MB model), swaps the textures in
-// when they no longer fit, and shows the picture once the new feature exists.
-// Retired objects are only released after the GPU is idle. Cheap when the size has
-// not changed (two compares), so the probe can call it every in-world frame.
-bool nrEnsureRenderSize(void* commandList, void* color, unsigned width, unsigned height);
+// Two extents exist (docs/N): the *domain* NR processes (Color/render size before
+// upscaling, engine Output/display size after) and the *guide* extent (Depth/MV,
+// always the engine render size). A feature is created for one work extent, so the
+// only way to follow a resize or a placement switch is to build a replacement:
+// this creates it first (releasing the last feature would make the driver unload
+// the 264 MB model), swaps the textures in when they no longer fit, and shows the
+// picture once the new feature exists. A refused after create falls back to before
+// for the session. Retired objects are only released after the GPU is idle. Cheap
+// when nothing changed (a few compares), so the probe can call it every frame.
+bool nrEnsureRenderSize(
+    void*    commandList,
+    void*    color,
+    unsigned guideWidth,
+    unsigned guideHeight,
+    void*    output,
+    int      requestedPlacement
+);
 
 // Engine-side frame facts for the panel, published from the evaluation hook before
 // any NR decision. Keeps the monitor alive when NR is switched off or unloaded - the
@@ -248,10 +271,19 @@ struct PanelStats {
     unsigned evalCount      = 0;
     unsigned evalFailures   = 0; // telemetry (docs/L 3.3)
     int      lastError      = 0;
-    unsigned renderWidth    = 0; // NR render size (1:1 with the engine's Color)
+    unsigned renderWidth    = 0; // guide extent (engine render size, Depth/MVec)
     unsigned renderHeight   = 0;
     unsigned outputWidth    = 0; // engine DLSS output (the presented picture)
     unsigned outputHeight   = 0;
+    // Placement axis (docs/N): effective side, the extent NR actually processes
+    // (render size before, Output size after) and the guide extent. The panel
+    // shows them so a switch that did nothing is visible immediately.
+    int      placement      = 0; // 0 = before, 1 = after
+    bool     afterFallback  = false;
+    unsigned domainWidth    = 0;
+    unsigned domainHeight   = 0;
+    unsigned guideWidth     = 0;
+    unsigned guideHeight    = 0;
     unsigned nrSamples      = 0; // samples behind nrMs
     unsigned engineSamples  = 0; // samples behind engineMs
     bool     hasNr          = false;
@@ -313,8 +345,17 @@ struct NrFrameParams {
     int      inputPercent  = 100;
     unsigned featureWidth  = 0;
     unsigned featureHeight = 0;
+    // Placement axis (docs/N): effective side, the extent NR processed (render
+    // size before, Output size after) and the guide extent. `renderWidth/Height`
+    // stay the engine render size (the guide), so the panel can show all three.
+    int      placement     = 0;
+    bool     afterFallback = false;
+    unsigned domainWidth   = 0;
+    unsigned domainHeight  = 0;
     unsigned renderWidth   = 0;
     unsigned renderHeight  = 0;
+    unsigned guideWidth    = 0;
+    unsigned guideHeight   = 0;
     bool  rendered     = false; // false until the first completed evaluation
 };
 

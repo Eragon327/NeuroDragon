@@ -17,6 +17,13 @@ namespace neurodragon::config {
 struct Nr {
     bool enabled = false;
 
+    // Placement (docs/N), the position axis: 0 = before the engine's upscaler
+    // (NR sees Color at the render size and its result becomes the upscaler's
+    // input - the original behaviour); 1 = after it (NR sees the engine's Output
+    // at the display size and writes the final HDR back into Output). Mutually
+    // exclusive: one evaluation per frame. Switching rebuilds the feature.
+    int placement = 0;
+
     // 5 = gain composite onto the engine's DLSS input, 6 = TRP ratio resolve (default:
     // the one that reaches the screen with highlights taken from the original).
     // No other value has a meaning any more (the old "evaluate only" 0 is gone): the
@@ -144,7 +151,7 @@ struct Ui {
 };
 
 struct Config {
-    int version = 2;
+    int version = 3;
     Nr  nr{};
     Sr  sr{};
     Ui  ui{};

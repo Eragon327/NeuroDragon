@@ -1362,14 +1362,27 @@ struct NrState {
     EvaluateFeatureFn evaluate = nullptr;
     ReleaseFeatureFn  release  = nullptr;
     ID3D12Resource*   output   = nullptr;
-    // The feature's work extent. Smaller than the render size when input scaling is
-    // on (docs/L 2.1): Width/Height, Color/Output/Backbuffer subrects and the encode
-    // dispatch all use this size, the guides and the composite use `render*`.
+    // The feature's work extent. Smaller than the domain when input scaling is on
+    // (docs/L 2.1): Width/Height, Color/Output/Backbuffer subrects and the encode
+    // dispatch all use this size, the composite uses `domain*`.
     unsigned          width    = 0;
     unsigned          height   = 0;
-    // The engine's render size (what the probe passes in every frame).
+    // The extent NR actually processes (docs/N): the render size before upscaling
+    // (Color's scene subrect) and the engine Output size after it. Guide extents
+    // (Depth/MVec) stay `renderWidth/Height` in both placements.
+    unsigned          domainWidth  = 0;
+    unsigned          domainHeight = 0;
+    // The engine's render size (what the probe passes in every frame) = guide size.
     unsigned          renderWidth  = 0;
     unsigned          renderHeight = 0;
+    // Placement axis (docs/N): 0 = before the upscaler, 1 = after it. `-1` until
+    // the first creation. A refused after create sets `afterFallback` for the
+    // session; the effective side is then 0 again.
+    int               placement     = -1;
+    bool              afterFallback = false;
+    // The placement/extent that already failed once, so a refused combination is
+    // not retried every frame.
+    int               failedPlacement = -1;
     // A scaled create failed once: stay at 100% for this session instead of asking
     // the runtime again every time the size moves. Cleared when the user picks a
     // different percentage, so choosing another value retries.
@@ -1425,16 +1438,25 @@ unsigned scaledExtent(unsigned extent, int percent) {
     return scaled ? scaled : 1u;
 }
 
-// Feature extent for this frame. A scaled create that failed keeps NR at 100% until
-// the user picks a different percentage (which retries it).
-void featureExtent(unsigned renderWidth, unsigned renderHeight, unsigned& featureWidth, unsigned& featureHeight, int& percent) {
+// Percentage in effect for a placement. The after stage is 100% by definition
+// (docs/N): it processes the display-sized Output. Input scaling stays a
+// before-stage knob until the optional after cost-reduction stage (docs/N P3).
+int featurePercent(int placement) {
+    if (placement == 1) {
+        return 100;
+    }
     int const configured = inputPercentFromConfig();
     if (gNr.scaleDisabled && configured != gNr.failedPercent) {
         gNr.scaleDisabled = false;
     }
-    percent       = gNr.scaleDisabled ? 100 : configured;
-    featureWidth  = percent == 100 ? renderWidth : scaledExtent(renderWidth, percent);
-    featureHeight = percent == 100 ? renderHeight : scaledExtent(renderHeight, percent);
+    return gNr.scaleDisabled ? 100 : configured;
+}
+
+// Feature extent for this frame/placement: the domain (the extent NR processes)
+// times the percentage in effect. The guides are independent of this size.
+void featureExtent(unsigned domainWidth, unsigned domainHeight, int percent, unsigned& featureWidth, unsigned& featureHeight) {
+    featureWidth  = percent == 100 ? domainWidth : scaledExtent(domainWidth, percent);
+    featureHeight = percent == 100 ? domainHeight : scaledExtent(domainHeight, percent);
 }
 
 // What the engine's own DLSS is doing this frame, independent of NR. The panel's
@@ -1833,6 +1855,8 @@ bool nrCreate(
     void*    colorResource,
     unsigned width,
     unsigned height,
+    void*    outputResource,
+    int      placement,
     void*    engineParams,
     void*    createFeature,
     void*    evaluateFeature
@@ -1867,35 +1891,81 @@ bool nrCreate(
         return false;
     }
 
-    D3D12_RESOURCE_DESC outDesc  = color->GetDesc();
-    HRESULT const       createHr = createColorSizedTexture(device, outDesc, &gNr.output);
+    // Two extents exist (docs/N). The *domain* is what NR processes: the engine's
+    // render size before upscaling (the scene subrect inside Color) or the engine
+    // Output's display size after it. The guides (Depth/MVec) stay render-sized.
+    int                 targetPlacement = placement == 1 ? 1 : 0;
+    D3D12_RESOURCE_DESC colorDesc       = color->GetDesc();
+    D3D12_RESOURCE_DESC domainDesc      = colorDesc;
+    unsigned            domainWidth     = width;
+    unsigned            domainHeight    = height;
+    if (targetPlacement == 1) {
+        auto* output = static_cast<ID3D12Resource*>(outputResource);
+        if (!output) {
+            nrLog(1, "[nr] create: placement=after 但没有引擎 Output，本次按放大前创建");
+            targetPlacement = 0;
+        } else {
+            domainDesc   = output->GetDesc();
+            domainWidth  = static_cast<unsigned>(domainDesc.Width);
+            domainHeight = static_cast<unsigned>(domainDesc.Height);
+            // The encode/composite bind Color through a fixed RGBA16F SRV. The
+            // engine's Output is RGBA16F today (J §9); a different format would be
+            // read as garbage, so refuse the after side instead of showing it.
+            if (domainDesc.Format != DXGI_FORMAT_R16G16B16A16_FLOAT) {
+                nrLog(
+                    1,
+                    "[nr] placement=after: Output 格式 %u 不是 RGBA16F，本次回落到放大前",
+                    static_cast<unsigned>(domainDesc.Format)
+                );
+                targetPlacement   = 0;
+                gNr.afterFallback = true;
+                domainDesc        = colorDesc;
+                domainWidth       = width;
+                domainHeight      = height;
+            }
+        }
+    }
+    // Allocate for the larger of the two domains once, so a later placement switch
+    // or resize only rebuilds the feature. The format must be the RGBA16F the
+    // encode/composite bind (the engine's Color and Output both are).
+    D3D12_RESOURCE_DESC const texDesc = domainDesc.Width > colorDesc.Width || domainDesc.Height > colorDesc.Height
+                                           ? domainDesc
+                                           : colorDesc;
+    HRESULT const             createHr = createColorSizedTexture(device, texDesc, &gNr.output);
     if (FAILED(createHr)) {
         nrLog(
             2,
             "[nr] output texture creation failed 0x%08X (%llux%llu fmt=%u)",
             static_cast<unsigned>(createHr),
-            static_cast<unsigned long long>(outDesc.Width),
-            static_cast<unsigned long long>(outDesc.Height),
-            static_cast<unsigned>(outDesc.Format)
+            static_cast<unsigned long long>(texDesc.Width),
+            static_cast<unsigned long long>(texDesc.Height),
+            static_cast<unsigned>(texDesc.Format)
         );
         createStage.markFailed();
         return false;
     }
-    // Input scaling (docs/L 2.1): the feature's work extent can be smaller than the
-    // engine's render size; every texture stays render-sized (the low-resolution
-    // image lives in the top-left region), so only the numbers below change.
+    // Input scaling (docs/L 2.1) applies to the domain extent: the feature's work
+    // extent can be smaller than what NR sees, and every texture stays domain-sized
+    // (the low-resolution image lives in the top-left region). After upscaling is
+    // always 100% for now (docs/N P3 is the optional cost-reduction stage).
+    int      percent       = featurePercent(targetPlacement);
     unsigned featureWidth  = 0;
     unsigned featureHeight = 0;
-    int      percent       = 100;
-    featureExtent(width, height, featureWidth, featureHeight, percent);
+    featureExtent(domainWidth, domainHeight, percent, featureWidth, featureHeight);
+    gNr.placement    = targetPlacement;
+    gNr.domainWidth  = domainWidth;
+    gNr.domainHeight = domainHeight;
     gNr.renderWidth  = width;
     gNr.renderHeight = height;
     gNr.width        = featureWidth;
     gNr.height       = featureHeight;
-    gNr.texWidth     = static_cast<unsigned>(outDesc.Width);
-    gNr.texHeight    = static_cast<unsigned>(outDesc.Height);
+    gNr.texWidth     = static_cast<unsigned>(texDesc.Width);
+    gNr.texHeight    = static_cast<unsigned>(texDesc.Height);
     NR_DEBUG(
-        "[nr] create：渲染 %ux%u → 特征 %ux%u（输入 %d%%）",
+        "[nr] create：placement=%s 域 %ux%u（guide %ux%u）→ 特征 %ux%u（%d%%）",
+        targetPlacement == 1 ? "after" : "before",
+        domainWidth,
+        domainHeight,
         width,
         height,
         featureWidth,
@@ -1903,7 +1973,7 @@ bool nrCreate(
         percent
     );
 
-    ensureEncoder(device, outDesc);
+    ensureEncoder(device, texDesc);
 
     bool const stamps = ensureStamps(device);
 
@@ -2121,7 +2191,7 @@ bool nrCreate(
     if (percent < 100 && !gNr.scaleDisabled) {
         gNr.scaleDisabled = true;
         gNr.failedPercent = percent;
-        featureExtent(width, height, featureWidth, featureHeight, percent); // now 100%
+        featureExtent(domainWidth, domainHeight, 100, featureWidth, featureHeight); // now 100%
         gNr.width  = featureWidth;
         gNr.height = featureHeight;
         paramSetU32(params, "DLSSNR.Width", featureWidth);
@@ -2130,6 +2200,59 @@ bool nrCreate(
         NR_DEBUG("[nr] 回落到 100%%：特征 %ux%u", featureWidth, featureHeight);
         if (createWith(coreApi, "core/回落100%")) {
             return true;
+        }
+    }
+    // After placement is the new side (docs/N): a refused create must not leave NR
+    // off for the session. Re-run the ladder with the domain = render size and the
+    // before percentage; the textures already cover the larger domain.
+    if (targetPlacement == 1) {
+        gNr.afterFallback = true;
+        nrLog(1, "[nr] placement=after 创建失败，回落到放大前（本会话）");
+        neurodragon::log::write(1, "nr.warn.afterFallback"_tr());
+        targetPlacement  = 0;
+        domainWidth      = width;
+        domainHeight     = height;
+        int const fallbackPercent = featurePercent(0);
+        featureExtent(domainWidth, domainHeight, fallbackPercent, featureWidth, featureHeight);
+        gNr.placement    = 0;
+        gNr.domainWidth  = domainWidth;
+        gNr.domainHeight = domainHeight;
+        gNr.width        = featureWidth;
+        gNr.height       = featureHeight;
+        paramSetU32(params, "DLSSNR.Width", featureWidth);
+        paramSetU32(params, "DLSSNR.Height", featureHeight);
+        NR_DEBUG("[nr] after 回落到 before：特征 %ux%u（%d%%）", featureWidth, featureHeight, fallbackPercent);
+        // Use the same API ladder as the main path: some machines can only create
+        // the feature through the runtime module, and a core-only retry would turn a
+        // refused after placement into "NR is off for the whole session".
+        auto createAnyApi = [&](char const* tag) -> bool {
+            if (createWith(coreApi, tag)) {
+                return true;
+            }
+            if (runtimeApi.create) {
+                if (createWith(runtimeApi, "runtime/回落before")) {
+                    return true;
+                }
+                if (runtimeInitExt && createWith(runtimeApi, "runtime/Init_Ext后/回落before")) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (createAnyApi("core/回落before")) {
+            return true;
+        }
+        if (fallbackPercent < 100 && !gNr.scaleDisabled) {
+            gNr.scaleDisabled = true;
+            gNr.failedPercent = fallbackPercent;
+            featureExtent(domainWidth, domainHeight, 100, featureWidth, featureHeight);
+            gNr.width  = featureWidth;
+            gNr.height = featureHeight;
+            paramSetU32(params, "DLSSNR.Width", featureWidth);
+            paramSetU32(params, "DLSSNR.Height", featureHeight);
+            if (createAnyApi("core/回落before-100%")) {
+                return true;
+            }
         }
     }
     neurodragon::log::write(
@@ -2144,58 +2267,127 @@ bool nrCreate(
 
 bool nrIsCreated() { return gNr.created; }
 
+int nrPlacement() {
+    if (gNr.created) {
+        return gNr.placement == 1 ? 1 : 0;
+    }
+    return config::get().nr.placement == 1 ? 1 : 0;
+}
+
+bool nrAfterFallback() { return gNr.afterFallback; }
+
 void nrSetGameQueue(void* queue) { gGameQueue = queue; }
 
-bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, unsigned renderHeight) {
-    if (!gNr.created || !commandList || !color || !renderWidth || !renderHeight) {
+bool nrEnsureRenderSize(
+    void*    commandList,
+    void*    color,
+    unsigned guideWidth,
+    unsigned guideHeight,
+    void*    output,
+    int      requestedPlacement
+) {
+    if (!gNr.created || !commandList || !color || !guideWidth || !guideHeight) {
         return false;
     }
-    // The feature has to follow two things: the engine's render size and the input
-    // percentage (docs/L 2.1). Both are folded into one feature extent, so a
-    // percentage change is a rebuild with the same machinery as a resize.
-    unsigned featureWidth  = 0;
-    unsigned featureHeight = 0;
-    int      percent       = 100;
-    featureExtent(renderWidth, renderHeight, featureWidth, featureHeight, percent);
-    gNr.renderWidth  = renderWidth; // display only; the feature extent is the key
-    gNr.renderHeight = renderHeight;
-    if (featureWidth == gNr.width && featureHeight == gNr.height) {
-        return true;
-    }
-    if (featureWidth == gNr.failedWidth && featureHeight == gNr.failedHeight) {
-        return false; // this exact extent already failed; do not retry it every frame
-    }
-    if (gNr.rebuilds >= kMaxRebuilds) {
-        if (!gNr.rebuildLimitLogged) {
-            gNr.rebuildLimitLogged = true;
-            neurodragon::log::write(1, "nr.warn.rebuildLimit"_tr(gNr.rebuilds));
+    // The feature follows three things: the domain extent (render size before,
+    // Output size after), the placement side, and the before input percentage.
+    int targetPlacement = requestedPlacement == 1 && !gNr.afterFallback ? 1 : 0;
+    unsigned domainWidth  = guideWidth;
+    unsigned domainHeight = guideHeight;
+    if (targetPlacement == 1) {
+        ResourceInfo const outInfo = output ? describe(output) : ResourceInfo{};
+        if (!outInfo.width || !outInfo.height) {
+            // No Output this frame. Already on the after side? Do not switch (and
+            // rebuild twice when Output comes back): just skip recording this frame.
+            // On the before side there is nothing to switch to; keep running before.
+            if (gNr.placement == 1) {
+                return false;
+            }
+            targetPlacement = 0;
+        } else {
+            domainWidth  = static_cast<unsigned>(outInfo.width);
+            domainHeight = static_cast<unsigned>(outInfo.height);
+            if (outInfo.format != static_cast<std::uint32_t>(DXGI_FORMAT_R16G16B16A16_FLOAT)) {
+                // Same format contract as nrCreate: the composite binds Color as
+                // RGBA16F, so a different Output format cannot be read correctly.
+                nrLog(
+                    1,
+                    "[nr] placement=after: Output 格式 %u 不是 RGBA16F，回落到放大前（本会话）",
+                    outInfo.format
+                );
+                neurodragon::log::write(1, "nr.warn.afterFallback"_tr());
+                gNr.afterFallback = true;
+                targetPlacement   = 0;
+                domainWidth       = guideWidth;
+                domainHeight      = guideHeight;
+            }
         }
-        return false;
     }
-    if (gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
-        return false; // the size is still moving; try again once it settles
-    }
+    int const percent       = featurePercent(targetPlacement);
+    unsigned  featureWidth  = 0;
+    unsigned  featureHeight = 0;
+    featureExtent(domainWidth, domainHeight, percent, featureWidth, featureHeight);
+
+    // Guides and the engine render size are panel facts; keep them fresh even when
+    // the feature does not need a rebuild.
+    gNr.renderWidth  = guideWidth;
+    gNr.renderHeight = guideHeight;
 
     auto*         colorRes = static_cast<ID3D12Resource*>(color);
     ID3D12Device* device   = nullptr;
     if (FAILED(colorRes->GetDevice(__uuidof(ID3D12Device), reinterpret_cast<void**>(&device))) || !device) {
         return false;
     }
-
-    D3D12_RESOURCE_DESC const colorDesc = colorRes->GetDesc();
-    // Only grow: a smaller size is served by narrowing the subrects, and allocating
+    D3D12_RESOURCE_DESC colorDesc = colorRes->GetDesc();
+    D3D12_RESOURCE_DESC outDesc   = colorDesc;
+    if (targetPlacement == 1) {
+        outDesc = static_cast<ID3D12Resource*>(output)->GetDesc();
+    }
+    // Only grow: a smaller extent is served by narrowing the subrects, and allocating
     // a full set of textures per downscale would cost ~90 MB at 1440p for nothing.
-    bool const      needTextures = !gNr.output || colorDesc.Width > gNr.texWidth || colorDesc.Height > gNr.texHeight;
-    ID3D12Resource* newOutput    = nullptr;
-    ID3D12Resource* newEncoded   = nullptr;
-    ID3D12Resource* newDecoded   = nullptr;
+    D3D12_RESOURCE_DESC const texDesc = outDesc.Width > colorDesc.Width || outDesc.Height > colorDesc.Height
+                                            ? outDesc
+                                            : colorDesc;
+    bool const placementChange = targetPlacement != gNr.placement;
+    bool const extentChange    = featureWidth != gNr.width || featureHeight != gNr.height;
+    bool const needTextures    = !gNr.output || texDesc.Width > gNr.texWidth || texDesc.Height > gNr.texHeight;
+    if (!placementChange && !extentChange && !needTextures) {
+        gNr.domainWidth  = domainWidth;
+        gNr.domainHeight = domainHeight;
+        device->Release();
+        return true;
+    }
+    if (featureWidth == gNr.failedWidth && featureHeight == gNr.failedHeight
+        && gNr.failedPlacement == targetPlacement) {
+        device->Release();
+        // A refused *switch* must keep the feature that already works on the old
+        // side (and not retry every frame); a refused extent still skips NR for
+        // that size, which is the pre-existing behaviour.
+        return placementChange;
+    }
+    if (gNr.rebuilds >= kMaxRebuilds) {
+        if (!gNr.rebuildLimitLogged) {
+            gNr.rebuildLimitLogged = true;
+            neurodragon::log::write(1, "nr.warn.rebuildLimit"_tr(gNr.rebuilds));
+        }
+        device->Release();
+        return false;
+    }
+    if (!placementChange && gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
+        device->Release();
+        return false; // the size is still moving; try again once it settles
+    }
+
+    ID3D12Resource* newOutput  = nullptr;
+    ID3D12Resource* newEncoded = nullptr;
+    ID3D12Resource* newDecoded = nullptr;
     if (needTextures) {
-        bool ok = SUCCEEDED(createColorSizedTexture(device, colorDesc, &newOutput));
+        bool ok = SUCCEEDED(createColorSizedTexture(device, texDesc, &newOutput));
         if (ok) {
-            ok = SUCCEEDED(createColorSizedTexture(device, colorDesc, &newEncoded));
+            ok = SUCCEEDED(createColorSizedTexture(device, texDesc, &newEncoded));
         }
         if (ok) {
-            ok = SUCCEEDED(createColorSizedTexture(device, colorDesc, &newDecoded));
+            ok = SUCCEEDED(createColorSizedTexture(device, texDesc, &newDecoded));
         }
         if (!ok) {
             nrLog(2, "[nr] 重建 %ux%u：纹理创建失败，保持 %ux%u", featureWidth, featureHeight, gNr.width, gNr.height);
@@ -2205,23 +2397,51 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
                 }
             }
             device->Release();
-            gNr.failedWidth  = featureWidth;
-            gNr.failedHeight = featureHeight;
+            gNr.failedWidth     = featureWidth;
+            gNr.failedHeight    = featureHeight;
+            gNr.failedPlacement = targetPlacement;
             return false;
         }
     }
 
-    paramSetU32(gNr.params, "DLSSNR.Width", featureWidth);
-    paramSetU32(gNr.params, "DLSSNR.Height", featureHeight);
     // Create before releasing. Releasing the last feature makes the driver unload the
-    // 264 MB model, so the replacement has to exist first or every resolution change
-    // costs a model reload.
-    void*     handle = nullptr;
-    int const ret    = gNr.create(commandList, 0x12, gNr.params, &handle);
-    if (ret != 1 || !handle) {
-        gNr.lastError    = ret;
-        gNr.failedWidth  = featureWidth;
-        gNr.failedHeight = featureHeight;
+    // 264 MB model, so the replacement has to exist first or every resize/placement
+    // switch costs a model reload.
+    void* handle = nullptr;
+    int   ret    = 0;
+    auto  createOne = [&](unsigned width, unsigned height) {
+        paramSetU32(gNr.params, "DLSSNR.Width", width);
+        paramSetU32(gNr.params, "DLSSNR.Height", height);
+        void* created = nullptr;
+        ret           = gNr.create(commandList, 0x12, gNr.params, &created);
+        if (ret == 1 && created) {
+            handle = created;
+            return true;
+        }
+        gNr.lastError = ret;
+        return false;
+    };
+    int  effectivePlacement = targetPlacement;
+    bool created            = createOne(featureWidth, featureHeight);
+    if (!created && effectivePlacement == 1) {
+        // The after side was refused (docs/N): fall back to before for this session.
+        gNr.afterFallback = true;
+        nrLog(1, "[nr] 重建 after 失败，回落到放大前（本会话）");
+        neurodragon::log::write(1, "nr.warn.afterFallback"_tr());
+        effectivePlacement = 0;
+        domainWidth        = guideWidth;
+        domainHeight       = guideHeight;
+        int const fallbackPercent = featurePercent(0);
+        featureExtent(domainWidth, domainHeight, fallbackPercent, featureWidth, featureHeight);
+        created = createOne(featureWidth, featureHeight);
+        if (!created && fallbackPercent < 100) {
+            gNr.scaleDisabled = true;
+            gNr.failedPercent = fallbackPercent;
+            featureExtent(domainWidth, domainHeight, 100, featureWidth, featureHeight);
+            created = createOne(featureWidth, featureHeight);
+        }
+    }
+    if (!created) {
         neurodragon::log::write(
             1,
             "nr.warn.rebuildFailed"_tr(
@@ -2237,10 +2457,33 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
             }
         }
         device->Release();
+        gNr.failedWidth     = featureWidth;
+        gNr.failedHeight    = featureHeight;
+        // Record the *requested* side, not the fallback side: after a refused after
+        // switch the next frame asks for before (afterFallback) and must not match
+        // this key and skip NR.
+        gNr.failedPlacement = targetPlacement;
+        if (placementChange) {
+            // Keep the old feature (still alive on the old side) instead of leaving
+            // NR off: a refused positioning switch is not an NR failure. The failed
+            // key above stops this exact switch from being retried every frame.
+            if (targetPlacement == 1) {
+                gNr.afterFallback = true;
+            }
+            NR_DEBUG(
+                "[nr] placement 切换失败：保持 %s（%ux%u，域 %ux%u）",
+                gNr.placement == 1 ? "after" : "before",
+                gNr.width,
+                gNr.height,
+                gNr.domainWidth,
+                gNr.domainHeight
+            );
+            return true;
+        }
         // A refused scaled extent (docs/L 2.1): fall back to 100% for this session
         // instead of retrying the same size and leaving NR off. Clearing the failed
         // key lets the next frame rebuild at the native extent.
-        if (percent < 100 && !gNr.scaleDisabled) {
+        if (effectivePlacement == 0 && percent < 100 && !gNr.scaleDisabled) {
             gNr.scaleDisabled = true;
             gNr.failedPercent = percent;
             gNr.failedWidth   = 0;
@@ -2252,6 +2495,12 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
 
     [[maybe_unused]] unsigned const oldWidth  = gNr.width;
     [[maybe_unused]] unsigned const oldHeight = gNr.height;
+    // A rebuild can replace gDecodedColor, and the engine's parameter object may
+    // still be pointed at it (docs/L 1.5). Hand the engine's own Color back before
+    // the old texture retires, or the next EvaluateFeature reads a dead resource.
+    if (placementChange || needTextures) {
+        nrRestoreEngineColor(gSwapParams, gEngineColor);
+    }
     retire(
         gNr.feature,
         needTextures ? gNr.output : nullptr,
@@ -2262,8 +2511,8 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
         gNr.output    = newOutput;
         gEncodedColor = newEncoded;
         gDecodedColor = newDecoded;
-        gNr.texWidth  = static_cast<unsigned>(colorDesc.Width);
-        gNr.texHeight = static_cast<unsigned>(colorDesc.Height);
+        gNr.texWidth  = static_cast<unsigned>(texDesc.Width);
+        gNr.texHeight = static_cast<unsigned>(texDesc.Height);
         // Fresh resources start in COMMON, so every "was a shader resource" flag
         // that the transition helpers rely on has to be cleared.
         gNr.outputWasSrv = false;
@@ -2271,6 +2520,9 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
         gDecodedIsSrv    = false;
     }
     gNr.feature                  = handle;
+    gNr.placement                = effectivePlacement;
+    gNr.domainWidth              = domainWidth;
+    gNr.domainHeight             = domainHeight;
     gNr.width                    = featureWidth;
     gNr.height                   = featureHeight;
     gNr.resourceRoundtripChecked = false;
@@ -2278,8 +2530,8 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
     gNr.engineOutputHeight       = 0;
     gCompositeRamp               = 0; // no history yet: fade the new feature in
     gExposureValid               = false; // snap the white point on the new feature
-    // A new render size means a new engine frame graph and a new engine Color: forget
-    // the old hand-back target instead of restoring a resource the engine retired.
+    // A new render size / placement means a new engine frame graph and a new engine
+    // Color: forget the old hand-back target instead of restoring a retired resource.
     gEngineColor   = nullptr;
     gSwapParams    = nullptr;
     gColorSwapped  = false;
@@ -2289,13 +2541,16 @@ bool nrEnsureRenderSize(void* commandList, void* color, unsigned renderWidth, un
     // engine's render size, so the release log stays quiet (the panel's rebuild
     // counter is the user-visible trace).
     NR_DEBUG(
-        "[nr] 特征尺寸 %ux%u → %ux%u（渲染 %ux%u，输入 %d%%，第 %u 次重建）",
+        "[nr] 特征 %ux%u → %ux%u（placement %s，域 %ux%u，guide %ux%u，%d%%，第 %u 次重建）",
         oldWidth,
         oldHeight,
         featureWidth,
         featureHeight,
-        renderWidth,
-        renderHeight,
+        effectivePlacement == 1 ? "after" : "before",
+        domainWidth,
+        domainHeight,
+        guideWidth,
+        guideHeight,
         percent,
         gNr.rebuilds
     );
@@ -2365,6 +2620,11 @@ void nrUnload() {
     gNr.attempted                = false; // re-arm creation for the next enable
     gNr.width                    = 0;
     gNr.height                   = 0;
+    gNr.domainWidth              = 0;
+    gNr.domainHeight             = 0;
+    gNr.placement                = -1;
+    gNr.afterFallback            = false;
+    gNr.failedPlacement          = -1;
     gNr.texWidth                 = 0;
     gNr.texHeight                = 0;
     gNr.outputWasSrv             = false;
@@ -2445,6 +2705,7 @@ void compositeGain(
     ID3D12Resource*            color,
     D3D12_RESOURCE_STATES      colorState,
     void*                      engineParams,
+    void*                      engineOutput,
     unsigned                   renderW,
     unsigned                   renderH,
     unsigned                   featureW,
@@ -2537,12 +2798,60 @@ void compositeGain(
     transition(cmd, color, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, colorState);
     transition(cmd, nrTex, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, nrState);
 
-    // Same one-frame trick as the other Replace modes: the engine re-fills its
-    // parameter object before every EvaluateFeature. Replace=7 keeps the engine's
-    // DLSS untouched: our own SR consumes the composite instead.
-    paramSetPtr(engineParams, "Color", gDecodedColor);
-    gSwapParams   = engineParams;
-    gColorSwapped = true;
+    // Delivery of the composed image (docs/N). Before upscaling the engine's own
+    // DLSS consumes it: the parameter object's Color is pointed at our texture right
+    // after the engine filled it in and before its EvaluateFeature. After upscaling
+    // there is no later consumer to redirect (the upscaler already ran), so the
+    // composed image is copied straight back over the engine's Output - the same
+    // ALL -> COPY_DEST -> ALL round trip RCAS already proves on that resource.
+    if (gNr.placement == 1) {
+        auto* target = static_cast<ID3D12Resource*>(engineOutput);
+        if (target) {
+            // CopyTextureRegion, not CopyResource: gDecodedColor is allocated for the
+            // largest domain ever seen ("grow only"), so after a window shrink it can
+            // be larger than the current Output. CopyResource requires identical
+            // dimensions and would be an invalid call every frame.
+            D3D12_RESOURCE_DESC const targetDesc = target->GetDesc();
+            UINT const width  = gNr.domainWidth < targetDesc.Width ? gNr.domainWidth : static_cast<UINT>(targetDesc.Width);
+            UINT const height = gNr.domainHeight < targetDesc.Height ? gNr.domainHeight : static_cast<UINT>(targetDesc.Height);
+            if (width && height) {
+                transition(cmd, target, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+                transition(
+                    cmd,
+                    gDecodedColor,
+                    D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+                    D3D12_RESOURCE_STATE_COPY_SOURCE
+                );
+                D3D12_TEXTURE_COPY_LOCATION dst{};
+                dst.pResource        = target;
+                dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+                dst.SubresourceIndex = 0;
+                D3D12_TEXTURE_COPY_LOCATION src{};
+                src.pResource        = gDecodedColor;
+                src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+                src.SubresourceIndex = 0;
+                D3D12_BOX box{};
+                box.left   = 0;
+                box.top    = 0;
+                box.front  = 0;
+                box.right  = width;
+                box.bottom = height;
+                box.back   = 1;
+                cmd->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
+                transition(cmd, target, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+                transition(
+                    cmd,
+                    gDecodedColor,
+                    D3D12_RESOURCE_STATE_COPY_SOURCE,
+                    D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
+                );
+            }
+        }
+    } else {
+        paramSetPtr(engineParams, "Color", gDecodedColor);
+        gSwapParams   = engineParams;
+        gColorSwapped = true;
+    }
 #ifdef TEST
     gFedResource = gDecodedColor;
     gFedDomain   = 0;
@@ -2552,8 +2861,9 @@ void compositeGain(
     if (!logged) {
         logged = true;
         NR_DEBUG(
-            "[nr] Replace=%d 生效：%s（用上一帧 NR 结果，strength=%.2f white=%.2f colour=%.2f maxRatio=%.2f）",
+            "[nr] Replace=%d placement=%s 生效：%s（strength=%.2f white=%.2f colour=%.2f maxRatio=%.2f）",
             config::get().nr.replace,
+            gNr.placement == 1 ? "after" : "before",
             mode == 4u ? "TRP Ratio 合成" : "增益合成",
             static_cast<double>(strengthRamped),
             static_cast<double>(config::get().nr.whitePoint),
@@ -2626,11 +2936,11 @@ bool nrRecord(
                                    ? config::get().nr.nrEncode
                                    : (config::get().nr.replace == 5 ? 0 : 3);
     bool const useEncoded = gEncodePso && gEncodedColor;
-    // Remember the engine's own Color before our first swap, so it can be handed back
-    // when NR turns off. If the parameter object hands OUR texture back instead, the
-    // engine does not rewrite Color every frame - that would turn the composite into a
-    // feedback loop, so it is worth one log line instead of an assumption (docs/L P4).
-    if (color) {
+    // Before upscaling only: remember the engine's own Color before our first swap,
+    // so it can be handed back when NR turns off. (After upscaling never swaps the
+    // pointer; the caller's "color" there is the engine Output, which must not
+    // become the hand-back target.)
+    if (color && gNr.placement == 0) {
         if (!gEngineColor && color != static_cast<void*>(gDecodedColor)) {
             gEngineColor = color;
         } else if (gDecodedColor && color == static_cast<void*>(gDecodedColor) && !gColorEchoLogged) {
@@ -2848,8 +3158,8 @@ bool nrRecord(
                 1.0f,
                 exposureFlags,
                 0.0f,
-                static_cast<float>(gNr.renderWidth),
-                static_cast<float>(gNr.renderHeight),
+                static_cast<float>(gNr.domainWidth),
+                static_cast<float>(gNr.domainHeight),
                 0.0f,
                 0.0f,
                 1.0f,
@@ -2923,7 +3233,7 @@ bool nrRecord(
             // overrides both so the input domain can be tested on any mode.
             // Scaled input (docs/L 2.1): the encode writes the feature extent while the
             // source is the full render size, so the shader needs both.
-            bool const     scaledEncode = w != gNr.renderWidth || h != gNr.renderHeight;
+            bool const     scaledEncode = w != gNr.domainWidth || h != gNr.domainHeight;
             unsigned const encMode      = scaledEncode
                                             ? (configuredEncode == 3 ? 13u : 10u)
                                             : static_cast<unsigned>(configuredEncode);
@@ -2938,8 +3248,8 @@ bool nrRecord(
                 config::get().nr.maxRatio,
                 adaptive ? 2u : 0u,
                 0.0f,
-                static_cast<float>(gNr.renderWidth),
-                static_cast<float>(gNr.renderHeight),
+                static_cast<float>(gNr.domainWidth),
+                static_cast<float>(gNr.domainHeight),
                 0.0f,
                 0.0f,
                 1.0f,
@@ -3080,10 +3390,15 @@ bool nrRecord(
         compositeGain(
             cmd,
             static_cast<ID3D12Resource*>(color),
-            useEncoded ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+            // Both encode paths restore Color to ALL_SHADER_RESOURCE before this
+            // point (the encode pass ends with the reverse transition, and the
+            // no-encode path restores after the evaluation). Passing the real state
+            // matters for the after placement, which then copies into Output.
+            D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
             engineParams,
-            gNr.renderWidth,
-            gNr.renderHeight,
+            engineOutput,
+            gNr.domainWidth,
+            gNr.domainHeight,
             w,
             h
         );
@@ -3099,7 +3414,7 @@ bool nrRecord(
     // Read-back shows the mode that actually ran, not a raw config value: anything but
     // 5 behaves as the ratio resolve, so the panel reports 6 for it.
     snapshot.replace        = gainMode ? 5 : 6;
-    bool const scaledInput  = w != gNr.renderWidth || h != gNr.renderHeight;
+    bool const scaledInput  = w != gNr.domainWidth || h != gNr.domainHeight;
     snapshot.compositeMode  = composited ? (gainMode ? (scaledInput ? 5 : 2) : (scaledInput ? 6 : 4)) : -1;
     snapshot.encodeMode     = useEncoded ? configuredEncode : -1;
     snapshot.style          = style;
@@ -3117,13 +3432,19 @@ bool nrRecord(
     snapshot.detail         = config::get().nr.detail;
     snapshot.adaptiveExposure = adaptiveExposureOn();
     snapshot.exposureBias     = config::get().nr.exposureBias;
-    snapshot.inputPercent   = (w == gNr.renderWidth && h == gNr.renderHeight)
+    snapshot.inputPercent   = (w == gNr.domainWidth && h == gNr.domainHeight)
                                   ? 100
                                   : static_cast<int>(inputPercentFromConfig());
     snapshot.featureWidth   = w;
     snapshot.featureHeight  = h;
+    snapshot.placement      = gNr.placement == 1 ? 1 : 0;
+    snapshot.afterFallback  = gNr.afterFallback;
+    snapshot.domainWidth    = gNr.domainWidth;
+    snapshot.domainHeight   = gNr.domainHeight;
     snapshot.renderWidth    = gNr.renderWidth;
     snapshot.renderHeight   = gNr.renderHeight;
+    snapshot.guideWidth     = guideWidth;
+    snapshot.guideHeight    = guideHeight;
     snapshot.rendered       = evaluateRet == 1;
     publishFrameParams(snapshot);
     static unsigned calls = 0;
@@ -3983,6 +4304,12 @@ PanelStats nrPanelStats() {
     stats.renderHeight   = gEngineFrame.renderHeight ? gEngineFrame.renderHeight : gNr.height;
     stats.outputWidth    = gEngineFrame.outputWidth ? gEngineFrame.outputWidth : gNr.engineOutputWidth;
     stats.outputHeight   = gEngineFrame.outputHeight ? gEngineFrame.outputHeight : gNr.engineOutputHeight;
+    stats.placement      = gNr.created && gNr.placement == 1 ? 1 : 0;
+    stats.afterFallback  = gNr.afterFallback;
+    stats.domainWidth    = gNr.domainWidth;
+    stats.domainHeight   = gNr.domainHeight;
+    stats.guideWidth     = gNr.renderWidth;
+    stats.guideHeight    = gNr.renderHeight;
 
     stats.nrSamples     = gStampMedianCount[0].load(std::memory_order_relaxed);
     stats.engineSamples = gStampMedianCount[1].load(std::memory_order_relaxed);
