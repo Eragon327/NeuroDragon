@@ -208,14 +208,19 @@
             "keys": "Hotkeys",
             "open": "Open / close",
             "close": "Close panel",
-            "rebindHint": "Click the button, then press the key you want (Esc cancels).",
-            "capturing": "Press a key…",
+            "openHint": "Click the button, then press and release the new key or combination, in order; Esc keeps the current binding (the panel key cannot be empty), Reset restores the default.",
+            "rebindHint": "Click the button, then press and release the keys you want, in order; Esc clears the binding, Reset restores the default.",
+            "capturing": "Press keys…",
+            "reset": "Reset",
+            "resetHint": "Back to the default combination",
+            "conflictExact": "Same combination as \"{0}\": the two fight, only the first match fires.",
+            "conflictOverlap": "Prefix overlap with \"{0}\": the shorter one fires first.",
             "nrKey": "NR on / off",
             "resetKey": "Reset NR history",
             "nrKeyHint": "Works while the panel is closed; press Apply first.",
             "resetKeyHint": "Works while the panel is closed; wipes NR and engine DLSS history together.",
             "screenshot": "Screenshot key",
-            "screenshotHint": "Click the button, then press the key you want (Esc cancels). The finished frame (HUD included, panel excluded) is saved as PNG under the game folder's screenshots/.",
+            "screenshotHint": "Click the button, then press and release the new key or combination (Esc clears it). The finished frame (HUD included, panel excluded) is saved as PNG under the game folder's screenshots/.",
             "config": "Config file",
             "configHint": "The config is imported at startup only; Apply affects this run, Save as default also writes config/config.json.",
             "about": "About",
@@ -233,7 +238,12 @@
             "saveDefault": "Save as default"
         },
         "key": {
-            "unknown": "Key 0x{0:02X}"
+            "unknown": "Key 0x{0:02X}",
+            "mouseLeft": "Mouse left",
+            "mouseRight": "Mouse right",
+            "mouseMiddle": "Mouse middle",
+            "mouseX1": "Mouse side 1",
+            "mouseX2": "Mouse side 2"
         },
         "toast": {
             "shotSaved": "Screenshot saved: {}",

@@ -2,6 +2,7 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/Test.h"
+#include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/ui/Overlay.h"
@@ -16,6 +17,7 @@
 #include <Windows.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -64,12 +66,15 @@ config::Sr sanitizedSr(config::Sr sr) {
     return sr;
 }
 
-int         gDraftKey{VK_END};
-// In-game NR hotkeys (docs/L 1.5), staged like the panel key.
-int         gDraftNrKey{VK_OEM_4};    // '['
-int         gDraftResetKey{VK_OEM_6}; // ']'
-// Screenshot key, staged like the others: same capture, same Apply.
-int         gDraftScreenshotKey{VK_F2};
+// Hotkey drafts. Combinations, like everything the overlay matches: "apply" writes
+// these back into the config, and the overlay re-reads the config from there.
+input::KeyBind gDraftPanelKeys{};
+input::KeyBind gDraftNrKeys{};
+input::KeyBind gDraftResetKeys{};
+input::KeyBind gDraftScreenshotKeys{};
+// Which row started the capture (index into the hotkey table); -1 = none. The
+// capture itself lives in the overlay because the window thread feeds it.
+int gPendingKeySlot{-1};
 // Model builds listed from the mod directory. Scanned once per panel open instead of
 // per frame: the pick only matters on the next start anyway.
 std::vector<std::string> gModelFiles;
@@ -92,58 +97,15 @@ void setStatus(std::string text) { gStatus = std::move(text); }
 
 void at(ImVec2 position) { ImGui::SetCursorScreenPos(position); }
 
-// Readable name for a virtual-key code.
-std::string keyLabel(int virtualKey) {
-    if (virtualKey == 0) return "0";
-    if (virtualKey >= 'A' && virtualKey <= 'Z') return std::string(1, static_cast<char>(virtualKey));
-    if (virtualKey >= '0' && virtualKey <= '9') return std::string(1, static_cast<char>(virtualKey));
-    if (virtualKey >= VK_F1 && virtualKey <= VK_F12) return "F" + std::to_string(virtualKey - VK_F1 + 1);
-    switch (virtualKey) {
-    case VK_OEM_1:
-        return ";";
-    case VK_OEM_2:
-        return "/";
-    case VK_OEM_3:
-        return "`";
-    case VK_OEM_4:
-        return "[";
-    case VK_OEM_5:
-        return "\\";
-    case VK_OEM_6:
-        return "]";
-    case VK_OEM_7:
-        return "'";
-    case VK_OEM_COMMA:
-        return ",";
-    case VK_OEM_PERIOD:
-        return ".";
-    case VK_OEM_MINUS:
-        return "-";
-    case VK_OEM_PLUS:
-        return "=";
-    case VK_END:
-        return "End";
-    case VK_HOME:
-        return "Home";
-    case VK_INSERT:
-        return "Insert";
-    case VK_DELETE:
-        return "Delete";
-    case VK_PRIOR:
-        return "PageUp";
-    case VK_NEXT:
-        return "PageDown";
-    case VK_TAB:
-        return "Tab";
-    case VK_SPACE:
-        return "Space";
-    case VK_RETURN:
-        return "Enter";
-    case VK_ESCAPE:
-        return "Esc";
-    default:
-        return "ui.key.unknown"_tr(virtualKey);
-    }
+// Staging starts from what is configured (the overlay runs the same parse, so the
+// draft starts out identical to the live bindings). An empty stored array is a real
+// value: "unbound", not "no record".
+void reloadKeyDrafts() {
+    gDraftPanelKeys      = parsePanelKeys(config::get().ui.openKeys); // never empty: no other way in
+    gDraftNrKeys         = parseKeys(config::get().ui.nrKeys, config::kDefaultNrKey);
+    gDraftResetKeys      = parseKeys(config::get().ui.resetKeys, config::kDefaultResetKey);
+    gDraftScreenshotKeys = parseKeys(config::get().ui.screenshotKeys, config::kDefaultScreenshotKey);
+    gPendingKeySlot      = -1;
 }
 
 bool mappedCombo(char const* label, int* value, char const* const* items, int const* values, int count) {
@@ -1087,40 +1049,131 @@ void drawTabAdvanced() {
 
     auto& overlay = Overlay::getInstance();
 
-    // The capture mechanism is global (one key at a time); this only remembers which
-    // row started it so the captured code lands in the right field.
-    static int pendingTarget = 0; // 0 = panel, 1 = NR on/off, 2 = reset, 3 = screenshot
-
-    auto hotkeyRow = [&](std::string const& labelText, std::string const& hintText, int* value, int target) {
-        widgets::beginRow();
-        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", labelText.c_str());
-        std::string const label =
-            overlay.isCapturingHotkey() && pendingTarget == target ? "ui.adv.capturing"_tr() : keyLabel(*value);
-        float const width = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(widgets::rowRight() - width);
-        if (ImGui::Button((label + "##hk" + std::to_string(target)).c_str())) {
-            pendingTarget = target;
-            overlay.beginHotkeyCapture();
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", hintText.c_str());
+    // One row per rebindable hotkey. The capture itself is global (one at a time,
+    // fed by the window thread); `gPendingKeySlot` only remembers which row started
+    // it so the result lands in the right draft.
+    struct Row {
+        input::KeyBind* keys;
+        Hotkey          hotkey;
+        std::string     label;
+        std::string     hint;
     };
+    std::array<Row, 4> const rows{{
+        {&gDraftPanelKeys, Hotkey::Panel, "ui.adv.open"_tr(), "ui.adv.openHint"_tr()},
+        {&gDraftNrKeys, Hotkey::NrToggle, "ui.adv.nrKey"_tr(), "ui.adv.nrKeyHint"_tr()},
+        {&gDraftResetKeys, Hotkey::NrReset, "ui.adv.resetKey"_tr(), "ui.adv.resetKeyHint"_tr()},
+        {&gDraftScreenshotKeys, Hotkey::Screenshot, "ui.adv.screenshot"_tr(), "ui.adv.screenshotHint"_tr()},
+    }};
 
-    hotkeyRow("ui.adv.open"_tr(), "ui.adv.rebindHint"_tr(), &gDraftKey, 0);
-    hotkeyRow("ui.adv.nrKey"_tr(), "ui.adv.nrKeyHint"_tr(), &gDraftNrKey, 1);
-    hotkeyRow("ui.adv.resetKey"_tr(), "ui.adv.resetKeyHint"_tr(), &gDraftResetKey, 2);
-    hotkeyRow("ui.adv.screenshot"_tr(), "ui.adv.screenshotHint"_tr(), &gDraftScreenshotKey, 3);
+    for (size_t index = 0; index < rows.size(); ++index) {
+        Row const& row = rows[index];
 
-    if (int const captured = overlay.takeCapturedHotkey(); captured != 0) {
-        int* target = pendingTarget == 1   ? &gDraftNrKey
-                    : pendingTarget == 2   ? &gDraftResetKey
-                    : pendingTarget == 3   ? &gDraftScreenshotKey
-                                           : &gDraftKey;
-        if (*target != captured) {
-            *target = captured;
+        // Worst collision with any *other* row. Severity only depends on binding
+        // contents (not on hover/click), so the style pushes below stay paired.
+        input::ConflictSeverity severity = input::ConflictSeverity::None;
+        std::string             otherLabel;
+        for (size_t other = 0; other < rows.size(); ++other) {
+            if (other == index) continue;
+            auto const candidate = input::classifyConflict(*row.keys, *rows[other].keys);
+            if (candidate > severity) {
+                severity   = candidate;
+                otherLabel = rows[other].label;
+            }
+        }
+
+        bool const capturing = gPendingKeySlot == static_cast<int>(index) && overlay.isCapturingKey();
+
+        std::string text;
+        if (capturing) {
+            auto const preview = overlay.capturePreview();
+            text = preview.empty() ? "ui.adv.capturing"_tr() : input::formatCombo(preview);
+        } else {
+            text = row.keys->display();
+        }
+
+        widgets::beginRow();
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", row.label.c_str());
+
+        auto const& style      = ImGui::GetStyle();
+        auto const  resetText  = "ui.adv.reset"_tr();
+        auto const  resetWidth = ImGui::CalcTextSize(resetText.c_str()).x + style.FramePadding.x * 2.0f;
+        auto const  keyWidth   = ImGui::CalcTextSize(text.c_str()).x + style.FramePadding.x * 2.0f;
+        // No reset button while capturing: the row should stay quiet (the preview
+        // text is still growing).
+        auto const totalWidth = capturing ? keyWidth : keyWidth + style.ItemInnerSpacing.x + resetWidth;
+
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(widgets::rowRight() - totalWidth);
+
+        bool const  conflicted = !capturing && severity != input::ConflictSeverity::None;
+        ImU32 const border     = severity == input::ConflictSeverity::Exact ? kRed : kAmber;
+        if (conflicted) {
+            ImGui::PushStyleColor(ImGuiCol_Border, border);
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, std::max(1.0f, theme::scale()));
+        }
+        // The visible text cannot be the id: two rows can show the same text (both
+        // "-", or the same key twice), and ImGui would then share one id between them.
+        std::string const id      = text + "##hotkey" + std::to_string(index);
+        bool const        clicked = ImGui::Button(id.c_str());
+        if (conflicted) {
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
+        }
+
+        if (clicked) {
+            gPendingKeySlot = static_cast<int>(index);
+            overlay.beginKeyCapture();
+        }
+        if (ImGui::IsItemHovered()) {
+            // The conflict is reported on hover only: an inline line per row pushed
+            // everything below it down and broke the column's rhythm.
+            if (severity == input::ConflictSeverity::Exact) {
+                ImGui::SetTooltip("%s", "ui.adv.conflictExact"_tr(otherLabel).c_str());
+            } else if (severity == input::ConflictSeverity::Overlap) {
+                ImGui::SetTooltip("%s", "ui.adv.conflictOverlap"_tr(otherLabel).c_str());
+            } else {
+                ImGui::SetTooltip("%s", row.hint.c_str());
+            }
+        }
+
+        if (capturing) continue;
+
+        ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
+
+        // Back to the code default. Grey (but still drawn) when already there, so the
+        // row does not change width between the two states.
+        bool const canReset = !row.keys->equals(defaultKeys(row.hotkey));
+        if (!canReset) ImGui::BeginDisabled();
+        bool const reset = ImGui::Button((resetText + "##reset" + std::to_string(index)).c_str());
+        if (!canReset) ImGui::EndDisabled();
+
+        if (reset) {
+            *row.keys = defaultKeys(row.hotkey);
             markDirty();
         }
-        pendingTarget = 0;
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            ImGui::SetTooltip("%s", "ui.adv.resetHint"_tr().c_str());
+        }
+    }
+
+    // The capture result arrives from the window thread: nullopt = nothing committed
+    // (still capturing, or cancelled); engaged-and-empty = the player pressed Esc, an
+    // explicit unbind; engaged-and-non-empty = the new combination.
+    if (auto captured = overlay.takeCapturedKeys()) {
+        int const slot = gPendingKeySlot;
+        if (slot >= 0 && slot < static_cast<int>(rows.size())) {
+            auto& keys = *rows[static_cast<size_t>(slot)].keys;
+            // The panel key cannot be unbound: Esc on that row keeps the current
+            // binding, because nothing else would open the panel again.
+            bool const keepsPanelKey = slot == static_cast<int>(Hotkey::Panel) && captured->empty();
+            if (!keepsPanelKey && !keys.equals(*captured)) {
+                keys = std::move(*captured);
+                markDirty();
+            }
+        }
+        gPendingKeySlot = -1;
+    } else if (!overlay.isCapturingKey()) {
+        gPendingKeySlot = -1;
     }
 
     widgets::statRow("ui.adv.close"_tr().c_str(), "Esc");
@@ -1137,14 +1190,15 @@ void drawTabAdvanced() {
 // Footer --------------------------------------------------------------------
 
 void applyDraft(bool persist) {
-    int const oldPreset    = config::get().sr.preset;
-    config::get().nr         = gDraft;
-    config::get().sr         = gDraftSr;
-    config::get().ui.openKey = gDraftKey;
-    config::get().ui.nrKey   = gDraftNrKey;
-    config::get().ui.resetKey = gDraftResetKey;
-    config::get().ui.screenshotKey = gDraftScreenshotKey;
-    Overlay::getInstance().refreshHotkey();
+    int const oldPreset = config::get().sr.preset;
+
+    config::get().nr                = gDraft;
+    config::get().sr                = gDraftSr;
+    config::get().ui.openKeys       = gDraftPanelKeys.keys();
+    config::get().ui.nrKeys         = gDraftNrKeys.keys();
+    config::get().ui.resetKeys      = gDraftResetKeys.keys();
+    config::get().ui.screenshotKeys = gDraftScreenshotKeys.keys();
+    Overlay::getInstance().refreshKeys();
     gDirty = false;
 
     // A model preset is only read at CreateFeature, so applying a new one has to
@@ -1207,11 +1261,10 @@ void drawFooter(Layout const& layout) {
     x -= buttonWidth + gap;
     at(ImVec2(x, top));
     if (widgets::footerButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), false)) {
-        gDraft    = config::get().nr;
-        gDraftSr  = sanitizedSr(config::get().sr);
-        gDraftKey = config::get().ui.openKey;
-        gDraftScreenshotKey = config::get().ui.screenshotKey;
-        gDirty    = false;
+        gDraft   = config::get().nr;
+        gDraftSr = sanitizedSr(config::get().sr);
+        reloadKeyDrafts();
+        gDirty = false;
         setStatus("ui.footer.discarded"_tr());
     }
 }
@@ -1347,14 +1400,11 @@ void onOpened() {
     // Start from what is running right now. Nothing is read from disk here: the
     // file is an import at load, and the panel is a staging area over the live
     // values.
-    gDraft    = config::get().nr;
-    gDraftSr  = sanitizedSr(config::get().sr);
-    gDraftKey = config::get().ui.openKey;
-    gDraftNrKey    = config::get().ui.nrKey;
-    gDraftResetKey = config::get().ui.resetKey;
-    gDraftScreenshotKey = config::get().ui.screenshotKey;
-    gModelFiles    = utils::listNrModelFiles();
-    gDirty    = false;
+    gDraft   = config::get().nr;
+    gDraftSr = sanitizedSr(config::get().sr);
+    reloadKeyDrafts();
+    gModelFiles = utils::listNrModelFiles();
+    gDirty      = false;
     gStatus.clear();
 }
 

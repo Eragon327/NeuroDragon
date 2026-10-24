@@ -120,29 +120,46 @@ int gWarmupFrames{};
 
 // Input bookkeeping: what the game has been told is down, so opening the panel can
 // synthesise the matching releases instead of leaving the player walking forward.
-bool                  gToggleKeyDown{};
 bool                  gConsumeEscapeRelease{};
-// In-game NR hotkeys (docs/L 1.5): one-shot edges so auto-repeat cannot toggle the
-// renderer every 30 ms while a key is held.
-bool                  gNrKeyDown{};
-bool                  gResetKeyDown{};
 std::array<bool, 256> gGameKeysDown{};
 std::array<bool, 5>   gGameMouseButtonsDown{};
 
-// Panel hotkey and its one-shot rebinding capture. The window thread reads the
-// key and writes the capture result; the render thread (panel) starts the capture
-// and takes the result. Atomics keep both sides free of locks.
-std::atomic<int> gHotkey{VK_END};
-std::atomic_bool gCapturingHotkey{false};
-std::atomic<int> gCapturedHotkey{0};
+// The four hotkeys. The panel thread writes them (refreshKeys), the window thread
+// reads a snapshot per key event; a combination is a vector, so they cannot be
+// atomics.
+struct KeyBindings {
+    input::KeyBind toggle;
+    input::KeyBind nrToggle;
+    input::KeyBind nrReset;
+    input::KeyBind screenshot;
+};
+std::mutex  gKeysMutex;
+KeyBindings gKeys{};
 
-// Screenshot hotkey (config ui.screenshotKey, F2 by default). The window thread
-// raises the request, the render thread consumes it at the next Present and copies
-// the frame *before* drawing the panel, so the PNG never contains the overlay.
-std::atomic<int>  gScreenshotKey{VK_F2};
-std::atomic_bool  gScreenshotRequested{false};
-bool              gScreenshotKeyDown{};
-std::wstring      gScreenshotDirectory;
+// Which keys the window thread currently sees held. Updated for every key/mouse
+// event in both panel states, because the toggle combination has to stay recognisable
+// while the panel is open. Window thread only.
+std::array<bool, input::kMaxVirtualKey> gHeldKeys{};
+// Keys whose key-down was swallowed by a hotkey: their key-up has to be swallowed
+// too, or the game sees a release it never saw a press for.
+std::array<bool, input::kMaxVirtualKey> gConsumedKeyReleases{};
+
+// Rebinding capture. Modal: while it is active every key and mouse button is
+// consumed and collected in press order, and the commit happens once all of them are
+// released again. The result is polled by the panel on its next frame, so the window
+// thread never touches panel state.
+std::atomic_bool                        gCapturingKey{false};
+std::mutex                              gCaptureMutex;
+std::vector<int>                        gCaptureCandidate;
+std::array<bool, input::kMaxVirtualKey> gCaptureDown{};
+bool                                    gCaptureAnyReleased{};
+std::optional<input::KeyBind>           gCapturedKeys{};
+
+// Screenshot request. The window thread raises it, the render thread consumes it at
+// the next Present and copies the frame *before* drawing the panel, so the PNG never
+// contains the overlay.
+std::atomic_bool gScreenshotRequested{false};
+std::wstring     gScreenshotDirectory;
 
 // Toast.
 std::mutex  gToastMutex;
@@ -319,24 +336,192 @@ LRESULT consumeMenuInputMessage(HWND window, UINT message, WPARAM wParam, LPARAM
     return 1;
 }
 
-// Screenshot key, handled in both panel states. Swallowing the key pair keeps the
-// game from also reacting to it (F2 is unused by Bedrock, but a rebound key might
-// not be).
-bool handleScreenshotKey(UINT message, WPARAM wParam) {
-    auto const key = static_cast<WPARAM>(gScreenshotKey.load(std::memory_order_relaxed));
-    if (key == 0 || wParam != key) return false;
-    if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) {
-        if (!gScreenshotKeyDown) {
-            gScreenshotKeyDown = true;
-            gScreenshotRequested.store(true, std::memory_order_release);
+// ---------------------------------------------------------------------------
+// Hotkeys
+// ---------------------------------------------------------------------------
+
+struct PressedKey {
+    int  code{}; // VK-space key code, 0 when the message is not a key at all
+    bool down{};
+};
+
+// One window message as a key state. Mouse buttons are decoded into the same VK
+// space the bindings use (input::kMouseLeft..kMouseX2), which is why a combination
+// such as "X + right mouse button" needs no special case anywhere below.
+[[nodiscard]] PressedKey decodePressedKey(UINT message, WPARAM wParam) {
+    switch (message) {
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+        return {static_cast<int>(wParam), true};
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        return {static_cast<int>(wParam), false};
+
+    // With CS_DBLCLKS the second press of a double click arrives as DBLCLK instead
+    // of DOWN; both mean "pressed".
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONDBLCLK:
+        return {input::kMouseLeft, true};
+    case WM_LBUTTONUP:
+        return {input::kMouseLeft, false};
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONDBLCLK:
+        return {input::kMouseRight, true};
+    case WM_RBUTTONUP:
+        return {input::kMouseRight, false};
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONDBLCLK:
+        return {input::kMouseMiddle, true};
+    case WM_MBUTTONUP:
+        return {input::kMouseMiddle, false};
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONDBLCLK:
+        return {GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? input::kMouseX1 : input::kMouseX2, true};
+    case WM_XBUTTONUP:
+        return {GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? input::kMouseX1 : input::kMouseX2, false};
+    default:
+        return {};
+    }
+}
+
+[[nodiscard]] KeyBindings keyBindingsSnapshot() {
+    std::lock_guard lock(gKeysMutex);
+    return gKeys;
+}
+
+enum class HotkeyAction { None, TogglePanel, NrToggle, NrReset, Screenshot };
+
+// Which action the key that just went down triggers, if any.
+//
+// The panel toggle and the screenshot key work in both panel states; the NR keys do
+// not while the panel is open (a modal panel owns the keyboard). When more than one
+// binding matches, the one with the most keys wins - that is what lets `C` and
+// `X + C` coexist. On an equal count the order of the table decides, so an exact
+// duplicate still has a predictable winner (the panel warns about the duplicate
+// instead of leaving it to chance).
+[[nodiscard]] HotkeyAction matchHotkey(int virtualKey, KeyBindings const& keys, bool panelOpen) {
+    struct Candidate {
+        input::KeyBind const* keys;
+        HotkeyAction          action;
+        bool                  armed;
+    };
+    std::array<Candidate, 4> const candidates{{
+        {&keys.toggle, HotkeyAction::TogglePanel, true},
+        {&keys.nrToggle, HotkeyAction::NrToggle, !panelOpen},
+        {&keys.nrReset, HotkeyAction::NrReset, !panelOpen},
+        {&keys.screenshot, HotkeyAction::Screenshot, true},
+    }};
+
+    input::KeyBind const* best   = nullptr;
+    HotkeyAction          action = HotkeyAction::None;
+    for (auto const& candidate : candidates) {
+        if (!candidate.armed || candidate.keys->empty()) continue;
+        if (candidate.keys->trigger() != virtualKey) continue;
+        if (!candidate.keys->allHeld(gHeldKeys)) continue;
+        if (best && candidate.keys->size() <= best->size()) continue;
+        best   = candidate.keys;
+        action = candidate.action;
+    }
+    return action;
+}
+
+void performHotkeyAction(HWND window, HotkeyAction action) {
+    switch (action) {
+    case HotkeyAction::TogglePanel: {
+        auto& overlay = Overlay::getInstance();
+        overlay.toggle();
+        // Opening the panel means the game keeps believing every key held at that
+        // moment is still held; release them or the player walks forward.
+        if (overlay.isVisible()) releaseGameInput(window);
+        break;
+    }
+    case HotkeyAction::NrToggle:
+        config::get().nr.enabled = !config::get().nr.enabled;
+        log::writeKey(0, config::get().nr.enabled ? "nr.info.hotkeyOn" : "nr.info.hotkeyOff");
+        break;
+    case HotkeyAction::NrReset:
+        nr::nrRequestReset();
+        log::writeKey(0, "nr.info.hotkeyReset");
+        break;
+    case HotkeyAction::Screenshot:
+        gScreenshotRequested.store(true, std::memory_order_release);
+        break;
+    case HotkeyAction::None:
+        break;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Rebinding capture
+// ---------------------------------------------------------------------------
+
+void clearCaptureState() {
+    gCaptureCandidate.clear();
+    gCaptureDown.fill(false);
+    gCaptureAnyReleased = false;
+}
+
+// Publishes the result and ends the capture. Called from the window thread; the
+// panel picks the value up with takeCapturedKeys().
+void finishCapture(std::optional<input::KeyBind> result) {
+    std::lock_guard lock(gCaptureMutex);
+    if (!gCapturingKey.exchange(false, std::memory_order_acq_rel)) return;
+    gCapturedKeys = std::move(result);
+    clearCaptureState();
+}
+
+// @returns whether the message belonged to the capture and must reach neither the
+// game nor ImGui.
+bool handleCaptureMessage(UINT message, WPARAM wParam) {
+    auto const [code, down] = decodePressedKey(message, wParam);
+    if (code == 0) return false;
+    if (!input::isValidKey(code)) return true; // outside the VK range: swallow, ignore
+
+    auto const index = static_cast<size_t>(code);
+
+    if (!down) {
+        gCaptureDown[index] = false;
+
+        std::optional<input::KeyBind> confirmed;
+        {
+            std::lock_guard lock(gCaptureMutex);
+            // The combination is complete once every key of the candidate has been
+            // released again. Single keys and combinations are then the same gesture:
+            // press G, release G; press X, press C, release X, release C.
+            if (std::ranges::find(gCaptureCandidate, code) != gCaptureCandidate.end()) gCaptureAnyReleased = true;
+            if (gCaptureAnyReleased && !gCaptureCandidate.empty()) {
+                auto const allReleased = std::ranges::none_of(gCaptureCandidate, [](int key) {
+                    return gCaptureDown[static_cast<size_t>(key)];
+                });
+                // A combination made of modifiers only is not committed: holding Ctrl
+                // to sprint and letting go would otherwise bind "Ctrl" and fire on
+                // every sprint. The capture stays open, so pressing a normal key next
+                // completes it.
+                auto const hasNormalKey = std::ranges::any_of(gCaptureCandidate, [](int key) {
+                    return !input::isModifierKey(key);
+                });
+                if (allReleased && hasNormalKey) confirmed = input::KeyBind::make(gCaptureCandidate);
+            }
         }
+        if (confirmed) finishCapture(std::move(confirmed));
         return true;
     }
-    if (message == WM_KEYUP || message == WM_SYSKEYUP) {
-        gScreenshotKeyDown = false;
+
+    if (code == VK_ESCAPE) {
+        // Esc is "unbind", not "cancel": the commit is an empty combination. The real
+        // cancel (panel closed, overlay uninstalled) goes through cancelKeyCapture().
+        finishCapture(input::KeyBind{});
         return true;
     }
-    return false;
+
+    if (!gCaptureDown[index]) {
+        std::lock_guard lock(gCaptureMutex);
+        if (std::ranges::find(gCaptureCandidate, code) == gCaptureCandidate.end()) {
+            gCaptureCandidate.push_back(code);
+        }
+    }
+    gCaptureDown[index] = true;
+    return true;
 }
 
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -347,26 +532,53 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     }
 
     if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && wParam == FALSE)) {
-        gToggleKeyDown        = false;
+        // Losing focus can eat the key-ups of a combination that is still held;
+        // forget everything, or the next press looks like auto-repeat forever.
+        gHeldKeys.fill(false);
+        gConsumedKeyReleases.fill(false);
         gConsumeEscapeRelease = false;
-        gNrKeyDown            = false;
-        gResetKeyDown         = false;
-        gScreenshotKeyDown    = false;
         ClipCursor(nullptr);
+        Overlay::getInstance().cancelKeyCapture();
     }
 
     auto const imguiReady = gImGuiReady.load(std::memory_order_acquire);
     if (!imguiReady) return forwardToGame(window, message, wParam, lParam);
 
-    // Before the panel branches: a screenshot must work whether the panel is open
-    // or closed, and the key must not leak into the panel's own hotkey capture.
-    if (!gCapturingHotkey.load(std::memory_order_acquire) && handleScreenshotKey(message, wParam)) {
-        return 1;
+    // 0) Rebinding capture owns every key and mouse button until it commits. Runs
+    //    before everything else, so captured keys leak into neither ImGui nor the
+    //    game.
+    if (gCapturingKey.load(std::memory_order_acquire) && handleCaptureMessage(message, wParam)) return 1;
+
+    bool const panelOpen = Overlay::getInstance().isVisible();
+
+    // 1) Hotkeys, in both panel states. A swallowed key-down keeps swallowing its
+    //    auto-repeat (the trigger stays marked until its key-up), and the key-up is
+    //    swallowed too - otherwise the game would see a release without a press.
+    if (auto const pressed = decodePressedKey(message, wParam);
+        pressed.code != 0 && input::isValidKey(pressed.code)) {
+        auto const index = static_cast<size_t>(pressed.code);
+        if (pressed.down) {
+            if (gHeldKeys[index]) {
+                if (gConsumedKeyReleases[index]) return 1; // auto-repeat of a swallowed trigger
+            } else {
+                gHeldKeys[index]  = true;
+                auto const action = matchHotkey(pressed.code, keyBindingsSnapshot(), panelOpen);
+                if (action != HotkeyAction::None) {
+                    gConsumedKeyReleases[index] = true;
+                    performHotkeyAction(window, action);
+                    return 1;
+                }
+            }
+        } else {
+            gHeldKeys[index] = false;
+            if (gConsumedKeyReleases[index]) {
+                gConsumedKeyReleases[index] = false;
+                return 1;
+            }
+        }
     }
 
-    bool const visible = Overlay::getInstance().isVisible();
-
-    if (!visible) {
+    if (!panelOpen) {
         // The release of the Esc that closed the panel: swallow it, but let ImGui
         // know the key went up (it will keep believing Esc is held otherwise).
         if (gConsumeEscapeRelease && (message == WM_KEYUP || message == WM_SYSKEYUP) && wParam == VK_ESCAPE) {
@@ -375,51 +587,6 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             return 1;
         }
 
-        auto const hotkey = static_cast<WPARAM>(gHotkey.load(std::memory_order_relaxed));
-        if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) {
-            if (wParam == hotkey && !gToggleKeyDown) {
-                gToggleKeyDown = true;
-                Overlay::getInstance().toggle();
-                if (Overlay::getInstance().isVisible()) releaseGameInput(window);
-                return 1;
-            }
-        } else if (message == WM_KEYUP || message == WM_SYSKEYUP) {
-            if (wParam == hotkey) {
-                gToggleKeyDown = false;
-                return 1;
-            }
-        }
-
-        // In-game NR hotkeys (docs/L 1.5): NR on/off and a one-shot history wipe.
-        // Both edges are swallowed - forwarding only the key-up leaves the game with
-        // a key it never saw pressed.
-        bool const keyEdge =
-            message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP;
-        if (keyEdge) {
-            bool const down       = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-            auto const nrKey      = static_cast<WPARAM>(config::get().ui.nrKey);
-            auto const resetKey   = static_cast<WPARAM>(config::get().ui.resetKey);
-            if (nrKey != 0 && wParam == nrKey) {
-                if (down && !gNrKeyDown) {
-                    gNrKeyDown               = true;
-                    config::get().nr.enabled = !config::get().nr.enabled;
-                    log::writeKey(0, config::get().nr.enabled ? "nr.info.hotkeyOn" : "nr.info.hotkeyOff");
-                } else if (!down) {
-                    gNrKeyDown = false;
-                }
-                return 1;
-            }
-            if (resetKey != 0 && wParam == resetKey) {
-                if (down && !gResetKeyDown) {
-                    gResetKeyDown = true;
-                    nr::nrRequestReset();
-                    log::writeKey(0, "nr.info.hotkeyReset");
-                } else if (!down) {
-                    gResetKeyDown = false;
-                }
-                return 1;
-            }
-        }
         return forwardToGame(window, message, wParam, lParam);
     }
 
@@ -427,51 +594,11 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 
     ClipCursor(nullptr);
 
-    // Rebinding: the next key press becomes the hotkey, Esc cancels. Runs before
-    // everything else so the key cannot leak into ImGui or the game.
-    if (gCapturingHotkey.load(std::memory_order_acquire)) {
-        if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) {
-            auto const code = static_cast<int>(wParam);
-            if (code == VK_ESCAPE) {
-                gCapturingHotkey.store(false, std::memory_order_release);
-                return 1;
-            }
-            // A bare modifier is not a useful "open the panel" key.
-            bool const modifier = code == VK_SHIFT || code == VK_LSHIFT || code == VK_RSHIFT || code == VK_CONTROL
-                               || code == VK_LCONTROL || code == VK_RCONTROL || code == VK_MENU || code == VK_LMENU
-                               || code == VK_RMENU || code == VK_LWIN || code == VK_RWIN;
-            if (!modifier) {
-                gCapturedHotkey.store(code, std::memory_order_release);
-                gCapturingHotkey.store(false, std::memory_order_release);
-            }
-            return 1;
-        }
-        if (message == WM_KEYUP || message == WM_SYSKEYUP || message == WM_CHAR) return 1;
-    }
-
     // F11 is a window action, not game input: if the panel ever draws wrong at the
     // current resolution, F11 must stay available.
     bool const keyMessage =
         message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP;
     if (keyMessage && wParam == VK_F11) return forwardToGame(window, message, wParam, lParam);
-
-    // The panel hotkey also closes the panel. The key-up has to clear the held flag
-    // even while the panel is open: it used to be swallowed as generic panel input,
-    // so the next press looked like keyboard auto-repeat and was ignored - that is
-    // why after an Esc close the panel needed two presses of the hotkey to reopen.
-    auto const hotkey = static_cast<WPARAM>(gHotkey.load(std::memory_order_relaxed));
-    if (keyMessage && wParam == hotkey) {
-        bool const down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-        if (down) {
-            if (!gToggleKeyDown) {
-                gToggleKeyDown = true;
-                Overlay::getInstance().setVisible(false);
-            }
-        } else {
-            gToggleKeyDown = false;
-        }
-        return 1;
-    }
 
     ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam);
 
@@ -1252,8 +1379,8 @@ bool Overlay::install() {
 
     gShuttingDown.store(false, std::memory_order_release);
 
-    // The hotkey comes from config.json, which was imported during load().
-    refreshHotkey();
+    // The hotkeys come from config.json, which was imported during load().
+    refreshKeys();
 
     // This also installs the D3D12 command-queue hook: both need the same temporary
     // device and queue, so they are created once inside that step.
@@ -1270,7 +1397,11 @@ bool Overlay::install() {
     if (!guard.keyUpHookInstalled) logger().warn("overlay: key-up guard failed");
 
     gInstalled.store(true, std::memory_order_release);
-    logger().debug("overlay: ready (VK {:#x} opens the panel)", gHotkey.load(std::memory_order_relaxed));
+    if (auto const toggle = keyBindingsSnapshot().toggle; toggle.empty()) {
+        logger().debug("overlay: ready (no panel hotkey bound)");
+    } else {
+        logger().debug("overlay: ready ({} opens the panel)", toggle.display());
+    }
     return true;
 }
 
@@ -1285,7 +1416,7 @@ void Overlay::uninstall() {
     gShuttingDown.store(true, std::memory_order_release);
     gVisible.store(false, std::memory_order_release);
     ClipCursor(nullptr);
-    cancelHotkeyCapture();
+    cancelKeyCapture();
 
     removeHook(gExecuteCommandListsTarget);
     removeHook(gResizeBuffers1Target);
@@ -1324,8 +1455,8 @@ void Overlay::uninstall() {
     gWindow               = nullptr;
     gVisibleLastFrame     = false;
     gConsumeEscapeRelease = false;
-    gToggleKeyDown        = false;
-    gScreenshotKeyDown    = false;
+    gHeldKeys.fill(false);
+    gConsumedKeyReleases.fill(false);
     gScreenshotRequested.store(false, std::memory_order_release);
     screenshot::releaseCache();
     gGameKeysDown.fill(false);
@@ -1342,6 +1473,9 @@ void Overlay::setVisible(bool visible) {
 
     if (visible) menu::onOpened();
     else menu::onClosed();
+
+    // A capture cannot outlive the panel: nothing would ever poll its result.
+    if (!visible) cancelKeyCapture();
 
     // Keep owning the input for a short moment after either transition, so the key
     // that triggered it never leaks into the game.
@@ -1363,32 +1497,89 @@ void Overlay::notify(std::string message) {
     gToastExpireAt = GetTickCount64() + kToastLifetimeMs;
 }
 
-int Overlay::hotkey() const { return gHotkey.load(std::memory_order_relaxed); }
-
-void Overlay::refreshHotkey() {
-    int key = config::get().ui.openKey;
-    if (key <= 0 || key > 0xFF) key = VK_END;
-    gHotkey.store(key, std::memory_order_release);
-
-    int shot = config::get().ui.screenshotKey;
-    if (shot <= 0 || shot > 0xFF) shot = VK_F2;
-    gScreenshotKey.store(shot, std::memory_order_release);
-}
-
-int Overlay::screenshotKey() const { return gScreenshotKey.load(std::memory_order_relaxed); }
-
 void Overlay::setScreenshotDirectory(std::wstring directory) { gScreenshotDirectory = std::move(directory); }
 
-void Overlay::beginHotkeyCapture() {
-    gCapturedHotkey.store(0, std::memory_order_release);
-    gCapturingHotkey.store(true, std::memory_order_release);
+// ---------------------------------------------------------------------------
+// Hotkeys / rebinding
+// ---------------------------------------------------------------------------
+
+input::KeyBind defaultKeys(Hotkey hotkey) {
+    int fallback = config::kDefaultOpenKey;
+    switch (hotkey) {
+    case Hotkey::Panel:
+        fallback = config::kDefaultOpenKey;
+        break;
+    case Hotkey::NrToggle:
+        fallback = config::kDefaultNrKey;
+        break;
+    case Hotkey::NrReset:
+        fallback = config::kDefaultResetKey;
+        break;
+    case Hotkey::Screenshot:
+        fallback = config::kDefaultScreenshotKey;
+        break;
+    }
+    return input::KeyBind::make({fallback}).value_or(input::KeyBind{});
 }
 
-void Overlay::cancelHotkeyCapture() { gCapturingHotkey.store(false, std::memory_order_release); }
+input::KeyBind parseKeys(std::vector<int> const& keys, int fallback) {
+    if (keys.empty()) return input::KeyBind{}; // deliberately unbound
+    if (auto parsed = input::KeyBind::make(keys)) return *parsed;
+    // Garbage in a hand-edited config must not leave a binding that can never fire.
+    return input::KeyBind::make({fallback}).value_or(input::KeyBind{});
+}
 
-bool Overlay::isCapturingHotkey() const { return gCapturingHotkey.load(std::memory_order_acquire); }
+input::KeyBind parsePanelKeys(std::vector<int> const& keys) {
+    // Empty included: there is no second way to open the panel, so "unbound" is not
+    // a usable state here.
+    return input::KeyBind::make(keys).value_or(defaultKeys(Hotkey::Panel));
+}
 
-int Overlay::takeCapturedHotkey() { return gCapturedHotkey.exchange(0, std::memory_order_acq_rel); }
+void Overlay::refreshKeys() {
+    KeyBindings keys{
+        parsePanelKeys(config::get().ui.openKeys),
+        parseKeys(config::get().ui.nrKeys, config::kDefaultNrKey),
+        parseKeys(config::get().ui.resetKeys, config::kDefaultResetKey),
+        parseKeys(config::get().ui.screenshotKeys, config::kDefaultScreenshotKey),
+    };
+
+    std::lock_guard lock(gKeysMutex);
+    gKeys = std::move(keys);
+}
+
+void Overlay::beginKeyCapture() {
+    {
+        std::lock_guard lock(gCaptureMutex);
+        gCapturedKeys.reset();
+        clearCaptureState();
+    }
+    gCapturingKey.store(true, std::memory_order_release);
+}
+
+void Overlay::cancelKeyCapture() {
+    {
+        std::lock_guard lock(gCaptureMutex);
+        clearCaptureState();
+        gCapturedKeys.reset();
+    }
+    gCapturingKey.store(false, std::memory_order_release);
+}
+
+bool Overlay::isCapturingKey() const { return gCapturingKey.load(std::memory_order_acquire); }
+
+std::vector<int> Overlay::capturePreview() const {
+    if (!gCapturingKey.load(std::memory_order_acquire)) return {};
+
+    std::lock_guard lock(gCaptureMutex);
+    return gCaptureCandidate;
+}
+
+std::optional<input::KeyBind> Overlay::takeCapturedKeys() {
+    std::lock_guard lock(gCaptureMutex);
+    auto result = std::move(gCapturedKeys);
+    gCapturedKeys.reset();
+    return result;
+}
 
 FrameStats Overlay::frameStats() const {
     FrameStats stats;

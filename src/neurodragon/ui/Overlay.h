@@ -1,6 +1,9 @@
 #pragma once
 
+#include "neurodragon/input/KeyBind.h"
+
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,6 +22,37 @@ struct FrameStats {
 // and uses it only to wait for the GPU before releasing objects a resolution change
 // replaced.
 [[nodiscard]] void* overlayGameQueue();
+
+// ---------------------------------------------------------------------------
+// Hotkeys
+// ---------------------------------------------------------------------------
+//
+// All four hotkeys are combinations, not single keys (input::KeyBind), and a mouse
+// button is just another key. They are matched in the window procedure because that
+// is where this overlay already owns the input path: the panel is modal and blocks
+// the engine's own input while it is open, so an event-bus based manager would go
+// blind exactly when the panel hotkey still has to work.
+
+enum class Hotkey {
+    Panel,      // open/close the panel; works in both panel states
+    NrToggle,   // NR on/off; only while the panel is closed
+    NrReset,    // wipe NR + engine DLSS history once; only while the panel is closed
+    Screenshot, // save the finished frame; works in both panel states
+};
+
+// Code default of @p hotkey, i.e. what "reset to default" restores.
+[[nodiscard]] input::KeyBind defaultKeys(Hotkey hotkey);
+
+// Parse one stored key array (config ui.openKeys / nrKeys / ...).
+//   - empty              -> deliberately unbound; a real value, not "no record";
+//   - illegal or garbage -> the code default, because a hand-edited config must not
+//                           leave behind a binding that can never fire.
+[[nodiscard]] input::KeyBind parseKeys(std::vector<int> const& keys, int fallback);
+
+// Same for the panel hotkey, which is the only way into the panel (there is no
+// command fallback): an empty value is repaired to the default instead of honoured,
+// because an "unbound" panel key locks the player out of the UI.
+[[nodiscard]] input::KeyBind parsePanelKeys(std::vector<int> const& keys);
 
 // Top-layer ImGui overlay.
 //
@@ -60,30 +94,36 @@ public:
     void notify(std::string message);
 
     // -----------------------------------------------------------------------
-    // Hotkey
+    // Hotkeys
     // -----------------------------------------------------------------------
 
-    // The key that opens/closes the panel. Comes from config.json (ui.openKey),
-    // imported at load; the panel's Advanced tab stages a new one and calls
-    // refreshHotkey() when it is applied.
-    [[nodiscard]] int hotkey() const;
-    void              refreshHotkey();
+    // The key that opens/closes the panel (config ui.openKeys) and where the
+    // screenshot PNGs go (<version>/screenshots, the game root). The screenshot runs
+    // at the next Present, before the panel is drawn, so the file holds the finished
+    // frame without the overlay.
+    void setScreenshotDirectory(std::wstring directory);
 
-    // Screenshot key (config ui.screenshotKey, F2 by default, rebindable in the
-    // panel's Advanced tab) and where the PNGs go (<version>/screenshots, the game
-    // root). The capture runs at the next Present, before the panel is drawn, so the
-    // file holds the finished frame without the overlay.
-    [[nodiscard]] int  screenshotKey() const;
-    void               setScreenshotDirectory(std::wstring directory);
+    // Re-read the four bindings from config.json. The window thread reads a snapshot
+    // per key event; the panel's Advanced tab calls this when a change is applied.
+    void refreshKeys();
 
-    // One-shot rebinding: the next key press (Esc cancels) becomes the new key. The
-    // capture is global (one key at a time); the panel decides which field the
-    // result lands in, so the same mechanism serves every rebindable key.
-    void               beginHotkeyCapture();
-    void               cancelHotkeyCapture();
-    [[nodiscard]] bool isCapturingHotkey() const;
-    // Returns the captured code once, then 0.
-    int takeCapturedHotkey();
+    // Rebinding capture. Modal: while it is active the window thread consumes every
+    // key and mouse button, collects them in press order and commits once all of them
+    // are released again. Esc commits an EMPTY combination (= unbind), it is not a
+    // cancel; closing the panel drops the capture.
+    void               beginKeyCapture();
+    void               cancelKeyCapture();
+    [[nodiscard]] bool isCapturingKey() const;
+
+    // Keys of the combination being captured, in press order, for the live preview.
+    // Empty while nothing is being captured.
+    [[nodiscard]] std::vector<int> capturePreview() const;
+
+    // Tri-state result, consumed once:
+    //   - std::nullopt       nothing committed (still capturing, or cancelled);
+    //   - engaged and empty  the player pressed Esc -> unbind that slot;
+    //   - engaged, not empty the new combination.
+    [[nodiscard]] std::optional<input::KeyBind> takeCapturedKeys();
 
     [[nodiscard]] FrameStats         frameStats() const;
     [[nodiscard]] std::vector<float> recentFrameMs() const;

@@ -208,14 +208,19 @@
             "keys": "热键",
             "open": "打开 / 关闭",
             "close": "关闭面板",
-            "rebindHint": "点一下按钮，再按你要用的键（Esc 取消）。",
+            "openHint": "点一下按钮，再按下并松开新的键或组合键（按顺序按）；Esc 保留当前绑定（面板键不能为空），点「重置」回到默认。",
+            "rebindHint": "点一下按钮，再按下并松开要用的键或组合键（按顺序按）；Esc 清空绑定，点「重置」回到默认。",
             "capturing": "按键中…",
+            "reset": "重置",
+            "resetHint": "回到默认组合",
+            "conflictExact": "与「{0}」完全相同：两条热键互相抢，只有先匹配的那条会生效。",
+            "conflictOverlap": "与「{0}」前缀重叠：短的那条会先响。",
             "nrKey": "NR 开 / 关",
             "resetKey": "重置 NR 历史",
             "nrKeyHint": "面板关闭时生效；改完先点「应用」。",
             "resetKeyHint": "面板关闭时生效；同时擦掉 NR 与引擎 DLSS 的时序历史。",
             "screenshot": "截图键",
-            "screenshotHint": "点一下按钮再按新键（Esc 取消）。成品帧（含 HUD、不含面板）存成 PNG，落到游戏目录下的 screenshots/。",
+            "screenshotHint": "点一下按钮再按下并松开新键或组合键（Esc 清空绑定）。成品帧（含 HUD、不含面板）存成 PNG，落到游戏目录下的 screenshots/。",
             "config": "配置文件",
             "configHint": "配置只在启动时读取；「应用」只作用于本次运行，「保存为默认」才会写入 config/config.json。",
             "about": "关于",
@@ -233,7 +238,12 @@
             "saveDefault": "保存为默认"
         },
         "key": {
-            "unknown": "按键 0x{0:02X}"
+            "unknown": "按键 0x{0:02X}",
+            "mouseLeft": "鼠标左键",
+            "mouseRight": "鼠标右键",
+            "mouseMiddle": "鼠标中键",
+            "mouseX1": "鼠标侧键 1",
+            "mouseX2": "鼠标侧键 2"
         },
         "toast": {
             "shotSaved": "截图已保存：{}",
