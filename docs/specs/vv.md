@@ -224,13 +224,22 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 | DLSS 在 VV 尺寸下不比 TAAU 快 | 收益只剩画质 | M6 先量时间，再决定是否默认开 |
 | 版本漂移（签名/回调） | 每个补丁都要重定位 | 全部签名走 `kSig*` + 启动自检，失败回退引擎原路径 |
 | 槽位猜错 | 客户端 AV（已发生：槽 25） | 只钩已验证的槽；要认槽先标定 |
+| 持有交换链后缓冲引用 | `ResizeBuffers` 失败 → 引擎 `abort()`（已发生：22:39 / 22:51 两次 `0xC0000409`） | **拿到的后缓冲引用必须当场 `Release`**；只在 `noteSwapChain()` 的调用内部检查、不常驻持有 |
+| 碰引擎纹理时引擎正在重建 | 驱动 AV（已发生：22:58 `nvwgf2umx.dll`，栈里有 `dumpTextureBmp ← onPresent ← presentHook`） | 任何对引擎纹理的**状态转换/拷贝**都必须在「确定不会重建」的安静窗口内做；自动触发已关闭，只能显式触发 |
 
 ## 10. 证据与工具
 
-- 代码：`src/neurodragon/probe/VvProbe.{h,cpp}`（只读探针）、`probe/VvCalibrate.cpp`（独立 TU）、
-  `ui/Overlay.cpp` 里两处计数回调。
-- 日志标记：`[vv] taau #N viewport=…`（每 300 次）、`[vv] taau #1/#2 …resText=[…]`（前两帧 dump）、
-  `[vv] presents=… submits=… lists=…`（前 10 帧 + 每 600 帧）、`[vv] submit #N tid= lists= qpc=`（前 24 次）。
+- 代码：`src/neurodragon/probe/VvProbe.{h,cpp}`（只读探针）、`probe/VvCalibrate.{h,cpp}`（独立 TU：
+  `__uuidof` / `d3d12.h` / BMP 回读都在这里）、`ui/Overlay.cpp` 里的回调
+  （`onPresent` / `noteSwapChain` / `setGameQueue` / `onExecuteCommandLists`）。
+- 探针**当前行为**（2026-10-24 收尾状态）：只读。hook `taau` 声明 + draw、`Close`（槽 9，
+  已验证）、引擎设备的 `CreateRenderTargetView`；日志出 `[vv] rtv res=` 清单、
+  `[vv] engine device`、`[vv] engine list vtable=`。**自动 BMP dump 已关闭**（会与重建并发导致驱动 AV），
+  `dumpTextureBmp()` 仍保留在 `VvCalibrate.cpp` 里，等显式触发器（面板按钮/热键）。
+- 日志标记：`[vv] taau #N viewport=…`（每 300 次）、`[vv] taau #1/#2 …resText=[…]`（前两帧）、
+  `[vv] presents=… taau=… seen=… dumps=…`（前 10 帧 + 每 600 帧）、`[vv] submit #N tid= lists= qpc=`（前 24 次）、
+  `[vv] rtv res=<ptr> <w>x<h> fmt=<n>`（每个新渲染目标一次）、`[vv] close #N list=… qpc=…`（采样帧前 64 次）。
+- 触发引擎重建资源：**按一次 F11（全屏切换）或改窗口大小**；重建后清单才会完整（启动时的创建早于模组加载）。
 - 工具（不进 mod 仓库）：`NeuroDragonWorkSpace\tools\vv_locate.py`、`vv_disasm_args2.py`、
   `rtti_names.py`、`vv_ngx_route.py`（均不依赖 IDA；capstone 走 pip 装）。
 - 版本约束：所有 RVA 只对 `1.26.5101.0` 成立；换版本先用 `vv_locate.py` 重新定位
@@ -243,3 +252,48 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 - M4–M7 的原始规划：[archive/2026-10/I-sr-final-plan.md](../archive/2026-10/I-sr-final-plan.md) §5
 - taau 契约与 bgfx：[renderdragon](renderdragon.md) §3–5
 - 路线位置：[roadmap §3](../roadmap.md)
+
+## 12. 下一步执行顺序（2026-10-24 定）
+
+用户决定：**先把「能不能插进去」验证掉，再回头认纹理**。理由：注入架构是阶段 2 的地基，
+而且它不需要知道任何纹理身份、不碰引擎资源，风险最低、能亲眼看。
+
+### A. 边界 / 注入验证（先做，零纹理依赖）
+
+目标：证明「拆 `ExecuteCommandLists` + 中间插一段我们自己的命令」在 TAAU 之后成立。
+
+做法：
+
+1. 用引擎设备自建 `ID3D12CommandAllocator` + `ID3D12GraphicsCommandList`（`VvCalibrate.cpp` 里已有同样套路）；
+2. 在 `onExecuteCommandLists` 里当 `listCount > 8` 时，把引擎的 48 个 list **按索引 k 拆开**：
+   先 `ExecuteCommandLists(前 k 个)`，再提交我们自己的 list，再提交剩下的；
+3. 我们的 list 里对**后缓冲**做 `ClearRenderTargetView`（或 `ClearDepthStencilView` 之外的全屏清）；
+4. 后缓冲指针从 `noteSwapChain()` 取，**每次取完立刻 `Release`**（§9 第一条崩溃就是这个）；
+5. 状态：`PRESENT → RENDER_TARGET → PRESENT`，**必须回到 PRESENT**，否则下一帧黑屏/异常。
+
+验收（用户可见）：
+
+- 画面变成我们清的颜色、**UI 仍在** ⇒ 说明注入点在 UI 之前，"pre-UI 写入"成立；
+- 全屏纯色（含 UI 区域）⇒ 注入点在 UI 之后；
+- 什么都没有 ⇒ 该边界在后缓冲被消费之后（或被覆盖），换 k。
+
+扫描策略：一帧一个 k（k 从 1 到 48），把 k 写进日志，配合一次截图就能定位边界区间；
+确定区间后再二分。
+
+### B. 认纹理（A 通过后再做）
+
+把 `dumpTextureBmp()` 接到**显式触发**上（面板按钮或热键），只在安静窗口执行（无 F11、无窗口尺寸变化）。
+第一轮先 dump 渲染分辨率那一组（10/11/12/26/28/41/54），确认哪个是 HDR 场景色、哪个是 MV、哪个是深度；
+第二轮 dump 显示分辨率那组 8 bit 面，确认 TAAU 的输出。
+
+### C. bgfx 桥（若 B 需要）
+
+如果 B 里 dump 出来的东西对不上 TAAU 的输入/输出（例如 TAAU 用的是 bgfx 侧的持久纹理），
+再从 `taau` 的 draw callback 一侧找 `bgfx::TextureHandle` 并搭 `handle → ID3D12Resource` 表。
+
+### 每步的硬约束（都是踩出来的）
+
+- 只钩**已验证**的槽（目前只有 `Close` = 9）；新槽必须先标定；
+- 任何碰引擎资源/交换链的动作都要考虑"引擎正在重建"的并发窗口；
+- 拿到的 COM 引用一律当场 `Release`；
+- 每步先做只读自检（prologue / 槽位 / 设备身份），不匹配就回退并报错，不要静默降级。

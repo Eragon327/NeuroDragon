@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/ui/GameNotice.h"
 #include "neurodragon/ui/InputGuard.h"
 #include "neurodragon/ui/Menu.h"
@@ -1305,12 +1306,15 @@ bool hookSwapChainEntryPoints(HWND gameWindow) {
 // ---------------------------------------------------------------------------
 
 HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT flags) {
+    probe::vv::noteSwapChain(swapChain);
+    probe::vv::onPresent();
     render(swapChain);
     return gOriginalPresent(swapChain, interval, flags);
 }
 
 HRESULT __stdcall
 present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT_PARAMETERS const* parameters) {
+    probe::vv::onPresent();
     render(static_cast<IDXGISwapChain*>(swapChain));
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
@@ -1348,6 +1352,8 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
             gGameQueue->AddRef();
         }
     }
+    probe::vv::setGameQueue(queue);
+    probe::vv::onExecuteCommandLists(reinterpret_cast<void* const*>(lists), count);
     gOriginalExecuteCommandLists(queue, count, lists);
 }
 
