@@ -644,6 +644,7 @@ std::size_t probeFrameBuilderFactor(void* fb) {
         gFbFactorTable.store(taddr, std::memory_order_relaxed);
         gFbIndexOffset.store(0x57c, std::memory_order_relaxed);
         gFbObject.store(fb, std::memory_order_relaxed);
+        nr::srSetFactorTable(true);
         utils::logger().info(
             "[sr] fb factor table_rva={:#x} index={} current={:.3f}",
             taddr - begin,
@@ -1101,6 +1102,9 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         nr::nrStampBegin(cmdList, n, 1);
     }
     int const result = gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
+    // Engine SR health (docs/K §2.2 ③): the panel counts evaluations and failures,
+    // so "SR stopped running" has a number behind it instead of a log hunt.
+    nr::srReportEvaluation(result);
 #ifdef TEST
     if (gNrEnabled && gNrWindowOpen && gFrame.load(std::memory_order_relaxed) == gNrDumpFrame + 4) {
         // The engine's own Output, right after its DLSS ran: this is the proof
@@ -1217,6 +1221,30 @@ int ngxGetParamsDetour(void** params) {
     return result;
 }
 
+// Which DLSS runtime the engine actually loaded, and from where (docs/K §2.2 ④):
+// with a swapped nvngx_dlss.dll, "it works" and "the engine ignored the file and
+// used something else" look identical in every other line. Size is logged instead
+// of the version resource so this needs no extra import library: 310.5.3 is
+// 54,779,504 bytes, 310.9.1 is 58,956,912.
+void logDlssRuntime() {
+    HMODULE const module = ::GetModuleHandleW(L"nvngx_dlss.dll");
+    if (!module) {
+        return;
+    }
+    wchar_t path[MAX_PATH]{};
+    if (::GetModuleFileNameW(module, path, MAX_PATH) == 0) {
+        return;
+    }
+    ULONGLONG size = 0;
+    WIN32_FILE_ATTRIBUTE_DATA attributes{};
+    if (::GetFileAttributesExW(path, GetFileExInfoStandard, &attributes)) {
+        size = (static_cast<ULONGLONG>(attributes.nFileSizeHigh) << 32) | attributes.nFileSizeLow;
+    }
+    char utf8[MAX_PATH * 4]{};
+    ::WideCharToMultiByte(CP_UTF8, 0, path, -1, utf8, static_cast<int>(sizeof(utf8)), nullptr, nullptr);
+    utils::logger().info("[sr] DLSS runtime: {} ({} bytes)", utf8, size);
+}
+
 // Hooking must not run inside a LoadLibrary detour (loader lock), so a watcher
 // thread installs these once both modules are resident.
 void hookNgxExports() {
@@ -1283,6 +1311,7 @@ void hookNgxExports() {
         reinterpret_cast<std::uintptr_t>(gNgxCreateOriginal),
         reinterpret_cast<std::uintptr_t>(gNgxEvalOriginal)
     );
+    logDlssRuntime();
 }
 
 // ---------------------------------------------------------------------------
@@ -1315,6 +1344,7 @@ bool installSrFrameContextHook() {
     void* target = ll::memory::SignatureView{srsig::kFrameContext}.resolve(true);
     if (!target) {
         utils::logger().error("[sr] frame-context signature not found; engine overrides disabled");
+        nr::srSetFrameContextHook(false);
         return false;
     }
     if (ll::memory::hook(
@@ -1326,9 +1356,11 @@ bool installSrFrameContextHook() {
         )
         != 0) {
         utils::logger().error("[sr] frame-context hook failed");
+        nr::srSetFrameContextHook(false);
         return false;
     }
     utils::logger().info("[sr] frame-context hook @ {:#x}", reinterpret_cast<std::uintptr_t>(target));
+    nr::srSetFrameContextHook(true);
     return true;
 }
 

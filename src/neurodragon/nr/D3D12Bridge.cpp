@@ -3299,6 +3299,18 @@ std::atomic<unsigned> gEngineFlags{0};
 std::atomic<unsigned> gEnginePreset{0};
 std::atomic<unsigned> gEngineSharpBits{0};
 
+// Telemetry and self-check (docs/K §2.2 ③, docs/I §7). Written from the probe and
+// read by the panel; nothing here feeds back into rendering.
+std::atomic_bool      gSrFrameCtxHook{false};
+std::atomic_bool      gSrFactorTable{false};
+std::atomic_bool      gSrCreateSeen{false};
+std::atomic<unsigned> gSrEvalCount{0};
+std::atomic<unsigned> gSrEvalFailures{0};
+std::atomic<unsigned> gSrInputFormat{0};
+std::atomic_bool      gSrInputFormatValid{false};
+std::atomic<unsigned> gSrJitterXBits{0};
+std::atomic<unsigned> gSrJitterYBits{0};
+
 // Engine upscaling configuration (see srDriveFrameContext). Every value is
 // measured from the engine's own objects, never inferred.
 std::atomic<bool>     gSrEngValid{false};
@@ -3476,6 +3488,7 @@ void srApplyCreateOverrides(void* params, int feature) {
     if (!params || feature != 1) { // 1 = NVSDK_NGX_Feature_SuperSampling (DLSS)
         return;
     }
+    gSrCreateSeen.store(true, std::memory_order_relaxed);
     static char const* const keys[] = {
         "DLSS.Hint.Render.Preset.DLAA",
         "DLSS.Hint.Render.Preset.Quality",
@@ -3520,6 +3533,20 @@ void srReadEngineParams(void* params) {
     gEngineFlags.store(paramGetU32(params, "DLSS.Feature.Create.Flags"), std::memory_order_relaxed);
     gEnginePreset.store(paramGetU32(params, "DLSS.Hint.Render.Preset.Quality"), std::memory_order_relaxed);
     gEngineSharpBits.store(floatBits(paramGetF32(params, "Sharpness")), std::memory_order_relaxed);
+    // Jitter the engine is feeding this frame (docs/K §2.2 ③ telemetry): the panel
+    // could only show it in a TEST build before, because reading it needed the
+    // parameter setters; reading what the engine wrote does not.
+    gSrJitterXBits.store(floatBits(paramGetF32(params, "Jitter.Offset.X")), std::memory_order_relaxed);
+    gSrJitterYBits.store(floatBits(paramGetF32(params, "Jitter.Offset.Y")), std::memory_order_relaxed);
+    // Input format of the engine's own Color texture. Read-only: the parameter object
+    // hands out the resource, so its desc is the only place the format appears.
+    if (auto* color = static_cast<ID3D12Resource*>(paramGetResource(params, "Color"))) {
+        auto const desc = color->GetDesc();
+        if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+            gSrInputFormat.store(static_cast<unsigned>(desc.Format), std::memory_order_relaxed);
+            gSrInputFormatValid.store(true, std::memory_order_relaxed);
+        }
+    }
 
     // One-shot history wipe. The engine never clears this key itself, so leaving
     // it at 1 would reset every frame; writing 0 again on the next frame restores
@@ -3536,6 +3563,17 @@ void srReadEngineParams(void* params) {
 }
 
 void srRequestReset() { gSrResetPending.store(true, std::memory_order_relaxed); }
+
+void srSetFrameContextHook(bool ok) { gSrFrameCtxHook.store(ok, std::memory_order_relaxed); }
+
+void srSetFactorTable(bool ok) { gSrFactorTable.store(ok, std::memory_order_relaxed); }
+
+void srReportEvaluation(int result) {
+    gSrEvalCount.fetch_add(1, std::memory_order_relaxed);
+    if (result != 1) {
+        gSrEvalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Engine upscaling configuration: measured, and optionally overridden.
@@ -3699,6 +3737,18 @@ void srDriveFrameContext(void* engine, void* ctx) {
     // 2026-10-23: config q=5 at startup -> no CreateFeature, no EvaluateFeature,
     // so NR never ran. After creation the same write is what drives the rebuild.
     bool const engineHasDlss = gSrOriginal.load(std::memory_order_relaxed) != nullptr;
+
+    // A rebuild requested before the engine has a DLSS feature (panel opened at the
+    // main menu, ray tracing off) has nothing to rebuild: the phase machine could
+    // only advance inside the canWrite branch below, so it would stay armed for the
+    // rest of the session and the panel would read "rebuilding" forever. Drop the
+    // request instead - the next CreateFeature reads our overrides anyway (docs/J §6).
+    if (!engineHasDlss && gSrRebuildPhase.load(std::memory_order_relaxed) != 0) {
+        gSrRebuildPhase.store(0, std::memory_order_relaxed);
+        gSrRebuildTicks.store(0, std::memory_order_relaxed);
+        gSrReadoutHold.store(0, std::memory_order_relaxed);
+        NR_DEBUG("[sr] rebuild request dropped: the engine has no DLSS feature yet");
+    }
 
     unsigned newQuality = ctxQuality;
     unsigned const wantedQ = chosenQuality();
@@ -3891,6 +3941,18 @@ SrStats srPanelStats() {
     stats.flags         = gEngineFlags.load(std::memory_order_relaxed);
     stats.preset        = gEnginePreset.load(std::memory_order_relaxed);
     stats.sharpness     = bitsFloat(gEngineSharpBits.load(std::memory_order_relaxed));
+    stats.rebuilding    = gSrRebuildPhase.load(std::memory_order_relaxed) != 0
+                       || gSrReadoutHold.load(std::memory_order_relaxed) != 0;
+    stats.evalCount        = gSrEvalCount.load(std::memory_order_relaxed);
+    stats.evalFailures     = gSrEvalFailures.load(std::memory_order_relaxed);
+    stats.inputFormat      = gSrInputFormat.load(std::memory_order_relaxed);
+    stats.inputFormatValid = gSrInputFormatValid.load(std::memory_order_relaxed);
+    stats.jitterX          = bitsFloat(gSrJitterXBits.load(std::memory_order_relaxed));
+    stats.jitterY          = bitsFloat(gSrJitterYBits.load(std::memory_order_relaxed));
+    stats.callbackWrapped    = stats.wrapped;
+    stats.frameContextHook   = gSrFrameCtxHook.load(std::memory_order_relaxed);
+    stats.factorTable        = gSrFactorTable.load(std::memory_order_relaxed);
+    stats.createOverridesRan = gSrCreateSeen.load(std::memory_order_relaxed);
     return stats;
 }
 

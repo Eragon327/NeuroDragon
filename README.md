@@ -89,9 +89,12 @@ BMP dump、NGX 参数追踪（`nr.paramLog`）、`[res]/[desc]/[eval]` 等诊断
 默认构建是发布版：不写 `dump/`、不钩引擎的 NGX 参数 setter、不含任何 debug 行。
 
 ```bash
-xmake f --test=y && xmake build -y      # 诊断构建（TEST 已定义）
-xmake f --test=n && xmake build -y      # 发布构建（默认）
+xmake f -p windows --test=y && xmake build -y   # 诊断构建（TEST 已定义）
+xmake f -p windows --test=n && xmake build -y   # 发布构建（默认）
 ```
+
+`-p windows` 不能省：本机在 msys bash 里跑 `xmake f` 不带它会把平台重配成 `msys`，
+随后构建不出模组（2026-10-24 实测）。
 
 发布版保留：info/warn/error 行、`log::Stage` 阶段标记、NR 创建/求值/合成、面板与 GPU 计时。
 

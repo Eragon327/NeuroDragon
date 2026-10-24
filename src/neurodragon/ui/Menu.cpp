@@ -230,6 +230,33 @@ std::string presetName(unsigned hint) {
     }
 }
 
+// DXGI format of the engine's Color, as a name when it is one we have actually
+// seen (docs/D §2: R16G16B16A16_FLOAT) and as a number otherwise - the panel's job
+// here is to show a change, not to catalogue every format.
+std::string formatName(unsigned format) {
+    switch (format) {
+    case 2:
+        return "R32G32B32A32_FLOAT";
+    case 10:
+        return "R16G16B16A16_FLOAT";
+    case 11:
+        return "R16G16B16A16_UNORM";
+    case 24:
+        return "R10G10B10A2_UNORM";
+    case 28:
+        return "R8G8B8A8_UNORM";
+    case 87:
+        return "B8G8R8A8_UNORM";
+    case 91:
+        return "B8G8R8A8_UNORM_SRGB";
+    default:
+        break;
+    }
+    char buffer[32]{};
+    std::snprintf(buffer, sizeof(buffer), "DXGI %u", format);
+    return buffer;
+}
+
 // Frame-time graph: the y axis follows the data instead of a fixed 0-50 ms, with
 // a small smoothing so the scale does not flicker frame to frame.
 float autoGraphMax(std::vector<float> const& values) {
@@ -740,28 +767,13 @@ void drawTabSr() {
 
     char buffer[128]{};
 
-    widgets::sectionHeader("ui.sr.engine"_tr().c_str());
-
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", ps.renderWidth, ps.renderHeight);
-    widgets::statRow("ui.sr.renderSize"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", ps.outputWidth, ps.outputHeight);
-    widgets::statRow("ui.sr.outputSize"_tr().c_str(), buffer);
-    if (ps.outputWidth != 0 && ps.renderWidth != 0) {
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%.1f%%",
-            100.0 * static_cast<double>(ps.renderWidth) / static_cast<double>(ps.outputWidth)
-        );
-        widgets::statRow("ui.sr.ratio"_tr().c_str(), buffer);
-    }
-    widgets::statRow("ui.sr.quality"_tr().c_str(), qualityName(sr.quality).c_str());
-    widgets::statRow("ui.sr.preset"_tr().c_str(), presetName(sr.preset).c_str());
-    std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
-    widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
-    widgets::hint("ui.sr.readOnlyHint"_tr().c_str());
-
-    ImGui::Spacing();
+    // The old "engine (read only)" block lived here. It duplicated the measured size
+    // chain, flashed the temporary quality slot for a few frames after every forced
+    // rebuild, and mixed "what we asked for" with "what the engine did". What survives
+    // is only the part that verifies a write (docs/L §0.7): the size chain next to the
+    // control that moves it, plus the quality slot and preset the engine last created
+    // its feature with - both blanked while a rebuild is in flight, because the
+    // temporary slot is not a result (docs/J §8).
     widgets::sectionHeader("ui.sr.internal"_tr().c_str());
     // Only the ratios DLSS actually has a slot for: each one maps 1:1 to the
     // engine's own quality slot, so the DLSS size is the engine's exact answer and
@@ -788,6 +800,30 @@ void drawTabSr() {
         markDirty();
     }
     widgets::hint("ui.sr.scaleHint"_tr().c_str());
+    // What the two writes actually produced: scene render rect -> engine output.
+    // This is the pair that proves the override landed (docs/J §2), so it belongs
+    // right under the control that moves it - not in a separate read-only block.
+    if (ps.renderWidth != 0 && ps.outputWidth != 0) {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%u x %u → %u x %u（%.1f%%）",
+            ps.renderWidth,
+            ps.renderHeight,
+            ps.outputWidth,
+            ps.outputHeight,
+            100.0 * static_cast<double>(ps.renderWidth) / static_cast<double>(ps.outputWidth)
+        );
+        widgets::statRow("ui.sr.currentSize"_tr().c_str(), buffer);
+    }
+    {
+        // Read back from the engine's CreateFeature parameter object, not from the
+        // draft: this is how a "the preset did not take" report is distinguished from
+        // "the panel did not save it" without reading the log.
+        std::string const slot =
+            sr.rebuilding ? "ui.sr.rebuilding"_tr() : qualityName(sr.quality);
+        widgets::statRow("ui.sr.quality"_tr().c_str(), slot.c_str(), sr.rebuilding ? kTextDim : 0);
+    }
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.model"_tr().c_str());
@@ -814,6 +850,10 @@ void drawTabSr() {
         markDirty();
     }
     widgets::hint("ui.sr.modelHint"_tr().c_str());
+    {
+        std::string const preset = sr.rebuilding ? "ui.sr.rebuilding"_tr() : presetName(sr.preset);
+        widgets::statRow("ui.sr.preset"_tr().c_str(), preset.c_str(), sr.rebuilding ? kTextDim : 0);
+    }
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.sharpSection"_tr().c_str());
@@ -913,7 +953,50 @@ void drawTabSr() {
     } else {
         widgets::hint("ui.sr.cbNone"_tr().c_str());
     }
+    // Create flags (IsHDR|MVLowRes = 0x3) come from the same parameter object as the
+    // optimal-settings answer, so they live here rather than in a separate block.
+    std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
+    widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
     widgets::hint("ui.sr.cbHint"_tr().c_str());
+
+    // Self-check + telemetry (docs/I §7 risk register, docs/K §2.2 ③). The four
+    // check rows answer "is SR wired up at all" after a game update; the rows below
+    // answer "is the engine actually running it" without reading the log.
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.selfCheck"_tr().c_str());
+    auto const checkRow = [](char const* label, bool ok) {
+        widgets::statRow(
+            label,
+            ok ? "ui.sr.checkOk"_tr().c_str() : "ui.sr.checkFailed"_tr().c_str(),
+            ok ? 0 : kRed
+        );
+    };
+    checkRow("ui.sr.checkCallback"_tr().c_str(), sr.callbackWrapped);
+    checkRow("ui.sr.checkFrameCtx"_tr().c_str(), sr.frameContextHook);
+    checkRow("ui.sr.checkFactorTable"_tr().c_str(), sr.factorTable);
+    checkRow("ui.sr.checkCreate"_tr().c_str(), sr.createOverridesRan);
+    widgets::hint("ui.sr.checkHint"_tr().c_str());
+
+    std::snprintf(buffer, sizeof(buffer), "%u", sr.evalCount);
+    widgets::statRow("ui.sr.evalCount"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u", sr.evalFailures);
+    widgets::statRow("ui.sr.evalFailures"_tr().c_str(), buffer, sr.evalFailures != 0 ? kRed : 0);
+    widgets::statRow(
+        "ui.sr.inputFormat"_tr().c_str(),
+        sr.inputFormatValid ? formatName(sr.inputFormat).c_str() : "-"
+    );
+    widgets::statRow(
+        "ui.sr.inputHdr"_tr().c_str(),
+        sr.flags == 0 ? "-" : ((sr.flags & 1u) != 0u ? "HDR" : "SDR")
+    );
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%.2f / %.2f",
+        static_cast<double>(sr.jitterX),
+        static_cast<double>(sr.jitterY)
+    );
+    widgets::statRow("ui.sr.jitter"_tr().c_str(), buffer);
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.actions"_tr().c_str());

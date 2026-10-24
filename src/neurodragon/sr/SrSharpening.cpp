@@ -166,9 +166,15 @@ constexpr unsigned kStableFrames = 12;
 constexpr unsigned kRetireDelay = 120;
 
 #ifdef TEST
-// TEST builds take one before/after pair 300 sharpened frames in, so the diff can
-// be checked offline without another game session.
-constexpr unsigned kDumpAfterFrames = 300;
+// TEST builds write one before/after pair per distinct strength, so two strengths
+// can be compared in a single session. The old fixed "frame 300" trigger fired once
+// per process, which meant the second strength needed a restart (docs/J §9).
+constexpr unsigned kDumpAfterFrames = 120;
+float    gDumpArmedStrength = -2.0f; // strength the armed capture belongs to
+unsigned gDumpAtFrame       = 0;     // sharpened-frame index to capture at
+float    gDumpStrength      = 0.0f;  // strength of the pair being flushed
+char     gDumpBeforeName[40]{};      // the file names carry the strength
+char     gDumpAfterName[40]{};
 #endif
 
 struct RetiredTexture {
@@ -598,10 +604,23 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
     // ALL_SHADER_RESOURCE (the dump helper's contract). The BMPs differ only where
     // RCAS touched a pixel; the dump's own log line carries max/mean/above1 of the
     // raw half-float data, which is what confirms the linear-HDR domain.
-    if (gFrames.load(std::memory_order_relaxed) == kDumpAfterFrames) {
-        nr::queueColorDumpN(2, cmd, output, "sharp_before.bmp", 0);
-        g.dumpPending   = true;
-        g.dumpFlushAt   = frame + 200;
+    //
+    // Re-armed on every strength change (and once after the previous pair flushed),
+    // so 0.672 and 1.0 can both be captured in one session under different names.
+    unsigned const framesNow = gFrames.load(std::memory_order_relaxed);
+    if (!g.dumpPending && strength != gDumpArmedStrength) {
+        gDumpArmedStrength = strength;
+        gDumpAtFrame       = framesNow + kDumpAfterFrames;
+        auto const milli   = static_cast<unsigned>(strength * 1000.0f + 0.5f);
+        std::snprintf(gDumpBeforeName, sizeof(gDumpBeforeName), "sharp_before_%03u.bmp", milli);
+        std::snprintf(gDumpAfterName, sizeof(gDumpAfterName), "sharp_after_%03u.bmp", milli);
+    }
+    if (!g.dumpPending && gDumpAtFrame != 0 && framesNow == gDumpAtFrame) {
+        nr::queueColorDumpN(2, cmd, output, gDumpBeforeName, 0);
+        gDumpStrength = strength;
+        g.dumpPending = true;
+        g.dumpFlushAt = frame + 200;
+        gDumpAtFrame  = 0;
     }
 #endif
 
@@ -613,7 +632,7 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
 
 #ifdef TEST
     if (g.dumpPending) {
-        nr::queueColorDumpN(3, cmd, output, "sharp_after.bmp", 0);
+        nr::queueColorDumpN(3, cmd, output, gDumpAfterName, 0);
     }
     if (g.dumpPending && frame >= g.dumpFlushAt) {
         g.dumpPending = false;
@@ -626,8 +645,8 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
         srLog(
             0,
             "[sr] 锐化前后 dump（强度 %.3f，增量倍率 %.2f）：before=%d max=%.2f nz=%u / after=%d max=%.2f nz=%u",
-            static_cast<double>(strength),
-            static_cast<double>(4.0f * strength),
+            static_cast<double>(gDumpStrength),
+            static_cast<double>(4.0f * gDumpStrength),
             okBefore ? 1 : 0,
             static_cast<double>(maxBefore),
             nzBefore,

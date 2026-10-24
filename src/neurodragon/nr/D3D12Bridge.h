@@ -340,6 +340,31 @@ struct SrStats {
     unsigned flags         = 0;
     unsigned preset        = 0;
     float    sharpness     = 0.0f;
+    // True while a forced feature rebuild is in flight (plus the settle window).
+    // The engine creates the feature with the *temporary* quality slot during this
+    // period, so `quality`/`preset` are not a result yet and the panel must not show
+    // them as one (docs/J §6: the transient slot was still occasionally visible).
+    bool     rebuilding    = false;
+
+    // ---- telemetry (docs/K §2.2 ③, docs/J §8) --------------------------------
+    // Engine SR evaluations seen and how many did not return 1. A rising failure
+    // count is the cheapest explanation for "SR stopped working" and needs no log.
+    unsigned evalCount     = 0;
+    unsigned evalFailures  = 0;
+    // Format of the engine's own `Color` texture (DXGI_FORMAT as unsigned; the panel
+    // maps the common ones) and the jitter the engine is writing this frame.
+    unsigned inputFormat      = 0;
+    bool     inputFormatValid = false;
+    float    jitterX          = 0.0f;
+    float    jitterY          = 0.0f;
+
+    // ---- self-check (docs/I §7 risk register) -------------------------------
+    // Whether each hook SR depends on is actually installed. A game update that
+    // moves a signature now shows up as one failed row instead of a silent no-op.
+    bool     callbackWrapped    = false; // optimal-settings callback replaced
+    bool     frameContextHook   = false; // per-frame ctx copy hooked
+    bool     factorTable        = false; // FrameBuilder factor table located
+    bool     createOverridesRan = false; // CreateFeature detour saw the SR feature
 };
 
 // Engine upscaling configuration, read from the per-frame render context
@@ -410,6 +435,14 @@ void srReadEngineParams(void* params);
 // One-shot history wipe for the engine's DLSS: writes Reset=1 for one frame,
 // then back to 0 (the same key the engine uses when a world loads).
 void srRequestReset();
+
+// ---- self-check / telemetry writers (called from the probe) -----------------
+// The panel lists the hooks SR depends on, so a game update that moves a signature
+// reads as one failed row instead of "SR silently does nothing" (docs/I §7).
+void srSetFrameContextHook(bool ok);
+void srSetFactorTable(bool ok);
+// Engine SR health: called with the engine's own EvaluateFeature return value.
+void srReportEvaluation(int result);
 
 [[nodiscard]] PanelStats nrPanelStats();
 

@@ -240,14 +240,11 @@
             "shotFailed": "Screenshot failed (see log)"
         },
         "sr": {
-            "engine": "Engine SR (read-only)",
-            "renderSize": "Render size",
-            "outputSize": "Output size",
-            "ratio": "Render scale",
-            "quality": "Quality slot (PerfQualityValue)",
-            "preset": "Network preset",
+            "quality": "Engine quality slot (at create)",
+            "preset": "Engine preset (at create)",
+            "currentSize": "Size (measured)",
+            "rebuilding": "rebuilding…",
             "flags": "Create flags",
-            "readOnlyHint": "These are the engine's current values; Internal resolution rewrites both the DLSS size and the scene size.",
             "callback": "Engine sizing callback (read-only)",
             "cbCount": "Callback calls",
             "cbDisplay": "Input (output size)",
@@ -291,7 +288,20 @@
             "ctxNone": "No engine frame context seen yet (it appears inside a world).",
             "qualitySlot": "Engine quality slot (experimental)",
             "factorSlot": "Scene factor (FrameBuilder)",
-            "slotHint": "The quality slot sets the DLSS size; the scene factor sets the size the scene really renders at. Use them together: 66% with quality 2, 100% with quality 5. Scene factor defaults to following the engine."
+            "slotHint": "The quality slot sets the DLSS size; the scene factor sets the size the scene really renders at. Use them together: 66% with quality 2, 100% with quality 5. Scene factor defaults to following the engine.",
+            "selfCheck": "Self-check and telemetry",
+            "checkOk": "ok",
+            "checkFailed": "FAILED",
+            "checkCallback": "Sizing callback wrapper",
+            "checkFrameCtx": "Frame-context hook",
+            "checkFactorTable": "Factor table located",
+            "checkCreate": "Create overrides (CreateFeature)",
+            "checkHint": "All four should read ok; the factor table is only located after the first world load. A FAILED row means a game update moved a signature and SR will silently do nothing - see the [sr] line in the log.",
+            "evalCount": "SR evaluations",
+            "evalFailures": "SR evaluation failures",
+            "inputFormat": "Input format (Color)",
+            "inputHdr": "HDR input",
+            "jitter": "Jitter (px)"
         }
     },
     "log": {
