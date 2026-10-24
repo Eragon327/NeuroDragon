@@ -5,6 +5,7 @@
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/probe/VvInject.h"
+#include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
@@ -1037,6 +1038,23 @@ std::string skipReasonText(probe::vv::inject::SkipReason reason) {
     }
 }
 
+#ifdef TEST
+// B0 probe controls (docs/specs/vv.md §13.4). TEST-only and deliberately not
+// translated: this is a developer switch, not a user feature. The delay lets the
+// player click, close the panel and start walking before the 24 frames begin.
+void drawB0Probe() {
+    widgets::sectionHeader("VV B0 (TEST)");
+    widgets::hint("Press F11 once after entering the world so the engine rebuilds its render graph.");
+    if (ImGui::Button("Dump now (stand still, then F2)")) {
+        probe::vv::requestDumpNow();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Sample 24 frames in 2 s (then walk)")) {
+        probe::vv::requestContextSample(24, 2000);
+    }
+}
+#endif
+
 void drawVvInjection() {
     widgets::sectionHeader("ui.diag.vv"_tr().c_str());
 
@@ -1188,6 +1206,10 @@ void drawTabDiagnostics() {
 
     ImGui::Spacing();
     drawVvInjection();
+#ifdef TEST
+    ImGui::Spacing();
+    drawB0Probe();
+#endif
 
     // What the last evaluation actually wrote (docs/L 1.2). This is the answer to
     // "did my change reach the runtime": the numbers come from the same variables

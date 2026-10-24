@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 研究（2026-10-25：M6 B0 只读探针——VV 会话 / 颜色域 / 输入角色 / 矩阵）
+
+- 新增只读探针，不建 DLSS feature、不写任何引擎资源：
+  - `[vv] session`：记录 `_nvngx.dll` / `nvngx.dll` / `nvngx_dlss.dll` / `D3D12Core.dll`
+    是否加载、引擎 NGX `Init*` 是否被抓到（appId/dataPath）、core 的五个导出是否存在；
+    **只在抓到引擎 Init 后**调 `GetCapabilityParameters`，避免在未初始化的 core 上取参数。
+  - `vv_dump_now.txt` 的 dump 文件名与日志都带资源指针
+    （`vv_b<batch>_res_<idx>_p<PTR>_<w>x<h>_fmt<f>.bin`），让离线判定能唯一对上颜色/深度候选。
+  - `vv_ctx_now.txt`：连续 12 帧采样 `TAAContext`（draw callback 第 3 个参数）与
+    `UpscalingCameraData`（taau 第 7 个参数）的 `0x000..0x300` 原始 float，另打 `+0x200/+0x240`
+    两个 4×4；用于重新定位「当前/上一帧 VP、jitter、世界原点」。
+- 2026-10-25 03:02 首次 B0 采集：VV 下 `nvngx.dll` / `_nvngx.dll` / `nvngx_dlss.dll` /
+  `nvngx_dlssnr.dll` **全部未加载**，引擎也未 Init ⇒ DLSS-SR 必须自建 NGX 会话（B1 新增前置）；
+  当次 dump 命中 0 个渲染分辨率 target（需先 F11），F8 没有产生采样日志（已加 F10/V/面板按钮）。
+- 离线 `ngx_probe --sr` 已证自建会话可行：驱动目录的 `_nvngx.dll` + `Init_ProjectID` 返回 1，
+  `CreateFeature(1)` 接受 360×243 → 1091×736（ret=1，handle 非空）；模型由 exe 同目录的
+  `nvngx_dlss.dll` 提供。
+- 外部工具：`NeuroDragonWorkSpace/tools/vv_domain.py`、`vv_ctx.py`。
+- 文档：`docs/specs/vv.md` §13（M6 规划与 B0 判据）、`docs/roadmap.md` 阶段 2 状态。
+- TEST 构建 `1b8629a3…` 已**热替换**到本工作区（游戏运行中按「改名 → 换入」完成；当前进程仍用旧映射，
+  重启后生效）。旧 DLL 备份 `.bak-before-m6b0` 与 `.old-live`；主目录 `1.26.51.01` 未动。
+  **尚无完整 B0 结果**，等一次有效采集（§13.4）。
+- 2026-10-25 03:29 旋转样本定案 P0.4：`TAAContext+0x200/+0x240` 是当前/上一帧 VP（相机相对、
+  无平移；`prev(n)==cur(n-1)`）；`+0x280/+0x28c` 是当前/上一帧相机位置；`+0x1e4/+0x1e8` 是 jitter。
+  矩阵每行第 4 个 float 与第 3 个重复（HLSL 打包痕迹），实际布局由 B1 的 MV 调试视图确认。
+- 修复 03:28 的 dump 0 命中：渲染图的 RTV 在 resize 钩子之前创建（03:28:50.510 vs .518），
+  现在 `gSeen` 不随 resize 清空、容量 4096。
+- 修复 2026-10-25 03:4x 的 F9 崩溃：dump 回退遍历裸指针 `gSeen` 并调用 `nr::describe()`，
+  其中一个已释放 → AV 在 `D3D12Core.dll`。新增引用计数的 `gHeld`（≤1000×600、非交换链后缓冲、
+  环形 128），回退只用它存档的尺寸/格式；不再对裸指针取 desc。
+- 2026-10-25 03:44 **B0 收口**：F11 成功、F9 回退 dump 出 12 张 844×475，无崩溃。
+  颜色域是 **HDR**：最佳 `fmt26` 候选 + **ACES + gamma 2.2** 与 F2 截图平均差 26.3/255
+  （SDR 最佳 55.3，Reinhard 113.9）⇒ M6 用 ACES，不用 Reinhard。color = 渲染分辨率下最新的
+  `fmt26`；depth = `fmt44` R24G8 主深度（`fmt41` 恒 1.0、`fmt54` 0..0.25 都不是）。
+  P0.1 自建 NGX 会话、P0.4 VP/相机位置/jitter 均已答。B1 可开工。
+- **修复 F11 崩溃（三处）**：① 渲染目标清单 `createRtvDetour` 之前对每个新 RTV `AddRef`，
+  包含交换链后缓冲，导致 `ResizeBuffers` 失败、引擎 `abort()`（2026-10-25 03:14，`0xC0000409`）；
+  现在 `gSeen` 只存裸指针。② `gTextures` 之前对会话内所有纹理 AddRef（数千张，含 1024 图集），
+  现在只保留重建后的前 96 张，并在 `onSwapChainResize()` 里先释放。③ 关闭「进世界 3 秒后自动
+  dump」，避免同步拷贝与 F11 重建并发。
+- B0 触发方式：`F9` 立刻 dump（站定后按，再按 `F2`）；`F8`/`F10`/`V` 任意一个让上下文采样在
+  2 秒后开始（按完就可以走/转视角）；面板「诊断 → VV B0 (TEST)」有同样的两个按钮。
+  `F8` 在部分笔记本上会被 Fn 锁成媒体键（2026-10-25 03:02 实测按下无日志），所以加了 `F10`/`V`
+  和按钮；dump 前要先按一次 `F11` 让引擎重建渲染图（否则创建钩子看不到旧的渲染分辨率纹理）。
+
 ### Added（2026-10-24：VV 边界注入实验——阶段 2 的 A 步）
 
 - 「诊断」页新增「VV 注入（边界实验）」：把引擎每帧一次的 `ExecuteCommandLists`（约 48 个 command list）

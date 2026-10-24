@@ -54,8 +54,24 @@ void noteWorldEntered();
 // the BMP dump (they live in PRESENT, not COMMON).
 void noteSwapChain(void* swapChain);
 
+// Called from the overlay's ResizeBuffers / ResizeBuffers1 hooks *before* the
+// original runs. Releases the probe's references to the old render graph: a live
+// reference to a swap-chain back buffer (or the whole old graph) makes
+// ResizeBuffers fail, and the engine answers that with abort() - the 2026-10-25
+// 03:14 F11 crash. Safe to call when nothing is recorded.
+void onSwapChainResize();
+
 // The game's D3D12 direct queue, captured by the overlay's ExecuteCommandLists hook.
 // Only used by the one-shot BMP dump.
 void setGameQueue(void* queue);
+
+// B0 diagnostic triggers (docs/specs/vv.md §13.3). TEST builds act on them; a
+// release build compiles the calls out, so the panel can stay wired either way.
+// `frames` / `delayMs` describe a context sample that starts after the delay -
+// the player presses once, then walks during the wait.
+void requestContextSample(unsigned frames, unsigned delayMs);
+
+// Runs one render-resolution dump synchronously (the same path F9 uses).
+void requestDumpNow();
 
 } // namespace neurodragon::probe::vv

@@ -141,6 +141,34 @@ std::atomic<bool> gDumpFrame{false};
 std::atomic<unsigned> gCloseInFrame{0};
 std::atomic<unsigned> gBigFrames{0};
 
+// ---------------------------------------------------------------------------
+// B0 probes (docs/specs/vv.md §13.1) - diagnostics build only
+// ---------------------------------------------------------------------------
+//
+// P0.4 needs the two objects the TAAU pass actually owns, sampled together:
+//   * the draw callback's TAAContext (its third argument), where the matrices
+//     already read out at +0x200/+0x240 live - and, per P0.4, maybe only the
+//     PROJECTION there, so the whole window is sampled rather than one offset;
+//   * UpscalingCameraData (the declarator's `camera` argument), which is the
+//     natural home of the view/projection pair the Mac decompile calls
+//     Current/PreviousViewProjectionMatrixUniform.
+// A marker file (`vv_ctx_now.txt`) arms 12 consecutive samples; logs are parsed
+// offline (tools/vv_ctx.py). Nothing is written and no state is touched.
+#ifdef TEST
+std::atomic<unsigned> gJitterIndex{0};
+std::atomic<void*>    gCameraData{nullptr};
+std::atomic<unsigned> gCtxSamplesLeft{0};
+std::atomic<unsigned> gCtxSampleIndex{0};
+std::atomic<unsigned> gCtxBatch{0};
+// F8 asks for a sample and only starts after a delay, so the player can press it
+// while standing and then walk: a file marker (which takes two hands and a
+// keyboard) is no longer needed for the moving sample.
+std::atomic<unsigned long long> gCtxStartMs{0};
+// One-shot P0.1 state: the core is only queried after the engine's own Init was
+// observed, and the answer is logged once per state change.
+std::atomic<bool> gSessionReady{false};
+#endif
+
 // Cached engine device and queue, filled when the first engine submission is seen.
 std::atomic<void*> gEngineDevice{nullptr};
 std::atomic<void*> gGameQueue{nullptr};
@@ -152,8 +180,31 @@ std::uint64_t      gSeenStableSince = 0;
 unsigned           gDumpPasses = 0;
 // Every resource that has ever been given a render-target view, so the one-shot dump
 // knows what to look at without depending on any unverified vtable slot.
-void*    gSeen[256]{};
-unsigned gSeenCount = 0;
+// Raw-pointer render-target inventory. No references are held (see
+// createRtvDetour), and it is deliberately NOT cleared on resize: the engine
+// creates the new render graph's views *before* our ResizeBuffers hook runs
+// (2026-10-25 03:28:50.510 vs .518), so clearing there would discard exactly the
+// textures the next dump needs. 4096 entries cover a whole session.
+constexpr unsigned kSeenSlots = 4096;
+void*              gSeen[kSeenSlots]{};
+unsigned           gSeenCount = 0;
+
+// Reference-counted subset of the RTV inventory, safe to describe at dump time.
+// Only small, non-swap-chain resources enter it (see createRtvDetour), it is a
+// ring so the newest 128 survive, and it is NOT cleared on resize: the new
+// graph's views are created just before our ResizeBuffers hook runs. This is the
+// list dumpSemantics uses; the full gSeen list stays raw because a *stale* raw
+// pointer passed to nr::describe() is exactly the 2026-10-25 03:4x AV.
+struct HeldRtv {
+    void*    resource;
+    unsigned width;
+    unsigned height;
+    unsigned format;
+};
+constexpr unsigned kHeldSlots = 128;
+HeldRtv            gHeld[kHeldSlots]{};
+unsigned           gHeldCount = 0;
+unsigned           gHeldNext = 0;
 
 // The render resolution the TAAU pass upscales FROM: display viewport x the engine's
 // factor. It is the key that turns the render-target inventory into named inputs
@@ -206,6 +257,32 @@ void* lookupRtv(std::uintptr_t handle) {
     return nullptr;
 }
 
+// True when the resource is one of the swap chain's current back buffers. Those
+// must never be AddRef'd (ResizeBuffers would fail and the engine aborts); the
+// size gate below already excludes them, but this is the exact test when the
+// chain is known.
+bool isSwapChainBuffer(void* resource) {
+    if (!resource) {
+        return false;
+    }
+    auto* const chain = gSwapChain.load(std::memory_order_relaxed);
+    if (!chain) {
+        return false;
+    }
+    void*    buffers[2]{};
+    unsigned const count = swapChainBuffers(chain, buffers, 2);
+    bool     found = false;
+    for (unsigned i = 0; i < count; ++i) {
+        if (buffers[i] == resource) {
+            found = true;
+        }
+    }
+    for (unsigned i = 0; i < count; ++i) {
+        releaseComObject(buffers[i]);
+    }
+    return found;
+}
+
 void createRtvDetour(void* device, void* resource, void const* desc, std::uintptr_t handle) {
     // The boundary experiment creates a view of the back buffer on this same device;
     // the back buffer is not part of the frame graph this hook inventories.
@@ -232,15 +309,35 @@ void createRtvDetour(void* device, void* resource, void const* desc, std::uintpt
             break;
         }
     }
-    if (isNew && gSeenCount < 256) {
-        // Hold a reference: the engine rebuilds the whole render graph on a resize and
-        // frees the previous textures, and the inventory must survive that to be usable
-        // later (the semantic dump runs seconds after the rebuild). The cost is that the
-        // old textures stay alive until uninstall - tens of MB, and never a back buffer.
-        addRefComObject(resource);
+    if (isNew && gSeenCount < kSeenSlots) {
+        // The raw inventory NEVER holds a reference: it sees every render-target
+        // view, including the swap chain's back buffers, and a live reference to
+        // a back buffer makes ResizeBuffers fail (engine abort(), 0xC0000409).
+        // The reference-counted list dumpSemantics may safely describe is gHeld,
+        // restricted to small non-swap-chain textures.
         gSeen[gSeenCount++] = resource;
         gLastRtvTick.store(GetTickCount(), std::memory_order_relaxed);
         auto const info = nr::describe(resource);
+        // The render graph at this engine is <=1000x600 at the current VV factor
+        // (844x475 at 2560x1440, 360x242 windowed); display-sized back buffers,
+        // 1024x2048 atlases and 1937x333 UI strips fall outside. The swap-chain
+        // test is the exact one when the chain is already known.
+        bool const renderSized = info.width <= 1000 && info.height <= 600;
+        if (renderSized && !isSwapChainBuffer(resource)) {
+            if (gHeldCount == kHeldSlots) {
+                releaseComObject(gHeld[gHeldNext].resource);
+            } else {
+                ++gHeldCount;
+            }
+            addRefComObject(resource);
+            gHeld[gHeldNext] = HeldRtv{
+                resource,
+                static_cast<unsigned>(info.width),
+                static_cast<unsigned>(info.height),
+                info.format
+            };
+            gHeldNext = (gHeldNext + 1) % kHeldSlots;
+        }
         utils::logger().info(
             "[vv] rtv res={:#x} {}x{} fmt={} flags={:#x}",
             reinterpret_cast<std::uintptr_t>(resource),
@@ -359,7 +456,7 @@ struct TextureRecord {
     unsigned format;
     unsigned source; // 1 = committed, 2 = placed
 };
-constexpr unsigned kTextureSlots = 4096;
+constexpr unsigned kTextureSlots = 96; // retained references; see recordTexture
 TextureRecord gTextures[kTextureSlots]{};
 unsigned      gTextureCount = 0;
 
@@ -371,6 +468,11 @@ void recordTexture(void* resource, unsigned source) {
     if (info.dimension != 3 || info.width < 64 || info.height < 64 || info.mips > 2) {
         return;
     }
+    // Only the FIRST few textures after a resize are kept, and a resize clears the
+    // list (onSwapChainResize). The engine creates its render graph in one burst
+    // right after the swap-chain rebuild; holding a reference to every texture it
+    // ever creates (thousands of atlases in a session) is both a VRAM leak and a
+    // way to make the next rebuild fail (2026-10-25 03:14 abort).
     for (unsigned i = 0; i < gTextureCount; ++i) {
         if (gTextures[i].resource == resource) {
             return;
@@ -379,8 +481,8 @@ void recordTexture(void* resource, unsigned source) {
     if (gTextureCount >= kTextureSlots) {
         return;
     }
-    // Same reason as the render-target inventory: hold a reference so a later rebuild
-    // cannot free the texture out from under a dump.
+    // Hold a reference so a later rebuild cannot free the texture out from under a
+    // dump. Bounded by kTextureSlots and dropped on resize.
     addRefComObject(resource);
     gTextures[gTextureCount++] = TextureRecord{
         resource,
@@ -397,6 +499,19 @@ void recordTexture(void* resource, unsigned source) {
         info.format,
         source == 1 ? "committed" : "placed"
     );
+}
+
+// A swap-chain resize (F11 / window size) frees the whole render graph. Release
+// our references and drop the raw-pointer inventories before ResizeBuffers runs:
+// keeping the old generation alive is how the 03:14 abort was produced.
+void resetTextureInventory() {
+    for (unsigned i = 0; i < gTextureCount; ++i) {
+        releaseComObject(gTextures[i].resource);
+        gTextures[i] = TextureRecord{};
+    }
+    gTextureCount = 0;
+    // gSeen / gRtvs are raw pointers and are intentionally kept: the new graph's
+    // RTVs can be created just before this hook runs (see gSeen).
 }
 
 long createCommittedDetour(
@@ -1030,6 +1145,12 @@ void taauDetour(
         height = rect[3];
     }
     auto const up = readUpscaling(upscaling);
+    // P0.4: the draw callback samples these two, so both are captured on the
+    // declaration side of the same frame (the declarator runs before the draw).
+#ifdef TEST
+    gJitterIndex.store(up.jitterIndex, std::memory_order_relaxed);
+    gCameraData.store(camera, std::memory_order_relaxed);
+#endif
     if (width && height && up.factor > 0.0f && up.factor <= 1.0f) {
         // The engine truncates (1131 x 0.33 -> 373x239, not 373x240), so this must
         // truncate too; findTarget still allows a two-pixel tolerance.
@@ -1136,8 +1257,8 @@ void logTaaContext(unsigned frame, void const* object, unsigned words) {
                 std::snprintf(
                     text,
                     sizeof(text),
-                    " -> texture {:#x} {}x{} fmt={}",
-                    reinterpret_cast<std::uintptr_t>(candidate),
+                    " -> texture %#llx %ux%u fmt=%u",
+                    static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(candidate)),
                     static_cast<unsigned>(info.width),
                     static_cast<unsigned>(info.height),
                     info.format
@@ -1206,6 +1327,114 @@ void dumpContextFloats(void const* object) {
     }
 }
 
+#ifdef TEST
+// P0.4: one full float window, tagged by batch/sample/object. The window starts
+// at 0 so an offset found later is unambiguous; 0x300 bytes covers everything
+// the earlier scans ever pointed at (matrices at 0x200/0x240, jitter and origins
+// are known to be nearby, not elsewhere). Raw floats, no interpretation: the
+// offline pass decides which 4x4 is a view-projection and which pair is jitter.
+void sampleFloatWindow(void const* object, char const* label, unsigned batch, unsigned sample) {
+    if (!object || !readable(object, 0x300)) {
+        utils::logger().warn(
+            "[vv] ctxs b{} #{} {} unreadable (base={:#x})",
+            batch,
+            sample,
+            label,
+            reinterpret_cast<std::uintptr_t>(object)
+        );
+        return;
+    }
+    auto const* const bytes = static_cast<unsigned char const*>(object);
+    LARGE_INTEGER     now{};
+    QueryPerformanceCounter(&now);
+    utils::logger().info(
+        "[vv] ctxs b{} #{} {} base={:#x} jitter={} qpc={}",
+        batch,
+        sample,
+        label,
+        reinterpret_cast<std::uintptr_t>(object),
+        gJitterIndex.load(std::memory_order_relaxed),
+        now.QuadPart
+    );
+    for (std::size_t offset = 0; offset < 0x300; offset += 32) {
+        float v[8]{};
+        if (!readable(bytes + offset, sizeof(v))) {
+            return;
+        }
+        std::memcpy(v, bytes + offset, sizeof(v));
+        utils::logger().info(
+            "[vv] ctxs b{} #{} {} +{:#04x}: {:+.5f} {:+.5f} {:+.5f} {:+.5f} | {:+.5f} {:+.5f} {:+.5f} {:+.5f}",
+            batch,
+            sample,
+            label,
+            offset,
+            static_cast<double>(v[0]),
+            static_cast<double>(v[1]),
+            static_cast<double>(v[2]),
+            static_cast<double>(v[3]),
+            static_cast<double>(v[4]),
+            static_cast<double>(v[5]),
+            static_cast<double>(v[6]),
+            static_cast<double>(v[7])
+        );
+    }
+}
+
+// The two matrices the earlier run pinned, printed as one line per sample: the
+// offline pass uses them to check whether they are view-projection or projection
+// only (a projection has no translation in the last row/column; a view-projection
+// changes under camera rotation and, for a world-space matrix, translation too).
+void samplePinnedMatrices(void const* object, unsigned batch, unsigned sample) {
+    if (!object || !readable(object, 0x280)) {
+        return;
+    }
+    float current[16]{};
+    float previous[16]{};
+    std::memcpy(current, static_cast<unsigned char const*>(object) + 0x200, sizeof(current));
+    std::memcpy(previous, static_cast<unsigned char const*>(object) + 0x240, sizeof(previous));
+    utils::logger().info(
+        "[vv] ctxm b{} #{} jitter={} cur=[{:+.6f} {:+.6f} {:+.6f} {:+.6f} | {:+.6f} {:+.6f} {:+.6f} {:+.6f} | "
+        "{:+.6f} {:+.6f} {:+.6f} {:+.6f} | {:+.6f} {:+.6f} {:+.6f} {:+.6f}] prev=[{:+.6f} {:+.6f} {:+.6f} {:+.6f} "
+        "| {:+.6f} {:+.6f} {:+.6f} {:+.6f} | {:+.6f} {:+.6f} {:+.6f} {:+.6f} | {:+.6f} {:+.6f} {:+.6f} {:+.6f}]",
+        batch,
+        sample,
+        gJitterIndex.load(std::memory_order_relaxed),
+        static_cast<double>(current[0]),
+        static_cast<double>(current[1]),
+        static_cast<double>(current[2]),
+        static_cast<double>(current[3]),
+        static_cast<double>(current[4]),
+        static_cast<double>(current[5]),
+        static_cast<double>(current[6]),
+        static_cast<double>(current[7]),
+        static_cast<double>(current[8]),
+        static_cast<double>(current[9]),
+        static_cast<double>(current[10]),
+        static_cast<double>(current[11]),
+        static_cast<double>(current[12]),
+        static_cast<double>(current[13]),
+        static_cast<double>(current[14]),
+        static_cast<double>(current[15]),
+        static_cast<double>(previous[0]),
+        static_cast<double>(previous[1]),
+        static_cast<double>(previous[2]),
+        static_cast<double>(previous[3]),
+        static_cast<double>(previous[4]),
+        static_cast<double>(previous[5]),
+        static_cast<double>(previous[6]),
+        static_cast<double>(previous[7]),
+        static_cast<double>(previous[8]),
+        static_cast<double>(previous[9]),
+        static_cast<double>(previous[10]),
+        static_cast<double>(previous[11]),
+        static_cast<double>(previous[12]),
+        static_cast<double>(previous[13]),
+        static_cast<double>(previous[14]),
+        static_cast<double>(previous[15])
+    );
+}
+#endif // TEST
+
 void drawDetour(void* self, void* context, void* third, void* fourth) {
     auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
     if (index <= 12 || index % 600 == 0) {
@@ -1223,6 +1452,23 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
         logTaaContext(static_cast<unsigned>(index), third, 0x60);
         dumpContextFloats(third);
     }
+    // P0.4 marker sampling: 12 consecutive frames, both objects, raw floats.
+#ifdef TEST
+    if (gCtxSamplesLeft.load(std::memory_order_relaxed) > 0
+        && GetTickCount64() >= gCtxStartMs.load(std::memory_order_relaxed)) {
+        unsigned const sample = gCtxSampleIndex.fetch_add(1, std::memory_order_relaxed);
+        gCtxSamplesLeft.fetch_sub(1, std::memory_order_relaxed);
+        unsigned const batch = gCtxBatch.load(std::memory_order_relaxed);
+        sampleFloatWindow(third, "ctx", batch, sample);
+        sampleFloatWindow(gCameraData.load(std::memory_order_relaxed), "cam", batch, sample);
+        // The callback's second argument is the execution context. The matrices at
+        // TAAContext+0x200 turned out to be identical under pure forward movement
+        // (2026-10-25 03:23), so the view/VP may live here instead; sampling it is
+        // cheap and only happens on an explicit request.
+        sampleFloatWindow(context, "exec", batch, sample);
+        samplePinnedMatrices(third, batch, sample);
+    }
+#endif
     gOriginalDraw(self, context, third, fourth);
 }
 
@@ -1345,6 +1591,36 @@ bool takeDumpRequest() {
     return true;
 }
 
+// P0.4: arm 12 consecutive context samples. Separate from the dump marker so
+// "dump now" (a still frame, for the colour/depth identity) and "sample now"
+// (stand still, then walk, for matrices/jitter/origins) can be sequenced by the
+// player in one run. A forward slash is a valid separator on Windows, which keeps
+// the path building free of escape sequences.
+#ifdef TEST
+bool takeContextRequest() {
+    std::filesystem::path const marker = std::filesystem::path(utils::applicationDirectory()) / L"vv_ctx_now.txt";
+    std::error_code             error;
+    if (!std::filesystem::exists(marker, error)) {
+        return false;
+    }
+    std::filesystem::remove(marker, error);
+    return true;
+}
+
+void armContextSample(unsigned frames, unsigned delayMs) {
+    unsigned const batch = gCtxBatch.fetch_add(1, std::memory_order_relaxed) + 1;
+    gCtxSampleIndex.store(0, std::memory_order_relaxed);
+    gCtxSamplesLeft.store(frames, std::memory_order_relaxed);
+    gCtxStartMs.store(delayMs ? GetTickCount64() + delayMs : 0, std::memory_order_relaxed);
+    utils::logger().info(
+        "[vv] ctxs: batch {} armed ({} frames{})",
+        batch,
+        frames,
+        delayMs ? ", starting in 2 s - walk now" : ""
+    );
+}
+#endif // TEST
+
 unsigned dumpSemantics(unsigned batch) {
     auto* const device = gEngineDevice.load(std::memory_order_relaxed);
     auto* const queue  = gGameQueue.load(std::memory_order_relaxed);
@@ -1366,20 +1642,112 @@ unsigned dumpSemantics(unsigned batch) {
     // let the offline tool identify them.
     unsigned written = 0;
     unsigned index   = 0;
+    {
+        LARGE_INTEGER now{};
+        QueryPerformanceCounter(&now);
+        utils::logger().info("[vv] semantics: batch {} dump start qpc={}", batch, now.QuadPart);
+    }
     for (unsigned i = 0; i < gTextureCount; ++i) {
         auto const& record = gTextures[i];
         if (!withinTwo(record.width, w) || !withinTwo(record.height, h)) {
             continue;
         }
-        wchar_t name[96]{};
-        std::swprintf(name, std::size(name), L"vv_b%u_res_%02u_%ux%u_fmt%u.bin", batch, index++, w, h, record.format);
+        // The pointer is part of the file name: P0.3 has to say which resource a
+        // picture belongs to, and the texture log line is the only other place the
+        // address appears. Without it, two same-format candidates are
+        // indistinguishable offline.
+        unsigned const slot = index++;
+        wchar_t        name[128]{};
+        std::swprintf(
+            name,
+            std::size(name),
+            L"vv_b%u_res_%02u_p%llX_%ux%u_fmt%u.bin",
+            batch,
+            slot,
+            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(record.resource)),
+            w,
+            h,
+            record.format
+        );
         auto const path = directory + L"\\" + name;
         if (dumpTextureRawAs(device, queue, record.resource, path.c_str(), DumpState::Common)) {
             ++written;
-            utils::logger().info("[vv] semantics: res fmt={} src={} written", record.format, record.source);
+            utils::logger().info(
+                "[vv] semantics: res idx={} ptr={:#x} fmt={} {}x{} src={} written",
+                slot,
+                reinterpret_cast<std::uintptr_t>(record.resource),
+                record.format,
+                record.width,
+                record.height,
+                record.source
+            );
+        }
+    }
+    // Fallback: the engine's render graph is often visible only through the RTV
+    // inventory, not the CreateCommittedResource hook (2026-10-25 03:28: the
+    // 844x475 group was created at .510, before our resize hook at .518, and the
+    // creation hook never logged it). gHeld is the reference-counted, small-size
+    // subset of that inventory, so describing/copying it cannot touch a freed
+    // resource (the 03:4x AV was a raw gSeen pointer going into nr::describe).
+    if (!written) {
+        unsigned rtvIndex = 0;
+        for (unsigned i = 0; i < gHeldCount && written < 32; ++i) {
+            unsigned const idx = (gHeldNext + kHeldSlots - 1 - i) % kHeldSlots;
+            auto const&    held = gHeld[idx];
+            if (!held.resource) {
+                continue;
+            }
+            if (!withinTwo(held.width, w) || !withinTwo(held.height, h)) {
+                continue;
+            }
+            bool excluded = false;
+            for (unsigned k = 0; k < gExcludedCount; ++k) {
+                if (gExcluded[k] == held.resource) {
+                    excluded = true;
+                    break;
+                }
+            }
+            if (excluded) {
+                continue;
+            }
+            // gHeld already owns a reference; no AddRef here.
+            unsigned const slot = 100 + rtvIndex++;
+            wchar_t        name[128]{};
+            std::swprintf(
+                name,
+                std::size(name),
+                L"vv_b%u_res_%02u_p%llX_%ux%u_fmt%u.bin",
+                batch,
+                slot,
+                static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(held.resource)),
+                held.width,
+                held.height,
+                held.format
+            );
+            auto const path = directory + L"\\" + name;
+            bool const ok   = dumpTextureRawAs(device, queue, held.resource, path.c_str(), DumpState::Common);
+            if (ok) {
+                ++written;
+                utils::logger().info(
+                    "[vv] semantics: rtv idx={} ptr={:#x} fmt={} {}x{} written",
+                    slot,
+                    reinterpret_cast<std::uintptr_t>(held.resource),
+                    held.format,
+                    held.width,
+                    held.height
+                );
+            }
         }
     }
     utils::logger().info("[vv] semantics: {} render-resolution target(s) dumped", written);
+    if (!written) {
+        utils::logger().warn(
+            "[vv] semantics: no texture matches {}x{} - the engine built its render graph before the "
+            "creation hook was in place; press F11 once (fullscreen toggle) to rebuild it, then F9 again",
+            w,
+            h
+        );
+    }
 
     // "Did it render" is answered by the files themselves: a world frame writes them, the
     // main menu leaves them empty.
@@ -1422,9 +1790,106 @@ void logSubmitRate(std::uint64_t presents) {
 
 } // namespace
 
+// ---------------------------------------------------------------------------
+// P0.1: is there an NGX session this process may use?
+// ---------------------------------------------------------------------------
+//
+// VV has no engine DLSS evaluate of its own, so "the core is loaded" and "the
+// core was initialised" are two different facts and only the second one makes a
+// self-built feature legal. The engine owns the session; the probe only queries
+// the core after its Init was observed, because GetCapabilityParameters on a
+// core that was never initialised has no defined answer. Result is logged once
+// per state change (install, world enter, and a slow poll until it flips).
+#ifdef TEST
+using NgxCapabilitiesFn = int (*)(void**);
+
+void logNgxSession(char const* why) {
+    HMODULE shim     = GetModuleHandleW(L"nvngx.dll");
+    HMODULE core     = GetModuleHandleW(L"_nvngx.dll");
+    HMODULE dlss     = GetModuleHandleW(L"nvngx_dlss.dll");
+    HMODULE dlssNr   = GetModuleHandleW(L"nvngx_dlssnr.dll");
+    HMODULE d3d12Core = GetModuleHandleW(L"D3D12Core.dll");
+    if (!core) {
+        core = shim;
+    }
+
+    unsigned long long appId = 0;
+    wchar_t            dataPath[MAX_PATH]{};
+    bool const         init = nr::nrEngineInitCaptured(&appId, dataPath, MAX_PATH);
+    // fmt refuses non-void pointers and a wchar_t* would otherwise be printed as
+    // an address; the path is only interesting as text.
+    char pathUtf8[MAX_PATH * 4]{};
+    if (dataPath[0]) {
+        WideCharToMultiByte(CP_UTF8, 0, dataPath, -1, pathUtf8, sizeof(pathUtf8), nullptr, nullptr);
+    }
+
+    bool const ready = gSessionReady.load(std::memory_order_relaxed);
+    utils::logger().info(
+        "[vv] session ({}): shim={:#x} core={:#x} dlss={:#x} dlssnr={:#x} d3d12core={:#x} engineInit={} appId={:#x} "
+        "dataPath={}",
+        why,
+        reinterpret_cast<std::uintptr_t>(shim),
+        reinterpret_cast<std::uintptr_t>(core),
+        reinterpret_cast<std::uintptr_t>(dlss),
+        reinterpret_cast<std::uintptr_t>(dlssNr),
+        reinterpret_cast<std::uintptr_t>(d3d12Core),
+        init ? 1 : 0,
+        appId,
+        pathUtf8[0] ? pathUtf8 : "<none>"
+    );
+
+    if (!core) {
+        utils::logger().warn("[vv] session: no NGX core module; DLSS-SR cannot be created here");
+        return;
+    }
+
+    auto const caps     = GetProcAddress(core, "NVSDK_NGX_D3D12_GetCapabilityParameters");
+    auto const create   = GetProcAddress(core, "NVSDK_NGX_D3D12_CreateFeature");
+    auto const evaluate = GetProcAddress(core, "NVSDK_NGX_D3D12_EvaluateFeature");
+    auto const allocate = GetProcAddress(core, "NVSDK_NGX_D3D12_AllocateParameters");
+    auto const release  = GetProcAddress(core, "NVSDK_NGX_D3D12_ReleaseFeature");
+    utils::logger().info(
+        "[vv] session: exports caps={} create={} evaluate={} allocate={} release={}",
+        caps ? 1 : 0,
+        create ? 1 : 0,
+        evaluate ? 1 : 0,
+        allocate ? 1 : 0,
+        release ? 1 : 0
+    );
+
+    if (!init) {
+        utils::logger().warn(
+            "[vv] session: core query skipped - the engine's NGX Init has not been observed in this process"
+        );
+        return;
+    }
+    if (!caps) {
+        utils::logger().warn("[vv] session: core has no GetCapabilityParameters export");
+        return;
+    }
+    if (ready) {
+        return;
+    }
+    void*     params = nullptr;
+    int const ret    = reinterpret_cast<NgxCapabilitiesFn>(caps)(&params);
+    utils::logger().info(
+        "[vv] session: GetCapabilityParameters ret=0x{:08X} params={:#x}",
+        static_cast<unsigned>(ret),
+        reinterpret_cast<std::uintptr_t>(params)
+    );
+    if (ret == 1 && params) {
+        gSessionReady.store(true, std::memory_order_relaxed);
+        utils::logger().info("[vv] session: usable (B0 P0.1 passes; DLSS-SR may be built on this core)");
+    }
+}
+#endif // TEST
+
 void noteWorldEntered() {
+#ifdef TEST
+    logNgxSession("world enter");
+#endif
     gWorldEnteredTick.store(GetTickCount(), std::memory_order_relaxed);
-    utils::logger().info("[vv] semantics: world entered; dump queued");
+    utils::logger().info("[vv] semantics: world entered (B0: manual dump only; press F11, then F9)");
 }
 
 bool install() {
@@ -1501,6 +1966,15 @@ bool install() {
             utils::logger().warn("[vv] D3D12CreateDevice not hooked; render targets stay unresolved");
         }
     }
+#ifdef TEST
+    // P0.1 runs at install (the modules are usually loaded by now) and again at
+    // world enter / a slow poll; see logNgxSession.
+    logNgxSession("install");
+    utils::logger().info(
+        "[vv] B0: F9 = dump now (stand still, then F2), F8 = context sample in 2 s (press, then walk); "
+        "file markers vv_dump_now.txt / vv_ctx_now.txt still work"
+    );
+#endif
     return true;
 }
 
@@ -1508,12 +1982,15 @@ void uninstall() {
     // The boundary experiment created objects on the engine's device, so it has to
     // let go of them before the probe's own hooks come down.
     inject::release();
-    // The inventory holds one reference per recorded render target (see createRtvDetour).
-    for (unsigned i = 0; i < gSeenCount; ++i) {
-        releaseComObject(gSeen[i]);
-        gSeen[i] = nullptr;
-    }
+    // gSeen holds raw pointers only (no references - see createRtvDetour); the
+    // reference-counted inventories are gTextures and gHeld, released here.
     gSeenCount = 0;
+    for (unsigned i = 0; i < gHeldCount; ++i) {
+        releaseComObject(gHeld[i].resource);
+        gHeld[i] = HeldRtv{};
+    }
+    gHeldCount = 0;
+    gHeldNext  = 0;
     for (unsigned i = 0; i < gTextureCount; ++i) {
         releaseComObject(gTextures[i].resource);
         gTextures[i].resource = nullptr;
@@ -1600,6 +2077,45 @@ void onPresent() {
     if (presents <= 10 || presents % 600 == 0) {
         logSubmitRate(presents);
     }
+#ifdef TEST
+    // B0 hotkeys, polled here so they work regardless of the panel/input focus and
+    // need no file creation while playing:
+    //   F9 = dump now (stand still, then press F2 for the screenshot)
+    //   F8 / F10 / V = arm 24 consecutive context samples that START IN 2 s, so the
+    //        player can press while standing and then walk/turn during the wait.
+    // Three keys because a laptop may route F8 (and sometimes F10) to a media
+    // action under Fn-lock; `V` is a plain key Bedrock does not bind.
+    static bool f8Down  = false;
+    static bool f9Down  = false;
+    static bool f10Down = false;
+    static bool vDown   = false;
+    bool const  f8      = (GetAsyncKeyState(VK_F8) & 0x8000) != 0;
+    bool const  f9      = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
+    bool const  f10     = (GetAsyncKeyState(VK_F10) & 0x8000) != 0;
+    bool const  v       = (GetAsyncKeyState('V') & 0x8000) != 0;
+    if ((f8 && !f8Down) || (f10 && !f10Down) || (v && !vDown)) {
+        utils::logger().info(
+            "[vv] ctxs: hotkey {} pressed",
+            (f8 && !f8Down) ? "F8" : ((f10 && !f10Down) ? "F10" : "V")
+        );
+        armContextSample(24, 2000);
+    }
+    if (f9 && !f9Down) {
+        unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
+        unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
+        if (w && h) {
+            unsigned const batch = gDumpBatch.fetch_add(1, std::memory_order_acq_rel);
+            utils::logger().info("[vv] semantics: batch {} requested by F9", batch);
+            dumpSemantics(batch);
+        } else {
+            utils::logger().warn("[vv] semantics: F9 pressed but the render size is unknown");
+        }
+    }
+    f8Down  = f8;
+    f9Down  = f9;
+    f10Down = f10;
+    vDown   = v;
+#endif
     // One shot, a few seconds in: by then the frame graph has been rebuilt at least
     // once (the render targets only become visible after a rebuild, see the header).
     // The render-target inventory is only complete after the engine rebuilt its
@@ -1621,17 +2137,11 @@ void onPresent() {
     // keeps retrying instead of stopping at the first partial success.
     // World-entered trigger: one batch, three seconds after the join event (the world is
     // still streaming in before that).
-    unsigned const entered = gWorldEnteredTick.load(std::memory_order_relaxed);
-    if (entered != 0 && GetTickCount() - entered > 3000) {
-        gWorldEnteredTick.store(0, std::memory_order_relaxed);
-        unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
-        unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
-        if (w && h) {
-            unsigned const batch = gDumpBatch.fetch_add(1, std::memory_order_acq_rel);
-            utils::logger().info("[vv] semantics: batch {} requested by world-enter", batch);
-            dumpSemantics(batch);
-        }
-    }
+    // Automatic world-enter dump is disabled for B0: it runs a synchronous GPU copy
+    // on the present thread three seconds after the join, which can race a
+    // fullscreen toggle / render-graph rebuild (the 2026-10-24 22:58 driver AV).
+    // The manual path (F9 / panel button) is taken after the rebuild has settled.
+    gWorldEnteredTick.store(0, std::memory_order_relaxed);
     if (presents % 30 == 0 && takeDumpRequest()) {
         unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
         unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
@@ -1646,10 +2156,28 @@ void onPresent() {
             utils::logger().warn("[vv] semantics: requested but the render size is unknown");
         }
     }
+#ifdef TEST
+    // P0.4 marker: arm 12 consecutive TAAContext / UpscalingCameraData samples.
+    // The marker is consumed here and the frames are consumed by the draw hook,
+    // so the two threads never read the same file.
+    if (presents % 30 == 0 && takeContextRequest()) {
+        armContextSample(12, 0);
+    }
+    // P0.1: keep checking until the engine's Init appears (it may happen after a
+    // world load on some starts). Once the core answers, this stops.
+    if (!gSessionReady.load(std::memory_order_relaxed) && presents % 600 == 0) {
+        logNgxSession("present poll");
+    }
+#endif
     (void)gSeenCount;
     (void)gLastSeenCount;
     (void)gSeenStableSince;
     (void)gDumpPasses;
+}
+
+void onSwapChainResize() {
+    resetTextureInventory();
+    utils::logger().info("[vv] resize: released the old render-graph inventory");
 }
 
 void noteSwapChain(void* swapChain) {
@@ -1678,5 +2206,28 @@ void noteSwapChain(void* swapChain) {
 }
 
 void setGameQueue(void* queue) { gGameQueue.store(queue, std::memory_order_relaxed); }
+
+void requestContextSample(unsigned frames, unsigned delayMs) {
+#ifdef TEST
+    armContextSample(frames ? frames : 24, delayMs);
+#else
+    (void)frames;
+    (void)delayMs;
+#endif
+}
+
+void requestDumpNow() {
+#ifdef TEST
+    unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
+    unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
+    if (!w || !h) {
+        utils::logger().warn("[vv] semantics: dump requested before the render size is known");
+        return;
+    }
+    unsigned const batch = gDumpBatch.fetch_add(1, std::memory_order_acq_rel);
+    utils::logger().info("[vv] semantics: batch {} requested by panel", batch);
+    dumpSemantics(batch);
+#endif
+}
 
 } // namespace neurodragon::probe::vv

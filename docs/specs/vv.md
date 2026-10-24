@@ -4,9 +4,9 @@
 > 本文由旧 `O`（VV 路径侦察）、旧 `M §3`（阶段 2 的未知）与旧 `I §5`（M4–M7）合并而来；
 > 原文归档在 [archive/2026-10](../archive/2026-10/) 与 [research/2026-10-24-vv-path.md](../research/2026-10-24-vv-path.md)。
 >
-> **验证环境**：`E:\LeviLauncher\versions\1.26.51.01-agent2`（2560×1440 全屏）。
-> **注意**：`1.26.51.01-agent2` 是另一个 agent 的并发工作区，部署/实验不要碰它；
-> 主目录是 `E:\LeviLauncher\versions\1.26.51.01`。
+> **验证环境**：`E:\LeviLauncher\versions\1.26.51.01-agent2`（本工作区，2560×1440 全屏）。
+> **注意**：主目录 `E:\LeviLauncher\versions\1.26.51.01` 是另一个 agent 的并发工作区，
+> 部署/实验不要碰它。
 
 ## 0. 一句话
 
@@ -279,7 +279,7 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 | DLSS 在 VV 尺寸下不比 TAAU 快 | 收益只剩画质 | M6 先量时间，再决定是否默认开 |
 | 版本漂移（签名/回调） | 每个补丁都要重定位 | 全部签名走 `kSig*` + 启动自检，失败回退引擎原路径 |
 | 槽位猜错 | 客户端 AV（已发生：槽 25） | 只钩已验证的槽；要认槽先标定 |
-| 持有交换链后缓冲引用 | `ResizeBuffers` 失败 → 引擎 `abort()`（已发生：22:39 / 22:51 两次 `0xC0000409`） | **拿到的后缓冲引用必须当场 `Release`**；只在 `noteSwapChain()` 的调用内部检查、不常驻持有 |
+| 持有交换链后缓冲引用 | `ResizeBuffers` 失败 → 引擎 `abort()`（已发生：22:39 / 22:51 / 2026-10-25 03:14 三次 `0xC0000409`） | **拿到的后缓冲引用必须当场 `Release`**；渲染目标清单（`gSeen`）**只存裸指针、不得 AddRef**（03:14 的根因）；只在 `noteSwapChain()` 的调用内部检查、不常驻持有 |
 | 碰引擎纹理时引擎正在重建 | 驱动 AV（已发生：22:58 `nvwgf2umx.dll`，栈里有 `dumpTextureBmp ← onPresent ← presentHook`） | 任何对引擎纹理的**状态转换/拷贝**都必须在「确定不会重建」的安静窗口内做；自动触发已关闭，只能显式触发 |
 
 ## 10. 证据与工具
@@ -428,3 +428,144 @@ B 步要确认的就是：倒 4 这条 list 里画的是不是 TAAU、它写的�
 - 任何碰引擎资源/交换链的动作都要考虑"引擎正在重建"的并发窗口；
 - 拿到的 COM 引用一律当场 `Release`；
 - 每步先做只读自检（prologue / 槽位 / 设备身份），不匹配就回退并报错，不要静默降级。
+
+## 13. M6：DLSS-SR 替换 TAAU（2026-10-25 拍板）
+
+> **状态**：B0 已收口（2026-10-25 03:44）；B1–B4 未开工。
+> 规划按用户 2026-10-25 的「按推荐走」确定：B0 先锁三个未知；第一版 TAAU 照跑 +
+> DLSS 覆盖；**HDR 路径用 ACES + gamma 2.2**（B0 实测；Reinhard 差 4 倍多）；A/B 热键 `F8`；
+> 「跳过 TAAU」放到 M6-4，可选、后置。
+
+### 13.1 为什么先 B0 再写 feature
+
+vv.md §6 的输入清单里还有三件事没有被运行时证据钉死，而它们各自都能让第一次上屏
+「看起来像 DLSS 坏了」，并且无法归因：
+
+| # | 未知 | 为什么必须先答 |
+|---|---|---|
+| 1 | VV 下 NGX **会话**是否可用 | 「没有引擎 DLSS 调用」不等于「core 没加载/没 Init」。在未 Init 的 core 上调 `GetCapabilityParameters`/`CreateFeature` 没有定义行为 |
+| 2 | color/output 的**域** | TAAU 输入是 HDR 还是已经色调映射过的 LDR，决定我们是否需要自己 tonemap；猜错就是颜色/亮度全错 |
+| 3 | color/depth 的**指针角色** | 同尺寸同格式有多张（HDR 与 LDR、历史与当前、两份深度）；选错时画面只是「不对」，不会崩 |
+
+外加两项会直接影响 MV 正确性的观测：jitter 偏移、世界原点。`TAAContext+0x200/+0x240`
+先前被记成「前后 VP」，但打印出的矩阵**没有平移、没有相机旋转**（对角投影），很可能只是
+**投影矩阵**；完整的 view/projection 还可能在 `UpscalingCameraData`（taau 的第 7 个参数）里。
+B0 的 P0.4 按「两个对象、整窗采样」重新定位，不再假设偏移。
+
+### 13.2 批次与判据
+
+| 批次 | 内容 | 成本 | 退出条件 |
+|---|---|---|---|
+| **B0** | 只读探针 P0.1–P0.5：会话、域、输入角色、矩阵/jitter/原点、MV 公式 | 1–1.5 天 | §13.3 的五条判据都有答案；没有答案就按 §8 stop/go 停 |
+| **B1** | 抽 NGX 封装；`vv/VvDlssSr`；一个 compute（color→FP16、depth→R32F、MV）；旁路/深度/MV 三个调试视图 | 2–3 天 | 旁路画面、深度视图、MV 视图都正确；HUD 在 |
+| **B2** | `CreateFeature(1)` + evaluate + 编码写后缓冲；接 `VvInject` 尾 k=4；F8 A/B；计时；尺寸重建；失败跳过 | 2–3 天 | TAAU ↔ DLSS 可见切换；10 分钟/F11/重进世界/20 次切换不崩 |
+| **B3** | 面板读数、失败自动停用、文档、TEST+release 部署 | 1–2 天 | 验收清单通过，release 部署主目录 |
+| **B4**（可选） | 跳过 TAAU，量净收益 | 1–2 天 | 只在 B2 稳定且需要净收益数字时做 |
+
+**stop/go 不变**（§8）：会话答不出、或颜色/深度角色在两次采集内仍无法确定，就停在
+「VV 只做读数 + 提示」，不硬推 B1。
+
+### 13.3 B0 探针（一次 TEST 构建、一次会话）
+
+| 探针 | 做法 | 判据 |
+|---|---|---|
+| P0.1 会话 | 日志 `[vv] session`：`_nvngx.dll` / `nvngx.dll` / `nvngx_dlss.dll` / `D3D12Core.dll` 是否加载；引擎 Init 是否被抓到（appId/dataPath）；**只在抓到 Init 后**调 `GetCapabilityParameters`，并记录五个导出是否存在 | `ret==1 && params!=null` → 复用；模块在但未 Init → 单独评估自 Init；模块不在 → stop/go |
+| P0.2 域 | 进世界站着不动：`vv_dump_now.txt` 触发渲染分辨率组 dump，同时按 `F2`；离线比较 `upscale(tonemap(HDR候选))`、`upscale(LDR候选)` 与截图中心区域 | 两假设中平均绝对差明显更低者胜；两者都不像 → 先查 TAAU 是否写后缓冲 |
+| P0.3 角色 | 同一批 dump 的**文件名带资源指针**，日志 `[vv] semantics: res idx=… ptr=…` 一一对应；离线按内容排序 | 60 帧内 color 指针稳定；深度候选按「非常数 + 近白远黑 + 结构」排序；若交替出现两套则记成集合 |
+| P0.4 矩阵/jitter/原点 | `vv_ctx_now.txt` 触发 12 帧连续采样：`TAAContext` 与 `UpscalingCameraData` 各 0x300 字节原始 float；另打 `+0x200/+0x240` 的 16+16 矩阵 | 静止时前后矩阵相同、jitter 每帧变化且绝对值 < 1；走动时原点/平移漂移；若找不到 jitter，退「jitter=0 + 记录风险」 |
+| P0.5 MV 公式 | 用 P0.4 的矩阵 + 一帧深度（优先 `R32_FLOAT` 候选）离线跑 reprojection：reversed-Z、像素单位、符号、far（w=0） | 静止 MV≈0；走动径向、转视角切向；否则先改公式，不写 shader |
+
+### 13.4 B0 实现（2026-10-25）
+
+代码（只读，不建 feature、不写任何引擎资源）：
+
+- `probe/VvProbe.cpp`
+  - `logNgxSession()`：P0.1；在 `install`、`noteWorldEntered`、以及每 600 帧轮询（未就绪时）。
+  - `vv_dump_now.txt` 的 dump 文件名与日志都带资源指针：`vv_b<batch>_res_<idx>_p<PTR>_<w>x<h>_fmt<f>.bin`；
+    每批开始记 `qpc`，便于与 `F2` 截图对齐。
+  - `vv_ctx_now.txt`：连续 12 帧采样 `TAAContext`（draw callback 第 3 个参数）与
+    `UpscalingCameraData`（declarator 第 7 个参数）的 `0x000..0x300` 原始 float；每帧另打
+    `[vv] ctxm` 的 `+0x200/+0x240` 两个 4×4；采样行带 `jitter` 与 `qpc`。
+  - `taauDetour` 额外保存 `jitterIndex` 与 camera data 指针（只存指针，不读）。
+- `nr/D3D12Bridge.{h,cpp}`：新增只读 `nrEngineInitCaptured()`，把引擎 Init 的 appId/dataPath
+  交给 P0.1；NR 行为不变。
+- 外部工具（不进 mod 仓库）：`NeuroDragonWorkSpace/tools/vv_domain.py`（P0.2/P0.3：域判定 +
+  color 候选排序 + 深度候选统计 + 对比图）、`vv_ctx.py`（P0.4：矩阵/jitter/原点候选）。
+- 部署：2026-10-25 03:38 TEST 构建 `1b8629a3…` 已**热替换**到本工作区（游戏运行中无法直接覆盖，
+  按「改名 → 换入」完成；当前进程仍用旧映射，**重启后生效**）。旧 DLL 备份 `.bak-before-m6b0`
+  与 `.old-live`；主目录 `1.26.51.01` 未动。
+- **2026-10-25 03:4x F9 崩溃与修复**：`dumpSemantics` 的回退遍历了**裸指针** `gSeen` 并调用
+  `nr::describe()`，其中一个指针已被引擎释放 → AV 在 `D3D12Core.dll`（栈：`describe` ←
+  `dumpSemantics` ← `onPresent`）。修复：新增**引用计数**的 `gHeld` 子集（只收 ≤1000×600 且
+  非交换链后缓冲的 RTV，环形 128 条），回退只用 `gHeld` 的**存档尺寸/格式**，不再对裸指针取 desc。
+  03:28 的 dump 0 命中同时修了：`gSeen` 不再随 resize 清空、容量 4096。
+- **2026-10-25 03:14 F11 崩溃与修复**：按 F11 时引擎 `abort()`（ucrtbase，`0xC0000409`，
+  `FAST_FAIL_FATAL_APP_EXIT`）。三处根因一起修：
+  1. RTV 清单 `gSeen` 对每个新 RTV `AddRef`，其中包含交换链后缓冲 → `ResizeBuffers` 失败；
+     现在 `gSeen` **只存裸指针、不持引用**；
+  2. `gTextures` 对会话内**所有**纹理 AddRef（数千张，含 1024 图集）→ 显存与重建压力；
+     现在只保留重建后的**前 96 张**，并在 `onSwapChainResize()` 里先释放；
+  3. 「进世界 3 秒后自动 dump」被关闭：同步 GPU 拷贝不能与 F11 重建并发（§9 的 22:58 驱动 AV）。
+- **B0 热键（TEST）**：`F9` = 立刻 dump（站定后按，再按 `F2` 截图）；`F8` / `F10` / `V` 任意一个 =
+  2 秒后开始连续 24 帧上下文采样（按下后可以立刻走动/转视角）。`F8` 在部分笔记本上会被 Fn 锁成
+  媒体键，所以准备了 `F10` 与 `V`；面板「诊断 → VV B0 (TEST)」也有两个按钮，完全不依赖热键。
+- **dump 前先按一次 `F11`**：引擎的渲染图在模组的创建钩子装好之前就可能建好，那次启动的
+  渲染分辨率纹理不在清单里（2026-10-25 03:02 实测：0 个 dump 命中）。`F11` 一次让引擎重建资源，
+  之后 `F9` 才有货；日志会给出同样的提示。
+
+**一次会话的采集顺序**（TEST 构建，VV，进世界）：
+
+1. 进世界后等 3 秒，**按一次 `F11`**（窗口 resize 不会重建渲染图；2026-10-25 03:23 已证）。
+   新构建修了三处引用问题，若这次仍崩就停止，不再重试；
+2. 等 3 秒，站住不动，按 `F9`，等日志 `requested by F9` + `captured`（应有非 0 个 target），
+   立刻按 `F2`；
+3. 仍在原地，按 **`F10`**（或 `F8` / `V` / 面板按钮），站着别动（2 秒后自动采样 24 帧静态）；
+4. **再按 `F10`，然后立刻用鼠标快速转动视角约 90°（同时可向前走）**，持续 2 秒——
+   这一步必须**转视角**，只前进的话 `+0x200/+0x240` 矩阵不会变，分辨不出它是不是 VP；
+5. 退出游戏，保留 `latest.log`、`vv_b*_res_*.bin`、`screenshots/*.png`。
+
+### 13.5 B0 结果
+
+| 项 | 结论 |
+|---|---|
+| P0.1 会话 | ✅ **VV 下不加载 NGX，必须自建会话**。离线 `ngx_probe --sr` 已证：驱动目录的 `_nvngx.dll` + `Init_ProjectID` + `GetCapabilityParameters` 全部返回 1，`CreateFeature(1)` 接受 360×243 / 844×475 等尺寸（ret=1，handle 非空）。B1 第一步在游戏内重复这条路径 |
+| P0.2 域 | ✅ **HDR 路径**。2026-10-25 03:44 的 12 张 844×475 dump + F2 截图：最佳候选 `fmt26 R11G11B10`（idx=100，ptr 在当次会话为 `0x2F0DE60F4D0`）用 **ACES + gamma 2.2** 与截图平均绝对差 **26.3/255**、相关 0.978；SDR 最佳 55.3；Reinhard 113.9。⇒ **M6 用 ACES+gamma，不用 Reinhard** |
+| P0.3 color/depth 角色 | 🟡 **color = 渲染分辨率下最新的 `fmt26` R11G11B10**（当次 idx=100；idx=101/102 是历史/中间面，分数明显更差）。**depth = `fmt44` R24G8**（主深度，两个候选）；`fmt41 R32F` 实测几乎恒为 1.0、`fmt54 D16` 0..0.25，都不是主深度。深度不能直接 copy 到 buffer，B1 用 compute 转 R32F 后加深度视图钉死是哪一个 |
+| P0.4 矩阵/jitter/原点 | ✅ `ctx+0x200/+0x240` = 当前/上一帧 VP（相机相对、无平移；`prev(n)==cur(n-1)`）；`ctx+0x280/+0x28c` = 当前/上一帧相机位置；`ctx+0x1e4/+0x1e8` = jitter（像素单位） |
+| P0.5 MV 公式 | 🟡 数据齐了：`worldRelPrev = inv(curVP)·depth + (posCur − posPrev)`，`prevClip = prevVP·worldRelPrev`；B1 用 MV 调试视图确认矩阵布局/符号 |
+
+**B0 收口结论**：三件会挡住 B1 的事都有答案——会话可自建、颜色是 HDR + ACES、输入指针有可复现的选取规则。
+可以开工 B1。证据：`1.26.51.01-agent2` 根目录的 `vv_b0_res_*.bin`、`screenshots/20261025-034431-787-0.png`、
+`_vv_domain.png`（工具 `vv_domain.py` 生成）。
+
+其他现场：03:44 的 F11 成功（未崩），F9 回退 dump 出 **12 张 844×475**；03:28 的 dump 0 是因为重建的
+RTV 在 resize 钩子之前创建，已由 `gHeld` 修复。
+
+其他现场：03:02 会话是**窗口 1091×736**（factor 0.33 ⇒ 渲染 360×242），不是 2560×1440；B0 的
+内容判定不受影响，但 B1 之后的观感/计时验收需要全屏。03:02 的两次 `F9` 都执行了 dump 路径
+（`requested by F9`），说明热键轮询本身正常。
+
+### 13.6 B1 起的技术口径（已定，避免实现时再选）
+
+- **NGX 会话（2026-10-25 新增前置）**：VV 下引擎不加载 NGX、不 Init。B1 的第一步改为
+  「自加载 core（`C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_*\_nvngx.dll`）
+  + `Init_ProjectID`（沿用 NR 的 app id）+ `GetCapabilityParameters` + 用 core 的 `CreateFeature(1)`
+  建 DLSS-SR」。离线 `ngx_probe --sr` 已验证：Init 返回 1、`CreateFeature(1)` 对 360×243 →
+  1091×736 返回 1 且 handle 非空；模型 `nvngx_dlss.dll` 从 exe 同目录被 core 找到。
+  **不要**在未 Init 的 core 上直接建 feature；自建会话只在确认引擎没有 Init 时执行。
+
+- **一个 compute**：读 color 源与 depth 源，一次 dispatch 写 `RGBA16F` / `R32F` / `RG32F` 三张 UAV；
+  之后全屏 PS 把 DLSS 输出（或旁路 color）写成后缓冲。compute 不直接写后缓冲（翻转链后缓冲的
+  UAV 标志不保证，PS+RTV 是稳的）。
+- **NGX 参数对象独立**：优先 `AllocateParameters`，不要与 NR 共用 capability 对象。
+- **DLSS 参数**：`Width/Height` = render，`OutWidth/OutHeight` = display；HDR 路径
+  `DLSS.Feature.Create.Flags=1`、SDR = 0；**不设 MVLowRes**；`MV.Scale=1`（MV 已是像素单位）；
+  `DepthInverted=1`；`Reset=1` 一次性（进世界/重建/重新启用）。
+- **输出编码（B0 定案）**：HDR 输出用 **ACES + gamma 2.2**（与 F2 截图平均差 26.3/255，
+  相关 0.978；Reinhard 是 113.9，不用）。后缓冲 RTV 是 sRGB 视图时输出线性值、由硬件编码；
+  是 UNORM 时 shader 内做 gamma——面板给读数。
+- **一个进程一个 SR**：见到引擎 `CreateFeature(1)` 就拒绝并提示重启；VV 下预期没有，必须防。
+- **失败即跳过**：任何一步失败当帧不写后缓冲，TAAU 的画面自动保留；连续失败 N 次自动停用。
+- **尺寸**：新尺寸稳定 12 帧才重建；两次重建至少隔 20 次求值；每会话上限 64 次；DRS 抖动期跳过。
+- **计时口径**：TAAU 仍跑时 A/B 的差值是 **DLSS 增量成本**，不是替换收益；净收益只在 B4 量。
+

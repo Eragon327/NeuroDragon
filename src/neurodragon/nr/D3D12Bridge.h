@@ -107,6 +107,17 @@ bool nrCreate(
 // without it the model answers PlatformError for every entry point.
 void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 
+// Whether the engine's own NGX Init was observed in this process, and what it
+// passed. The VV path needs this before it may call into the core at all: the
+// engine owns the session, and a `GetCapabilityParameters` on a core that was
+// never initialised has no defined answer (docs/specs/vv.md §13, probe P0.1).
+// `dataPath` is optional and copied up to `capacity` wide characters.
+[[nodiscard]] bool nrEngineInitCaptured(
+    unsigned long long* appId,
+    wchar_t*            dataPath,
+    unsigned            capacity
+);
+
 [[nodiscard]] bool nrIsCreated();
 
 // Effective placement (docs/N): 0 = before upscaling, 1 = after upscaling.

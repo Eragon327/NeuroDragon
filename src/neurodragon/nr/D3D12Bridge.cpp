@@ -1850,6 +1850,21 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath) {
     }
 }
 
+bool nrEngineInitCaptured(unsigned long long* appId, wchar_t* dataPath, unsigned capacity) {
+    if (appId) {
+        *appId = gEngineAppId;
+    }
+    if (dataPath && capacity) {
+        dataPath[0] = 0;
+        if (!gEngineDataPath.empty()) {
+            unsigned const chars = static_cast<unsigned>(gEngineDataPath.size() < capacity ? gEngineDataPath.size() : capacity - 1);
+            std::memcpy(dataPath, gEngineDataPath.data(), static_cast<std::size_t>(chars) * sizeof(wchar_t));
+            dataPath[chars] = 0;
+        }
+    }
+    return gEngineAppId != 0;
+}
+
 bool nrCreate(
     void*    commandList,
     void*    colorResource,

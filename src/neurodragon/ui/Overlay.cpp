@@ -1323,6 +1323,9 @@ present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT
 HRESULT __stdcall
 resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height, DXGI_FORMAT format, UINT flags) {
     std::unique_lock lock(gResourceMutex);
+    // The probe holds references into the old render graph; release them before
+    // ResizeBuffers or the engine aborts on its failure (2026-10-25 03:14).
+    probe::vv::onSwapChainResize();
     // ResizeBuffers requires every reference to the old back buffers to be gone.
     releaseGraphics();
     lock.unlock();
@@ -1340,6 +1343,7 @@ HRESULT __stdcall resizeBuffers1Hook(
     IUnknown* const* presentQueue
 ) {
     std::unique_lock lock(gResourceMutex);
+    probe::vv::onSwapChainResize();
     releaseGraphics();
     lock.unlock();
     return gOriginalResizeBuffers1(swapChain, count, width, height, format, flags, creationNodeMask, presentQueue);
