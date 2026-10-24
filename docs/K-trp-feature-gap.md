@@ -69,7 +69,7 @@
 | subrect / 只渲染子矩形 | ✅ |
 | 锁渲染比例 | ✅ FrameBuilder 因子表 patch（等价于它的 DRS 接管） |
 | 遥测 | 部分：尺寸/档位/flags/预设/动态范围/ctx；缺输入格式、jitter 相位、evaluate 成败 |
-| NR 在 SR 之前 | ✅（我们只有这条） |
+| NR 在 SR 之前 | ✅（我们只有这条）；「放大后」= 位置轴 After 档，2026-10-24 已排期，见 [N](N-nr-placement-plan.md) |
 
 **可做（按性价比）**
 
@@ -168,7 +168,7 @@
 | Peripheral compression / fused preparation | 前者与 ① 目标重叠且更复杂；后者是 TRP 内部准备阶段优化，我们没有对应阶段 |
 | Style 3–255 自定义 | TRP 源码注释写明：**310.8 / 310.9.16 上 style ≥2 输出全部等于 Cinematic**，开放到 255 是假选项 |
 | 天气/时段覆盖、战斗降 pass | 没有天气/时段概念；1 pass 也没什么可降 |
-| NR 放在 DLSS 之后 | 2560×1440 上 NR ≈ 8.75 ms，四倍成本；TRP 自己也建议优先「前」 |
+| NR 放在 DLSS 之后 | 2560×1440 上 NR ≈ 8.75 ms，四倍成本；TRP 自己也建议优先「前」。**2026-10-24 裁定：改为排期项（位置轴），见 [N](N-nr-placement-plan.md)**——成本数字仍然有效，但 RCAS 已证明引擎 `Output` 可读写（[J §9](J-sr-implementation.md#L119)），所以它不再等于「不做」 |
 
 ## 4. 一小时实验清单（零/低成本，先做掉）
 

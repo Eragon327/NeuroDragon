@@ -143,3 +143,4 @@ xmake f -p windows --test=n && xmake build -y   # 发布构建（默认）
 | [docs/K-trp-feature-gap.md](docs/K-trp-feature-gap.md) | **路线权威** | TRP 0.5.3 的 SR/NR 全量对照、可做项、代价与排期 |
 | [docs/L-nr-remaining-plan.md](docs/L-nr-remaining-plan.md) | **执行权威** | NR 剩余功能的批次、验收判据、探针记录与约定 |
 | [docs/M-roadmap.md](docs/M-roadmap.md) | **阶段路线权威** | 四阶段顺序（NR/SR → VV 接管 TAAU → FG → RR）、每阶段状态与开工前必答的未知 |
+| [docs/N-nr-placement-plan.md](docs/N-nr-placement-plan.md) | **位置轴路线** | NR 在放大器前/后两档（Before / After upscaling）的语义、路线 P0–P4、判据与验收 |

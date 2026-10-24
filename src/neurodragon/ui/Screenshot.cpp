@@ -263,7 +263,14 @@ std::wstring makePath(std::wstring const& directory) {
     );
     std::filesystem::path path = directory;
     path /= name;
-    return path.wstring();
+    // Absolute, because this string is also what the player is shown in chat
+    // (ui::notice::chat) and logged: `./mods/...` only means something relative to
+    // the game's working directory. The mod directory itself comes from LeviLamina
+    // as a relative path (latest.log proves it: "./mods/NeuroDragon\screenshots\…
+    // .png"), so the resolution happens here, where the file is also written.
+    std::error_code error;
+    auto const      absolute = std::filesystem::absolute(path, error);
+    return (error ? path : absolute).wstring();
 }
 
 } // namespace

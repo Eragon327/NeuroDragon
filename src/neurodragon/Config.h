@@ -2,14 +2,18 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace neurodragon::config {
 
 // Runtime settings, stored as <mod dir>/config/config.json through ll::config
 // (nlohmann::json via boost::pfr aggregate reflection): every field below is a
-// real key. There is no migration from older formats - delete the file and the
-// defaults below are written again. `version` is required by ll::config's
-// concept; bump it only when a key's meaning changes.
+// real key. `version` is required by ll::config's concept; bump it whenever a key
+// is added or removed, not only when a key's meaning changes - loadConfig only
+// fills in missing fields when the version differs, so without a bump an older
+// file is deserialised as-is and fails on the new keys. There is no value
+// migration: v1's single-key `ui.openKey`/... are simply dropped and the four
+// hotkeys start from their defaults again (v2 turned them into combinations).
 struct Nr {
     bool enabled = false;
 
@@ -116,24 +120,31 @@ struct Sr {
 
 struct Config;
 
+// Default virtual-key codes of the four hotkeys. Named here so the panel's "reset
+// to default", the overlay's fallback for a hand-edited config and the values below
+// cannot drift apart.
+inline constexpr int kDefaultOpenKey       = 0x23; // VK_END
+inline constexpr int kDefaultNrKey         = 0xDB; // VK_OEM_4, '['
+inline constexpr int kDefaultResetKey      = 0xDD; // VK_OEM_6, ']'
+inline constexpr int kDefaultScreenshotKey = 0x71; // VK_F2 (Bedrock does not use it)
+
 // Panel settings. Like everything else here: read once at load, written only by
 // "Save as default" in the panel.
 struct Ui {
-    // Virtual-key code of the panel hotkey. 0x23 = VK_END.
-    int openKey = 0x23;
-
-    // In-game NR hotkeys, live while the panel is closed. 0xDB / 0xDD are '[' / ']'
-    // on a US layout (VK_OEM_4 / VK_OEM_6); 0 disables one.
-    int nrKey    = 0xDB; // NR on/off
-    int resetKey = 0xDD; // wipe NR + engine DLSS temporal history once
-
-    // Virtual-key code of the "save the finished frame" screenshot key.
-    // 0x71 = VK_F2 (Bedrock does not use it). The PNG goes to <mod>/screenshots/.
-    int screenshotKey = 0x71;
+    // Hotkeys are ordered combinations of Windows virtual-key codes (the order is
+    // the press order, modifiers first - see input::KeyBind::make). An **empty
+    // array is a real value**: the player unbound that slot. It is not the same as
+    // "no record", which falls back to the defaults above. The panel key is the one
+    // exception: it is the only way into the panel, so an empty value there is
+    // repaired to the default (ui::parsePanelKeys).
+    std::vector<int> openKeys{kDefaultOpenKey};
+    std::vector<int> nrKeys{kDefaultNrKey};             // NR on/off
+    std::vector<int> resetKeys{kDefaultResetKey};       // wipe NR + engine DLSS history once
+    std::vector<int> screenshotKeys{kDefaultScreenshotKey};
 };
 
 struct Config {
-    int version = 1;
+    int version = 2;
     Nr  nr{};
     Sr  sr{};
     Ui  ui{};

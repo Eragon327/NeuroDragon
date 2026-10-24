@@ -108,11 +108,13 @@ sizing 入口先比较 active/requested mode、factor、feature handle、display
   在引擎还没有 DLSS feature 时（主菜单、没开光追）应用预设不会留下卡住的重建请求——没有东西可
   重建，请求在帧上下文里直接丢弃，下一次 CreateFeature 仍会读到我们的覆盖。
 - 底部：保存为默认 / 应用 / 放弃（没有重载按钮）。
-- **待实机（本批构建已部署，2026-10-24）**：
+- **待实机（本批构建已部署，实机验收推迟到下次进游戏——2026-10-24 用户决定）**：
   1. §9 的锐化二次验收：0.672（≈2.7 倍增量）与 1.0（4 倍）的观感、**整帧开关**下可否辨认、
      拉满是否出现白边；日志看 `[sr] RCAS 锐化已启用：强度 …（增量 … 倍）` 与
      `[sr] 锐化前后 dump（强度 …）`。
-  2. §10 的截图：连按两次 F2、`[shot] 已排队 / 已写入` 两行耗时（编码移到线程后的新数）、
+  2. §10 的截图：按 F2 应生成 `<version>/screenshots/*.png`（**游戏根目录**、随 exe，不再是
+     `mods/NeuroDragon/screenshots/`），内容 = 屏幕所见（含 HUD、不含面板），反馈走游戏聊天栏
+     且带绝对路径；连按两次 F2、`[shot] 已排队 / 已写入` 两行耗时（编码移到线程后的新数）、
      面板开着按 F2 不含面板、拖窗口后按仍是新尺寸。
 - 其余待办：NR 侧 T1.x（见 `docs/G`）。**组合预设包**（I 的 M2 剩余）由用户 2026-10-24 决定
   **暂不做、后面再说**；75%（TRP 的 78%）实验与 mip LOD 偏置未排期。
@@ -207,16 +209,21 @@ TRP 0.5.3 的做法是钩住 Skyrim 自己的截图保存、再用成品帧覆�
 - **时机**：Present 钩子里、画我们的面板之前 —— 所以文件是「屏幕所见」：DLSS/NR 之后的成品帧、
   含 HUD、**不含面板**、输出分辨率。
 - **键**：`ui.screenshotKey`（默认 `VK_F2` = 0x71；Bedrock 不用这个键），面板开/关都生效，
-  按键会被吞掉不再传给游戏；「高级」页只读显示当前键。
-- **落盘**：`<mod>/screenshots/YYYYMMDD-HHMMSS-mmm-N.png`，日志一行
-  `[shot] 已保存 …（尺寸，格式，耗时，体积）`。
+  按键会被吞掉不再传给游戏；「高级」页的「截图键」按钮可直接改键（与面板键/NR 键同一个捕获
+  机制，改完点「应用」）。
+- **落盘**：`<version>/screenshots/YYYYMMDD-HHMMSS-mmm-N.png`（**游戏根目录**，与 `mods/`、
+  `logs/` 同级，不是 mod 目录里），日志一行 `[shot] 已排队 …` 与 `[shot] 已写入 …`。
 - **实现细节**：`CreateWrappedResource` 之后 `AcquireWrappedResources` → `CopyResource` 到
   staging → `Flush`（11on12 的命令在 Flush 时提交，Map 才能等到数据）→ Map → 转 BGRA8 →
   WIC PNG。11on12 的列 pitch 从 `Map` 拿，不自己算。格式支持 B8G8R8A8 / R8G8B8A8 /
   R10G10B10A2 / R16G16B16A16_FLOAT（后者按 Reinhard+gamma 编码，与 dump 同曲线）。
-- **反馈**：按下后屏幕底部弹出一次 toast「截图已保存 / 截图失败（见日志）」——第一次实机
-  （04:50）按键完全没有反馈，用户不知道有没有截上。日志现在是两行：`[shot] 已排队 …`
-  （读回+转换耗时）与 `[shot] 已写入 …`（后台编码耗时）。
+- **反馈**：按下后**聊天栏**出现一行「截图已保存：<绝对路径>」/「截图失败（见日志）」——第一次
+  实机（04:50）按键完全没有反馈，用户不知道有没有截上；随后补的底部 2.2 s ImGui toast 又被指
+  「太不明显」，2026-10-24 改走原生聊天：`ui::notice::chat`（`GameNotice.cpp`）把文本投给客户端
+  线程，再调 `ClientInstance::getGuiData()->displayClientMessage`——纯客户端消息、不发包、不经过
+  聊天过滤。路径**必须**是绝对路径：`getModDir()` 给的是相对的（旧日志 `./mods/…`），所以
+  `Screenshot.cpp::makePath` 现在自己 `std::filesystem::absolute`，日志与聊天拿到同一串。
+  日志仍是两行：`[shot] 已排队 …`（读回+转换耗时）与 `[shot] 已写入 …`（后台编码耗时）。
 - **代价**：第一次实机整条链路在 Present 线程上同步跑，**395 ms/张**（可见卡顿）。现在 PNG 编码
   移到单独线程（`CreateThread`，卸载时 join），Present 线程只剩读回 + 转 BGRA；实测新数值待记。
 - **实测（04:50）**：两张 PNG 都是 2560×1440、格式 28（`R8G8B8A8_UNORM`）、5.7–5.9 MB、
