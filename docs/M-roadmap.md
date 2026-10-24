@@ -38,7 +38,7 @@
 | 阶段 | 内容 | 状态（2026-10-24） | 里程碑 | 当前权威文档 |
 |---|---|---|---|---|
 | 1 | NR 神经渲染 + SR 超分（RT 路线，复用引擎 DLSS） | 🟡 一半 | L 批 1–3；I 的 M0–M3 | L / K / J / D |
-| 2 | NR + SR 接入 VV 管线，替代 TAAU | ⬜ 未开始 | I 的 M4–M7（M8 可选） | I / A |
+| 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 **M4 侦察中**：taau 已实测命中（1 次/帧）、提交结构已量到，见 [O](O-vv-path.md) | I 的 M4–M7（M8 可选） | I / A / **O** |
 | 3 | FG 帧生成 | ⬜ 未开始（**排期变更**，见 §6） | 尚无里程碑，须先答 §4 的未知 | A（P3/P4/P6）/ F（Present 设施） |
 | 4 | RR 光线重建（尝试） | ⬜ 未开始，**可能不可做** | 先答 D §7 的决定性问题 | D §7 |
 
@@ -69,7 +69,7 @@ M6 DLSS 替换 → M7 统一收尾，M8 可选），本文不重复，只记**�
 
 | # | 未知 | 为什么是前置 | 探针/判据 |
 |---|---|---|---|
-| 1 | VV 下 `taau` 是否命中、NGX 是否已被引擎 Init | 不命中就没有插入点；已 Init 则不能二次 Init | I 的 K4：`upscaling_mode=0` + `graphics_mode=2`，看 taau 命中次数 |
+| 1 | VV 下 `taau` 是否命中、NGX 是否已被引擎 Init | 不命中就没有插入点；已 Init 则不能二次 Init | ✅ **已答（[O §3](O-vv-path.md)）**：`upscaling_mode=0` + `upscaling_percentage=33` + `graphics_mode=2` 时 taau 每帧 1 次声明 + 1 次 draw；VV 下引擎不调 NGX，feature 要自己建 |
 | 2 | bgfx 句柄 → `ID3D12Resource` 的桥 | taau 输入只有 bgfx 句柄（[A §7.3](A-renderdragon-passmap.md#L237-L257)），拿不到资源就什么都做不了 | I 的 K6：钩 bgfx D3D12 纹理创建，拿到 1 张资源 |
 | 3 | 深度从哪来 | taau **不绑深度**（[A §7.1](A-renderdragon-passmap.md#L201-L222)），NR 要深度 | 钩延迟着色通道或自建深度拷贝 |
 | 4 | 写 taau 输出目标是否被后续 pass 依赖 | 写错就是花屏/崩溃 | I 的 M5：先「TAAU 照跑再覆盖」，不成立就放弃写入 |

@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/probe/RenderProbe.h"
+#include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
 
@@ -92,6 +93,11 @@ bool NeuroDragon::enable() {
     // Locate + hook dragon::framerenderer::modules::taau without any PDB.
     probe::install();
 
+    // Vibrant Visuals reconnaissance: a read-only hook on the same `taau` function
+    // that shows whether the VV upscaler is live and with which numbers
+    // (docs/O-vv-path.md). It touches nothing the game owns.
+    probe::vv::install();
+
     // Screenshots go to the game root (`<version>/screenshots`, a sibling of `mods/`
     // and `logs/`) rather than inside the mod folder: that top-level folder is where
     // a player already looks for the game's own output, and the mod directory stays
@@ -116,6 +122,7 @@ bool NeuroDragon::disable() {
     // Take the panel down first: it owns the window procedure and hooks Present,
     // both of which must be in their original state before the NR hooks are dropped.
     ui::Overlay::getInstance().uninstall();
+    probe::vv::uninstall();
     probe::uninstall();
     return true;
 }
