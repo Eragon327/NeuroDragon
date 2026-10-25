@@ -1,0 +1,82 @@
+# NGX parameter names proven to exist in the runtime the mod talks to.
+#
+# Generated from the bytes of the feature DLLs, not from memory or from an SDK
+# header: the 2026-10-25 VV session wrote JitterOffsetX / MVScaleX where this
+# runtime only knows Jitter.Offset.X / MV.Scale.X, so EvaluateFeature answered
+# 0xBAD00005 and three game starts went into finding that out.
+#
+# Update with:  python scripts/agentflow/flow.py keys --dll <nvngx_dlss.dll>
+#               python scripts/agentflow/flow.py keys --dll <dll> --verify
+# A name may only be added here after it was found in the DLL bytes.
+#
+# source: nvngx_dlss.dll sha256=8707e53b26c68c60
+# source: nvngx_dlssnr.dll sha256=2bc19bc09a7b89dd
+
+Color
+CreationNodeMask
+DLSS.Feature.Create.Flags
+DLSS.Get.Dynamic.Max.Render.Height
+DLSS.Get.Dynamic.Max.Render.Width
+DLSS.Get.Dynamic.Min.Render.Height
+DLSS.Get.Dynamic.Min.Render.Width
+DLSS.Hint.Render.Preset.Quality
+DLSS.Indicator.Invert.X.Axis
+DLSS.Indicator.Invert.Y.Axis
+DLSSNR.Backbuffer
+DLSSNR.BackbufferSubrectBaseX
+DLSSNR.BackbufferSubrectBaseY
+DLSSNR.BackbufferSubrectHeight
+DLSSNR.BackbufferSubrectWidth
+DLSSNR.Color
+DLSSNR.ColorSubrectBaseX
+DLSSNR.ColorSubrectBaseY
+DLSSNR.ColorSubrectHeight
+DLSSNR.ColorSubrectWidth
+DLSSNR.Depth
+DLSSNR.DepthInverted
+DLSSNR.DepthSubrectBaseX
+DLSSNR.DepthSubrectBaseY
+DLSSNR.DepthSubrectHeight
+DLSSNR.DepthSubrectWidth
+DLSSNR.Enabled
+DLSSNR.Height
+DLSSNR.Hint.Render.Preset
+DLSSNR.Intensity
+DLSSNR.LocalStructureStrength
+DLSSNR.LocalToneStrength
+DLSSNR.MVec
+DLSSNR.MVecScaleX
+DLSSNR.MVecScaleY
+DLSSNR.MVecSubrectBaseX
+DLSSNR.MVecSubrectBaseY
+DLSSNR.MVecSubrectHeight
+DLSSNR.MVecSubrectWidth
+DLSSNR.Output
+DLSSNR.OutputSubrectBaseX
+DLSSNR.OutputSubrectBaseY
+DLSSNR.OutputSubrectHeight
+DLSSNR.OutputSubrectWidth
+DLSSNR.Reset
+DLSSNR.ScalingRatio
+DLSSNR.SkinStructureStrength
+DLSSNR.Style
+DLSSNR.UICorrection
+DLSSNR.UseAutoMask
+DLSSNR.Width
+DLSSOptimalSettingsCallback
+Depth
+DepthInverted
+Height
+Jitter.Offset.X
+Jitter.Offset.Y
+MV.Scale.X
+MV.Scale.Y
+MotionVectors
+OutHeight
+OutWidth
+Output
+PerfQualityValue
+Reset
+Sharpness
+VisibilityNodeMask
+Width

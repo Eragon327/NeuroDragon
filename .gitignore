@@ -552,3 +552,6 @@ fabric.properties
 
 .ida/
 .dsh/
+# agentflow evidence is committed on purpose: `flow.py review` re-hashes it.
+!docs/agent/evidence/
+!docs/agent/evidence/**

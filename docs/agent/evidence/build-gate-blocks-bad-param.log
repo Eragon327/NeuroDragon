@@ -1,0 +1,7 @@
+# Evidence: the pre-build gate is a hard stop, not a warning (2026-10-25, this worktree).
+# Procedure: add src/neurodragon/vv/_agentflow_probe.cpp with paramU32(p, "DefinitelyNotAnNGXKey", 1),
+# run 'xmake -y', note the exit code, delete the probe file again.
+
+agentflow gate: 7 finding(s), 1 error(s), 2 waived
+  ERROR            ngx.unknown-name         parameter 'DefinitelyNotAnNGXKey' is not a name the NGX runtime knows (used in src/neurodragon/vv/_agentflow_probe.cpp; first failure of this kind: JitterOffsetX vs Jitter.Offset.X, 2026-10-25)
+EXIT=127

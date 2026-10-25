@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Color",
+    "level": "error",
+    "why": "DLSS-SR input; without it EvaluateFeature has nothing to upscale"
+  },
+  {
+    "name": "Depth",
+    "level": "error",
+    "why": "DLSS-SR input; the temporal reprojection needs it"
+  },
+  {
+    "name": "MotionVectors",
+    "level": "error",
+    "why": "DLSS-SR input; without it the history cannot be reprojected"
+  },
+  {
+    "name": "Output",
+    "level": "error",
+    "why": "DLSS-SR destination; required by the feature contract"
+  },
+  {
+    "name": "Jitter.Offset.X",
+    "level": "error",
+    "why": "proven required: NGX feature log said 'could not find Jitter.Offset.X parameter' and EvaluateFeature answered 0xBAD00005 (2026-10-25 18:57, nvngx_dlss_310_5_3.log)"
+  },
+  {
+    "name": "Jitter.Offset.Y",
+    "level": "error",
+    "why": "the y half of the same required pair"
+  },
+  {
+    "name": "Reset",
+    "level": "warn",
+    "why": "every DLSS sample sets it; not yet proven that omitting it fails validation"
+  },
+  {
+    "name": "MV.Scale.X",
+    "level": "warn",
+    "why": "SDK samples always set the MV scale; this runtime exposes MV.Scale.X, but a missing value has not been proven to fail EvaluateFeature here"
+  },
+  {
+    "name": "MV.Scale.Y",
+    "level": "warn",
+    "why": "the y half of MV.Scale"
+  },
+  {
+    "name": "DepthInverted",
+    "level": "warn",
+    "why": "VV depth is reversed-Z (near = 1.0); wrong or missing hint degrades quality rather than failing validation"
+  }
+]

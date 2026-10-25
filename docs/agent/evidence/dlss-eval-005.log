@@ -1,0 +1,10 @@
+# Provenance: excerpt of E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log (same run).
+# The DLSS feature exists and is evaluated every frame, and every evaluation fails.
+
+[2026-10-25 18:57:01.103 DBG][NeuroDragon] [eval] f=1 tid=38972 cl=0x1a0a98ab840 h=0x1a0a1800a90 1689x950 c=0x1a0a98ae700 d=0x1a0a98afa20 mv=0x1a0a98b0d40 o=0x1a0a98add70 ret=0xbad00005
+[2026-10-25 18:57:01.114 DBG][NeuroDragon] [eval] f=2 tid=38972 cl=0x1a0a98ab840 h=0x1a0a1800a90 1689x950 c=0x1a0a98ae700 d=0x1a0a98afa20 mv=0x1a0a98b0d40 o=0x1a0a98add70 ret=0xbad00005
+[2026-10-25 18:57:01.124 DBG][NeuroDragon] [eval] f=3 tid=38972 cl=0x1a0a98ab840 h=0x1a0a1800a90 1689x950 c=0x1a0a98ae700 d=0x1a0a98afa20 mv=0x1a0a98b0d40 o=0x1a0a98add70 ret=0xbad00005
+
+[2026-10-25 18:57:01.001 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-25 18:57:01.001 IFO][NeuroDragon] [vvsr] sr readback Width: u32 ret=1 val=1689 | f32 ret=1 val=1689.000
+[2026-10-25 18:57:01.001 IFO][NeuroDragon] [vvsr] sr readback OutWidth: u32 ret=1 val=2560 | f32 ret=1 val=2560.000

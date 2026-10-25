@@ -77,6 +77,23 @@ target("NeuroDragon") -- Change this to your mod name.
     --  add_includedirs("src-client")
     --  add_files("src-client/**.cpp")
     end
+    -- Pre-build gate (scripts/agentflow/flow.py, protocol in AGENTS.md).
+    -- It fails the build on the mistakes that are cheaper to catch here than in a
+    -- game session: an NGX parameter name the runtime does not know, a shader that
+    -- does not compile, a DLSS evaluate that stopped setting a required parameter.
+    -- There is deliberately no switch to skip it - a build that cannot pass the
+    -- gate must not be handed to a human as "try this".
+    before_build(function (target)
+        import("lib.detect.find_program")
+        local python = find_program("python") or find_program("python3")
+        if not python then
+            raise("agentflow: python is required for the pre-build gate (see AGENTS.md)")
+        end
+        os.execv(python, {
+            path.join(os.projectdir(), "scripts", "agentflow", "flow.py"),
+            "gate", "build",
+        })
+    end)
     -- Replaces @levibuildscript/modpacker: that rule only copies the DLL, its
     -- PDB and manifest.json, while this mod also ships lang/ and the NR model.
     after_build(function (target)

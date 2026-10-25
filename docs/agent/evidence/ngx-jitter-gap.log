@@ -1,0 +1,7 @@
+# Provenance: excerpt of the NGX feature log written by the TEST build (e86b5d78) run at 2026-10-25 18:57.
+# Full file: %LOCALAPPDATA%\Temp\NeuroDragon\NGX\nvngx_dlss_310_5_3.log
+# Reason it is here: this is the evidence for the 0xBAD00005 root cause.
+
+[2026-10-25 18:57:01] [tid:38972][NGXDLAA::EvaluateFeature:799] error: could not find Jitter.Offset.X parameter
+[2026-10-25 18:57:01] [tid:38972][NGXDLAA::EvaluateFeature:799] error: could not find Jitter.Offset.X parameter
+[2026-10-25 18:57:01] [tid:38972][NGXDLAA::EvaluateFeature:799] error: could not find Jitter.Offset.X parameter
