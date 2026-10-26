@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 修复/研究（2026-10-26：运行时切 Bilinear、相机对象、MV 快照时机）
+
+- **P0-2 修复（已实机）**：`VvProbe::drawDetour` 在转发前快照 TAA context 的
+  `+0x200/+0x240/+0x1e4/+0x280`，`taaMatrices()` 改读快照。原因：引擎在自己的 draw 里把 prev
+  覆盖成 cur，提交后读永远是 `prev == cur`，旋转 MV 恒为 0。EXP-0021 实机日志
+  `[vvsr] mv snapshot: previous VP differs …`，站定 `prev_same=1`。
+- **运行时切换 `upscaling_mode`（已实机）**：新增 `probe/RuntimeOptions`（TEST，marker 控制）：
+  `ClientInstance::getOptions()` → `IOptionRegistry`，按 save tag 扫描 `OptionID` 0..1023
+  （26.51 头里 `OptionID` 是空枚举，且编号相对 26.10 **移位**：26.10 的 579 在 26.51 是
+  `upscaling_percentage`）→ `Option::load("1")`。必须在客户端线程；`ClientThreadExecutor`
+  在启动早期投递不可靠，改为每 2 s 重投 + level-join 直接调用。EXP-0020：切换后 `[vv] taau #`
+  0 次（含随后进世界），引擎退出时把 per-user `options.txt` 写回 `mode=1`。
+- **实测**：引擎读的是
+  `Minecraft Bedrock\Users\<id>\games\com.mojang\minecraftpe\options.txt`；版本根目录的
+  `options.txt` 是诱饵（EXP-0016 改它无效、EXP-0017 改 per-user 有效）。
+- **相机探针**：`probe/VvCamera`（TEST）读 `ClientInstance::getCamera()`。basis 与同帧 taau context
+  一致；position/标量/投影栈在 present 时不可靠（camera-relative、空栈），bilinear 档的相机位置需另找。
+- **bilinear 的 render size fallback**：display 从 swapchain 后缓冲取（`noteSwapChain`）；
+  render 从 RTV 清单的 fmt26 反推并 latch（编译通过、待实机）。
+- **agentflow**：`smoke` 增加 `dwell_s` 与 `window_after`（否定断言需要窗口；EXP-0016 曾在 17 s
+  误判 pass），子进程 stdout/stderr 接 `DEVNULL`（否则游戏继承管道把 `tail`/job 挂住）；新增
+  `bilinear-mode`、`runtime-bilinear` 两个 profile；单测 46 通过。
+- **未结**：SR+DLSS 的 2 px 屏幕固定竖缝（只在运动时可见；六组移动帧 dump 的引擎颜色 / DLSS 输出 /
+  写回 final 都干净）。现场手段与已排除项见 `docs/specs/vv.md` §17.7。
+
 ### 修复（2026-10-25 23:1x：VV 里 DLSS 常驻 + 输入清单不再被挤空）
 
 - `VvDlssSr`：`evaluateSr` 恢复 float 参数写入并改用运行时真名（`Jitter.Offset.X/Y`、`MV.Scale.X/Y`），

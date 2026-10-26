@@ -20,13 +20,19 @@ VV 下的 TAAU 每帧恰好 1 次声明 + 1 次 draw，跑在 factor 0.33、jitt
 
 ## 1. 触发条件（用户口述 + 实测钉死）
 
-`options.txt` 三条同时满足，`taau` 才会真正跑：
+`options.txt` 三条同时满足，`taau` 才会真正跑（**读的是 per-user 存储**，不是版本根目录那份，
+见 §17.1）：
 
 | 键 | 值 | 说明 |
 |---|---|---|
 | `graphics_mode` | `2` | Vibrant Visuals（延迟渲染）；`3` = 开光追（走 RTX 帧渲染器，是另一条路径） |
 | `upscaling_mode` | `0` | `0 = Taau`，`1 = Bilinear`。**Bilinear 根本不进 taau 分支** |
 | `upscaling_percentage` | 非 0 且 < 100 | 实测用 `33`；`0` = 原生 100%，上采样无意义，taau 不触发 |
+
+> **2026-10-26 更正**：上表的值在 **per-user** 存储
+> `Minecraft Bedrock/Users/<id>/games/com.mojang/minecraftpe/options.txt` 里（引擎启动读、退出写回）；
+> 版本根目录的 `options.txt` 是诱饵，改了不生效。`upscaling_percentage` 的值就是渲染比例
+> （实测 `66` → taau `factor=0.6600`），不是档位名。
 
 实测：设成上面三行后，**连主菜单**都在跑 taau（菜单背景全景也走 VV 上采样），
 所以探针不用进世界也能验证 hook 是否活着。
@@ -1040,3 +1046,93 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 3. **切场景时约 0.78 s 冻结**：世界内稳定 99–100 fps（每 ~21 s 有一段 3 秒的 77–82 fps，非单帧卡死）；
    唯一的长帧 `779.6 ms at present #20003`（23:16:17.850）与 taau 深扫的 11 行同步 dump
    （23:16:17.154→17.848，每行 ~70–120 ms）完全重合。⇒ 冻结来自深扫，不来自 SR 管线。
+
+## 17. 运行时切换与相机（2026-10-26）
+
+> 这轮要回答两件事：S5 怎么让 TAAU 不执行；A2 在 TAAU 不跑时拿什么当 MV 相机来源。
+> 两条都绕不开「引擎设置到底存哪」与「相机对象能给什么」。
+
+### 17.1 设置存在哪
+
+| 路径 | 结论 |
+|---|---|
+| `<version>\options.txt`（版本根目录） | **诱饵**：改了不生效。EXP-0016 把 `upscaling_mode` 改成 1，引擎仍 `mode=0` |
+| `Minecraft Bedrock\Users\<id>\games\com.mojang\minecraftpe\options.txt` | **引擎真正读的那份**：启动读、退出写回 |
+
+- 证据：EXP-0017 改 per-user `upscaling_mode=1` → `[vv] taau #` 0 次；EXP-0020 运行时刻意改完，
+  退出时引擎把 `1` 写回 per-user 文件。
+- `upscaling_percentage` 的值就是渲染比例（per-user 里 `66` → taau `factor=0.6600`）。
+  早期文档写「33%」用的是根目录诱饵的值，别再当依据。
+- 旧备份 `options.txt.bak-*-20261023` 表明这条路径 10-23 就被人用过，只是没写进文档。
+
+### 17.2 OptionID 在 26.20+ 不可用，而且编号移位
+
+- `mc/options/option_types/OptionID.h` 在 26.51.7 里是空枚举（3 行）；26.10.14 的包里有完整枚举
+  （LiteLDev/mcapi-requests#255：客户端 options 头被裁剪）。
+- **编号也变了**：26.10 的 `DeferredUpscalingMode = 579`；26.51 运行时实测
+  `579 = upscaling_percentage`、`580 = upscaling_mode`、`581 = gfx_upscaling`、
+  `582 = target_resolution`、`703 = graphics_mode`。照抄旧枚举会写到错的选项上。
+- 可行做法：`IOptionRegistry::isValidOption(id)`（有边界检查）扫 0..1023 → `get(id)` →
+  `Option::save(vector<pair<string,string>>&)` 拿 save tag（就是 options.txt 的键名），
+  匹配后 `Option::load("1")`。EXP-0020 实测 `valid=470`、`id=580 upscaling_mode`。
+
+### 17.3 运行时切换（不碰 options.txt）
+
+- 入口：`ClientInstance::getOptions()` → `IOptionRegistry` → `Option::load("1")`。
+  EXP-0020：load 之后再无一条 `[vv] taau #`（含随后进世界），退出时引擎写回 `mode=1`。
+- **必须在客户端线程**。`ll::thread::ClientThreadExecutor` 在启动早期投递的任务不保证及时执行
+  （EXP-0018/19：hand-off 有日志，任务没跑或很晚才跑）；可靠做法是每 2 s 重投，
+  或直接在 `ClientLevelJoinEvent` 里调用（那一刻就是客户端线程）。
+- 测试开关：`<mod>\config\force_bilinear.flag` 存在时，TEST 构建在 load 时排队、Present 投递、
+  join 事件直接调用。日志序列：`marker … present=1` → `requested` → `handing…` →
+  `task running` → `scan done` → `load … -> 1` → `reread = 1`。
+
+### 17.4 相机对象能拿到什么、拿不到什么
+
+`ClientInstance::getCamera()` → `mce::Camera`（`mc/deps/renderer/Camera.h`）：
+
+| 字段 | 实测（EXP-0021/0022） |
+|---|---|
+| `mRight/mUp/mForward` | 与同帧 taau context 的列向量**归一化后完全一致** ⇒ 是渲染用的相机 |
+| `mInverseViewMatrix` | 只有旋转（camera-relative 渲染，没有平移） |
+| `mPosition` | 恒 0（世界位置不在这里） |
+| `viewMatrixStack` | 恒等（VV 不用 view 栈） |
+| `projectionMatrixStack` | 大多为空；偶发上次 pass 的投影（Sx=0.76575 / Sy=1.36133 与 taau 列长一致，v14=-0.05） |
+| `mAspectRatio/mFov/mZNear/mZFar` | 恒 0（0x320 字节 raw dump 里 basis 之后的标量段全 0） |
+
+- **结论**：bilinear 档下相机方向可以自建 MV；**位置必须另找**
+  （`getLocalPlayer()->getEyePos()` 是候选，第三人称/视角平滑会有偏差）；
+  投影不能每帧可靠读到，读到后要缓存 Sx/Sy。
+- **近平面不一致**：相机投影 v14 = -0.05，taau context = -0.025（2×）。
+  MV 的 `depth = near/(1-d)` 用 0.025；若深度其实来自 0.05 的投影，平移项会差 2×。**未定论**。
+
+### 17.5 快照时机（P0-2，已实机验证）
+
+- TAAU draw callback 拿到的 context 里，`+0x240` 还是**上一帧**的 VP；引擎在自己的 draw 里会把
+  prev 覆盖成 cur。所以在提交后（ExecuteCommandLists）再读，永远是 `prev == cur`。
+- 修法：`drawDetour` 转发前快照 `+0x200/+0x240/+0x1e4/+0x280`，`taaMatrices()` 只读快照。
+- EXP-0021 实机：走动时 `[vvsr] mv snapshot: previous VP differs from current (frame 298, delta=…)`；
+  站定 `prev_same=1`。
+
+### 17.6 bilinear 档的 render size fallback（编译通过、待实机）
+
+- `taauDetour` 是唯一填 `renderWidth/Height` 的地方；Bilinear 不跑它 ⇒ SR 管线拿到 0，直接 return。
+- 现在 display 由 swapchain 后缓冲 desc 填（`noteSwapChain`，走 `nr::describe`，不依赖 taau）；
+  render size 从 RTV 清单取「最新的、小于 display、比例匹配的 fmt26」，latch 一次，resize 时丢弃重取。
+- 日志：`[vvsr] sr: TAAU is not running; render size from the inventory = WxH`。
+
+### 17.7 未结：SR+DLSS 的 2 px 竖缝（EXP-0023）
+
+- 现象：**屏幕固定、贯穿画面、约 2 px、极淡（~2/255）**；只在运动时明显；SR 关没有、SR+DLSS 有；
+  窗口模式与游戏 F2 截图里都有（⇒ 在后缓冲内容里）。
+- 已排除：EXP-0023 的六组移动帧 dump 里，引擎颜色（mid colourhalf）、DLSS 输出（dlssout）、
+  写回 final 在 65%（render x≈1099 / display x≈1666）**都没有**静态缝；MV 非零、无 NaN、无列跳变；
+  深度正常（天空≈1.0、远处地形 0.9968+）。
+- 现场手段已备：`vv_sr_spatial.txt`（纯空间 A/B：零 MV/jitter、每帧 Reset）、
+  `vv_dump_sr.txt`（移动中 dump，含 dlssout/mv/depth）。下一步用 F2 那一帧对齐同帧 dump 再比。
+
+### 17.8 dump 的一个坑
+
+我们自己的纹理在写回后处于 `NON_PIXEL_SHADER_RESOURCE`。用 `DumpState::Common` 去拷会读到
+stale 字节（MV 全 0、depth 全 1.0），看起来像"MV 坏了"。`dumpTextureRawAs` 必须传对应状态；
+`DumpState` 里已补 `NonPixelShaderResource = 0x40`。
