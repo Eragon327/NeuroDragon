@@ -105,7 +105,9 @@ python scripts/agentflow/flow.py claim --final     # 只认 kind=final 的验收
 ## 7. 这个仓库的既有约束（别踩）
 
 - Hook 用 LeviLamina 的 8 个 Hook 宏，不要手写 MinHook 注册（热函数会在 `enable()` 里死锁）。
-- 测试实例是 `E:\LeviLauncher\versions\1.26.51.01-agent2`，**不要**部署到没有 `-agent2` 的那个版本。
+- 测试实例由**本检出**的 `scripts/agentflow/config.local.json` 给出（git-ignored，`instance` 字段）：
+  `agent2` 检出用 `E:\LeviLauncher\versions\1.26.51.01-agent2`，`main` 检出用 `E:\LeviLauncher\versions\1.26.51.01`。
+  没有这个文件时 `deploy` 直接拒绝；**不要**把实例写回 tracked 的 `config.json`，也不要用 `--instance` 指向别人的实例。
 - 引擎的渲染目标在模组加载前就建好了：RTV/DSV 清单要等一次 F11 重建才有渲染分辨率资源。
 - 改了 DLL 必须重开游戏或 reload，旧进程里跑的还是旧镜像。
 

@@ -24,7 +24,10 @@
 - `flow.py` 命令行；`checks.py` 静态检查；`ngx_keys.txt` 由运行时 DLL 字节生成；
   `ngx_required.json` DLSS-SR evaluate 的必需参数（每条带证据说明）；`waivers.json` 有期限的豁免；
   `smoke/*.json` L1 的日志断言（`requires`/`forbids`/`min_occurrences`/`timeout_s`）；
-  `config.json` 实例路径与预算（`l1_max_per_session`、`commit_hint_hours`）。
+  `config.json` 预算（`l1_max_per_session`、`commit_hint_hours`）。
+- **实例路径是每检出自己的**：`config.json` 跟着 git 走，两个检出（`main` / `agent2`）却部署到不同实例，
+  所以它故意把 `instance` 留空；每个检出在 `scripts/agentflow/config.local.json`（git-ignored）写自己的
+  `{"instance": "E:\\LeviLauncher\\versions\\..."}`。两边都没有时 `deploy` 拒绝而不是猜目标。
 - 工作区状态：`docs/agent/contract.json`（契约）、`docs/agent/ledger.jsonl`（只追加账本）、
   `docs/agent/evidence/`（原始产物）。
 

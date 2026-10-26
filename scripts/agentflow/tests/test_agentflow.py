@@ -556,6 +556,35 @@ class FlowV2Tests(unittest.TestCase):
         self.assertEqual(out.returncode, 1)
         self.assertIn("does not exist", out.stdout)
 
+    # per-checkout config --------------------------------------------------
+    def test_local_config_overrides_the_tracked_instance(self):
+        # Two checkouts share one tracked config.json but deploy to two game
+        # instances; the ignored local file must win over the tracked value.
+        # (Written before verify: the fixture has no git repo, so the file is
+        # part of the content digest there.  In a real checkout .gitignore keeps
+        # it out of `git ls-files`, so adding it later does not stale a verify.)
+        local_inst = self.ws.root / "game-dir"
+        (local_inst / "mods" / "NeuroDragon").mkdir(parents=True)
+        (self.ws.root / "scripts/agentflow/config.local.json").write_text(
+            json.dumps({"instance": str(local_inst)}), encoding="utf-8")
+        self.assertEqual(self.ws.verify().returncode, 0)
+        self.ws.open_exp("U-instance")
+        out = self.ws.run("deploy", "--exp", self.ws.exp_id(), "--dry-run", "--allow-waived", "x")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn(str(local_inst), out.stdout)
+        self.assertNotIn(str(self.ws.root / "inst"), out.stdout)
+
+    def test_deploy_refuses_when_no_instance_is_configured_anywhere(self):
+        # Fail closed: with the tracked instance empty and no local override,
+        # deploy must refuse rather than pick a target (a wrong pick would
+        # overwrite the other checkout's test instance).
+        (self.ws.root / "scripts/agentflow/config.json").write_text(
+            json.dumps({"instance": ""}), encoding="utf-8")
+        out = self.ws.run("deploy", "--exp", "EXP-9999", "--dry-run")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("no instance configured", out.stdout)
+        self.assertIn("config.local.json", out.stdout)
+
     # exp lifecycle --------------------------------------------------------
     def test_exp_update_adds_a_runbook_to_an_open_experiment(self):
         self.ws.open_exp("U-late")

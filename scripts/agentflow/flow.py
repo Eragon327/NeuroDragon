@@ -114,13 +114,15 @@ def git(root: Path, *args: str) -> str:
 
 def paths(root: Path) -> dict[str, Path]:
     agent = root / "docs" / "agent"
+    flow = root / "scripts" / "agentflow"
     return {
         "agent": agent,
         "contract": agent / "contract.json",
         "ledger": agent / "ledger.jsonl",
         "evidence": agent / "evidence",
-        "config": root / "scripts" / "agentflow" / "config.json",
-        "waivers": root / "scripts" / "agentflow" / "waivers.json",
+        "config": flow / "config.json",
+        "config_local": flow / "config.local.json",
+        "waivers": flow / "waivers.json",
         "bin": root / "bin" / "NeuroDragon",
     }
 
@@ -128,6 +130,12 @@ def paths(root: Path) -> dict[str, Path]:
 def config(root: Path) -> dict:
     cfg = dict(DEFAULT_CONFIG)
     cfg.update(read_json(paths(root)["config"], {}))
+    # `config.json` is tracked, so every checkout reads it - but the main and
+    # agent2 checkouts deploy to different game instances.  The git-ignored local
+    # file carries the machine/checkout-specific instance; with neither file
+    # naming one, `instance` stays empty and `deploy` refuses instead of guessing
+    # a target (a wrong guess would overwrite the other checkout's test instance).
+    cfg.update(read_json(paths(root)["config_local"], {}))
     return cfg
 
 
@@ -653,7 +661,8 @@ def cmd_deploy(root: Path, args) -> int:
     cfg = config(root)
     inst = _resolve_instance(root, args)
     if inst is None:
-        print("agentflow: no instance configured (scripts/agentflow/config.json or --instance)")
+        print("agentflow: no instance configured (set `instance` in "
+              "scripts/agentflow/config.local.json, or pass --instance)")
         return 1
     exp = experiments(root).get(args.exp)
     if not exp:
