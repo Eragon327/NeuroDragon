@@ -14,12 +14,16 @@
 | 未授权扩大范围 | `contract set` 必须 `--user-authorization`，写入账本 | 硬（命令拒绝） |
 | 声称通过但没有执行 | `review` 重跑检查 + 重算哈希；`claim` 要求 review 晚于证据 | 硬 |
 | 手抄 DLL 绕过部署 | `deploy` 记 sha256；`doctor` 比对实际部署文件 | 检测（不能阻止 cp） |
+| 历史不可读（2102 行一个 commit） | `commit propose`：类型由文件组决定、subject 禁空话、trailer 从账本生成；`apply` 只执行批准过的那份内容（tree 一变就拒） | 硬 |
+| 跨 session 丢意图 / 未提交归属 | `brief`（开局一个视图）+ `handoff write`（结束一句话）；`dirty` 的「未归属」= 没记账的手尾 | 视图 + `doctor` 警告 |
+| 把能测的事甩给人 / 重复实机 | `smoke`：按 `smoke/*.json` 断言日志、锚定 byte offset、launch lease + 每 session 预算；`runbook` 把 L2 成批列出 | L1 硬（预算/lease），L2 靠视图 |
 
 ## 文件
 
 - `flow.py` 命令行；`checks.py` 静态检查；`ngx_keys.txt` 由运行时 DLL 字节生成；
   `ngx_required.json` DLSS-SR evaluate 的必需参数（每条带证据说明）；`waivers.json` 有期限的豁免；
-  `config.json` 实例路径与预算。
+  `smoke/*.json` L1 的日志断言（`requires`/`forbids`/`min_occurrences`/`timeout_s`）；
+  `config.json` 实例路径与预算（`l1_max_per_session`、`commit_hint_hours`）。
 - 工作区状态：`docs/agent/contract.json`（契约）、`docs/agent/ledger.jsonl`（只追加账本）、
   `docs/agent/evidence/`（原始产物）。
 
@@ -48,3 +52,10 @@
 3. **豁免机制是双刃**：`waivers.json` 可以合法压掉一条错误，但有过期日、要写理由、部署还要额外确认；
    过期后自动恢复为错误（有测试覆盖）。仍然需要人定期看它。
 4. **契约的「完成」判定依赖人写好的验收项**；验收项写得太松，门禁就只能拦流程、拦不住内容。
+5. **smoke 是正则，不是判据**：profile 写得松（例如只要 `[eval]` 出现）就会让坏构建通过。
+   每个 `requires` 必须来自「只有成功路径才会打的日志」，改 profile 时先用
+   `smoke --profile X --replay <log> --tail 300000` 在已知好/坏日志上各跑一次。
+   `--replay` 只证明正则能匹配，不证明本次构建——真正的判定靠 byte offset 之后的增量。
+6. **L1 仍然要重启客户端**：`smoke` 会启动 `Minecraft.Windows.exe`（或 `--no-launch` 等你启动），
+   默认不杀已在跑的游戏；`--interrupt` 才会 taskkill。lease 只防两个 agent 同时启动，
+   不防你手动开游戏。

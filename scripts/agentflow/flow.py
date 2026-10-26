@@ -32,9 +32,11 @@ import argparse
 import datetime
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -54,6 +56,10 @@ DEFAULT_CONFIG = {
     "instance": "",
     "max_attempts_per_unknown": 3,
     "stale_experiment_hours": 12,
+    # L1 launches restart the game on a shared machine; the budget is what makes
+    # "default yes" safe, and the hint is when `doctor` suggests a commit.
+    "l1_max_per_session": 4,
+    "commit_hint_hours": 6,
 }
 
 
@@ -93,9 +99,13 @@ def write_json(path: Path, value) -> None:
 
 
 def git(root: Path, *args: str) -> str:
+    # git speaks UTF-8; this console is cp936.  Without an explicit encoding a
+    # Chinese commit message or source comment is decoded as cp936 - mojibake in
+    # the digest, or a UnicodeDecodeError that then looks like a git failure.
     try:
         out = subprocess.run(
-            ["git", *args], cwd=root, capture_output=True, text=True, timeout=30
+            ["git", *args], cwd=root, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=60,
         )
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -202,28 +212,57 @@ def _files_under(root: Path, dirs: tuple[str, ...]) -> list[Path]:
     return out
 
 
-def _tracked_sources(root: Path) -> list[Path]:
-    return _files_under(root, DIGEST_DIRS)
+def _tree_files(root: Path) -> list[tuple[str, Path]]:
+    """Files that define "the tree": everything the gate reads, tracked or not."""
+    scopes = (*DIGEST_DIRS, *EXTRA_INPUTS)
+    names: set[str] = set()
+    if git(root, "rev-parse", "--is-inside-work-tree").strip() == "true":
+        for args in (("ls-files", "--"), ("ls-files", "--others", "--exclude-standard", "--")):
+            for rel in git(root, *args, *scopes).splitlines():
+                rel = rel.strip()
+                if rel and "__pycache__" not in rel and not rel.endswith(".pyc"):
+                    names.add(rel)
+    if not names:
+        # not a git checkout (test fixture): walk the files themselves
+        for p in _files_under(root, DIGEST_DIRS):
+            names.add(p.relative_to(root).as_posix())
+    return sorted((rel, root / rel) for rel in names)
+
+
+def head_sha(root: Path) -> str:
+    return git(root, "rev-parse", "HEAD").strip()
 
 
 def tree_digest(root: Path) -> str:
+    """Content hash of the working tree.
+
+    Deliberately independent of HEAD and of whether the change is committed: the
+    same bytes must hash the same before and after `git commit`.  Otherwise every
+    commit invalidates the verify that justified it, and `flow.py commit` could
+    never approve a tree it just checked.  Which commit a record belongs to is
+    provenance, and each ledger event stores `head` separately.
+    """
     h = hashlib.sha256()
-    head = git(root, "rev-parse", "HEAD").strip()
-    h.update(head.encode())
-    diff = git(root, "diff", "HEAD", "--", *DIGEST_DIRS, "xmake.lua", "manifest.json", "tooth.json")
-    h.update(diff.encode("utf-8", "replace"))
-    untracked = git(root, "ls-files", "--others", "--exclude-standard", "--", *DIGEST_DIRS)
-    for rel in sorted(x for x in untracked.splitlines() if x.strip()):
-        p = root / rel
-        if p.is_file():
-            h.update(rel.encode())
-            h.update(p.read_bytes())
-    if not head and not diff:
-        # not a git checkout (test fixture): hash the files themselves
-        for p in sorted(_tracked_sources(root)):
-            h.update(str(p.relative_to(root)).encode())
-            h.update(p.read_bytes())
+    for rel, path in _tree_files(root):
+        h.update(rel.encode("utf-8", "surrogateescape"))
+        h.update(b"\0")
+        # A deletion is a change too: a tracked file that is gone still has to
+        # move the digest, or removing a file would look like "same tree".
+        h.update(path.read_bytes() if path.is_file() else b"<deleted>")
+        h.update(b"\0")
     return h.hexdigest()[:16]
+
+
+def dirty_paths(root: Path) -> list[str]:
+    """Working-tree paths that differ from HEAD, untracked files included."""
+    return sorted({rel for _, rel in _dirty_status(root)})
+
+
+def oneline(text: str, limit: int = 96) -> str:
+    """Collapse a ledger field into a single printable line."""
+    flat = " ".join(str(text or "").split())
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
+
 
 
 def newest_source_mtime(root: Path) -> float:
@@ -451,6 +490,10 @@ def cmd_exp_new(root: Path, args) -> int:
         "unknown": args.unknown, "hypothesis": args.hypothesis, "change": args.change,
         "expect_pass": args.expect_pass, "expect_fail": args.expect_fail,
         "evidence_plan": args.evidence_plan, "tree": tree_digest(root),
+        "head": head_sha(root),
+        "tier": args.tier,
+        "runbook": [step.strip() for step in (args.runbook or "").split("|") if step.strip()],
+        "expect_s": int(args.expect_s or 0),
         "postmortem": args.postmortem or "",
         "authorization": args.user_authorization or "",
     }
@@ -460,7 +503,8 @@ def cmd_exp_new(root: Path, args) -> int:
             path = root / path
         event["from_evidence"] = evidence_entry(path)
     append(root, event)
-    print(f"{exp_id} open  unknown={args.unknown} attempt={attempt} tree={event['tree']}")
+    print(f"{exp_id} open  unknown={args.unknown} attempt={attempt} tier={args.tier} "
+          f"tree={event['tree']}")
     return 0
 
 
@@ -488,8 +532,13 @@ def cmd_exp_close(root: Path, args) -> int:
     if status == "fail" and not args.next:
         print("agentflow: a failed experiment must record --next (the next hypothesis and its evidence)")
         return 1
+    # The dirty set at close time is the cheapest record of "what this experiment
+    # touched"; `brief` uses it to attribute uncommitted files to an experiment
+    # without asking anyone to type a file list.
     append(root, {"kind": "exp", "id": args.id, "status": status, "result": args.result,
-                  "conclusion": args.conclusion, "next": args.next or "", "evidence": entries})
+                  "conclusion": args.conclusion, "next": args.next or "",
+                  "evidence": entries, "dirty": dirty_paths(root)[:60],
+                  "head": head_sha(root)})
     print(f"{args.id} closed {status}")
     return 0
 
@@ -505,7 +554,7 @@ def _gate(root: Path, record: bool) -> int:
             print(f"  WAIVER EXPIRED {waiver.get('match')}: {waiver.get('reason', '')}")
     ok = not errors
     if record:
-        append(root, {"kind": "verify", "tree": tree_digest(root), "ok": ok,
+        append(root, {"kind": "verify", "tree": tree_digest(root), "head": head_sha(root), "ok": ok,
                       "findings": [{"id": f["id"], "level": f["level"], "waived": f.get("waived")}
                                    for f in findings]})
     return 0 if ok else 1
@@ -617,6 +666,7 @@ def cmd_deploy(root: Path, args) -> int:
     dll = mod_dir / "NeuroDragon.dll"
     digest = sha256_file(dll)
     append(root, {"kind": "deploy", "exp": exp["id"], "instance": str(inst), "tree": tree,
+                  "head": head_sha(root),
                   "dll_sha256": digest, "dll_size": dll.stat().st_size,
                   "waived": [f["id"] for f in waived_findings], "why": args.why or ""})
     print(f"deployed {dll.name} sha256={digest[:16]} (recorded; `doctor` will notice any bypass)")
@@ -777,15 +827,699 @@ def cmd_doctor(root: Path, args) -> int:
         if age > limit_hours:
             problems.append(f"{exp['id']} has been open for {age:.1f}h (limit {limit_hours}h)")
 
+    # Warnings are advice, not a failed doctor: formality that blocks work gets
+    # bypassed, and a bypassed gate is worse than a missing one.
+    warnings = []
+    for exp in experiments(root).values():
+        if exp.get("status") != "open":
+            continue
+        if not exp.get("tier"):
+            warnings.append(f"{exp['id']} predates tiers; it is treated as L2 (needs your hands)")
+        if (exp.get("tier") or "L2") == "L2" and not exp.get("runbook"):
+            warnings.append(f"{exp['id']} is L2 but has no runbook - `flow.py runbook` cannot hand it over")
+
+    tree = tree_digest(root)
+    verifies = [e for e in events if e.get("kind") == "verify" and e.get("tree") == tree]
+    dirty = dirty_paths(root)
+    if dirty and verifies and verifies[-1].get("ok"):
+        hint = float(config(root).get("commit_hint_hours", 6))
+        last_ts = max((e["ts"] for e in events), default=now())
+        age_h = (stamp() - datetime.datetime.fromisoformat(last_ts).timestamp()) / 3600
+        if age_h > hint:
+            warnings.append(f"{len(dirty)} uncommitted file(s), this tree verified {age_h:.1f}h ago - "
+                            f"`flow.py commit propose`")
+
+    handoff = next((e for e in reversed(events) if e.get("kind") == "handoff"), None)
+    if handoff and handoff.get("next"):
+        after = [e for e in events if e.get("ts", "") > handoff["ts"]]
+        idle_h = (stamp() - datetime.datetime.fromisoformat(handoff["ts"]).timestamp()) / 3600
+        if not after and idle_h > 24:
+            warnings.append(f"the last handoff said next={oneline(handoff['next'], 60)} "
+                            f"but nothing happened for {idle_h:.0f}h - the session may have died")
+
     if problems:
         print("agentflow doctor: found problems")
         for p in problems:
             print(f"  - {p}")
+    if warnings:
+        print("agentflow doctor: warnings")
+        for w in warnings:
+            print(f"  - {w}")
+    if problems:
         return 1
-    print("agentflow doctor: clean")
+    print("agentflow doctor: clean" if not warnings else "agentflow doctor: no problems")
     return 0
 
 
+
+
+# --------------------------------------------------------------------------- #
+# commit proposals
+# --------------------------------------------------------------------------- #
+
+PROPOSAL = ".commit-proposal.json"
+
+# The commit is where history becomes auditable, so the subject has to name
+# something a reviewer can check.  These words name nothing: the three commits
+# before 2026-10-26 were "feat: enhance agent workflow", "feat: complete m6b0",
+# "feat: get all necessary input in VV" - 2102 lines under a verb with no object.
+SUBJECT_BANNED = re.compile(
+    r"\b(update[sd]?|updating|improve[sd]?|improving|enhance[sd]?|enhancing|"
+    r"misc|various|stuff|changes?|tweaks?|cleanup|fix(?:es)?\s+bugs?|wip|tmp|temp)\b",
+    re.IGNORECASE,
+)
+
+
+def _dirty_status(root: Path) -> list[tuple[str, str]]:
+    out = []
+    for line in git(root, "status", "--porcelain", "-uall").splitlines():
+        if len(line) < 4:
+            continue
+        code, rel = line[:2].strip(), line[3:]
+        if " -> " in rel:                       # rename: the destination is the file
+            rel = rel.split(" -> ", 1)[1]
+        out.append((code, rel.strip().strip('"')))
+    return out
+
+
+def _infer_type(files: list[str]) -> str:
+    if any(f.startswith("src/") for f in files):
+        return "exp"
+    if any(f.startswith("scripts/agentflow") or f in ("xmake.lua", "AGENTS.md") for f in files):
+        return "flow"
+    return "docs"
+
+
+def _infer_scope(files: list[str]) -> str:
+    subs = set()
+    for f in files:
+        parts = f.split("/")
+        if len(parts) >= 4 and parts[0] == "src" and parts[1] == "neurodragon":
+            subs.add(parts[2])
+        elif len(parts) == 3 and parts[0] == "src" and parts[1] == "neurodragon":
+            subs.add(Path(f).stem)
+    if len(subs) == 1:
+        return subs.pop().lower()
+    if any(f.startswith("scripts/agentflow") for f in files):
+        return "agentflow"
+    return ""
+
+
+def _proposal_files(root: Path, args) -> list[tuple[str, str]]:
+    excludes = [e.rstrip("/") for e in (args.exclude or [])]
+    files = []
+    for code, rel in _dirty_status(root):
+        if rel.endswith(PROPOSAL) or rel.endswith(".launch-lease.json"):
+            continue
+        if rel.startswith("bin/") or rel.startswith(".dsh/"):
+            continue
+        if any(rel == ex or rel.startswith(ex + "/") for ex in excludes):
+            continue
+        files.append((code, rel))
+    return files
+
+
+def _size_notes(root: Path, files: list[str]) -> list[str]:
+    notes = []
+    for rel in files:
+        path = root / rel
+        if not path.is_file():
+            continue
+        size = path.stat().st_size
+        if size > 2 << 20:
+            notes.append(f"{rel} is {size / 1048576:.1f} MB")
+        elif size > 512 << 10 and path.suffix.lower() in {".log", ".json", ".jsonl", ".txt", ".md"}:
+            notes.append(f"{rel} is {size // 1024} KB")
+    return notes
+
+
+def _commit_message(root: Path, header: str, args, tree: str, notes: list[str]) -> str:
+    lines = [header, ""]
+    if args.why:
+        lines += [oneline(args.why, 200), ""]
+    if args.exp:
+        exp = experiments(root).get(args.exp) or {}
+        lines.append(f"Exp: {args.exp}")
+        if exp.get("hypothesis"):
+            lines.append(f"Hypothesis: {oneline(exp['hypothesis'], 110)}")
+        for entry in exp.get("evidence", []):
+            rel = entry.get("path", "")
+            try:
+                rel = Path(rel).resolve().relative_to(root.resolve()).as_posix()
+            except ValueError:
+                pass
+            lines.append(f"Evidence: {rel} sha256:{entry['sha256'][:12]}")
+        if exp.get("result"):
+            lines.append(f"Result: {oneline(exp['result'], 90)}")
+    verifies = [e for e in ledger(root) if e.get("kind") == "verify" and e.get("tree") == tree]
+    if verifies:
+        waived = sum(1 for f in verifies[-1].get("findings", []) if f.get("waived"))
+        lines.append(f"Verify: ok, {waived} waived (tree {tree})")
+    if args.exp:
+        deploys = [e for e in ledger(root) if e.get("kind") == "deploy" and e.get("exp") == args.exp]
+        if deploys:
+            last = deploys[-1]
+            lines.append(f"Deploy: {last['ts'][5:16].replace('T', ' ')} dll {last['dll_sha256'][:8]}")
+    for note in notes:
+        lines.append(f"Note: {note}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def cmd_commit(root: Path, args) -> int:
+    if args.action == "apply":
+        return _commit_apply(root, args)
+    return _commit_propose(root, args)
+
+
+def _commit_propose(root: Path, args) -> int:
+    if not args.subject:
+        print("agentflow: --subject is required (one imperative line, <= 72 chars)")
+        return 1
+    subject = " ".join(args.subject.split())
+    if len(subject) > 72:
+        print(f"agentflow: the subject is {len(subject)} chars; keep it <= 72")
+        return 1
+    if SUBJECT_BANNED.search(subject):
+        print(f"agentflow: {subject!r} names no checkable behaviour. Say what changed, "
+              f"not that something was enhanced (AGENTS.md §9).")
+        return 1
+    if subject.endswith("."):
+        print("agentflow: no trailing period in the subject")
+        return 1
+
+    dirty = _proposal_files(root, args)
+    files = [rel for _, rel in dirty]
+    if not files:
+        print("agentflow: nothing to commit")
+        return 1
+
+    actual_type = _infer_type(files)
+    type_ = args.type or actual_type
+    if type_ != actual_type:
+        print(f"agentflow: these files are a {actual_type!r} change, not {type_!r} "
+              f"(src -> exp, scripts/agentflow+xmake+AGENTS -> flow, docs -> docs)")
+        return 1
+
+    exps = experiments(root)
+    open_exps = [e for e in exps.values() if e.get("status") == "open"]
+    if type_ == "exp":
+        if not args.exp:
+            print("agentflow: an exp commit must name its experiment (--exp EXP-xxxx)")
+            return 1
+        exp = exps.get(args.exp)
+        if not exp:
+            print(f"agentflow: no experiment {args.exp!r}")
+            return 1
+        if exp.get("status") == "open":
+            print(f"agentflow: {args.exp} is still open - a commit records a result, "
+                  f"not a checkpoint. Close it first, or pass --checkpoint.")
+            return 1
+        others = [e["id"] for e in open_exps if e["id"] != args.exp]
+        if others and not args.checkpoint:
+            print(f"agentflow: {', '.join(others)} still open; this commit would freeze "
+                  f"half of another experiment. Close it, or pass --checkpoint.")
+            return 1
+
+    tree = tree_digest(root)
+    verifies = [e for e in ledger(root) if e.get("kind") == "verify" and e.get("tree") == tree]
+    if not verifies or not verifies[-1].get("ok"):
+        print("agentflow: no passing verify for this exact content - running it now")
+        if _gate(root, record=True):
+            print("agentflow: the gate failed; nothing to propose")
+            return 1
+
+    # The verify above may have appended to the ledger, which is part of the
+    # commit; recompute so the record of the check lands with the change it
+    # justifies instead of drifting into the next commit.
+    dirty = _proposal_files(root, args)
+    files = [rel for _, rel in dirty]
+    notes = _size_notes(root, files)
+    scope = (args.scope if args.scope is not None else _infer_scope(files)).lower()
+    if args.checkpoint:
+        header = f"wip({args.exp or 'checkpoint'}): {subject}"
+    elif scope:
+        header = f"{type_}({scope}): {subject}"
+    else:
+        header = f"{type_}: {subject}"
+    message = _commit_message(root, header, args, tree, notes)
+
+    proposal = {"ts": now(), "tree": tree, "head": head_sha(root), "type": type_,
+                "scope": scope, "subject": subject, "checkpoint": bool(args.checkpoint),
+                "exp": args.exp or "", "files": files, "message": message, "notes": notes}
+    write_json(root / "docs" / "agent" / PROPOSAL, proposal)
+
+    print(f"proposal  {header}")
+    print(f"  tree    {tree}  ({len(files)} file(s))")
+    for code, rel in dirty:
+        print(f"    {code:2} {rel}")
+    leftovers = [rel for _, rel in _dirty_status(root) if rel not in set(files)]
+    src_left = [rel for rel in leftovers if rel.startswith("src/")]
+    if src_left:
+        print(f"  warn    {len(src_left)} src/ file(s) stay uncommitted but were part of the "
+              f"verified tree; this commit's own snapshot does not contain them")
+    for note in notes:
+        print(f"  note    {note}")
+    print("\n----- commit message -----")
+    print(message, end="")
+    print("--------------------------")
+    print('approve: 用户回 ok 后运行 `flow.py commit apply --approved "<原话>"`')
+    return 0
+
+
+def _commit_apply(root: Path, args) -> int:
+    path = root / "docs" / "agent" / PROPOSAL
+    proposal = read_json(path, None)
+    if not isinstance(proposal, dict):
+        print("agentflow: no open proposal - run `flow.py commit propose ...` first")
+        return 1
+    if not args.approved:
+        print('agentflow: applying a proposal needs --approved "<what the user said>"')
+        return 1
+    tree = tree_digest(root)
+    if tree != proposal.get("tree"):
+        print(f"agentflow: the content changed since the proposal "
+              f"({proposal.get('tree')} -> {tree}). Propose again; the approval was for the old bytes.")
+        return 1
+    files = list(proposal.get("files") or [])
+    if not files:
+        print("agentflow: the proposal has no files")
+        return 1
+    added = subprocess.run(["git", "add", "-A", "--", *files], cwd=root, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+    if added.returncode != 0:
+        print("agentflow: git add failed: " + (added.stderr.strip() or added.stdout.strip()))
+        return 1
+    commit = subprocess.run(["git", "commit", "-F", "-", "--", *files], cwd=root,
+                            input=proposal.get("message", ""), capture_output=True,
+                            text=True, encoding="utf-8", errors="replace")
+    if commit.returncode != 0:
+        print("agentflow: git commit failed (proposal kept):")
+        print((commit.stderr or commit.stdout).strip())
+        return 1
+    sha = git(root, "rev-parse", "HEAD").strip()
+    append(root, {"kind": "commit", "sha": sha, "tree": tree, "type": proposal.get("type"),
+                  "scope": proposal.get("scope"), "exp": proposal.get("exp", ""),
+                  "files": len(files), "approved": args.approved,
+                  "checkpoint": bool(proposal.get("checkpoint"))})
+    path.unlink(missing_ok=True)
+    print(f"committed {sha[:8]}  {proposal.get('message', '').splitlines()[0]}")
+    print(f"  {len(files)} file(s), tree {tree}")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# handoff / brief
+# --------------------------------------------------------------------------- #
+
+
+def _last(events: list[dict], kind: str, **match) -> dict | None:
+    for event in reversed(events):
+        if event.get("kind") != kind:
+            continue
+        if any(event.get(key) != value for key, value in match.items()):
+            continue
+        return event
+    return None
+
+
+def _open_exps(root: Path) -> list[dict]:
+    exps = [e for e in experiments(root).values() if e.get("status") == "open"]
+    exps.sort(key=lambda e: e["ts"])
+    return exps
+
+
+def _session_since(events: list[dict]) -> str:
+    handoff = _last(events, "handoff")
+    if handoff:
+        return handoff["ts"]
+    return (datetime.datetime.now().astimezone()
+            - datetime.timedelta(hours=8)).isoformat(timespec="milliseconds")
+
+
+def cmd_handoff(root: Path, args) -> int:
+    if args.action == "show":
+        event = _last(ledger(root), "handoff")
+        if not event:
+            print("agentflow: no handoff recorded")
+            return 0
+        print(json.dumps(event, ensure_ascii=False, indent=2))
+        return 0
+    if not args.next:
+        print('agentflow: handoff write needs --next "<the single next action>"')
+        return 1
+    event = append(root, {
+        "kind": "handoff", "next": args.next, "awaiting": args.awaiting or [],
+        "note": args.note or "", "tree": tree_digest(root), "head": head_sha(root),
+        "open": [e["id"] for e in _open_exps(root)],
+    })
+    print(f"handoff written: next={oneline(event['next'], 80)}")
+    return 0
+
+
+def cmd_brief(root: Path, args) -> int:
+    con = contract(root)
+    events = ledger(root)
+    tree = tree_digest(root)
+    verifies = [e for e in events if e.get("kind") == "verify" and e.get("tree") == tree]
+    if verifies and verifies[-1].get("ok"):
+        vstate = f"verify ok {verifies[-1]['ts'][11:16]}"
+    elif verifies:
+        vstate = "verify FAILED"
+    else:
+        vstate = "no verify for this tree"
+    print(f"goal   : {oneline(con['goal'], 88)}")
+    print(f"stage  : {con['stage']} - {STAGES.get(con['stage'], '?')} · tree {tree} · {vstate}")
+
+    deploy = _last(events, "deploy")
+    if deploy:
+        print(f"build  : deployed {deploy['ts'][11:16]} {deploy['exp']} dll {deploy['dll_sha256'][:8]}")
+    else:
+        print("build  : no deploy recorded")
+
+    open_exps = _open_exps(root)
+    if not open_exps:
+        print("open   : none")
+    for exp in open_exps[:3]:
+        minutes = (stamp() - datetime.datetime.fromisoformat(exp["ts"]).timestamp()) / 60
+        tier = exp.get("tier") or "L2?"
+        tail = ""
+        if tier == "L2":
+            step = (exp.get("runbook") or [None])[0]
+            tail = f"  → 等你跑: {oneline(step, 40)}" if step else "  → 等你跑 (缺 runbook)"
+        print(f"open   : {exp['id']} {exp['unknown']} {tier} attempt {exp.get('attempt')} "
+              f"{minutes:.0f}m{tail}")
+
+    closed = sorted((e for e in experiments(root).values() if e.get("status") in ("pass", "fail")),
+                    key=lambda e: e["ts"])
+    for exp in closed[-2:]:
+        print(f"last   : {exp['id']} {exp['status']}「{oneline(exp.get('result', ''), 40)}」")
+    for exp in [e for e in closed if e["status"] == "fail"][-2:]:
+        print(f"avoid  : {exp['id']} {oneline(exp.get('conclusion', ''), 76)}")
+
+    handoff = _last(events, "handoff")
+    if handoff:
+        after = [e for e in events if e.get("ts", "") > handoff["ts"]]
+        suffix = "" if after else "  (未动)"
+        print(f"handoff: next={oneline(handoff.get('next', ''), 76)}{suffix}")
+        if handoff.get("awaiting"):
+            print(f"         awaiting={'; '.join(handoff['awaiting'])}")
+        if handoff.get("note"):
+            print(f"         note={oneline(handoff['note'], 88)}")
+    else:
+        print("handoff: none recorded")
+
+    dirty = dirty_paths(root)
+    if dirty:
+        owned: dict[str, str] = {}
+        for exp in closed[-3:]:
+            for rel in exp.get("dirty", []) or []:
+                owned.setdefault(rel, exp["id"])
+        groups: dict[str, int] = {}
+        unowned = []
+        for rel in dirty:
+            if rel in owned:
+                key = owned[rel]
+            elif rel.startswith("docs/"):
+                key = "docs"
+            elif rel.startswith("scripts/agentflow") or rel in ("xmake.lua", "AGENTS.md"):
+                key = "flow"
+            else:
+                key = "未归属"
+                unowned.append(rel)
+            groups[key] = groups.get(key, 0) + 1
+        summary = " / ".join(f"{k} {v}" for k, v in sorted(groups.items(), key=lambda kv: -kv[1]))
+        print(f"dirty  : {len(dirty)} 文件 → {summary}")
+        for rel in unowned[:4]:
+            print(f"         未归属: {rel}")
+
+    since = _session_since(events)
+    deploys = [e for e in events if e.get("kind") == "deploy" and e.get("ts", "") > since]
+    smokes = [e for e in events if e.get("kind") == "smoke" and e.get("ts", "") > since]
+    print(f"spend  : 部署 {len(deploys)} 次 · L1 smoke {len(smokes)} 次（自 {since[11:16]} 起）")
+    return 0
+
+
+def cmd_runbook(root: Path, args) -> int:
+    events = ledger(root)
+    open_l2 = [e for e in _open_exps(root) if (e.get("tier") or "L2") == "L2"]
+    if not open_l2:
+        print("agentflow runbook: 没有等你的 L2 实验")
+        return 0
+    total = 0
+    for exp in open_l2:
+        deploy = _last(events, "deploy", exp=exp["id"])
+        seconds = int(exp.get("expect_s") or 120)
+        total += seconds
+        build = (f"{deploy['ts'][5:16].replace('T', ' ')} dll {deploy['dll_sha256'][:8]}"
+                 if deploy else "未部署")
+        print(f"\n{exp['id']}  {exp['unknown']}  构建 {build}")
+        print(f"  未知项: {oneline(exp.get('hypothesis', ''), 96)}")
+        steps = exp.get("runbook") or []
+        if steps:
+            print("  步骤: " + " → ".join(f"{i + 1}) {s}" for i, s in enumerate(steps)))
+            print("        不要做: 别点别的按钮、别改设置；偏离了就说明")
+        else:
+            print("  步骤: 缺 runbook —— 先补，别凭记忆让人跑")
+        print(f"  预期: {oneline(exp.get('expect_pass', ''), 100)}")
+        print(f"  失败意味着: {oneline(exp.get('expect_fail', ''), 100)}（由我读日志判定）")
+        print("  出问题: 什么都别做，说一声；退回 = 关游戏重开")
+        print(f"  耗时: 约 {seconds} 秒")
+    print(f"\n合计约 {total // 60} 分 {total % 60} 秒；回我一个结论词即可")
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# L1 smoke: launch, assert on the log, close the experiment
+# --------------------------------------------------------------------------- #
+
+SMOKE_DEFAULTS = {"name": "smoke", "tier": "L1", "timeout_s": 180,
+                  "requires": [], "forbids": [], "min_occurrences": {}}
+
+
+def _load_profile(root: Path, name: str) -> tuple[dict | None, str]:
+    path = Path(name)
+    if not path.is_file():
+        path = root / "scripts" / "agentflow" / "smoke" / f"{name}.json"
+    if not path.is_file():
+        return None, f"no smoke profile {name!r}"
+    profile = read_json(path, None)
+    if not isinstance(profile, dict) or not profile.get("requires"):
+        return None, f"{path} needs a non-empty `requires`"
+    merged = dict(SMOKE_DEFAULTS)
+    merged.update(profile)
+    merged["name"] = profile.get("name") or path.stem
+    merged["_path"] = str(path)
+    return merged, ""
+
+
+def _eval_profile(profile: dict, text: str) -> tuple[bool, list[str], list[str]]:
+    text = text.replace("\x00", "")
+    missing = []
+    for pattern in profile["requires"]:
+        if not re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
+            missing.append(pattern)
+    for pattern, need in (profile.get("min_occurrences") or {}).items():
+        got = len(re.findall(pattern, text, re.IGNORECASE | re.MULTILINE))
+        if got < int(need):
+            missing.append(f"{pattern} x{got}/{need}")
+    forbidden = [p for p in profile["forbids"] if re.search(p, text, re.IGNORECASE | re.MULTILINE)]
+    return (not missing and not forbidden), missing, forbidden
+
+
+def _read_since(path: Path, offset: int, limit: int = 8 << 20) -> tuple[str, int]:
+    if not path.is_file():
+        return "", offset
+    size = path.stat().st_size
+    if size < offset:                 # the log rotated: everything is new
+        offset = 0
+    with path.open("rb") as f:
+        f.seek(offset)
+        data = f.read(limit)
+    return data.decode("utf-8", "replace"), size
+
+
+def _game_running() -> bool:
+    try:
+        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq Minecraft.Windows.exe", "/NH"],
+                             capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return "minecraft.windows.exe" in out.stdout.lower()
+
+
+def cmd_smoke(root: Path, args) -> int:
+    profile, error = _load_profile(root, args.profile)
+    if profile is None:
+        print(f"agentflow: {error}")
+        return 1
+
+    if args.replay:
+        path = Path(args.replay)
+        if not path.is_absolute():
+            path = root / path
+        if not path.is_file():
+            print(f"agentflow: {path} does not exist")
+            return 1
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if args.tail:
+            text = text[-int(args.tail):]
+        ok, missing, forbidden = _eval_profile(profile, text)
+        print(f"agentflow smoke replay {profile['name']} on {path.name}: "
+              f"{'PASS' if ok else 'FAIL'}")
+        for item in missing:
+            print(f"  missing   {item}")
+        for item in forbidden:
+            print(f"  forbidden {item}")
+        print("  (replay only proves the profile's regexes; it says nothing about this build)")
+        return 0 if ok else 1
+
+    if not args.exp:
+        print("agentflow: smoke closes an experiment; pass --exp EXP-xxxx")
+        return 1
+    exp = experiments(root).get(args.exp)
+    if not exp:
+        print(f"agentflow: no experiment {args.exp!r}")
+        return 1
+    if exp.get("status") != "open":
+        print(f"agentflow: {args.exp} is closed ({exp.get('status')})")
+        return 1
+    tier = exp.get("tier") or "L2"
+    if tier == "L0":
+        print(f"agentflow: {args.exp} is L0 (offline); run `flow.py verify` instead")
+        return 1
+
+    inst = _resolve_instance(root, args)
+    if inst is None:
+        print("agentflow: no instance configured")
+        return 1
+    log = inst / "logs" / "latest.log"
+    exe = Path(args.exe) if args.exe else inst / "Minecraft.Windows.exe"
+    if not args.no_launch and not exe.is_file():
+        print(f"agentflow: {exe} does not exist")
+        return 1
+    if not log.is_file():
+        print(f"agentflow: {log} does not exist - has the game ever run here?")
+        return 1
+
+    events = ledger(root)
+    budget = int(config(root).get("l1_max_per_session", 4))
+    since = _session_since(events)
+    used = len([e for e in events if e.get("kind") == "smoke" and e.get("ts", "") > since])
+    if used >= budget and not args.user_authorization:
+        print(f"agentflow: {used} automatic runs already this session (budget {budget}). "
+              f"A repeat needs --user-authorization \"<who/what>\".")
+        return 1
+
+    lease_path = root / "docs" / "agent" / ".launch-lease.json"
+    lease = read_json(lease_path, {}) if lease_path.is_file() else {}
+    if isinstance(lease, dict) and lease.get("ts"):
+        age = stamp() - datetime.datetime.fromisoformat(lease["ts"]).timestamp()
+        if age < int(profile["timeout_s"]) + 300:
+            print(f"agentflow: another run holds the launch lease ({lease.get('exp')} "
+                  f"since {lease['ts'][11:16]}); wait or delete {lease_path}")
+            return 1
+
+    running = _game_running()
+    if running and not args.interrupt:
+        print("agentflow: Minecraft.Windows.exe is already running. I will not restart it "
+              "without --interrupt (that ends your session).")
+        return 1
+    if running and args.interrupt:
+        print("agentflow: --interrupt given; stopping the running client")
+        subprocess.run(["taskkill", "/IM", "Minecraft.Windows.exe", "/F"], capture_output=True)
+        time.sleep(3)
+
+    offset = log.stat().st_size
+    started = now()
+    write_json(lease_path, {"exp": args.exp, "profile": profile["name"], "ts": started,
+                            "offset": offset})
+    try:
+        if args.no_launch:
+            print(f"agentflow: waiting for a launch you start; asserting on bytes after {offset}")
+        else:
+            print(f"agentflow: launching {exe.name}; asserting on bytes after {offset}")
+            subprocess.Popen([str(exe)], cwd=str(inst), close_fds=True)
+        if tier == "L2":
+            print("agentflow: L2 profile - 现在按 runbook 操作（进世界/走动/回菜单）")
+
+        deadline = time.time() + float(args.timeout or profile["timeout_s"])
+        text = ""
+        while time.time() < deadline:
+            text, _ = _read_since(log, offset)
+            ok, missing, forbidden = _eval_profile(profile, text)
+            if ok or forbidden:
+                break
+            time.sleep(1.0)
+        text, size_now = _read_since(log, offset)
+        ok, missing, forbidden = _eval_profile(profile, text)
+    finally:
+        lease_path.unlink(missing_ok=True)
+
+    touched = any(re.search(p, text.replace("\x00", ""), re.IGNORECASE | re.MULTILINE)
+                  for p in profile["requires"])
+    aborted = (not ok) and (not touched) and (not forbidden) and tier == "L2"
+
+    evidence_dir = paths(root)["evidence"]
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    evidence = evidence_dir / f"smoke-{profile['name']}-{args.exp}.log"
+    deploy = _last(events, "deploy", exp=args.exp)
+    elapsed = int(stamp() - datetime.datetime.fromisoformat(started).timestamp())
+    header = [
+        f"# agentflow smoke {profile['name']} on {args.exp}",
+        f"# started {started}  verdict={'ABORTED' if aborted else ('PASS' if ok else 'FAIL')} "
+        f"elapsed={elapsed}s",
+        f"# tree {tree_digest(root)}  head {head_sha(root)[:8]}",
+        f"# dll {deploy['dll_sha256'][:16] if deploy else 'not deployed for this exp'}",
+        f"# profile {profile['_path']}",
+        f"# requires={profile['requires']}",
+        f"# missing={missing}  forbidden={forbidden}",
+        f"# log {log} offset {offset} -> {size_now}",
+        "",
+    ]
+    evidence.write_text("\n".join(header) + text[-2_000_000:], encoding="utf-8")
+
+    append(root, {"kind": "smoke", "exp": args.exp, "profile": profile["name"],
+                  "tree": tree_digest(root), "head": head_sha(root), "ok": ok,
+                  "aborted": aborted, "missing": missing, "forbidden": forbidden,
+                  "offset": offset, "elapsed_s": elapsed, "evidence": str(evidence)})
+
+    print(f"agentflow smoke {profile['name']}: "
+          f"{'ABORTED' if aborted else ('PASS' if ok else 'FAIL')}")
+    for item in missing:
+        print(f"  missing   {item}")
+    for item in forbidden:
+        print(f"  forbidden {item}")
+    print(f"  evidence  {evidence}")
+
+    if aborted:
+        print(f"  触发没有发生（L2 步骤未完成/没进世界）-> {args.exp} 保持打开，不记失败")
+        return 1
+
+    result = f"smoke {profile['name']}: {'pass' if ok else 'fail'}"
+    if ok:
+        conclusion = "自动 smoke：全部断言命中"
+        nxt = ""
+    else:
+        parts = []
+        if missing:
+            parts.append("缺 " + "; ".join(missing))
+        if forbidden:
+            parts.append("命中禁止 " + "; ".join(forbidden))
+        conclusion = "自动 smoke 失败：" + ("；".join(parts) or "超时")
+        nxt = ("读 evidence 尾部增量；先判断缺失断言是触发没发生（步骤没做/没进世界），"
+               "还是功能真的没有")
+    append(root, {"kind": "exp", "id": args.exp, "status": "pass" if ok else "fail",
+                  "result": result, "conclusion": conclusion, "next": nxt,
+                  "evidence": [evidence_entry(evidence)], "dirty": dirty_paths(root)[:60],
+                  "head": head_sha(root), "auto": "smoke"})
+    print(f"  {args.exp} closed {'pass' if ok else 'fail'}; the client is left running")
+    return 0 if ok else 1
+
+
+# --------------------------------------------------------------------------- #
+# NGX key table
+# --------------------------------------------------------------------------- #
 
 def cmd_keys(root: Path, args) -> int:
     dlls = [Path(p) for p in (args.dll or [])]
@@ -868,6 +1602,10 @@ def main(argv: list[str] | None = None) -> int:
     new.add_argument("--postmortem")
     new.add_argument("--from-evidence")
     new.add_argument("--user-authorization")
+    new.add_argument("--tier", choices=["L0", "L1", "L2"], default="L2",
+                     help="L0 offline, L1 log assertions only, L2 needs a human (default)")
+    new.add_argument("--runbook", help="3-5 steps for the human, separated by |")
+    new.add_argument("--expect-s", type=int, help="how long the human run should take")
     new.set_defaults(fn=cmd_exp_new)
     close = exp_sub.add_parser("close")
     close.add_argument("id")
@@ -885,6 +1623,41 @@ def main(argv: list[str] | None = None) -> int:
     gate.set_defaults(fn=cmd_gate)
 
     sub.add_parser("verify", help="run the checks and record them for this tree").set_defaults(fn=cmd_verify)
+
+    sub.add_parser("brief", help="the one thing to read at session start").set_defaults(fn=cmd_brief)
+    sub.add_parser("runbook", help="all open L2 experiments as one human session").set_defaults(fn=cmd_runbook)
+
+    hd = sub.add_parser("handoff", help="record the one line the next session needs")
+    hd.add_argument("action", choices=["write", "show"])
+    hd.add_argument("--next")
+    hd.add_argument("--awaiting", nargs="*", default=[])
+    hd.add_argument("--note")
+    hd.set_defaults(fn=cmd_handoff)
+
+    cm = sub.add_parser("commit", help="propose a commit, then apply it after the user says ok")
+    cm.add_argument("action", choices=["propose", "apply"])
+    cm.add_argument("--type", choices=["exp", "flow", "docs", "revert"])
+    cm.add_argument("--scope")
+    cm.add_argument("--subject")
+    cm.add_argument("--why")
+    cm.add_argument("--exp")
+    cm.add_argument("--exclude", nargs="*", default=[])
+    cm.add_argument("--checkpoint", action="store_true")
+    cm.add_argument("--approved")
+    cm.set_defaults(fn=cmd_commit)
+
+    sm = sub.add_parser("smoke", help="launch the client, assert on the log, close the experiment")
+    sm.add_argument("--profile", required=True)
+    sm.add_argument("--exp")
+    sm.add_argument("--replay", help="score an existing log against the profile (no launch)")
+    sm.add_argument("--tail", type=int, help="with --replay: only the last N bytes of the log")
+    sm.add_argument("--no-launch", action="store_true")
+    sm.add_argument("--interrupt", action="store_true")
+    sm.add_argument("--timeout", type=float)
+    sm.add_argument("--exe")
+    sm.add_argument("--instance")
+    sm.add_argument("--user-authorization")
+    sm.set_defaults(fn=cmd_smoke)
 
     dep = sub.add_parser("deploy", help="copy the build into the game, with preconditions")
     dep.add_argument("--exp", required=True)

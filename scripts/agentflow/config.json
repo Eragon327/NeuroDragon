@@ -1,5 +1,7 @@
 {
-  "instance": "E:\\LeviLauncher\\versions\\1.26.51.01-agent2",
+  "instance": "E:\\\\LeviLauncher\\\\versions\\\\1.26.51.01-agent2",
   "max_attempts_per_unknown": 3,
-  "stale_experiment_hours": 12
+  "stale_experiment_hours": 12,
+  "l1_max_per_session": 4,
+  "commit_hint_hours": 6
 }

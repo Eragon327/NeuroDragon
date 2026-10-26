@@ -1,0 +1,17 @@
+{
+  "name": "world-gate",
+  "tier": "L2",
+  "timeout_s": 420,
+  "why": "SR is gated on the world/menu state: the state line must show the world at least once and the menu at least once in the same run. Order is not asserted; the experiment's evidence carries the sequence.",
+  "requires": [
+    "\\[vvsr\\] world: getLevel\\(\\)=1",
+    "\\[vvsr\\] world: getLevel\\(\\)=0"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:"
+  ],
+  "min_occurrences": {
+    "\\[vvsr\\] world: getLevel\\(\\)=1": 5
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "sr-eval",
+  "tier": "L2",
+  "timeout_s": 300,
+  "why": "DLSS-SR evaluated repeatedly and the picker kept finding render-resolution colour targets. The trigger (enter a world) is a human step; the verdict is a log assertion, so nobody has to judge sharpness.",
+  "requires": [
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)",
+    "\\[vvsr\\] sr pick: .*colourTargets=[1-9]"
+  ],
+  "forbids": [
+    "no render-resolution colour/depth"
+  ],
+  "min_occurrences": {
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)": 3,
+    "\\[vvsr\\] sr pick: .*colourTargets=[1-9]": 1
+  }
+}

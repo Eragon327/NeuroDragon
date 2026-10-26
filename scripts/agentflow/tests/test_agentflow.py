@@ -62,6 +62,9 @@ class Workspace:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(REPO / rel, dst)
         shutil.copytree(REPO / "src" / "neurodragon" / "vv", self.root / "src" / "neurodragon" / "vv")
+        smoke = REPO / "scripts" / "agentflow" / "smoke"
+        if smoke.is_dir():
+            shutil.copytree(smoke, self.root / "scripts" / "agentflow" / "smoke")
         (self.root / "docs" / "agent" / "evidence").mkdir(parents=True)
         (self.root / "docs" / "agent" / "contract.json").write_text(
             json.dumps(CONTRACT, ensure_ascii=False), encoding="utf-8"
@@ -80,6 +83,16 @@ class Workspace:
             [sys.executable, str(FLOW), "--root", str(self.root), *args],
             capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
+
+    def git_init(self) -> None:
+        """Commit tests need a real repository; the fixture itself is not one."""
+        def git(*args: str) -> None:
+            subprocess.run(["git", *args], cwd=self.root, check=True, capture_output=True)
+        git("init", "-q")
+        git("config", "user.email", "agentflow@test.local")
+        git("config", "user.name", "agentflow test")
+        git("add", "-A")
+        git("commit", "-qm", "fixture")
 
     # ---------------------------------------------------------------- helpers
     def evidence(self, name: str, text: str = "log") -> Path:
@@ -147,21 +160,33 @@ class GateTests(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
 
     def test_waived_deviation_requires_explicit_consent_to_deploy(self):
-        self.assertEqual(self.ws.verify().returncode, 0)
+        # Self-contained: the repo's own waivers.json is empty now that the Jitter
+        # defect is fixed, so a test that leans on it tests yesterday's tree.
+        (self.ws.root / "src/neurodragon/vv/_probe.cpp").write_text(
+            'void f(void* p) { paramU32(p, "NotARealKey", 1); }', encoding="utf-8")
+        (self.ws.root / "scripts/agentflow/waivers.json").write_text(json.dumps([{
+            "check": "ngx.params", "match": "NotARealKey", "reason": "known deviation",
+            "expires": "2099-01-01", "owner": "user"}]), encoding="utf-8")
+        dll = self.ws.root / "bin/NeuroDragon/NeuroDragon.dll"
+        os.utime(dll, (time.time() + 60, time.time() + 60))
+        out = self.ws.verify()
+        self.assertEqual(out.returncode, 0, out.stdout)
         self.ws.open_exp("U-ngx")
         out = self.ws.run("deploy", "--exp", self.ws.exp_id(), "--dry-run")
-        self.assertEqual(out.returncode, 1, "Jitter is waived, so deploy must ask")
+        self.assertEqual(out.returncode, 1, "the build carries a waived deviation, so deploy must ask")
         self.assertIn("--allow-waived", out.stdout)
         out = self.ws.run("deploy", "--exp", self.ws.exp_id(), "--dry-run", "--allow-waived", "testing")
         self.assertEqual(out.returncode, 0, out.stdout)
 
     def test_expired_waiver_turns_back_into_an_error(self):
+        (self.ws.root / "src/neurodragon/vv/_probe.cpp").write_text(
+            'void f(void* p) { paramU32(p, "NotARealKey", 1); }', encoding="utf-8")
         (self.ws.root / "scripts/agentflow/waivers.json").write_text(json.dumps([{
-            "check": "ngx.required", "match": "'Jitter.Offset.X'", "reason": "old",
+            "check": "ngx.params", "match": "NotARealKey", "reason": "old",
             "expires": "2000-01-01", "owner": "user"}]), encoding="utf-8")
         out = self.ws.verify()
         self.assertEqual(out.returncode, 1)
-        self.assertIn("Jitter.Offset.X", out.stdout)
+        self.assertIn("NotARealKey", out.stdout)
 
     def test_shader_compile_error_is_caught_offline(self):
         (self.ws.root / "src/neurodragon/vv/VvBroken.cpp").write_text(
@@ -358,6 +383,12 @@ class CheckUnitTests(unittest.TestCase):
         self.assertNotIn("JitterOffsetX", names)
 
     def test_required_parameter_gap_is_reported_with_evidence(self):
+        # The check must still fire when a future edit drops a required key; the
+        # repo's own evaluate now writes them, so the fixture has to omit one.
+        (self.ws.root / "src/neurodragon/vv/_probe.cpp").write_text(
+            'static void evaluateSr(void* ctx) {\n'
+            '    gEvaluate(ctx, 1);\n'
+            '}\n', encoding="utf-8")
         import checks  # noqa: PLC0415
         ids = [f["id"] for f in checks.check_ngx_params(self.ws.root) if f["level"] == "error"]
         self.assertIn("ngx.missing-required", ids)
@@ -386,6 +417,143 @@ class CheckUnitTests(unittest.TestCase):
     def test_shaders_compile(self):
         import checks  # noqa: PLC0415
         self.assertEqual([f for f in checks.check_shaders(self.ws.root) if f["level"] == "error"], [])
+
+
+class FlowV2Tests(unittest.TestCase):
+    """commit / brief / runbook / smoke - the handoff layer added 2026-10-26."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.mkdtemp(prefix="agentflow-v2-")
+        self.ws = Workspace(self.tmp)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _ledger(self) -> list[dict]:
+        raw = (self.ws.root / "docs/agent/ledger.jsonl").read_text(encoding="utf-8")
+        return [json.loads(line) for line in raw.splitlines() if line.strip()]
+
+    # commit ---------------------------------------------------------------
+    def test_commit_subject_must_name_something_checkable(self):
+        self.ws.git_init()
+        (self.ws.root / "docs/notes.md").write_text("x", encoding="utf-8")
+        out = self.ws.run("commit", "propose", "--subject", "enhance the workflow")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("names no checkable behaviour", out.stdout)
+
+    def test_commit_refuses_while_the_named_experiment_is_open(self):
+        self.ws.git_init()
+        self.ws.open_exp("U-commit")
+        (self.ws.root / "src/neurodragon/vv/_probe.cpp").write_text("void f(){}", encoding="utf-8")
+        out = self.ws.run("commit", "propose", "--subject", "gate sr on the level state",
+                          "--exp", self.ws.exp_id())
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("is still open", out.stdout)
+
+    def test_commit_apply_refuses_a_changed_tree(self):
+        self.ws.git_init()
+        (self.ws.root / "docs/notes.md").write_text("one", encoding="utf-8")
+        self.assertEqual(
+            self.ws.run("commit", "propose", "--subject", "record the probe notes").returncode, 0)
+        (self.ws.root / "src/neurodragon/vv/_probe.cpp").write_text("void g(){}", encoding="utf-8")
+        out = self.ws.run("commit", "apply", "--approved", "ok")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("content changed", out.stdout)
+
+    def test_commit_apply_commits_with_trailers_and_records_it(self):
+        self.ws.git_init()
+        os.makedirs(self.ws.root / "docs/specs", exist_ok=True)
+        (self.ws.root / "docs/specs/vv.md").write_text("colour path", encoding="utf-8")
+        out = self.ws.run("commit", "propose", "--subject", "document the vv colour path")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("Verify: ok", out.stdout)
+        out = self.ws.run("commit", "apply", "--approved", "ok in test")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        message = subprocess.run(["git", "log", "-1", "--format=%B"], cwd=self.ws.root,
+                                 capture_output=True, text=True, encoding="utf-8").stdout
+        self.assertIn("docs: document the vv colour path", message)
+        self.assertIn("Verify: ok", message)
+        self.assertTrue(any(e.get("kind") == "commit" and e.get("approved") == "ok in test"
+                            for e in self._ledger()))
+        out = self.ws.run("doctor")
+        self.assertEqual(out.returncode, 0, out.stdout)
+
+    def test_verify_stays_valid_across_a_commit(self):
+        # tree_digest used to hash HEAD + diff, so the act of committing
+        # invalidated the verify the commit was approved on.
+        self.ws.git_init()
+        (self.ws.root / "docs/notes.md").write_text("one", encoding="utf-8")
+        self.assertEqual(
+            self.ws.run("commit", "propose", "--subject", "record the first note").returncode, 0)
+        self.assertEqual(self.ws.run("commit", "apply", "--approved", "ok").returncode, 0)
+        before = len([e for e in self._ledger() if e.get("kind") == "verify"])
+        (self.ws.root / "docs/notes.md").write_text("two", encoding="utf-8")
+        self.assertEqual(
+            self.ws.run("commit", "propose", "--subject", "record the second note").returncode, 0)
+        after = len([e for e in self._ledger() if e.get("kind") == "verify"])
+        self.assertEqual(before, after, "committing must not force another verify")
+
+    # handoff / brief ------------------------------------------------------
+    def test_brief_shows_the_handoff_and_the_l2_waiting_on_a_human(self):
+        self.ws.open_exp("U-mv", tier="L2", runbook="进世界|走动|回菜单")
+        self.assertEqual(self.ws.run("handoff", "write", "--next", "读 dump 定 VP 方向").returncode, 0)
+        out = self.ws.run("brief")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("读 dump 定 VP 方向", out.stdout)
+        self.assertIn("L2", out.stdout)
+        self.assertIn("等你跑", out.stdout)
+        self.assertIn("进世界", out.stdout)
+
+    def test_brief_marks_an_unmoved_handoff(self):
+        self.assertEqual(self.ws.run("handoff", "write", "--next", "读最后一帧").returncode, 0)
+        out = self.ws.run("brief")
+        self.assertIn("(未动)", out.stdout)
+
+    def test_runbook_hands_over_all_open_l2_as_one_session(self):
+        self.ws.open_exp("U-one", tier="L2", runbook="进世界|看 HUD", expect_s="90")
+        self.ws.open_exp("U-two", tier="L2", runbook="回菜单")
+        out = self.ws.run("runbook")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("EXP-0001", out.stdout)
+        self.assertIn("进世界", out.stdout)
+        self.assertIn("合计约", out.stdout)
+
+    def test_doctor_warns_about_an_l2_experiment_without_a_runbook(self):
+        self.ws.open_exp("U-bare")
+        out = self.ws.run("doctor")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("no runbook", out.stdout)
+
+    # smoke ----------------------------------------------------------------
+    def test_smoke_replay_scores_a_log_against_a_profile(self):
+        good = self.ws.evidence(
+            "boot-ok.log",
+            "[vv] session (install): shim=0x1\n"
+            "[vv] level listeners join=true exit=true\n")
+        out = self.ws.run("smoke", "--profile", "boot", "--replay", str(good))
+        self.assertEqual(out.returncode, 0, out.stdout)
+
+        partial = self.ws.evidence("boot-partial.log", "[vv] session (install): shim=0x1\n")
+        out = self.ws.run("smoke", "--profile", "boot", "--replay", str(partial))
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("level listeners", out.stdout)
+
+        crashed = self.ws.evidence(
+            "boot-crash.log",
+            "[vv] session (install): shim=0x1\n"
+            "[vv] level listeners join=true exit=true\n"
+            "Unhandled exception at 0x1234\n")
+        out = self.ws.run("smoke", "--profile", "boot", "--replay", str(crashed))
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("forbidden", out.stdout)
+
+    def test_smoke_refuses_to_restart_a_running_client(self):
+        self.ws.open_exp("U-smoke", tier="L1")
+        # No instance exe / log in the fixture, so the guard must trip first or
+        # the command must fail without touching anything.
+        out = self.ws.run("smoke", "--profile", "boot", "--exp", self.ws.exp_id())
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("does not exist", out.stdout)
 
 
 if __name__ == "__main__":

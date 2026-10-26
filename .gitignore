@@ -555,3 +555,8 @@ fabric.properties
 # agentflow evidence is committed on purpose: `flow.py review` re-hashes it.
 !docs/agent/evidence/
 !docs/agent/evidence/**
+
+# agentflow ephemeral state: the proposal waiting for approval and the L1
+# launch lease.  Machine state, not history.
+docs/agent/.commit-proposal.json
+docs/agent/.launch-lease.json

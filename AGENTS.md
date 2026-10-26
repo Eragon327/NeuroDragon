@@ -3,7 +3,8 @@
 ## 0. 开工前（30 秒）
 
 ```bash
-python scripts/agentflow/flow.py status        # 目标 / 阶段 / 验收项 / 未关闭实验
+python scripts/agentflow/flow.py brief         # 开局唯一必跑：阶段/构建/等你跑的/未提交归属
+python scripts/agentflow/flow.py status        # 目标 / 阶段 / 验收项 / 未关闭实验（长视图）
 python scripts/agentflow/flow.py doctor        # 有没有人绕过流程（脏部署、失效豁免、陈旧实验）
 ```
 
@@ -36,6 +37,9 @@ python scripts/agentflow/flow.py exp close EXP-0007 --pass \
 
 `exp close` **必须有证据文件**（日志 / dump / 截图），否则只能算推测。失败还必须写 `--next`。
 
+**没有可失败的假设的改动不开 exp**（重构、文档、门禁、typo）：跑 `verify` 就够了。
+`exp` 记的是未知项，不是「我改过东西」。
+
 ## 2. 实机预算与停止条件
 
 一次「构建 → 部署 → 让人开游戏 → 贴日志」算一次实机。进入实机前，逐条自问并写进 `exp new`：
@@ -61,7 +65,9 @@ python scripts/agentflow/flow.py exp close EXP-0007 --pass \
   然后把 DLL/PDB/manifest/lang 拷过去并记账。**不要手 `cp`** —— `doctor` 会对不上账并报出来。
 - 已豁免的偏差：`scripts/agentflow/waivers.json`，必须写理由 + 过期日期 + 由谁批准；
   部署带豁免的构建还需要显式 `--allow-waived "<这次跑仍然值得的理由>"`。
-- 本仓库**不要 commit**：改动留在工作区，由用户提交。
+- **commit 由 Agent 敲，但必须先拿到批准**：`flow.py commit propose`（生成消息 + 前置检查）→
+  用户回 ok → `flow.py commit apply --approved "<原话>"`。没批准不提交；只 `git add` 不需要批准。
+  提交标准见 §9。
 
 ## 4. 已验证 ≠ 永久有效
 
@@ -98,3 +104,71 @@ python scripts/agentflow/flow.py claim --final     # 只认 kind=final 的验收
 - 测试实例是 `E:\LeviLauncher\versions\1.26.51.01-agent2`，**不要**部署到没有 `-agent2` 的那个版本。
 - 引擎的渲染目标在模组加载前就建好了：RTV/DSV 清单要等一次 F11 重建才有渲染分辨率资源。
 - 改了 DLL 必须重开游戏或 reload，旧进程里跑的还是旧镜像。
+
+## 8. 人机契约（谁负责什么）
+
+**请求实机前，Agent 必须给全这五条**，缺一条就别说「请跑一次」：
+
+1. 这次消除的**唯一**未知项 + 账本编号（`EXP-xxxx`），以及跑的是哪个构建（部署时间/哈希）。
+2. 3–5 步操作，含「**不要做什么**」（别点别的按钮、别改设置）。
+3. 预期看到什么；以及失败时**分别意味着什么**——由 Agent 读日志判定。
+4. 崩了/不对时用户做什么（多数情况是「什么都别做，说一声」）+ 怎么退回已知状态。
+5. 预计耗时。
+
+**Agent 不可以**：
+
+- 让用户判断 Agent 自己能测的东西（「是不是更锐」「是不是更清楚」）——画质只能当**次要信号**，不能当验收判据。
+- 把能从日志确认的事甩给用户负责（例：F11 有没有生效，看 `[vvsr] sr pick: … colourTargets=`）。
+- 无新证据就再问一次同一个未知项（`exp new` 会拒绝）。
+- 让用户调试（试点别的按钮找原因、改配置试）。
+
+**用户只有三条义务**：照做（偏离就说明）→ 报可见异常 → 给一个结论词。不用解释技术原因、不用截图、不用判断是不是"对"。
+
+| 用户说 | 含义 | Agent 必须做 |
+|---|---|---|
+| 「好了」 | 步骤做完，无可见异常 | 读日志下结论；**日志说失败就以日志为准**，不能拿「用户说好了」推翻 |
+| 「好了，看不出区别」 | 跑完，画面无可见变化 | 先看 `eval=`；成功则是 MV=0/Reset=1 的预期，不记为验收 |
+| 「崩了，在 X 之后」 | 客户端退出/黑屏 | 读日志尾与 crash 文件，不猜 |
+| 「不对：…」 | 偏色/HUD 丢失/闪烁/按钮不在 | 记进账本，先定位引入变更，不叠加猜测 |
+| 「没跑」/「现在不行」 | 拒绝或推迟 | **不算失败**；关掉实验或改走不需要实机的路径 |
+| 「我改了步骤：…」 | 偏离脚本 | 本轮不作该判据的证据，重跑或降级为探索 |
+
+用户的话要**原样**进账本（`exp close --result "<原话>"`），不许改写成「已验证」。
+
+## 9. commit 标准（`flow.py commit`）
+
+- **一个 commit = 一个通过 `verify` 的状态 + 一条账本理由**。类型由文件组决定：
+  `exp`（`src/`）、`flow`（`scripts/agentflow`、`xmake.lua`、`AGENTS.md`）、`docs`（specs/roadmap/CHANGELOG）。
+  三者混在一起就既 review 不了也回滚不了——`9bc5c7b`（17 文件 2102 行）就是反例。
+- subject 一句祈使句 ≤72 字符，说的是**可检查的行为**；`update/improve/enhance/misc/changes`
+  会被工具拒绝。其余 trailer（Exp/Hypothesis/Evidence/Verify/Deploy）由 `commit propose` 从账本填，
+  agent 不手写——**消息能说的东西不超过账本里有的东西**。
+- 有 open exp 动 `src/` 时拒绝提交；要中途留存用 `--checkpoint`（生成 `wip(EXP-xxxx):`，`doctor` 会标出）。
+- `commit propose` 自己会跑一次 `verify`；`tree_digest` 是内容哈希，**提交不会让它失效**（旧实现会）。
+- 证据随 exp commit 一起进；`bin/` 永不进；>512 KB 文本 / >2 MB 图会打 `Note:` 提示。
+- 提案 → 用户 ok → `apply --approved "<原话>"`。内容在批准后被改过，`apply` 会拒绝。
+
+## 10. 跨 session 交接（`flow.py brief` / `handoff`）
+
+- 开局只跑 `flow.py brief`：阶段 / 构建 / 等你跑的 / 上次 next 有没有动 / 未提交文件归属 / 本次已花实机。
+- 会话结束**只有状态变了才写**：`flow.py handoff write --next "..." [--awaiting ...] [--note ...]`。
+  字段三个，写不出就说明没什么可交接。
+- 不维护 `HANDOFF.md`：第二份真相必然漂移，新 session 会信它而不信账本。账本 + `brief` 是唯一来源。
+- `brief` 里 `dirty` 的「未归属」= 上一轮改了没记账的手尾：先确认，再决定提交或丢弃。
+- L2 请求用 `flow.py runbook` 一次列全，不要一个 exp 打断一次。
+
+## 11. 测试分级（谁跑、谁判定）
+
+| 级 | 触发 | 判定 | 前置 |
+|---|---|---|---|
+| L0 | agent | 退出码 / 日志（`verify`、构建、`smoke --replay`） | 无 |
+| L1 | agent（`smoke` 启动客户端） | 日志断言（`scripts/agentflow/smoke/*.json`） | verify + deploy；同树失败重跑要 `--replicate`；每 session 预算 |
+| L2 | 用户 | 日志断言 + 一个结论词 | `exp new --tier L2 --runbook "步骤1|步骤2|步骤3"` |
+
+- L1 默认同意，但有闸：游戏已在跑 → 默认拒绝（`--interrupt` 才会杀）；一次只允许一个 launch lease；
+  `l1_max_per_session` 用完要 `--user-authorization`。默认同意 ≠ 无限连点。
+- smoke 只看启动后日志增量（锚定 byte offset）——4.4 MB 的 `latest.log` 里还躺着上一局的失败，
+  不锚定就会把旧的 `ret=0xbad00005` 当成本次的。
+- L2 的判据必须是日志断言；人只提供**触发**和**异常**（偏色/闪/HUD 丢了）。能加一行断言解决
+  的 L2 必须降成 L1；反过来为了不写断言把 L1 抬成 L2 = 违规。
+- L2 触发没发生时（没进世界/没按步骤），`smoke` 记 ABORTED 并**保持实验打开**，不记失败。

@@ -1,0 +1,18 @@
+{
+  "name": "boot",
+  "tier": "L1",
+  "timeout_s": 180,
+  "why": "The mod loaded and the level listeners registered. Catches the class of build that never reaches the render path, without asking anyone to look at the screen.",
+  "requires": [
+    "\\[vv\\] session \\(install\\)",
+    "\\[vv\\] level listeners join=true exit=true"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] session \\(install\\)": 1
+  }
+}
