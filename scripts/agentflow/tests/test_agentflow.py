@@ -19,6 +19,7 @@ Run:  python -m unittest discover -s scripts/agentflow/tests -v
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import shutil
@@ -554,6 +555,60 @@ class FlowV2Tests(unittest.TestCase):
         out = self.ws.run("smoke", "--profile", "boot", "--exp", self.ws.exp_id())
         self.assertEqual(out.returncode, 1)
         self.assertIn("does not exist", out.stdout)
+
+    # exp lifecycle --------------------------------------------------------
+    def test_exp_update_adds_a_runbook_to_an_open_experiment(self):
+        self.ws.open_exp("U-late")
+        self.assertIn("no runbook", self.ws.run("doctor").stdout)
+        out = self.ws.run("exp", "update", self.ws.exp_id(), "--tier", "L2",
+                          "--runbook", "进世界|走动|回菜单", "--expect-s", "90")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertNotIn("no runbook", self.ws.run("doctor").stdout)
+        brief = self.ws.run("brief").stdout
+        self.assertIn("进世界", brief)
+        self.assertIn("L2", brief)
+
+    def test_exp_update_refuses_a_closed_experiment(self):
+        self.ws.open_exp("U-done")
+        exp = self.ws.exp_id()
+        log = self.ws.evidence("done.log", "log")
+        self.assertEqual(self.ws.run("exp", "close", exp, "--pass", "--result", "ok",
+                                     "--evidence", str(log), "--conclusion", "fine").returncode, 0)
+        out = self.ws.run("exp", "update", exp, "--runbook", "x|y")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("history is not editable", out.stdout)
+
+    def test_exp_cancel_needs_no_evidence_and_spends_no_attempt(self):
+        self.assertEqual(self.ws.open_exp("U-cancel").returncode, 0)
+        first = self.ws.exp_id()
+        self.assertEqual(self.ws.run("exp", "cancel", first, "--why", "现在不跑").returncode, 0)
+        self.assertIn("open   : none", self.ws.run("brief").stdout)
+        self.assertIn("没有等你的 L2", self.ws.run("runbook").stdout)
+        # Not a failure: reopening needs no postmortem/evidence and reuses the number.
+        self.assertEqual(self.ws.open_exp("U-cancel").returncode, 0, "cancel must not block the retry")
+        attempts = [e["attempt"] for e in self._ledger()
+                    if e.get("kind") == "exp" and e.get("status") == "open"]
+        self.assertEqual(attempts, [1, 1])
+        cancelled = [e for e in self._ledger() if e.get("status") == "cancelled"]
+        self.assertEqual(cancelled[-1]["result"], "现在不跑")
+
+    def test_doctor_keeps_the_open_time_after_an_update(self):
+        self.ws.open_exp("U-old")
+        path = self.ws.root / "docs/agent/ledger.jsonl"
+        old = (datetime.datetime.now().astimezone()
+               - datetime.timedelta(hours=20)).isoformat(timespec="milliseconds")
+        events = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+        for event in events:
+            if event.get("kind") == "exp" and event.get("status") == "open":
+                event["ts"] = old
+                event["opened"] = old
+        path.write_text("\n".join(json.dumps(e, ensure_ascii=False) for e in events) + "\n",
+                        encoding="utf-8")
+        self.assertEqual(self.ws.run("exp", "update", self.ws.exp_id(),
+                                     "--runbook", "进世界|回菜单").returncode, 0)
+        out = self.ws.run("doctor")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("has been open", out.stdout)
 
 
 if __name__ == "__main__":

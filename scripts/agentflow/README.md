@@ -11,6 +11,7 @@
 | 绕过前置检查直接进游戏 | `xmake` 的 `before_build` 跑 `gate build`；`deploy` 要求当前树有通过的 `verify` | 硬（构建失败 / 部署拒绝） |
 | 已验证契约被后续改动破坏 | `accept` 记录证据哈希；证据一变 `claim`/`review` 立即拒绝 | 硬 |
 | 假设写成事实 | `exp close` 必须有证据文件；失败必须有 `--next` | 硬 |
+| 把假证据塞进没跑的实验 | `exp cancel`：不加证据也能收尾，不占 attempt；`exp update` 事后补 runbook/tier | 硬 |
 | 未授权扩大范围 | `contract set` 必须 `--user-authorization`，写入账本 | 硬（命令拒绝） |
 | 声称通过但没有执行 | `review` 重跑检查 + 重算哈希；`claim` 要求 review 晚于证据 | 硬 |
 | 手抄 DLL 绕过部署 | `deploy` 记 sha256；`doctor` 比对实际部署文件 | 检测（不能阻止 cp） |

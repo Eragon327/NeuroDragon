@@ -174,6 +174,20 @@ def experiments(root: Path) -> dict[str, dict]:
     return merged
 
 
+def experiment_opened(root: Path, exp_id: str) -> str:
+    """When the attempt started.
+
+    `exp update` appends events, so the merged record's ts is the last edit, not
+    the open time.  Staleness must not reset just because a runbook was filled in
+    twelve hours later.
+    """
+    for event in ledger(root):
+        if (event.get("kind") == "exp" and event.get("id") == exp_id
+                and event.get("status") == "open"):
+            return event.get("opened") or event["ts"]
+    return ""
+
+
 def evidence_entry(path: Path) -> dict:
     return {"path": str(path), "sha256": sha256_file(path), "size": path.stat().st_size}
 
@@ -451,33 +465,38 @@ def cmd_exp_new(root: Path, args) -> int:
     previous = _experiment_tail(root, args.unknown)
     attempt = 1
     if previous:
-        attempt = int(previous.get("attempt", 0)) + 1
         if previous.get("status") == "open":
             print(f"agentflow: {previous['id']} is still open on {args.unknown!r}; close it with "
-                  f"its evidence before opening another one.")
+                  f"its evidence, or cancel it, before opening another one.")
             return 1
-        if not args.postmortem:
-            print(f"agentflow: {previous['id']} already tested {args.unknown!r} "
-                  f"({previous.get('status')}). Record what its evidence showed with --postmortem.")
-            return 1
-        if not args.from_evidence:
-            print(f"agentflow: refusing a repeat without new evidence. --from-evidence must point at a "
-                  f"file produced after {previous['id']} ({previous['ts'][:16]}).")
-            return 1
-        path = Path(args.from_evidence)
-        if not path.is_absolute():
-            path = root / path
-        if not path.is_file():
-            print(f"agentflow: --from-evidence {args.from_evidence!r} does not exist")
-            return 1
-        # Ledger stamps carry milliseconds and a filesystem may not; give the
-        # comparison a small slack so a file written in the same second as the
-        # failed attempt cannot masquerade as "produced after it".
-        previous_ts = datetime.datetime.fromisoformat(previous["ts"]).timestamp()
-        if path.stat().st_mtime <= previous_ts + 0.5:
-            print(f"agentflow: --from-evidence {args.from_evidence!r} is older than {previous['id']} - "
-                  f"it cannot be evidence that you analysed that result.")
-            return 1
+        if previous.get("status") == "cancelled":
+            # A cancelled run learned nothing and spent no attempt: same number,
+            # and none of the "analyse the previous evidence" demands apply.
+            attempt = int(previous.get("attempt") or 1)
+        else:
+            attempt = int(previous.get("attempt", 0)) + 1
+            if not args.postmortem:
+                print(f"agentflow: {previous['id']} already tested {args.unknown!r} "
+                      f"({previous.get('status')}). Record what its evidence showed with --postmortem.")
+                return 1
+            if not args.from_evidence:
+                print(f"agentflow: refusing a repeat without new evidence. --from-evidence must point at a "
+                      f"file produced after {previous['id']} ({previous['ts'][:16]}).")
+                return 1
+            path = Path(args.from_evidence)
+            if not path.is_absolute():
+                path = root / path
+            if not path.is_file():
+                print(f"agentflow: --from-evidence {args.from_evidence!r} does not exist")
+                return 1
+            # Ledger stamps carry milliseconds and a filesystem may not; give the
+            # comparison a small slack so a file written in the same second as the
+            # failed attempt cannot masquerade as "produced after it".
+            previous_ts = datetime.datetime.fromisoformat(previous["ts"]).timestamp()
+            if path.stat().st_mtime <= previous_ts + 0.5:
+                print(f"agentflow: --from-evidence {args.from_evidence!r} is older than {previous['id']} - "
+                      f"it cannot be evidence that you analysed that result.")
+                return 1
     limit = int(cfg.get("max_attempts_per_unknown", 3))
     if attempt > limit and not args.user_authorization:
         print(f"agentflow: attempt {attempt} on {args.unknown!r} exceeds the budget of {limit}. "
@@ -487,6 +506,7 @@ def cmd_exp_new(root: Path, args) -> int:
     exp_id = f"EXP-{len(exps) + 1:04d}"
     event = {
         "kind": "exp", "id": exp_id, "status": "open", "attempt": attempt,
+        "opened": now(),
         "unknown": args.unknown, "hypothesis": args.hypothesis, "change": args.change,
         "expect_pass": args.expect_pass, "expect_fail": args.expect_fail,
         "evidence_plan": args.evidence_plan, "tree": tree_digest(root),
@@ -505,6 +525,56 @@ def cmd_exp_new(root: Path, args) -> int:
     append(root, event)
     print(f"{exp_id} open  unknown={args.unknown} attempt={attempt} tier={args.tier} "
           f"tree={event['tree']}")
+    return 0
+
+
+def cmd_exp_update(root: Path, args) -> int:
+    """Fill in fields that were not known when the experiment was opened.
+
+    The runbook is the obvious one: it belongs to the moment you decide to hand
+    the run to a human, which is usually after the experiment exists.
+    """
+    exp = experiments(root).get(args.id)
+    if not exp:
+        print(f"agentflow: no experiment {args.id!r}")
+        return 1
+    if exp.get("status") != "open":
+        print(f"agentflow: {args.id} is closed ({exp.get('status')}); history is not editable - "
+              f"open a new attempt instead")
+        return 1
+    fields: dict = {}
+    if args.tier:
+        fields["tier"] = args.tier
+    if args.runbook is not None:
+        fields["runbook"] = [step.strip() for step in args.runbook.split("|") if step.strip()]
+    if args.expect_s is not None:
+        fields["expect_s"] = int(args.expect_s)
+    if not fields:
+        print("agentflow: exp update needs --tier, --runbook or --expect-s")
+        return 1
+    append(root, {"kind": "exp", "id": args.id, "updated": now(), **fields})
+    print(f"{args.id} updated: " + ", ".join(f"{k}={v}" for k, v in fields.items()))
+    return 0
+
+
+def cmd_exp_cancel(root: Path, args) -> int:
+    """Close an attempt that never happened.
+
+    AGENTS.md §8:「没跑 / 现在不行」不算失败.  Before this command the only way to
+    end such an attempt was to attach a fake evidence file to `exp close`, which
+    poisons the ledger - so the honest path has to be a first-class one.
+    """
+    exp = experiments(root).get(args.id)
+    if not exp:
+        print(f"agentflow: no experiment {args.id!r}")
+        return 1
+    if exp.get("status") != "open":
+        print(f"agentflow: {args.id} is already {exp.get('status')}")
+        return 1
+    append(root, {"kind": "exp", "id": args.id, "status": "cancelled",
+                  "result": args.why, "conclusion": f"cancelled: {args.why}",
+                  "next": "", "head": head_sha(root)})
+    print(f"{args.id} cancelled (no evidence needed, no attempt spent)")
     return 0
 
 
@@ -823,7 +893,8 @@ def cmd_doctor(root: Path, args) -> int:
     for exp in experiments(root).values():
         if exp.get("status") != "open":
             continue
-        age = (stamp() - datetime.datetime.fromisoformat(exp["ts"]).timestamp()) / 3600
+        opened = experiment_opened(root, exp["id"]) or exp["ts"]
+        age = (stamp() - datetime.datetime.fromisoformat(opened).timestamp()) / 3600
         if age > limit_hours:
             problems.append(f"{exp['id']} has been open for {age:.1f}h (limit {limit_hours}h)")
 
@@ -1200,7 +1271,8 @@ def cmd_brief(root: Path, args) -> int:
     if not open_exps:
         print("open   : none")
     for exp in open_exps[:3]:
-        minutes = (stamp() - datetime.datetime.fromisoformat(exp["ts"]).timestamp()) / 60
+        opened = experiment_opened(root, exp["id"]) or exp["ts"]
+        minutes = (stamp() - datetime.datetime.fromisoformat(opened).timestamp()) / 60
         tier = exp.get("tier") or "L2?"
         tail = ""
         if tier == "L2":
@@ -1617,6 +1689,16 @@ def main(argv: list[str] | None = None) -> int:
     close.add_argument("--conclusion", required=True)
     close.add_argument("--next")
     close.set_defaults(fn=cmd_exp_close)
+    upd = exp_sub.add_parser("update", help="fill in tier/runbook after the experiment exists")
+    upd.add_argument("id")
+    upd.add_argument("--tier", choices=["L0", "L1", "L2"])
+    upd.add_argument("--runbook", help="3-5 steps for the human, separated by |")
+    upd.add_argument("--expect-s", type=int)
+    upd.set_defaults(fn=cmd_exp_update)
+    can = exp_sub.add_parser("cancel", help="close an attempt that never ran (not a failure)")
+    can.add_argument("id")
+    can.add_argument("--why", required=True, help="why the run is not happening (kept verbatim)")
+    can.set_defaults(fn=cmd_exp_cancel)
 
     gate = sub.add_parser("gate", help="pre-build checks (wired into xmake)")
     gate.add_argument("what", choices=["build"])

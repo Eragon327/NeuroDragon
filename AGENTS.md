@@ -37,6 +37,10 @@ python scripts/agentflow/flow.py exp close EXP-0007 --pass \
 
 `exp close` **必须有证据文件**（日志 / dump / 截图），否则只能算推测。失败还必须写 `--next`。
 
+- 步骤往往实验开了才想清楚：`exp update EXP-xxxx --runbook "进世界|走动|说一声"`（`--tier`、`--expect-s` 同理）。
+- 「没跑 / 现在不行」用 `exp cancel EXP-xxxx --why "…"`：不需要证据、不占 attempt 次数、不算失败。
+  **别为了收尾塞假证据**——那比不记录更坏。
+
 **没有可失败的假设的改动不开 exp**（重构、文档、门禁、typo）：跑 `verify` 就够了。
 `exp` 记的是未知项，不是「我改过东西」。
 
