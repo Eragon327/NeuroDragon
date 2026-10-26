@@ -1,0 +1,20 @@
+{
+  "name": "runtime-bilinear",
+  "tier": "L1",
+  "timeout_s": 180,
+  "dwell_s": 25,
+  "window_after": "\\[vv\\] options: load upscaling_mode",
+  "why": "A2's switch has to come from the engine's option registry, not options.txt. The probe scans OptionID 0..1023 for the `upscaling_mode` save tag and calls Option::load(\"1\") on the client thread; this profile only counts taau declarations *after* that call, so taau running normally beforehand is not a failure. Dwell 25 s gives the renderer time to rebuild and to log a period.",
+  "requires": [
+    "\\[vv\\] options: reread upscaling_mode = 1"
+  ],
+  "forbids": [
+    "\\[vv\\] taau #",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] options: reread upscaling_mode = 1": 1
+  }
+}

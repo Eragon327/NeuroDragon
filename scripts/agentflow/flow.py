@@ -1395,6 +1395,15 @@ def _load_profile(root: Path, name: str) -> tuple[dict | None, str]:
 
 def _eval_profile(profile: dict, text: str) -> tuple[bool, list[str], list[str]]:
     text = text.replace("\x00", "")
+    # `window_after` scopes the assertions to what was logged *after* the state change
+    # under test. Without it an absence assertion also counts the lines from before the
+    # change (taau running normally, then switching it off, is a pass - but the prefix
+    # would fail a plain `forbids`). The window is the text after the last marker; an
+    # unopened window has nothing to assert on, so it reads as "requires missing".
+    window = profile.get("window_after")
+    if window:
+        matches = list(re.finditer(window, text, re.IGNORECASE | re.MULTILINE))
+        text = text[matches[-1].end():] if matches else ""
     missing = []
     for pattern in profile["requires"]:
         if not re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
@@ -1417,6 +1426,24 @@ def _read_since(path: Path, offset: int, limit: int = 8 << 20) -> tuple[str, int
         f.seek(offset)
         data = f.read(limit)
     return data.decode("utf-8", "replace"), size
+
+
+def _smoke_stop(ok: bool, forbidden: bool, first_ok: float | None, now: float, dwell: float) -> bool:
+    """Whether a smoke run has read enough to decide.
+
+    A forbidden pattern ends the run immediately. A profile with ``dwell_s`` keeps
+    reading for that long *after the requires first matched*: without it an absence
+    assertion ("taau never logged") passes on the first frames, before the renderer
+    has logged anything at all. 2026-10-26 EXP-0016 did exactly that - the pass came
+    17 s in and the first ``[vv] taau`` line landed a second later.
+    """
+    if forbidden:
+        return True
+    if not ok:
+        return False
+    if first_ok is None:
+        return False
+    return dwell <= 0 or now - first_ok >= dwell
 
 
 def _game_running() -> bool:
@@ -1520,17 +1547,27 @@ def cmd_smoke(root: Path, args) -> int:
             print(f"agentflow: waiting for a launch you start; asserting on bytes after {offset}")
         else:
             print(f"agentflow: launching {exe.name}; asserting on bytes after {offset}")
-            subprocess.Popen([str(exe)], cwd=str(inst), close_fds=True)
+            # The client inherits the parent's stdout otherwise, and then any pipe
+            # (`| tail`, a job wrapper) stays open until the *game* exits - the
+            # 2026-10-26 EXP-0016 run looked hung for four minutes for this reason.
+            subprocess.Popen(
+                [str(exe)], cwd=str(inst), close_fds=True,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
         if tier == "L2":
             print("agentflow: L2 profile - 现在按 runbook 操作（进世界/走动/回菜单）")
 
+        dwell = float(profile.get("dwell_s") or 0)
         deadline = time.time() + float(args.timeout or profile["timeout_s"])
         text = ""
+        first_ok: float | None = None
         while time.time() < deadline:
             text, _ = _read_since(log, offset)
             ok, missing, forbidden = _eval_profile(profile, text)
-            if ok or forbidden:
+            if _smoke_stop(ok, forbidden, first_ok, time.time(), dwell):
                 break
+            if ok and first_ok is None:
+                first_ok = time.time()
             time.sleep(1.0)
         text, size_now = _read_since(log, offset)
         ok, missing, forbidden = _eval_profile(profile, text)

@@ -1,0 +1,21 @@
+{
+  "name": "bilinear-mode",
+  "tier": "L1",
+  "timeout_s": 180,
+  "dwell_s": 25,
+  "why": "S5 route A's first premise: does options.txt `upscaling_mode:1` actually keep the engine out of the taau branch? taau runs even in the main menu, so one launch answers it without a world and without a human step. The mod must load (session/listener lines) or the absence of taau proves nothing.",
+  "requires": [
+    "\\[vv\\] session \\(install\\)",
+    "\\[vv\\] level listeners join=true exit=true"
+  ],
+  "forbids": [
+    "\\[vv\\] taau #",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] session \\(install\\)": 1,
+    "\\[vv\\] level listeners join=true exit=true": 1
+  }
+}

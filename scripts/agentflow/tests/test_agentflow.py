@@ -640,5 +640,52 @@ class FlowV2Tests(unittest.TestCase):
         self.assertIn("has been open", out.stdout)
 
 
+class SmokeDwellUnitTests(unittest.TestCase):
+    """The smoke loop's exit rule.
+
+    2026-10-26 EXP-0016: the bilinear-mode profile "passed" 17 s after launch because
+    the requires (session/listener lines, logged during loader init) matched before
+    the renderer had logged anything; the first [vv] taau line landed one second
+    later. An absence assertion needs a window, so a profile may set `dwell_s`: keep
+    reading that long after the requires first matched, then decide.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        sys.path.insert(0, str(REPO / "scripts" / "agentflow"))
+        import flow  # noqa: PLC0415
+
+        cls.stop = staticmethod(flow._smoke_stop)
+
+    def test_requires_match_starts_the_dwell_instead_of_ending_the_run(self):
+        self.assertFalse(self.stop(True, False, None, 100.0, 25))
+        self.assertFalse(self.stop(True, False, 100.0, 110.0, 25))
+        self.assertTrue(self.stop(True, False, 100.0, 126.0, 25))
+
+    def test_dwell_zero_keeps_the_old_behaviour(self):
+        self.assertTrue(self.stop(True, False, 100.0, 100.0, 0))
+
+    def test_forbidden_ends_at_once_and_missing_requires_never_pass(self):
+        self.assertTrue(self.stop(False, True, None, 100.0, 25))
+        self.assertFalse(self.stop(False, False, 100.0, 200.0, 25))
+
+    def test_window_after_ignores_the_prefix(self):
+        sys.path.insert(0, str(REPO / "scripts" / "agentflow"))
+        import flow  # noqa: PLC0415
+
+        profile = {"window_after": "MARK", "requires": ["REREAD"], "forbids": ["TAUU"]}
+        # taau ran before the switch: that prefix must not count.
+        ok, missing, forbidden = flow._eval_profile(profile, "TAUU\nMARK\nREREAD\n")
+        self.assertTrue(ok, (missing, forbidden))
+        # ... but anything after the window marker does.
+        ok, missing, forbidden = flow._eval_profile(profile, "MARK\nREREAD\nTAUU\n")
+        self.assertFalse(ok)
+        self.assertEqual(forbidden, ["TAUU"])
+        # an unopened window has nothing to match against
+        ok, missing, forbidden = flow._eval_profile(profile, "REREAD\n")
+        self.assertFalse(ok)
+        self.assertEqual(missing, ["REREAD"])
+
+
 if __name__ == "__main__":
     unittest.main()
