@@ -1,6 +1,8 @@
 # VV 路径（阶段 2）：把 NR/SR 接进 Vibrant Visuals，替代 TAAU
 
-> **状态**：阶段 2 未开工；M4 侦察（只读）已有结论，五个未知答掉两个。
+> **状态**（2026-10-25 16:0x 更新）：阶段 2 **进行中**。M4 侦察与 M5（注入可行）已收口；
+> M6 的 B0（只读取证）与 B1a（自建 NGX 会话）已实机通过；B1b（颜色旁路）**切点成立、颜色未定**。
+> 下一步以 **§14** 为准；§5.2、§12 A 两处结论已被 §14.3 更正。
 > 本文由旧 `O`（VV 路径侦察）、旧 `M §3`（阶段 2 的未知）与旧 `I §5`（M4–M7）合并而来；
 > 原文归档在 [archive/2026-10](../archive/2026-10/) 与 [research/2026-10-24-vv-path.md](../research/2026-10-24-vv-path.md)。
 >
@@ -170,6 +172,13 @@ Mac 1.26.32 读的是 `+0x10`。**两者布局差 8 字节，跨版本迁移时�
 ⇒ **这一版运行时不能按公开头文件的槽号去挂钩 `ID3D12GraphicsCommandList` 的方法（除槽 9 `Close`
 已验证可用）。** 要拿绑定信息，只能先把槽号**测**出来（§7 第 2 条）。没有验证过的槽不要挂钩；
 要认槽，先拿一个已知对象做标定。
+
+> **2026-10-25 16:0x 更正（见 §14.3 ①）**：上面这段的结论是错的，保留是为了记住当时的现场。
+> 崩的原因是**把槽 25 当成了 `OMSetRenderTargets`**——25 实际是 `SetPipelineState`，
+> `OMSetRenderTargets` 是 46。公开头文件的声明顺序就是运行时 vtable 顺序：已实测对得上的有
+> `Close=9`、`DrawInstanced=12`、`DrawIndexedInstanced=13`、`CreateRenderTargetView=20`、
+> `CreateCommittedResource=27`、`CreatePlacedResource=29`。**槽号可以查头文件；不能做的是
+> 「按猜到的签名批量 hook 再转发」。**
 
 ## 6. 对阶段 2 的意义（五个未知的状态）
 
@@ -387,6 +396,11 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 ⇒ 倒 4 极可能就是 **TAAU 的 draw**（与 §5.1「清单里没有显示分辨率的 HDR 面 ⇒ TAAU 直接写后缓冲」的怀疑一致）。
 B 步要确认的就是：倒 4 这条 list 里画的是不是 TAAU、它写的目标是不是后缓冲。
 
+> **2026-10-25 16:0x 更正**：上面「插入点 = 尾部 k=4」只在**暂停界面 69 个 list** 这一种帧形上成立。
+> 世界内 list 数在 69/81 交替时，尾部 4 会落到 UI 之后，HUD 被我们的旁路覆盖（§13.8 04:22 实测）。
+> **任何 head/tail 计数都不是跨场景可用的边界**，最终要按内容认 list；在认清之前，k 只是面板上的手选参数。
+> 下一步的判定办法见 §14.4 B1c（把后缓冲在切点截图，直接看这个切点看到的世界）。
+
 ⇒ 尾部 k=4 在两次测量里都稳定（list 数 74 / 77，范围 73..113 / 75..115 都在变），**从头部数的 k 会跟着漂**。
 
 仍待确认：世界内的 HUD（血条 / 快捷栏 / 准星）在倒 3 / 倒 2 还是在世界合成里——这决定 k=4 是否足够。
@@ -491,9 +505,12 @@ B0 的 P0.4 按「两个对象、整窗采样」重新定位，不再假设偏�
   交给 P0.1；NR 行为不变。
 - 外部工具（不进 mod 仓库）：`NeuroDragonWorkSpace/tools/vv_domain.py`（P0.2/P0.3：域判定 +
   color 候选排序 + 深度候选统计 + 对比图）、`vv_ctx.py`（P0.4：矩阵/jitter/原点候选）。
-- 部署：2026-10-25 03:38 TEST 构建 `1b8629a3…` 已**热替换**到本工作区（游戏运行中无法直接覆盖，
-  按「改名 → 换入」完成；当前进程仍用旧映射，**重启后生效**）。旧 DLL 备份 `.bak-before-m6b0`
-  与 `.old-live`；主目录 `1.26.51.01` 未动。
+- 部署：2026-10-25 05:0x 色调诊断构建 `43d5991e…` 已热替换到本工作区（游戏运行中按
+  「改名 → 换入」完成；当前进程仍用旧映射，**重启后生效**）。之前用于 03:44 dump 的
+  `1b8629a3…`、B1a 的 `5dbfaa12…` / `fac1c25b…` / `92cff8ff…` / `60d19af8…` 依次备份为
+  `.b1a-old` … `.b1a-old4`，B1b 的 `fe9d0bf5…` / `263410d8…` 备份为 `.b1b-old` / `.b1b-old2`，
+  `.k4test-old` / `.content-old` / `.content-old2` / `.scan-old` / `.tone-old` 是各诊断构建前的
+  备份；`.bak-before-m6b0` 保留。主目录 `1.26.51.01` 未动。
 - **2026-10-25 03:4x F9 崩溃与修复**：`dumpSemantics` 的回退遍历了**裸指针** `gSeen` 并调用
   `nr::describe()`，其中一个指针已被引擎释放 → AV 在 `D3D12Core.dll`（栈：`describe` ←
   `dumpSemantics` ← `onPresent`）。修复：新增**引用计数**的 `gHeld` 子集（只收 ≤1000×600 且
@@ -569,3 +586,457 @@ RTV 在 resize 钩子之前创建，已由 `gHeld` 修复。
 - **尺寸**：新尺寸稳定 12 帧才重建；两次重建至少隔 20 次求值；每会话上限 64 次；DRS 抖动期跳过。
 - **计时口径**：TAAU 仍跑时 A/B 的差值是 **DLSS 增量成本**，不是替换收益；净收益只在 B4 量。
 
+### 13.7 B1a：自建 NGX 会话探针（2026-10-25 已实现，待实机）
+
+**目的**：只验证「VV 里能自建 NGX 会话并建出 DLSS-SR feature 1」，不 evaluate、不碰任何引擎纹理、
+不改变画面。离线 `ngx_probe --sr` 已证路径可行；这一步是在**游戏自己的设备**上重复一遍。
+
+实现：
+
+- `src/neurodragon/vv/VvDlssSr.{h,cpp}`（独立 `<d3d12.h>` TU）；
+- 面板 `诊断 → VV DLSS B1a (TEST)` 一个按钮 `Probe self-init NGX + CreateFeature(1)`；
+  `requestProbe()` 只置原子位，真正的工作在下一个 Present 的 `runPending()` 里做；
+- core 路径：`System32\_nvngx.dll` → `System32\nvngx.dll` → DriverStore 的
+  `nvami.inf_amd64_*\_nvngx.dll`（本机实际走最后一条）；
+- 会话：`NVSDK_NGX_D3D12_Init_Ext(0x0876232C, %TEMP%\NeuroDragon\NGX, engineDevice, 0x15, null)`；
+  失败再试 `Init_ProjectID`（不带 FeatureCommonInfo）；
+- `GetCapabilityParameters` → 写 `Width/Height/OutWidth/OutHeight`、`PerfQualityValue=3`、
+  `CreationNodeMask/VisibilityNodeMask=1`、`DLSS.Feature.Create.Flags=1`（IsHDR、不设 MVLowRes）；
+- 自建临时 allocator/list/fence，`CreateFeature(1)` → `Close` → 在游戏队列上执行 → fence 等待 3 s
+  → `ReleaseFeature`；全程只读引擎设备，不碰帧。
+
+**验收（重启后点一次按钮）**：
+- 日志：`[vvsr] Init_ProjectID(pathlist) ret=0x00000001`、
+  `GetCapabilityParameters ret=0x00000001`、`CreateFeature(1) ret=0x00000001`、
+  `B1a OK: feature 1 created and released (…)`；
+- 面板 `B1a NGX returns` 显示 `init=1 caps=1 create=1`，尺寸正确；
+- 画面与点击前逐帧一致（TAAU 照跑），无崩溃。
+
+**2026-10-25 04:04 首次 B1a**：`init=1 caps=1 create=0xBAD0000B`（UnableToInitializeFeature）。
+原因：第一次实现用 `Init_Ext(..., nullptr)`，没有给 core 任何模型搜索路径，它找不到 exe 同目录的
+`nvngx_dlss.dll`。修复：改用 `Init_ProjectID` + `FeatureCommonInfo.pathList = [游戏 exe 目录]`
+（`ngx_probe` 的同一形状）；path list / common info 存成静态对象，因为 core 可能到
+`CreateFeature` 时才去加载模型。新构建 `60d19af8…`。
+
+**2026-10-25 04:08 实机通过**：`Init_ProjectID(pathlist) ret=0x00000001`、
+`CreateFeature(1) ret=0x00000001`（handle 非空）、`ReleaseFeature ret=1`；
+尺寸 **1689×903 → 2560×1369**（当前用户是 66% 上采样）。**B1a ✅**。
+
+**失败处理**：任何一步返回非 1 都只记录并停止，不创建 feature；若 `Init_Ext` 让客户端崩，
+说明这条会话路径在游戏进程里不可用，B1 回到「VV 只做读数」并记录证据。
+
+### 13.8 B1b-1：颜色旁路（2026-10-25 已实现，待实机）
+
+**目的**：在 B0 已验证的尾部 k=4 插入点，用我们自己的 compute 读渲染分辨率颜色、按 B0 测得的
+**ACES + gamma 2.2** 编码，再拷回后缓冲。画面会变成 TAAU 的模糊替代品，但 UI/HUD 仍在——
+这一步确认注入点、颜色输入、色彩域和拷贝路径都成立，还不接 DLSS。
+
+实现：
+
+- `src/neurodragon/vv/VvBypass.{h,cpp}`：一个 compute shader（`Texture2D<float4> Src` → RGBA8 UAV），
+  ACES + gamma，采样渲染分辨率颜色、双线性放大到后缓冲尺寸；`CopyTextureRegion` 写到后缓冲。
+  PSO/root signature/描述符堆/输出纹理按需创建，输出随窗口尺寸重建。
+- `probe/VvInject` 增加 `Action::Bypass`；`record()` 在 Bypass 动作下直接调
+  `vv::bypass::record()`，不再清屏；失败则当帧不注入。
+- 面板「诊断 → VV DLSS B1b (TEST)」：**「Colour bypass at tail k=4」** 一键把注入设成
+  Fixed + 从尾部 k=4 + Bypass；「Stop injection」恢复。
+- 颜色输入从 `VvProbe::renderTargets()` 取**最新的渲染分辨率 fmt26**；`gHeld` 的尺寸门已从
+  ≤1000×600 放宽到 ≤2048×1200，覆盖当前 1689×903 的渲染尺寸。
+
+**已知假设（第一次实测要验证）**：颜色纹理在 TAAU 之后按 `ALL_SHADER_RESOURCE` 读取（不插屏障）；
+后缓冲在 k=4 时按 `PRESENT` 处理（与 M5 清屏实验相同）。若画面黑/花，下一版把颜色前后状态做成
+面板可选项（`ALL / COMMON / PIXEL|NON_PIXEL`）再测一次。
+
+**验收**：
+- 按按钮后画面变成明显的“模糊但颜色/曝光接近原图”的世界画面，**HUD 仍在**；
+- 面板 `B1b sizes` 显示 `1689x903 -> 2560x1369 fmt=26 recorded=1`；
+- 不崩；「Stop injection」下一帧恢复原画面。
+
+**2026-10-25 04:15–04:16 首次实机**：开头有效且“很明显”，约 40 秒后失效；日志
+`bypass: no render-size fmt26 colour (0 target(s) visible)`。原因：`gHeld` 环形被 UI 图集
+（1024×1024 等）填满，把渲染图的颜色挤掉了；`VvInject` 因此每帧跳过（`record failed`），画面回到 TAAU。
+修复：
+1. `VvBypass` **缓存选中的颜色资源并 AddRef**，直到 `renderGeneration`（resize / 进世界）或
+   渲染尺寸变化才重新选——环形再挤也不会丢；
+2. `gHeld` 排除**正方形**纹理（图集），环形扩到 256；
+3. `renderGeneration` 在 resize / 进世界时递增，缓存不会跨重建拿旧纹理。
+新构建 `263410d8…`。
+
+**2026-10-25 04:22 推翻「尾部 k=4 稳定」的旧结论（世界内）**：B1b 稳定后 UI 闪、随后消失，
+**手还在**；注入没有跳过（`skipped=0`），但 list 数在 **69/81 交替**。69 时 tail-4 = head-66
+（世界合成后、UI 前）；81 时 tail-4 = head-78，晚 12 个 list，HUD 被旁路覆盖。⇒ 世界内 UI 块
+大小会变，tail 计数不是内容边界。随后用 head 66 测试：**游戏内正常，但主菜单被擦掉**——
+主菜单的 UI 块位置与游戏内不同（用户还提到上采样系数从 33% 改到 66%，帧形可能与旧表不同）。
+⇒ 任何 head/tail 计数都不能跨场景成立，必须按内容认 list。
+
+**2026-10-25 04:3x 内容边界（B1b 的正确答案，已实现）**：任何 head/tail 计数都解释不了
+「主菜单与游戏内、69/81 两种帧形」——head 66 在游戏内正确、在主菜单却把主菜单擦掉，说明
+**场景不同、UI 块位置不同**。改为**按内容认 TAAU list**：
+
+- `drawDetour` 在调用原回调时，扫描执行上下文（第 2 个参数，深一层）、TAAContext、self、fourth
+  的 qword；若某个指针的 vtable 等于**引擎命令列表 vtable**（`hookCommandList` 里记录的），
+  或该 vtable 的槽 9 等于已知 `Close`，就把这个指针当作「TAAU 正在录制的 list」；
+- 全程只读 + `readable` 守卫，不挂钩任何未验证的槽；找不到就不认，不猜；
+- `executeCommandLists` 里在该 list 的数组位置 +1 处切分（`VvInject::setUseTaauList(true)`），
+  与 list 总数、tail/head 计数无关；
+- 日志 `[vv] taau list=... from exec +0x...` 和
+  `[vv] inject: taau-list boundary head=.../...`；面板 `B1b taau list: captured/not captured`。
+
+若扫描不到（上下文里没有 list 指针），回退到面板的 head/tail k；这只是后备，不是结论。
+构建 `c63a9d3c…`，待实机验证「世界内 + 主菜单都保留 UI」。
+
+**2026-10-25 04:4x 浅层扫描失败（`not captured`）**：执行上下文第一层没有 list 指针。
+已改为**按需深层扫描**：从 exec 走最多 3 跳、TAAContext/self/fourth 走 2 跳，
+512 节点 / visited 去重 / 每节点 0x100 字节，仍只读；B1b 按钮会请求一次扫描，
+面板仍显示 `captured/not captured`，日志给 `deep scan found nothing` 或命中的偏移。
+构建 `167796d8…`。如果深层也找不到，下一步是**单槽标定 DrawInstanced（slot 12）**，
+用 `gInTaauDraw` 标志直接抓当前 list——那条路有 hook 风险，必须先离线/自建 list 标定。
+
+**2026-10-25 04:49 深层扫描也失败**：日志 `deep scan found nothing (213..298 nodes)`。
+⇒ 执行上下文/回调对象图里没有引擎 list 指针，内容边界这条路在当前可读对象里走不通；
+B1b 仍回退尾部 k=4。**DrawInstanced 标定成为下一步**，不是继续加深扫描。
+
+**2026-10-25 04:5x 色调诊断**：回退 tail 4 时主菜单没有消失，但存档内颜色“很奇怪”。这不是
+边界问题，而是**颜色候选或色调曲线**不对：渲染分辨率下有多个 fmt26（最终色/历史/中间面），
+以及我们的 ACES 曲线是在 33% 那一帧拟合的，66%/另一个存档的曝光可能不同。
+已加面板诊断：
+- **Next colour candidate**：在 `renderTargets()` 的 fmt26 候选间循环（缓存随之失效），
+  面板显示 `choice=x/N` 与指针；日志列出每个候选的 `ptr/WxH`。
+- **Cycle tonemap**：`0 = ACES+gamma`、`1 = gamma only`、`2 = ACES only`，
+  用来区分“选错颜色”与“曲线不对”。
+构建 `43d5991e…`。下一步由这两组 A/B 决定是固定候选选择还是改色调映射。
+
+---
+
+## 14. 接手审查与 B1c 计划（2026-10-25 16:0x）
+
+> 本节是**现行计划**，与 §13 的时间线冲突时以本节为准。§13 保留为证据。
+>
+> 一句话：**「颜色很奇怪」不要用手摇曲线去解**——把**同一帧的后缓冲**（= TAAU 的输出）截下来当参考，
+> 和候选纹理、深度一起 dump，离线一次定死颜色、色调与切点；然后直接做 DLSS。
+> B1b 的目标是「验证切点 + 颜色域」，它已经达成（04:15 起画面成立、1920 帧 `skipped=0`）；
+> 它没达成也不该由它达成的是「把画面调得像 TAAU」——那是 DLSS 上屏之后用参考图去对的活。
+
+### 14.1 已经可以当依据的（强证据）
+
+| 结论 | 证据 |
+|---|---|
+| 引擎整帧一次 `ExecuteCommandLists` 带 ~48 个 list；拆成「前缀 + 我们的 list + 后缀」在同队列上执行成立 | M5 洋红实测（§12 A）；B1b 世界内连续注入 1920 帧、`skipped=0`（04:50 日志） |
+| `taau` 每帧 1 次声明 + 1 次 draw；factor / jitter / viewport / 四个依赖的语义 | §2–§3 |
+| 引擎设备从它自己提交的 list 反取；`F11` 重建后再读 RTV 清单是抓引擎资源的通用手法 | §5.1 |
+| VV 下没有 NGX，自建会话 + `CreateFeature(1)` 能建出 DLSS-SR（release 返回 1） | B1a 04:08（1689×903 → 2560×1369） |
+| **VP 矩阵不含 jitter**（静止时 `prev(n) == cur(n-1)`，而同帧 jitter 在变） | P0.4。⇒ MV 用未抖动矩阵算、jitter 单独交给 DLSS，正好是 DLSS 的契约 |
+| 深度主候选 = `fmt44`（`fmt41` 恒 1.0、`fmt54` 是 D16 副本） | P0.3 |
+| 注入列表/边界的机制、`Release` 与并发重建两条崩溃教训 | §9、§12 A |
+
+### 14.2 不能当依据的（弱结论 / 已过期）
+
+| 说法 | 问题 | 处置 |
+|---|---|---|
+| 「color = 最新的渲染分辨率 `fmt26`」 | 「最新」是 `gHeld` 环的**插入顺序**，不是语义；`VvBypass` 取 `candidates[0]`，与 TAAU 真正读的那张没有直接对应关系 | B1c 用参考图定 |
+| 「ACES + gamma 2.2」 | 33% 下的 844×475 **单帧**拟合（MAD 26.3/255），被直接用在 66%、另一个存档；10% 的残差说明还有一项没建模（**曝光**最可疑） | B1c 用参考图拟合 LUT，先看残差 |
+| 「插入点 = 尾部 k=4」 | 只对 69 个 list 的暂停界面成立；世界内 69/81 交替时 HUD 被覆盖（04:22） | B1c 换一种问法：直接看每个切点截下来的图 |
+| 「不能按公开头文件的槽号挂钩」 | 错的，见 §14.3 ① | 更正 |
+| MV 公式 | P0.5 只到「数据齐了」；矩阵/相机位置/远处的 w=0 都还没在一条真实路径上比过 | B2 的 MV 调试视图 + 同帧差分 |
+
+### 14.3 三处更正
+
+**① 槽号可以查公开头文件；25 不是 `OMSetRenderTargets`。**
+本机 SDK 的 `d3d12.h`（`D:\Windows Kits\10\Include\10.0.26100.0\um\d3d12.h`）里接口的声明顺序就是运行时
+vtable 顺序，本项目**已经实测对得上**的：`Close=9`（每帧 49 次，正在用）、`DrawInstanced=12`、
+`DrawIndexedInstanced=13`、`CreateRenderTargetView=20`（RTV 清单正在用）、`CreateCommittedResource=27`、
+`CreatePlacedResource=29`。10-24 22:0x 崩在槽 25，是因为**把 25 当成了 `OMSetRenderTargets`**；
+25 实际是 `SetPipelineState`（`rdx` = 对象指针、`r8` = 残留值，与 `(UINT, const HANDLE*)` 的形状不符，
+与当时的日志一致）。对应表：`OMSetRenderTargets=46`、`ClearRenderTargetView=48`、`ResourceBarrier=26`、
+`SetDescriptorHeaps=28`、`Dispatch=14`、`CopyTextureRegion=16`。
+**但「槽号对」不等于「批量挂钩安全」**：任何新槽只允许**纯转发**（detour 不改参数、直接调 trampoline），
+并且先拿**我们自己的** command list 按头文件调用一次确认命中，再上引擎的 list。这条是给 B1d 用的。
+
+**② 尾部 k=4 只是当时那个界面的答案**（§12 A 的结论已被 04:22 的世界内实测推翻，读 §12 时以更正条为准）。
+
+**③ 颜色纹理的读取没有屏障，这比色调曲线更可疑。**
+`vv/VvBypass.cpp` 里给颜色建 SRV 后直接 `Dispatch`，没有 `RENDER_TARGET → NON_PIXEL_SHADER_RESOURCE`
+的转换，注释里写的是「假设引擎在 TAAU 之后已经把它留在 ALL_SHADER_RESOURCE」；而
+`probe/VvCalibrate.h` 的 `DumpState` 注释恰好记过：**状态猜错，读回来的是全零或旧数据**（VV 纹理
+当时就是全零）。所以「颜色很奇怪」在动曲线之前必须先排除这一条——B1c 的候选 dump 会按状态各 dump
+一次，用「有数据的那个」反推真实状态。
+
+### 14.4 计划
+
+| 批次 | 内容 | 成本 | 退出条件（用户可见） |
+|---|---|---|---|
+| **B1c** 切点取证 | 一个构建：注入时把**后缓冲**拷进自有 readback、fence 完成后写 BMP；`Sweep` 对尾部 k=1..8 各截一帧；同帧 dump 候选 + 深度 + taau 参数 | 4–6 h 代码 + **1 次开机**（约 10 分钟）+ 1–2 h 离线 | 8 张切点图（哪张有 HUD / 手臂）+ 一张「参考 vs 最佳候选」对比图 + 面板上的 colour 指针与 LUT 残差 |
+| **B1d** 内容边界（**条件触发**） | 只在 B1c 判「尾部 k 跨场景不稳」时做：纯转发挂 46 / 12，按「绑定后缓冲 + 恰好 1 次 draw」认 TAAU 的 list | 1–1.5 天 | 洋红实验：世界洋红、HUD 仍在，且换场景后边界不变 |
+| **B2** DLSS 上屏 | 沿用 §13.6 的口径（HDR flag、`DepthInverted`、`MV.Scale=1`、一次 compute、PS/拷贝写后缓冲），加上 B1c 定下的颜色与色调 | 2–3 天 | `F8` A/B 可见；HUD 在；同帧参考 vs DLSS 的差分图无错位；10 分钟 / F11 / 重进世界不崩 |
+| **B3** 收尾 | 面板读数、失败自动停用、文档、TEST + release 双构建 | 1–2 天 | 验收清单 + release 部署 |
+
+**B1c 的具体做法**
+
+1. `probe/VvInject` 增加 `Action::Capture`：在我们自己的 list 里
+   `后缓冲 → COPY_SOURCE → CopyTextureRegion(自有 readback)`，再把状态还回 `PRESENT`；
+   **不改画面**，也不碰任何引擎纹理。提交后由现有 fence 判断完成，随后 `writeBmp` 落盘。
+2. 面板「Capture sweep」：`Sweep` + `Capture`，尾部 k=1..8，每档 1 帧。
+   **k=1 = 整帧之后**（最终画面，含 HUD），k 越大越早——8 张图连起来就是「这 8 个 list 各画了什么」。
+3. 同一会话再扫一组（转视角），用来分开「当前色」与「历史色」：历史色在转动时会滞后。
+4. 同帧顺手跑现有 dump（`fmt26/28/44` + taau 参数），文件名带指针与 qpc。
+5. 离线 `NeuroDragonWorkSpace/tools/vv_cut.py`（不进 mod 仓库）：
+   ① 按 k 排序并标出**第一张出现 HUD** 的；② 每个候选与参考做块相关（先降采样 + 归一化，与色调无关）；
+   ③ 对最佳候选拟合单调 LUT，输出残差与 `_vv_match.png`（参考 / 最佳候选 / 差异三联）。
+6. 判据：块相关 ≥ 0.99 且 LUT 残差 ≤ 2/255 ⇒ 颜色与色调都定；残差 > 8/255 ⇒ 色调里有随场景变化的项
+   （查曝光），此时 B2 先固定近似曲线，把「读曝光参数」另立一条。
+7. 对象图深扫与 `taauList` 分支（两条路都已证伪）留到 B1c 之后清理：本轮不动探针，免得在采集构建里
+   引入新变量。其中 `methods[9] == gOriginalClose` 这个兜底比较本身是死的——MinHook 不改 vtable，
+   只改函数序言。边界回到「面板上的 k」，直到 B1d 给出内容边界。
+
+**B1c 实现（2026-10-25 16:2x，TEST 构建 `c8cb017e…`，已热替换到本工作区；旧 `43d5991e…` 备份 `.b1c-old`）**
+
+- `vv/VvCapture.{h,cpp}`：`record()` 在我们的 list 里把后缓冲拷进自有 READBACK，4 个槽的环，
+  fence 没过就整帧跳过（不覆盖上一张）；`onSubmitted()` 在拆提交之后于同一队列 `Signal` 捕获 fence；
+  `presentHook` 里的 `poll()` 映射已完成的槽并写 BMP
+  `vv_cut_<seq>_k<split>_of<count>_tail<k>_<w>x<h>.bmp`（游戏根目录）。
+- `probe/VvInject`：`Action::Capture`；`setSweepDepth(8)` 让一轮只走尾部 k=1..8，跑完自动关注入
+  （一轮 = 每档一张图）；每档 hold=1，避免同一个 k 连拍多张。
+- `probe/VvCalibrate`：导出 `writeBmpRgba8()`，复用原来的 24 位 BMP 写法。
+- 面板「诊断 → VV B1c cut capture (TEST)」：`Capture sweep: tail k=1..8 (one pass)` / `Stop capture`，
+  读数 `captured/skipped/pending`、`tail/split/of`、最后文件名。
+- 离线 `NeuroDragonWorkSpace/tools/vv_cut.py`：切点联表 `_vv_cut_strip.png`、相邻切点平均差
+  （哪一档多出了一个 UI 块）、候选与参考的结构相关排名、单调 LUT 拟合与残差、`_vv_match.png`、
+  `_vv_curve.png`（散点：紧贴曲线 = 固定色调；散成一团 = 含曝光或选错纹理）。
+- **一次会话的采集顺序**：进世界 → 按一次 `F11` → 站定 → 面板按 capture（约 8 帧，画面不变）
+  → **立刻**按 `F9` 或 B0 的「Dump now」（候选 dump；相机必须还没动）→ 退出 → `python vv_cut.py --dir <版本目录>`。
+
+**B1c 的备用分支**（只在第 6 条判「残差大且不是选错候选」时走）：从引擎的 PSO 里把 TAAU 的 shader
+字节码 dump 出来，把 tonemap / jitter / reprojection 直接读出来，而不是拟合。只需三个**纯转发**钩子：
+device 的 `CreateGraphicsPipelineState=10`（存 bytecode）、list 的 `SetPipelineState=25`（记当前 PSO）、
+`DrawInstanced=12`（记这一 draw 用的是哪个 PSO）；随后离线反汇编。代价约 1 天 + 一个 DXBC/DXIL 工具，
+但这条能一次性把色调和 MV 两个未知都答掉。
+
+**不做的事**（都是这半天的教训）：不再扫回调的对象图找 list；不在游戏里手摇色调曲线；
+不做批量槽标定；不在 B1b 上继续加功能；不为 33% 与 66% 各拟合一套。
+
+### 14.5 B1c 结果（2026-10-25 16:37 采集，2560×1440 全屏、66% 上采样、70 个 list）
+
+**切点（看画面，不猜 k）**：8 张尾部切点里，只有 **tail 5 → tail 4** 这一档整个画面变了
+（中心区平均差 **31.19/255**），其余相邻档差 ≤ 0.21。读法：
+
+| 尾部 k | 画面 | 结论 |
+|---|---|---|
+| 8 … 5 | 世界 + **上一帧的侧栏面板与 HUD** | 这一帧的**世界合成还没发生**：引擎在这几档完全没动后缓冲（画面上是上一帧留下的内容，包括我们自己的 ImGui 面板） |
+| **4** | **世界，无 HUD、无手** | **list 67 = 世界最终合成**（一张全屏 pass 覆盖整个后缓冲）⇒ 插入点 |
+| 3 | 世界 + 手 + 快捷栏 + 准星 | list 68 = 手 / HUD 层 |
+| 2 / 1 | 再加坐标与小头像 | list 69 / 70 = 其余 UI |
+
+⇒ 在这一帧里，**世界合成之后只有 3 个 list**，`tail 4` 正好落在合成之后、UI 之前；
+手与 HUD 是**显示分辨率**、在合成之后直接画进后缓冲的（所以我们的输出只要覆盖世界，不碰 UI）。
+
+**颜色**：候选里 `fmt26` 1689×950（本次 `res_100`，ptr `0x1F7AACC6010`）秩相关 **0.9875** 最高，
+101/102 是历史/中间面（0.9824 / 0.9644）。**色调不是 ACES**：用 B1c 的帧对重新拟合，
+
+| 模型 | 残差（中心 2/3，0..255） |
+|---|---|
+| 逐通道 64 节点单调曲线（拟合） | **2.31** |
+| 单条幂函数（逐通道增益） | 6.34 |
+| ACES + gamma 2.2（B0 用的） | 21.40 |
+| 纯 gamma 2.2 | 28.87 |
+| sRGB | 30.07 |
+
+**跨会话复验**：用 03:44 那次（33%）的 dump + F2 截图独立拟合一遍，两条曲线在中段一致
+（x=0.15: 0.52 vs 0.55；x=0.30: 0.72 vs 0.74；x=0.45: 0.77 vs 0.74）⇒ 这是**显示编码**，
+不是随场景变化的 tonemap；颜色缓冲里已经带了色调映射，TAAU 只做「线性 → 8 bit 显示」这一段。
+
+**落地**：
+
+- `vv/VvTone.h`：把测得的编码存成 3×33 表（二次网格，暗部密），以两个 root-constant 块
+  （64 + 35 floats）交给 shader；`vv/VvBypass.cpp` 用它替换 ACES（面板「Cycle encode」可切
+  table / gamma / ACES+g 对照）。
+- 离线工具：`vv_cut.py`（切点联表 / 候选排名 / 曲线拟合）、`vv_tonefit.py`（模型对比）、
+  `vv_curvecheck.py`（两次会话的曲线是否一致）、`vv_gen_tone.py`（生成 `VvTone.h` 的表）。
+- TEST 构建 `6fe07a45…` 已热替换到本工作区（上一版 `c8cb017e…` 被覆盖，同一源码可重建；
+  `43d5991e…` 仍在 `.b1c-old`）。
+
+**仍未答的两件事**：
+
+1. ~~`tail 4` 在别的帧形是否成立~~ → **已改：不再数尾巴，改用内容边界（§14.6）**。
+2. 编码曲线只在**白天**两个场景验过。夜间/洞穴/强曝光差异下要再抓一帧复验（同一条工具链）。
+
+### 14.6 内容边界（B1d，2026-10-25）：按「谁写了后缓冲」认，不数尾巴
+
+**问题**：`tail 4` 只在 70 个 list 的那一帧对。世界内的帧形会在 69/81 之间变，暂停界面又是另一种；
+2026-10-25 04:22 的旁路就是把 HUD 冲掉了。**计数天生会漂**——它描述的是「离结尾多远」，
+而我们要的是「世界合成之后」。
+
+**不变量**（B1c 的画面已经证明）：一帧里只有**一个** list 写整个后缓冲（世界合成），它之前的 list
+一次都没碰过后缓冲，之后才是手 / HUD / UI。所以锚点是「这一帧**第一个绑定后缓冲并 draw** 的 list」，
+与帧有多少个 list 无关。
+
+**实现**（纯转发：不改参数、不碰资源状态）：
+
+- `OMSetRenderTargets` = 槽 **46**、`DrawInstanced` = **12**、`DrawIndexedInstanced` = **13**
+  （公开头文件的声明顺序；本项目已实测对上的还有 `Close=9`、`CreateRenderTargetView=20`、
+  `CreateCommittedResource=27`、`CreatePlacedResource=29`）。
+- `noteSwapChain` 每次 Present 把「后缓冲资源 ↔ 它们的 RTV 句柄」对上（日志 `back-buffer view handles=`），
+  所以 `OMSetRenderTargets` 的热路径只比较几个整数，不做纹理查找。
+- 记录每帧「哪些 list 绑定过后缓冲」「哪些随后 draw 过」；`ExecuteCommandLists` 里按数组顺序取
+  **第一个** bound+drew 的 list，得到 1 基 split，`inject::prepare()` 直接用它当切点。
+- 面板：`B1b boundary` 显示 `content: back-buffer writer`，`B1d writer` 显示 `split= list=`；
+  日志 `[vv] content boundary split=…`（前 6 帧 + 失败时每 600 帧）。
+
+**自检（用户可见）**：面板「Capture at content boundary (1 frame)」截出来的图**必须不含 HUD 与手**。
+在世界、暂停菜单、背包界面各按一次，图仍然干净 ⇒ 锚点成立。这条同时验证三个槽没有错位
+（首个 `OMSetRenderTargets` 调用的 count/single/handle 会打在日志里）。
+
+**风险**：三个槽都是纯转发，猜错只会「看不见 / 看错」，不会像 10-24 的槽 25 那样把参数
+当结构体传进去崩掉；失败时 `split=0`，`inject` 自动退回面板上的 k。
+
+**第一次实机（2026-10-25 16:56–16:59）：钩子对了，句柄没找到。**
+`[vv] om rt #1 list=… count=1 single=1 handle0=… increment=32` ⇒ 槽 46 的形状完全正确；
+但 `bbHandles=0`、`back-buffer view handles=0`。原因：交换链后缓冲的 RTV 是**模组加载之前**创建的，
+`gRtvs`（CreateRenderTargetView 的句柄表）里没有它们；而重扫只在「交换链指针变化」时触发，
+16:59:11 引擎重新创建了两张 `2560x1440 fmt=28` 视图，却没有触发重扫。
+修复：**RTV 清单增长也触发重扫**（`rtv views=` 进日志）。这条同时也说明锚点能不能用，取决于
+「引擎会不会在钩子装好之后重建后缓冲视图」——B1d 的第二个不确定点。
+
+**顺手修掉的坑**：`Action::Capture` + `Mode::Fixed` 原本会**每帧**写一张 11 MB 的 BMP
+（16:58 那一分钟写了 1941 张、21 GB）。现在 Fixed+Capture 是**一次性**（截完自动关），
+并且 `capture::record()` 有 64 张的硬上限。已删掉那批 `tail0` 文件，保留 16:37 的 8 张。
+
+**兜底锚点（已埋好，只记录不使用）**：`RSSetViewports` = 槽 **21**（纯转发）。世界 pass 用渲染分辨率
+视口，合成与 UI 用显示分辨率视口，所以「这一帧第一个用显示分辨率视口并 draw 的 list」是后缓冲写者的
+替代判据。前 3 帧会打一行 `[vv] frame viewports #N: 0:1689x950 … 67:2560x1440 …`——
+如果句柄路线仍然拿不到，就按这一行来定判据，而不是继续猜。
+
+**第二次实机（17:03–17:04）：重扫生效，句柄仍然对不上。**
+`back-buffer view handles=8` 出现了（说明「RTV 清单增长也重扫」有效），但 `content boundary split=0`
+依旧，`marks` 大多 0、偶尔 1 —— 合成绑定的那个 RTV 句柄不在表里：后缓冲的视图是**模组加载前**建的；
+16:59 重建的几张又按「取最新 8 个」被后来的视图挤掉。已改为**按创建顺序取最早 32 个**，
+句柄日志只在数量变化时打（否则一次会话 3778 行）。
+
+同一轮还拿到了第一份**整帧清单**（视口 / 是否绑深度 / draw 形状）：
+48 个 list 的菜单帧里有三个显示分辨率视口（list 2 / 25 / 44）。这正是兜底判据要用的数据，
+所以诊断升级成「帧形一变就打一行」——世界帧（70 个 list）比菜单帧更有用。
+
+**兜底判据的数据来源**：`[vv] frame #N lists=M: 0:v… 1:v…`，每个 list 一段
+`v<宽>x<高>[z] d<draw 次数>[ s<顶点>x<实例>][ x<索引数>]`，例如
+`67:v2560x1440 d1 s3x1` = 该 list 用显示分辨率视口、绑了深度、画了一次三角形。
+拿到世界帧的这一行，就能定出「合成」的签名（预期：显示视口 + 无深度 + 一次全屏 draw），
+且这个判据完全不依赖句柄的创建时机。
+
+**第三次实机（17:09）：19 种帧形的整帧清单，锚点改成「签名」。**
+
+| 位置（相对帧尾） | 视口 | 绑深度 | draw | 判读 |
+|---|---|---|---|---|
+| 帧首 idx 2 | 显示分辨率 | 有 | 0 | 只设视口 / 绑 RT，不画 |
+| tail 23 | 显示分辨率 | 无 | 1 次（6 索引） | 一次全屏 blit |
+| **tail 3 / 4 / 5（随帧形变）** | **显示分辨率** | **有** | **恰好 1 次（6 索引）** | **世界合成** |
+| tail 3 | 显示分辨率 | 有 | 40–73 次 | HUD |
+
+48、49、50、51、55、58、59、62、65、69、70、73、74、75、81、82、102、107、108 这 19 种帧形里，
+**合成 = 显示分辨率视口 + 绑深度 + 恰好一次 draw** 的签名全部唯一命中（HUD 在个别帧里也只有一次
+draw，但排在合成之后，取**第一个**即合成）。而 tail 偏移在 **3 / 4 / 5** 之间变
+（58 / 62 / 65 个 list 的帧分别是 tail 5 / 3 / 3）——**这正好证明「数尾巴」会错**。
+16:37 用切点图量出来的 `split=67/70` 与签名算出的 67 完全一致。
+
+⇒ 运行时的切点顺序：**签名**（`via=signature`）→ 后缓冲句柄（`via=handle`，句柄表仍可能被
+overlay 的视图挤满）→ 面板上的 k。
+
+**第四次实机（17:13）：签名自检通过。** 在世界里按「Capture at content boundary」，
+注入点 `split=67/70`（`via=signature`），截出来的图是**世界 + 手、没有 HUD / 准星 / 快捷栏 / 坐标**
+（`_check_boundary.png` 由那张 BMP 转出）。手在合成里（渲染分辨率内），所以它本来就该出现在这层——
+DLSS 会像 TAAU 一样把它一起放大。
+
+顺带修掉一个「早一格」的边角：48 个 list 的帧里出现过一次 `split=45`（比合成早一格，注入的帧会被
+下一次合成覆盖回来，属于**无害但无效**的失败）。改法：**优先选「紧接着多 draw 的 HUD 那一格」的
+候选**（合成后面就是 HUD），没有这样的候选再退回第一个 —— 日志会写 `via=signature+hud`。
+TEST 构建 `01aac5bf…` 已热替换到本工作区。
+
+## 15. B2：DLSS-SR 上屏（进行中，2026-10-25 17:2x）
+
+### 15.1 管线
+
+引擎后缓冲在内容切点之后，我们的 list 依次做：
+
+```
+引擎 colour (fmt26, 渲染分辨率) ─┐
+引擎 depth  (R24G8, 渲染分辨率) ─┴→ prep compute → RGBA16F / R32F / RG32F（MV 先置 0）
+                                                        │
+                                    （下一步）NGX DLSS-SR：Color/Depth/MV → Output（显示分辨率 RGBA16F）
+                                                        │
+                              final compute：VvTone 编码 → RGBA8 → CopyTextureRegion 到后缓冲
+```
+
+### 15.2 现在能看的（B2a，构建 `8b6baaf8…`）
+
+面板「诊断 → VV B2 SR (TEST)」三个按钮，都用内容边界：
+
+| 按钮 | 看什么 |
+|---|---|
+| `SR colour bypass` | prep 出来的颜色 + 编码，应该和游戏画面几乎一样（只是无 SR 的糊） |
+| `SR depth view` | 深度图：近白远黑（reversed-Z），应有地形/树的结构 |
+| `SR motion view` | MV（现在恒 0 → 均匀紫）；接上重建后用来判断「静止为 0、前进径向、转视角切向」 |
+
+读数：`B2 pipeline`（是否就绪、渲染/显示尺寸）、`B2 inputs`（当帧选中的颜色/深度指针与格式）。
+
+为什么先做这几件：颜色与深度的格式/状态、编码、写回后缓冲——这四件正是 DLSS 的输入输出契约。
+它们能上屏之后，接 NGX 就只剩「参数表 + 求值」这一件未知。
+
+### 15.3 下一步
+
+1. **MV**：用 `TAAContext+0x200/+0x240`（未抖动 VP）、`+0x280/+0x28c`（相机位置）与深度重建；
+   用 `SR motion view` 验「静止为 0」。`DepthInverted=1`。
+2. **NGX**：B1a 已证的自建会话 + `CreateFeature(1)`；参数按 §13.6 写，`Reset` 每帧（先不做时间累积），
+   观察 `evaluateRet`。
+3. 再接 jitter 与时间累积、F8 A/B、计时。
+
+### 15.4 实机（2026-10-25 18:2x）：颜色链路验收通过
+
+- `SR colour bypass` 上屏 = 正常颜色、整屏覆盖；`Dump SR inputs` 的三张图对得上：
+  引擎颜色均值 0.10/0.13/0.18、prep 后的 `colorhalf` 一致、`final` 一致。
+- 踩掉四个坑，全写进代码注释：
+  1. **根签名寄存器重叠**：prep/final 两张描述符表都想用 `t0/u0`，D3D12 直接拒签
+     （`E_INVALIDARG`，序列化器原文："overlaps with another shader register range"）。改成
+     一张 SRV 表（6）+ 一张 UAV 表（4）。
+  2. **根签名 64 DWORD 上限**：99 个编码表常量当 root constants 必挂。编码最终改成**无参数的
+     逐通道幂函数**（R 0.332 / G 0.352 / B 0.405，残差 6.3/255），LUT 留作参考。
+  3. **CBV 里的表运行时读不全**：红屏（只有 R 行有效）。离线同一张表套同一张图是正常的，
+     所以放弃 CBV 路线。
+  4. **final 尺寸用了 TAAU viewport（2560×1369）而不是后缓冲（2560×1440）** → 底部 71 行黑边。
+     改成以后缓冲自身尺寸为准（DLSS 的输出尺寸也必须如此）。
+- 深度视图：reversed-Z 的数值挤在 0.97–1.0，显示改成 `(1-d)*20` 才有对比。
+
+**B2b（DLSS 接线，构建 `4714da92…`）**：`vv/DlssSr` 增加常驻 feature（`ensureSrFeature` /
+`evaluateSr` / `releaseSr`）；`VvSr` 在 `View::Dlss` 下：prep → NGX evaluate（`Reset=1`、`MV=0`、
+`DepthInverted=1`、`MVScale=1`）→ 把输出当 t2 → 编码 → 写后缓冲。面板 `SR + DLSS` 按钮，
+读数 `B2 DLSS: feature= create= eval=`（1 = 成功）。
+
+### 14.7 待用户拍板
+
+| 选项 | 内容 | 代价 |
+|---|---|---|
+| **A（推荐）** | B1c → B2 → B3；B1d 按需插入 | 3 次开机，颜色/切点一次定死，B2 的第一次上屏就有可对比的参考 |
+| **B（最快看到 DLSS）** | 跳过 B1c，颜色沿用「最新 fmt26 + ACES」直接做 B2 | 省 1 天；第一次 DLSS 上屏的颜色仍然可能不对，回头再修 |
+| **C（先交付旁路）** | B1c → 修好 B1b 并交付一版「VV 里能看的 SR 旁路」→ 再 B2 | 多 1–2 天；每一步都能上屏 |
+
+
+
+## 16. 实机：DLSS 常驻（2026-10-25 23:13-23:16，构建 `1337c195…`）
+
+**已确认**
+
+- `EvaluateFeature` 从 f=1 到 f=18600 全部 `ret=0x1`（3 分 14 秒，2560×1440，渲染 1689×950）；
+  注入 0 跳过，HUD / 手 / 准星 / 坐标都在（`docs/agent/evidence/dlss-on-screen-3min.log` 与同会话截图）。
+- 上一轮「约 27 s 后掉回 TAAU」的机制：深度清单只有 8 槽，引擎每 ~6 s 新建一张 `128×128` 深度，
+  第 8 张（23:05:30.235）正好把 `1689×903` 主深度挤出环，紧随其后的 re-pick（.239）拿到 0 张。
+  修法：环扩到 64 槽 + 清单拒收 < 显示尺寸/4 的纹理 + 淘汰大尺寸条目时 warn（EXP-0004）。
+
+**未解决（用户观察，均有原始证据，尚未定位到根因）**
+
+1. **回主菜单后背景被覆盖**：菜单里 SR 仍在跑（`inject fixed k=46/48`、`eval=1`），且用的仍是世界里
+   那份 colour/depth（指针从 f=2 到 f=18600 没变）。截图显示菜单背景就是世界最后一帧（含第一人称的手），
+   即注入把进世界时选中的 colour 一直用到菜单。⇒ 颜色输入应当跟着引擎的 taau 声明走（§6 的 `in.color`
+   在深扫里能读到 `res=`），而不是只在 generation 变化时选一次。
+2. **底部约 6–11 行黑边**：我们的写回是整资源拷贝（`sr buffers 1689x950 -> 2560x1440`，`CopyTextureRegion`
+   无 region），同日游戏自带 F2 出图 2560×1440 **无黑边**；用户两张图为 2559×1439 / 2558×1439。
+   ⇒ 待确认：黑边是屏幕上肉眼可见（那就要在拷贝后加探针），还是只在截图里（截图/窗口边缘）。
+3. **切场景时约 0.78 s 冻结**：世界内稳定 99–100 fps（每 ~21 s 有一段 3 秒的 77–82 fps，非单帧卡死）；
+   唯一的长帧 `779.6 ms at present #20003`（23:16:17.850）与 taau 深扫的 11 行同步 dump
+   （23:16:17.154→17.848，每行 ~70–120 ms）完全重合。⇒ 冻结来自深扫，不来自 SR 管线。

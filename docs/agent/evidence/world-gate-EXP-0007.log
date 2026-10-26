@@ -1,0 +1,31 @@
+# EXP-0007 failure: SR did not resume after re-entering a world
+# run 2026-10-25 23:36 (build 6ccfef1c, ll::service::getLevel() gate)
+
+## level transitions observed by the gate
+[2026-10-25 23:31:09.068 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:31:54.083 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-25 23:36:10.885 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:36:30.534 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+
+## the last world: line is the exit transition; nothing after it even though the
+## player re-entered a world at 23:36:48 (see the connected line below)
+[2026-10-25 23:36:01.067 WRN][Server] <LVL|2920339248> Player connected: Eragon3276538, xuid: 2535409079292133
+[2026-10-25 23:36:30.255 WRN][Server] <LVL|3685032752> Player disconnected: Eragon3276538, xuid: 2535409079292133, pfid: 123BB64BF366A90D
+[2026-10-25 23:36:48.841 WRN][Server] <LVL|2778082112> Player connected: Eragon3276538, xuid: 2535409079292133
+[2026-10-25 23:37:09.790 WRN][Server] <LVL|3859384384> Player disconnected: Eragon3276538, xuid: 2535409079292133, pfid: 123BB64BF366A90D
+
+## injection kept failing as 'recording the injected work failed' with no [vvsr] line
+[2026-10-25 23:37:09.646 WRN][NeuroDragon] [vv] inject skipped (4800): recording the injected work failed
+[2026-10-25 23:37:11.005 WRN][NeuroDragon] [vv] inject skipped (4920): recording the injected work failed
+[2026-10-25 23:37:11.711 WRN][NeuroDragon] [vv] inject skipped (5040): recording the injected work failed
+[2026-10-25 23:37:12.419 WRN][NeuroDragon] [vv] inject skipped (5160): recording the injected work failed
+
+## any [vvsr] line after the re-entry (23:36:48)?
+0
+
+## postmortem written after closing EXP-0007
+- getLevel(): 1 while the first world is loaded (23:36:10-23:36:30), 0 from 23:36:30 on,
+  and it never returned to 1 even though the player re-entered a world at 23:36:48.
+- The same build returned false from sr::record outside a world; the injector then logged
+  'recording the injected work failed' every ~1.2 s and no [vvsr] line appeared after
+  23:36:48 (count 0), i.e. the SR path never ran again in that session.

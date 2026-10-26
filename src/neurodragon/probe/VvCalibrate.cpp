@@ -67,6 +67,14 @@ void fillTables(std::index_sequence<I...>, std::array<void*, kSlotCount>& detour
 
 } // namespace
 
+unsigned rtvDescriptorIncrement(void* deviceVoid) {
+    if (!deviceVoid) {
+        return 0;
+    }
+    auto* const device = static_cast<ID3D12Device*>(deviceVoid);
+    return device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+}
+
 using SlotReporter = void (*)(char const*, int);
 
 // Kept for reference only - see the note in VvCalibrate.h. Nothing calls it.
@@ -599,6 +607,19 @@ bool dumpTextureRawAs(
     if (list) list->Release();
     if (allocator) allocator->Release();
     return ok;
+}
+
+bool writeBmpRgba8(
+    wchar_t const*       path,
+    unsigned char const* rgba,
+    unsigned             width,
+    unsigned             height,
+    unsigned             rowPitch
+) {
+    if (!path || !rgba || !width || !height || rowPitch < width * 4) {
+        return false;
+    }
+    return writeBmp(path, rgba, width, height, rowPitch, DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
 } // namespace neurodragon::probe::vv

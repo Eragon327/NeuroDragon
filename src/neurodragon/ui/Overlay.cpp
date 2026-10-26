@@ -5,6 +5,8 @@
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
+#include "neurodragon/vv/VvCapture.h"
+#include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/ui/GameNotice.h"
 #include "neurodragon/ui/InputGuard.h"
 #include "neurodragon/ui/Menu.h"
@@ -1308,14 +1310,19 @@ bool hookSwapChainEntryPoints(HWND gameWindow) {
 
 HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT flags) {
     probe::vv::noteSwapChain(swapChain);
+    neurodragon::vv::dlss::runPending();
     probe::vv::onPresent();
+    // B1c: map the cut captures whose fence has passed and save them as BMPs.
+    neurodragon::vv::capture::poll();
     render(swapChain);
     return gOriginalPresent(swapChain, interval, flags);
 }
 
 HRESULT __stdcall
 present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT_PARAMETERS const* parameters) {
+    neurodragon::vv::dlss::runPending();
     probe::vv::onPresent();
+    neurodragon::vv::capture::poll();
     render(static_cast<IDXGISwapChain*>(swapChain));
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
@@ -1366,7 +1373,7 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     // submissions in the order they arrive - so this is exactly "insert GPU work
     // between two passes". Off by default; prepare() returns 0 and the call below
     // forwards everything unchanged.
-    unsigned const splitAt = probe::vv::inject::prepare(queue, count);
+    unsigned const splitAt = probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
     if (splitAt != 0 && splitAt <= count) {
         if (ID3D12CommandList* const ours = static_cast<ID3D12CommandList*>(probe::vv::inject::list())) {
             gOriginalExecuteCommandLists(queue, splitAt, lists);

@@ -1,0 +1,14 @@
+# EXP-0005: ll::service::getLevel() on this client build (run 2026-10-25 23:31-23:32)
+# build b3958aff9f4d2161
+
+## world (SR started 23:31:09)
+[2026-10-25 23:31:09.068 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:31:10.836 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-25 23:31:11.830 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-25 23:31:12.831 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+
+## transition and menu
+[2026-10-25 23:31:54.083 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-25 23:33:08.150 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-25 23:33:09.150 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-25 23:33:10.155 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0

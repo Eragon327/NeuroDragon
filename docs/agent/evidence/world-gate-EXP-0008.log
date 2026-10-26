@@ -1,0 +1,19 @@
+# EXP-0008: event-driven world gate (run 2026-10-25 23:43-23:45, build b954bc27)
+
+## listeners registered at load
+[2026-10-25 23:43:46.197 IFO][NeuroDragon] [vv] level listeners join=true exit=true
+
+## gate follows every world enter/exit (1 = world, 0 = menu)
+[2026-10-25 23:44:16.083 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:44:58.096 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-25 23:45:07.455 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:45:19.831 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-25 23:45:25.107 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:45:28.165 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+
+## SR resumed by itself after re-entering (f=4200 at 23:45:11), ret=1
+[2026-10-25 23:45:11.872 DBG][NeuroDragon] [eval] f=4200 tid=30924 cl=0x2977704c180 h=0x299699076b0 1689x950 c=0x2977704b6e0 d=0x2977704ca00 mv=0x2977704f040 o=0x2977704d390 ret=0x1
+[2026-10-25 23:45:18.033 DBG][NeuroDragon] [eval] f=4800 tid=30924 cl=0x2977704c180 h=0x299699076b0 1689x950 c=0x2977704b6e0 d=0x2977704ca00 mv=0x2977704f040 o=0x2977704d390 ret=0x1
+
+## user report (verbatim)
+进世界正常，主菜单正常，再进世界SR恢复。

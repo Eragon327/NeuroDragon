@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 修复（2026-10-25 23:1x：VV 里 DLSS 常驻 + 输入清单不再被挤空）
+
+- `VvDlssSr`：`evaluateSr` 恢复 float 参数写入并改用运行时真名（`Jitter.Offset.X/Y`、`MV.Scale.X/Y`），
+  `EvaluateFeature` 从 `0xBAD00005` 变为 `1`（f=1..18600 连续 3 分 14 秒）；首次求值回读两个键到日志。
+  `scripts/agentflow/waivers.json` 里为此缺陷开的豁免已删除——门禁现在强制要求这两个键。
+- `VvProbe`：深度清单 `8 → 64` 槽；RTV/DSV 清单拒收小于显示尺寸/4 的纹理（mip、UI 图集、helper map）；
+  淘汰大尺寸深度时打 warn。原因：引擎每 ~6 s 新建一张 `128×128` 深度，8 槽环在第 8 张时把
+  `1689×903` 主深度挤出，下一次 re-pick 拿到 0 张，注入整段停摆（2026-10-25 23:05 实测）。
+- 文档：`docs/specs/vv.md` §16 记录实机结论与三个未解决观察（回菜单背景被覆盖、底部黑边、切场景冻结）。
+
+### 修复（2026-10-25 22:5x：VV 探针的周期诊断不再卡渲染线程）
+
+- 删掉两个「每 120 帧」的周期诊断：`[vv] close #N` 采样器（一帧在渲染线程同步写 49 行日志）
+  与 `taau` 深层扫描的 120 帧重试（每次走 ~270 个 framegraph 节点，一个会话四次全未命中）。
+  两者都只是诊断，注入切点仍由 `[vv] content boundary … via=signature+hud` 给出，判据不变。
+- 深层扫描改为只在显式请求（F11 / 面板）或开局前 4 帧执行。
+- 新增 `[vv] long frame {ms} ms at present #N`：只有 ≥25 ms 的帧才打（前 10 次 + 每 50 次），
+  以后判定「卡顿还在不在、在哪一帧」用这一行，不靠体感。
+
 ### 研究（2026-10-25：M6 B0 只读探针——VV 会话 / 颜色域 / 输入角色 / 矩阵）
 
 - 新增只读探针，不建 DLSS feature、不写任何引擎资源：
@@ -42,6 +61,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   （SDR 最佳 55.3，Reinhard 113.9）⇒ M6 用 ACES，不用 Reinhard。color = 渲染分辨率下最新的
   `fmt26`；depth = `fmt44` R24G8 主深度（`fmt41` 恒 1.0、`fmt54` 0..0.25 都不是）。
   P0.1 自建 NGX 会话、P0.4 VP/相机位置/jitter 均已答。B1 可开工。
+
+### 实现（2026-10-25：B1a 自建 NGX 会话探针）
+
+- 新增 `src/neurodragon/vv/VvDlssSr.{h,cpp}`：在游戏自己的 D3D12 设备上从 DriverStore 加载
+  `_nvngx.dll`，`Init_Ext`（万能 CMS id）→ `GetCapabilityParameters` → 用
+  `CreateFeature(1)` 建 844x475 → 2560x1440 的 DLSS-SR feature，执行临时命令列表并释放。
+  不 evaluate、不碰引擎纹理、不改变画面。
+- 面板 `诊断 → VV DLSS B1a (TEST)` 加按钮；请求在下一个 Present 的 `runPending()` 中执行，
+  所有返回值与 handle 写入 `[vvsr]` 日志和面板读数。
+- 自带临时 DIRECT 队列执行 feature 初始化，不占用/不插入引擎的提交队列。
+- 2026-10-25 04:04 首次实机：`init=1 caps=1 create=0xBAD0000B`。原因是 `Init_Ext(..., nullptr)`
+  没给 core 模型搜索路径，找不到 exe 同目录的 `nvngx_dlss.dll`。改为 `Init_ProjectID` +
+  `FeatureCommonInfo.pathList=[游戏 exe 目录]`，并把 path list / common info 存成静态对象
+  （core 可能到 CreateFeature 才加载模型）。
+- TEST 构建 `60d19af8…` 已热替换到本工作区（重启生效）；旧 `1b8629a3…` / `5dbfaa12…` /
+  `fac1c25b…` / `92cff8ff…` 备份为 `.b1a-old` … `.b1a-old4`。待实机再点一次按钮验收。
+- 2026-10-25 04:08 **B1a 实机通过**：`Init_ProjectID(pathlist)=1`、`CreateFeature(1)=1`（handle
+  非空）、`ReleaseFeature=1`，尺寸 1689x903 -> 2560x1369（66% 上采样）。
+
+### 实现（2026-10-25：B1b-1 颜色旁路）
+
+- 新增 `src/neurodragon/vv/VvBypass.{h,cpp}`：compute 读渲染分辨率 fmt26 颜色，ACES + gamma 2.2
+  双线性放大到后缓冲尺寸，`CopyTextureRegion` 写后缓冲；在尾部 k=4 插入，HUD 在之后照画。
+- `VvInject` 增加 `Action::Bypass`；面板「VV DLSS B1b (TEST)」两个按钮
+  （`Colour bypass at tail k=4` / `Stop injection`）。
+- 颜色输入走 `VvProbe::renderTargets()`；`gHeld` 尺寸门放宽到 ≤2048×1200，覆盖 1689×903。
+- 第一次实测要验证两个状态假设：颜色按 ALL_SRV 读、后缓冲按 PRESENT 处理；若黑/花，下一版把
+  颜色前后状态做成面板选项。
+- TEST 构建 `fe9d0bf5…` 已热替换（重启生效）；`.b1b-old` 备份 B1a 构建。待实机验收。
+- 2026-10-25 04:15 **B1b 首次实机**：开头有效、很明显；约 40 秒后失效。日志
+  `no render-size fmt26 colour (0 target(s) visible)`——`gHeld` 环形被 UI 图集挤满，渲染图颜色被
+  逐出，`VvInject` 每帧跳过，画面回到 TAAU。
+- 修复：`VvBypass` 缓存选中的颜色资源并 AddRef，直到 `renderGeneration`（resize/进世界）或尺寸
+  变化；`gHeld` 排除正方形图集、环形扩到 256；`renderGeneration` 在 resize/进世界递增。
+  TEST 构建 `263410d8…` 已热替换（重启生效）；`.b1b-old2` 是修复前构建。待再验。
+- 2026-10-25 04:22 **推翻「尾部 k=4 稳定」的世界内结论**：B1b 稳定后 UI 闪/消失、手还在。
+  注入没有跳过（`skipped=0`），但每帧 list 数在 69/81 交替：69 时 tail-4 = head-66（世界合成后、
+  UI 前，HUD 可见）；81 时 tail-4 = head-78，晚 12 个 list，HUD 被旁路覆盖。⇒ 世界内 UI 块大小
+  会变，tail 计数不是内容边界；与 vv.md §12 的「最终按内容认 list」一致。
+- 诊断构建 `fb4c6b52…` 增加 **「B1b: head k=66 (test)」**（Fixed + 从头部 66 + Bypass），
+  验证世界最终合成是否固定在第 66 个 list、额外 12 个 list 是否追加在后。已热替换，待验。
+- 2026-10-25 04:3x head 66 实测：游戏内正常，**主菜单被擦掉**（背景变、菜单消失）——
+  主菜单的 UI 块位置与游戏内不同，加上采样系数改成 66%，任何 head/tail 计数都不能跨场景成立。
+- 改为**内容边界**：`drawDetour` 只读扫描执行上下文，找 vtable 等于引擎命令列表的指针，它就是
+  TAAU 正在录制的 list；`VvInject` 在该 list 位置 +1 切分，与 list 总数无关。面板显示
+  `B1b taau list: captured/not captured`；扫描不到才回退 head/tail k。
+  2026-10-25 04:4x 实机 `not captured`：浅层扫描在执行上下文第一层没找到 list 指针。
+- 改为**按需深层扫描**：exec 最多 3 跳、其余 2 跳，512 节点 / visited 去重 / 每节点 0x100 字节，
+  B1b 按钮请求一次；面板显示 `captured/not captured`，日志有命中偏移或
+  `deep scan found nothing`。2026-10-25 04:49 实机仍 `not captured`（213–298 节点），
+  内容边界在可读对象图里走不通；下一步改为 DrawInstanced 单槽标定。
+- 2026-10-25 04:5x 色调诊断：回退 tail 4 时主菜单没有消失，但存档内颜色很怪。加
+  **Next colour candidate**（fmt26 候选循环，缓存失效）与 **Cycle tonemap**
+  （ACES+γ / γ / ACES）两个面板按钮和 `choice=x/N ptr=` 读数，用于区分选错颜色与曲线不对。
+  TEST 构建 `43d5991e…` 已热替换（重启生效），待验。
 - **修复 F11 崩溃（三处）**：① 渲染目标清单 `createRtvDetour` 之前对每个新 RTV `AddRef`，
   包含交换链后缓冲，导致 `ResizeBuffers` 失败、引擎 `abort()`（2026-10-25 03:14，`0xC0000409`）；
   现在 `gSeen` 只存裸指针。② `gTextures` 之前对会话内所有纹理 AddRef（数千张，含 1024 图集），
@@ -51,6 +125,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2 秒后开始（按完就可以走/转视角）；面板「诊断 → VV B0 (TEST)」有同样的两个按钮。
   `F8` 在部分笔记本上会被 Fn 锁成媒体键（2026-10-25 03:02 实测按下无日志），所以加了 `F10`/`V`
   和按钮；dump 前要先按一次 `F11` 让引擎重建渲染图（否则创建钩子看不到旧的渲染分辨率纹理）。
+
+### 研究（2026-10-25：接手审查 + B1c 切点取证）
+
+- 审查与计划进 `docs/specs/vv.md` §14：B1b 的「颜色很奇怪」不再用手摇曲线去解，改用**同一帧的
+  后缓冲**当参考图离线拟合；顺带更正三处过期结论（公开头文件的槽号可以用、25 是 `SetPipelineState`
+  不是 `OMSetRenderTargets`；尾部 k=4 只属于当时的界面；颜色纹理的读取没有屏障）。
+- 新增 `src/neurodragon/vv/VvCapture.{h,cpp}`：在注入点把后缓冲拷进自有 READBACK（4 槽环，
+  fence 没过就跳过该帧，不覆盖上一张），`presentHook` 里映射并写 BMP：
+  `vv_cut_<seq>_k<split>_of<count>_tail<k>_<w>x<h>.bmp`。不改画面、不写任何引擎资源，
+  后缓冲只是 `PRESENT → COPY_SOURCE → PRESENT`。
+- `probe/VvInject`：新增 `Action::Capture` 与 `setSweepDepth()`；捕获一轮（尾部 k=1..8）跑完自动关注入。
+- `probe/VvCalibrate`：导出 `writeBmpRgba8()`（复用原来的 24 位 BMP 写法，省掉一次设备/队列往返）。
+- 面板「诊断 → VV B1c cut capture (TEST)」：一个按钮跑一轮；读数 `captured/skipped/pending`、
+  `tail/split/of` 与最后一个文件名。
+- 外部工具 `NeuroDragonWorkSpace/tools/vv_cut.py`：切点联表 `_vv_cut_strip.png`、相邻切点平均差、
+  候选与参考的结构相关排名、单调 LUT 拟合残差、`_vv_match.png`（参考 / 候选+曲线 / 差异×4）、
+  `_vv_curve.png`（散点，用来区分「固定曲线」与「含曝光」）。
+- TEST 构建 `c8cb017e…` 已热替换到本工作区（旧 `43d5991e…` 备份为 `.b1c-old`），待实机采集。
+
+### 研究（2026-10-25 16:37：B1c 实机采集——切点、颜色、显示编码一次定死）
+
+- 8 张尾部切点（2560×1440、66%、70 个 list）：只有 `tail 5 → tail 4` 让整个画面变了
+  （中心区差 **31.19/255**，其余相邻档 ≤ 0.21）⇒ **list 67 = 世界最终合成**（一张全屏 pass 覆盖后缓冲），
+  list 68–70 = 手 / HUD / 其余 UI；合成之前的 list 完全没动后缓冲（画面里还是上一帧，连我们的面板都在）。
+  **插入点 = 合成之后、UI 之前**，与旧结论一致，但这次是看画面看出来的。
+- 颜色：`fmt26` 1689×950（`res_100`，ptr `0x1F7AACC6010`）秩相关 0.9875 最高；历史/中间面
+  0.9824 / 0.9644。
+- 色调**不是 ACES**：同一帧对重新拟合，逐通道单调曲线残差 **2.31/255**，单条幂函数 6.34，
+  ACES+γ2.2 21.40，纯 γ2.2 28.87，sRGB 30.07。用 03:44（33%）那次的 dump + 截图独立复验，
+  两条曲线中段一致 ⇒ 这是**显示编码**，不是随场景变的 tonemap。
+- 新增 `src/neurodragon/vv/VvTone.h`（3×33 编码表 + HLSL 片段，两个 root-constant 块 64+35），
+  `VvBypass` 用它替换 ACES（面板「Cycle encode」可切 table / gamma / ACES+g）。
+  外部工具新增 `vv_tonefit.py`（模型对比）、`vv_curvecheck.py`（跨会话曲线一致性）、
+  `vv_gen_tone.py`（生成编码表）。
+- TEST 构建 `6fe07a45…` 已热替换到本工作区。
+- 仍未答：`tail 4` 在别的帧形（暂停界面 / 81 / 107 个 list）是否成立；编码曲线在夜间/强曝光下是否成立。
+
+### 研究（2026-10-25：内容边界 B1d——不再数尾部，按「谁写了后缓冲」认）
+
+- 问题：`tail 4` 只在 70 个 list 的帧形上成立；世界内帧形在 69/81 之间变时旁路会冲掉 HUD。
+- 不变量（B1c 的画面证据）：一帧里只有一个 list 写整个后缓冲（世界合成），之前不碰、之后才是手/HUD。
+- 实现：纯转发挂 `OMSetRenderTargets=46`、`DrawInstanced=12`、`DrawIndexedInstanced=13`；
+  `noteSwapChain` 把后缓冲资源与它们的 RTV 句柄对上；每帧取「第一个绑定后缓冲且 draw 过」的 list
+  作为切点（`inject::prepare` 直接使用，失败退回面板 k）。
+- 第一次实机（16:56）：槽 46 形状正确（`count=1 single=1 handle0=… increment=32`），但
+  `back-buffer view handles=0`——后缓冲的 RTV 在模组加载前创建，且重扫只认交换链变化。已改为
+  **RTV 清单增长也重扫**；另埋 `RSSetViewports=21` 只读诊断（`frame viewports`），作为兜底判据。
+- 同时修掉：`Action::Capture` + `Mode::Fixed` 每帧写一张 11 MB BMP（16:58 写了 1941 张 / 21 GB）。
+  现在 Fixed+Capture 一次性、`capture::record()` 上限 64 张；已删除那批 `tail0` 文件。
+- 面板：`B1b boundary` 显示 `content: back-buffer writer`、`B1d writer` 显示 `split/list`；
+  B1c 新增「Capture at content boundary (1 frame)」。
+- 文档：`docs/specs/vv.md` §14.6。TEST 构建 `2f000ef5…` 已热替换到本工作区。
+- **17:09 整帧清单（19 种帧形，48–108 个 list）**：世界合成 = **显示分辨率视口 + 绑深度 +
+  恰好一次 draw**，在每种帧形里唯一命中；而 tail 偏移在 3/4/5 之间变（数尾巴会错）。
+  切点改为「签名优先」（日志 `via=signature` / `signature+hud`），句柄与面板 k 依次兜底。
+- **17:13 自检通过**：世界里 `split=67/70`，截出来的图 = 世界 + 手、**无 HUD/准星/快捷栏/坐标**；
+  并修掉「候选早一格」的边角（优先选紧挨多 draw 的 HUD 的那一格）。
+  TEST 构建 `01aac5bf…` 已热替换到本工作区。
+
+### 研究（2026-10-25 18:2x：B2 颜色链路验收 + DLSS 接线）
+
+- 「SR colour bypass」实机正常（整屏、颜色正确）；`Dump SR inputs` 的三张图（引擎颜色 / prep 后 /
+  final）逐张对得上，颜色链路验收通过。
+- 期间踩掉四个坑并写进注释：根签名寄存器重叠（改单表）、根签名 64 DWORD 上限（编码改成无参数幂函数）、
+  CBV 编码表运行时读不全（红屏，弃用）、final 用 TAAU viewport 导致底部黑边（改用后缓冲尺寸）。
+- `vv/DlssSr` 增加常驻 DLSS-SR feature（create/evaluate/release）；`VvSr` 在 `SR + DLSS` 下
+  跑 prep → NGX evaluate（Reset=1、MV=0）→ 编码 → 后缓冲；面板显示 `feature/create/eval` 返回值。
+- TEST 构建 `4714da92…` 已热替换到本工作区。
 
 ### Added（2026-10-24：VV 边界注入实验——阶段 2 的 A 步）
 

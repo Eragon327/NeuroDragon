@@ -1,0 +1,50 @@
+# EXP-0004 evidence: why the SR injection stopped ~27 s after it started
+# run 2026-10-25 23:04:43-23:05:31, build EXP-0003/3078ed57
+
+## every depth view the engine created (ring = kHeldDepthSlots = 8)
+[2026-10-25 23:04:35.679 IFO][NeuroDragon] [vv] dsv res=0x1bff9133080 2560x1440 fmt=44
+[2026-10-25 23:04:40.913 IFO][NeuroDragon] [vv] dsv res=0x1c10865aae0 128x128 fmt=39
+[2026-10-25 23:04:40.913 IFO][NeuroDragon] [vv] dsv res=0x1c1086584a0 27x15 fmt=39
+[2026-10-25 23:04:40.913 IFO][NeuroDragon] [vv] dsv res=0x1c10865be00 27x15 fmt=39
+[2026-10-25 23:04:40.913 IFO][NeuroDragon] [vv] dsv res=0x1c108512cd0 2048x2048 fmt=53
+[2026-10-25 23:04:40.945 IFO][NeuroDragon] [vv] dsv res=0x1bff6c90750 1689x950 fmt=44
+[2026-10-25 23:04:41.015 IFO][NeuroDragon] [vv] dsv res=0x1bff6c98d30 1689x950 fmt=44
+[2026-10-25 23:04:41.063 IFO][NeuroDragon] [vv] dsv res=0x1bff6c966f0 1689x950 fmt=44
+[2026-10-25 23:04:43.562 IFO][NeuroDragon] [vv] dsv res=0x1c108930df0 1689x903 fmt=44
+[2026-10-25 23:04:43.562 IFO][NeuroDragon] [vv] dsv res=0x1c1089350e0 1689x903 fmt=44
+[2026-10-25 23:04:43.562 IFO][NeuroDragon] [vv] dsv res=0x1c108935a70 1689x903 fmt=44
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c11c168ee0 2560x1369 fmt=45
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c1086584a0 27x15 fmt=39
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c10865be00 27x15 fmt=39
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c108512cd0 2048x2048 fmt=53
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1bff6c90750 1689x950 fmt=44
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1bff6c98d30 1689x950 fmt=44
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1bff6c966f0 1689x950 fmt=44
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c1089350e0 1689x903 fmt=44
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c108935a70 1689x903 fmt=44
+[2026-10-25 23:04:43.740 IFO][NeuroDragon] [vv] dsv res=0x1c108930df0 1689x903 fmt=44
+[2026-10-25 23:04:43.787 IFO][NeuroDragon] [vv] dsv res=0x1c13fb57490 128x128 fmt=39
+[2026-10-25 23:04:49.883 IFO][NeuroDragon] [vv] dsv res=0x1c16838db30 128x128 fmt=39
+[2026-10-25 23:04:55.942 IFO][NeuroDragon] [vv] dsv res=0x1c166369060 128x128 fmt=39
+[2026-10-25 23:05:05.089 IFO][NeuroDragon] [vv] dsv res=0x1c13fb7cf00 128x128 fmt=39
+[2026-10-25 23:05:11.251 IFO][NeuroDragon] [vv] dsv res=0x1c1673369c0 128x128 fmt=39
+[2026-10-25 23:05:17.371 IFO][NeuroDragon] [vv] dsv res=0x1c161642c70 128x128 fmt=39
+[2026-10-25 23:05:24.215 IFO][NeuroDragon] [vv] dsv res=0x1c161643600 128x128 fmt=39
+[2026-10-25 23:05:30.235 IFO][NeuroDragon] [vv] dsv res=0x1bff905e6f0 128x128 fmt=39
+[2026-10-25 23:05:36.260 IFO][NeuroDragon] [vv] dsv res=0x1c378f51380 128x128 fmt=39
+[2026-10-25 23:05:42.263 IFO][NeuroDragon] [vv] dsv res=0x1c16a9bf610 128x128 fmt=39
+[2026-10-25 23:05:49.702 IFO][NeuroDragon] [vv] dsv res=0x1c165ef7aa0 128x128 fmt=39
+[2026-10-25 23:05:49.891 IFO][NeuroDragon] [vv] dsv res=0x1c1616f7a30 2560x1369 fmt=44
+[2026-10-25 23:05:49.903 IFO][NeuroDragon] [vv] dsv res=0x1c108930df0 1689x903 fmt=44
+[2026-10-25 23:05:50.282 IFO][NeuroDragon] [vv] dsv res=0x1c16717a480 2560x1370 fmt=44
+
+## last successful pick, then the first failing frame
+[2026-10-25 23:05:00.982 IFO][NeuroDragon] [vvsr] sr pick: render=1689x903 colourTargets=24 fmt26=10 depthTargets=5
+[2026-10-25 23:05:03.116 IFO][NeuroDragon] [vvsr] sr pick: render=1689x903 colourTargets=24 fmt26=10 depthTargets=5
+[2026-10-25 23:05:03.126 IFO][NeuroDragon] [vvsr] sr pick: render=1689x903 colourTargets=24 fmt26=10 depthTargets=5
+[2026-10-25 23:05:03.136 IFO][NeuroDragon] [vvsr] sr pick: render=1689x903 colourTargets=24 fmt26=10 depthTargets=5
+[2026-10-25 23:05:03.146 IFO][NeuroDragon] [vvsr] sr pick: render=1689x903 colourTargets=24 fmt26=10 depthTargets=5
+[2026-10-25 23:05:30.239 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-25 23:05:30.239 WRN][NeuroDragon] [vv] inject skipped (1): recording the injected work failed
+
+## the 8th small depth lands at 23:05:30.235; the first skipped injection is 23:05:30.239

@@ -1,0 +1,16 @@
+# EXP-0009: labelled matrix sample came back empty
+
+[2026-10-25 23:54:13.574 IFO][NeuroDragon] [vvsr] mv cam=(+0.0000,+0.0000,+0.0000) prevCam=(+0.0000,+0.0000,+0.0000) jitter=(+0.0000,+0.0000)
+[2026-10-25 23:54:13.574 IFO][NeuroDragon] [vvsr] mv cur=[ +0.000000]
+[2026-10-25 23:54:13.574 IFO][NeuroDragon] [vvsr] mv prev=[ +0.000000]
+
+## the dump ran at 23:54:13, i.e. before the world was entered (world flag turned 1 at 23:54:29)
+[2026-10-25 23:54:11.704 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:54:24.574 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-25 23:54:29.330 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-25 23:54:38.402 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+
+## postmortem
+- dump ran before the world was entered (world flag 1 at 23:54:29, dump 23:54:13) -> zeros
+- text buffer step was 11 bytes with a 12-byte write -> only one float survived
+- both are probe bugs; the historical ctxs window already shows +0x1e4 jitter, +0x200/+0x240 matrices, +0x280 camera origin

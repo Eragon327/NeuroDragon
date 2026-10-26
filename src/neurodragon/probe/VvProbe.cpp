@@ -8,6 +8,10 @@
 #include <MinHook.h>
 #include <Windows.h>
 
+#include "ll/api/event/EventBus.h"
+#include "ll/api/event/client/ClientExitLevelEvent.h"
+#include "ll/api/event/client/ClientJoinLevelEvent.h"
+
 
 #include <array>
 #include <atomic>
@@ -107,6 +111,7 @@ using OmSetRtvFn = void (*)(void* list, unsigned count, std::uintptr_t const* rt
 // which is how the TAAU pass itself is issued, and a clean triple proves the two
 // neighbouring vtable slots were read correctly.
 using CmdDrawFn = void (*)(void* list, unsigned vertexCount, unsigned instanceCount, unsigned startVertex, unsigned startInstance);
+using SetViewportsFn = void (*)(void* list, unsigned count, void const* viewports);
 
 struct RtvBinding {
     std::uint64_t handle;
@@ -115,6 +120,80 @@ struct RtvBinding {
 constexpr unsigned    kRtvSlots = 4096;
 RtvBinding            gRtvs[kRtvSlots]{};
 std::atomic<unsigned> gRtvCount{0};
+
+// --- content boundary (B1d) ------------------------------------------------
+// The frame's world composite is ONE list that writes the whole back buffer at
+// display resolution; everything before it leaves the back buffer untouched and
+// everything after it is the hand / HUD / UI. That was measured directly by the
+// B1c cut capture (2026-10-25: only tail 5 -> 4 changes a pixel) - so the stable
+// anchor is "the first list in the frame that binds a back buffer and draws",
+// not a tail count (docs/specs/vv.md §14.5).
+//
+// Finding it needs two pure-forward detours: OMSetRenderTargets (slot 46) to see
+// the binding, DrawInstanced / DrawIndexedInstanced (12 / 13) to see that the list
+// actually drew. The handles are compared against the back buffer's own view
+// handles, which are refreshed once per present.
+constexpr unsigned kBackBufferHandles = 32;
+std::atomic<std::uint64_t> gBackBufferHandles[kBackBufferHandles]{};
+std::atomic<unsigned>      gBackBufferHandleCount{0};
+std::atomic<unsigned>      gDescriptorIncrement{0};
+
+struct ListMark {
+    void* list;
+    bool  bound;
+    bool  drew;
+};
+constexpr unsigned kMarkSlots = 16;
+ListMark              gMarks[kMarkSlots]{};
+std::atomic<unsigned> gMarkCount{0};
+std::atomic<unsigned> gBoundarySplit{0}; ///< 1-based: cut AFTER this many lists
+std::atomic<void*>    gBoundaryList{nullptr};
+std::atomic<unsigned> gBoundaryLogs{0};
+
+// Diagnostic for the content boundary's fallback anchor: one entry per list that
+// did anything observable this frame - viewport, depth binding, first draw shape.
+// The world composite and the UI set a display-sized viewport; the world passes
+// render at the render resolution. One line per frame for the first frames only.
+struct ListSig {
+    void*    list;
+    unsigned width;
+    unsigned height;
+    unsigned dsv;          ///< bound a depth-stencil view in this list
+    unsigned draws;        ///< DrawInstanced + DrawIndexedInstanced in this list
+    unsigned firstVerts;   ///< first DrawInstanced vertex count (0 = none)
+    unsigned firstInst;    ///< first DrawInstanced instance count
+    unsigned firstIndices; ///< first DrawIndexedInstanced index count (0 = none)
+};
+constexpr unsigned kSigSlots = 128;
+ListSig               gSigs[kSigSlots]{};
+std::atomic<unsigned> gSigCount{0};
+std::atomic<unsigned> gSigFrames{0};
+
+ListSig* sigFor(void* list) {
+    if (!list) {
+        return nullptr;
+    }
+    unsigned const n = gSigCount.load(std::memory_order_relaxed);
+    for (unsigned i = 0; i < n && i < kSigSlots; ++i) {
+        if (gSigs[i].list == list) {
+            return &gSigs[i];
+        }
+    }
+    unsigned const slot = gSigCount.fetch_add(1, std::memory_order_relaxed);
+    if (slot < kSigSlots) {
+        gSigs[slot] = ListSig{list, 0, 0, 0, 0, 0, 0, 0};
+        return &gSigs[slot];
+    }
+    return nullptr;
+}
+
+void noteViewport(void* list, unsigned width, unsigned height) {
+    if (auto* const sig = sigFor(list)) {
+        sig->width  = width;
+        sig->height = height;
+    }
+}
+
 std::atomic<void*>    gResourceVtable{nullptr};
 // Every distinct CreateRenderTargetView implementation we have hooked (one per
 // device class): the overlay's throw-away device and the engine's own are not the
@@ -125,21 +204,30 @@ unsigned           gHookCount = 0;
 
 CreateDeviceFn gOriginalCreateDevice{};
 CreateRtvFn    gOriginalCreateRtv{};
+CreateRtvFn    gOriginalCreateDsv{};
 CloseFn        gOriginalClose{};
 OmSetRtvFn     gOriginalOmSetRtv{};
 CmdDrawFn      gOriginalDrawInstanced{};
 std::atomic<unsigned> gDrawInstancedCalls{0};
+SetViewportsFn gOriginalSetViewports{};
 using CmdDrawIndexedFn = void (*)(void* list, unsigned indexCount, unsigned instanceCount, unsigned startIndex, int baseVertex, unsigned startInstance);
 CmdDrawIndexedFn      gOriginalDrawIndexed{};
 std::atomic<unsigned> gDrawIndexedCalls{0};
 
 std::atomic<bool> gDeviceHooked{false};
 std::atomic<bool> gListHooked{false};
-// True for the recording of one frame every 600 presented frames: the frame graph is
-// stable, so one sampled frame is enough and a per-frame log would be unusable.
-std::atomic<bool> gDumpFrame{false};
-std::atomic<unsigned> gCloseInFrame{0};
-std::atomic<unsigned> gBigFrames{0};
+// Content boundary: the engine command list's vtable (captured by hookCommandList)
+// and the list that was recording when the TAAU draw callback ran. The draw
+// callback's execution context is scanned for a qword whose vtable matches; no
+// method is hooked, so this cannot corrupt a call.
+std::atomic<void*>    gEngineListVtable{nullptr};
+std::atomic<void*>    gTaauList{nullptr};
+std::atomic<unsigned> gTaauListFrame{0};
+std::atomic<unsigned> gTaauListLogs{0};
+std::atomic<bool>     gTaauScanRequested{false};
+// The 120-frame sampler that used to arm here (`gDumpFrame` / `gCloseInFrame` /
+// `gBigFrames`) was removed on 2026-10-25 22:46: it cost a render-thread burst every
+// ~1.2 s and its only reader was its own log line.
 
 // ---------------------------------------------------------------------------
 // B0 probes (docs/specs/vv.md §13.1) - diagnostics build only
@@ -171,7 +259,22 @@ std::atomic<bool> gSessionReady{false};
 
 // Cached engine device and queue, filled when the first engine submission is seen.
 std::atomic<void*> gEngineDevice{nullptr};
-std::atomic<void*> gGameQueue{nullptr};
+// Level presence, from the client join/exit event pair the RT path already uses.
+// Polling ll::service::getLevel() is not an option: it was non-empty in the first
+// world and stayed empty after leaving and entering another one (2026-10-25 23:36),
+// so an SR gate built on it never reopened.
+std::atomic<bool>      gWorldLoaded{false};
+ll::event::ListenerPtr gJoinLevelListener{};
+ll::event::ListenerPtr gExitLevelListener{};
+// The TAAContext handed to the TAAU draw callback, kept per frame. It holds the
+// current/previous view-projection pair (+0x200/+0x240), the camera origins
+// (+0x280..) and the sub-pixel jitter (+0x1e4 ..) that the motion-vector
+// reconstruction needs (docs/specs/vv.md §6).
+std::atomic<void*> gTaaContext{nullptr};
+// The draw callback's second argument (execution context). The +0x200 matrices turned
+// out to be unchanged under pure forward movement (2026-10-25 03:23), which is only
+// right for a camera-relative pair, so this object is dumped next to it.
+std::atomic<void*> gExecContext{nullptr};std::atomic<void*> gGameQueue{nullptr};
 void*              gExcluded[4]{};
 bool               gLoggedExclusion = false;
 unsigned           gExcludedCount = 0;
@@ -201,10 +304,28 @@ struct HeldRtv {
     unsigned height;
     unsigned format;
 };
-constexpr unsigned kHeldSlots = 128;
+constexpr unsigned kHeldSlots = 256;
 HeldRtv            gHeld[kHeldSlots]{};
 unsigned           gHeldCount = 0;
 unsigned           gHeldNext = 0;
+
+// Depth targets are created as *depth-stencil views*, not render-target views, so
+// they never entered the inventory above and the SR pipeline could not find the
+// main depth (2026-10-25: 1689x903 fmt=26 RTVs were there, no 43/44 anywhere).
+// CreateDepthStencilView is device vtable slot 21 (CreateRenderTargetView is 20).
+// 64 slots, not 8: the engine creates small helper depths continuously (a 128x128
+// one every ~6 s in the 2026-10-25 session), and with 8 slots the main depth was
+// evicted before the next re-pick. Small depths are filtered out below as well.
+struct HeldDepth {
+    void*    resource;
+    unsigned width;
+    unsigned height;
+    unsigned format;
+};
+constexpr unsigned kHeldDepthSlots = 64;
+HeldDepth          gHeldDepth[kHeldDepthSlots]{};
+unsigned           gHeldDepthCount = 0;
+unsigned           gHeldDepthNext = 0;
 
 // The render resolution the TAAU pass upscales FROM: display viewport x the engine's
 // factor. It is the key that turns the render-target inventory into named inputs
@@ -212,6 +333,10 @@ unsigned           gHeldNext = 0;
 // fmt=54 the depth. Filled by taauDetour, which is the only place both numbers exist.
 std::atomic<unsigned> gRenderWidth{0};
 std::atomic<unsigned> gRenderHeight{0};
+std::atomic<unsigned> gDisplayWidth{0};
+std::atomic<unsigned> gDisplayHeight{0};
+// Bumped on resize / world enter; the B1b bypass drops its cached colour then.
+std::atomic<unsigned> gRenderGeneration{1};
 // Bit per candidate that has been dumped successfully: the inventory is not always
 // complete (a rebuild may create only part of the render-resolution group), so the
 // dump retries until every format has been captured once.
@@ -257,6 +382,89 @@ void* lookupRtv(std::uintptr_t handle) {
     return nullptr;
 }
 
+// --- content boundary helpers ----------------------------------------------
+// The back buffers' view handles, so the hot OMSetRenderTargets detour only has to
+// compare a handful of integers. The pointers come from noteSwapChain (gExcluded),
+// the handles from the RTV inventory; both are refreshed once per present.
+bool isBackBufferResource(void* resource) {
+    if (!resource) {
+        return false;
+    }
+    for (unsigned i = 0; i < gExcludedCount && i < 4; ++i) {
+        if (gExcluded[i] == resource) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void refreshBackBufferHandles() {
+    // Two things move: the chain's buffers (resize) and the RTV inventory (the engine
+    // re-creates the back buffers' views when it rebuilds its render graph - 2026-10-25
+    // 16:59 showed two 2560x1440 fmt=28 views appearing mid-session). The first scan
+    // therefore has to be retried whenever a new view shows up, not only on resize.
+    static void*         previous[4]{};
+    static unsigned      previousCount = 0;
+    static unsigned      previousRtvs  = 0;
+    unsigned const       rtvs          = gRtvCount.load(std::memory_order_relaxed);
+    bool                 changed       = previousCount != gExcludedCount || previousRtvs != rtvs;
+    for (unsigned i = 0; i < gExcludedCount && i < 4; ++i) {
+        if (previous[i] != gExcluded[i]) {
+            changed = true;
+        }
+        previous[i] = gExcluded[i];
+    }
+    previousCount = gExcludedCount;
+    previousRtvs  = rtvs;
+    if (!changed) {
+        return;
+    }
+    unsigned         found = 0;
+    unsigned const   limit = rtvs < kRtvSlots ? rtvs : kRtvSlots;
+    // Oldest first: the engine's own view of a back buffer is the one the composite
+    // binds, and it is created when the render graph is rebuilt. Newer views (the
+    // overlay's D3D11On12 wrap among them) must not evict it, which "newest N" did.
+    for (unsigned i = 0; i < limit && found < kBackBufferHandles; ++i) {
+        if (isBackBufferResource(gRtvs[i].resource)) {
+            gBackBufferHandles[found++].store(gRtvs[i].handle, std::memory_order_relaxed);
+        }
+    }
+    gBackBufferHandleCount.store(found, std::memory_order_relaxed);
+    static unsigned previousFound = 0xFFFFFFFFu;
+    if (found != previousFound) {
+        previousFound = found;
+        utils::logger().info("[vv] back-buffer view handles={} (chain buffers={}, rtv views={})", found, gExcludedCount, rtvs);
+    }
+}
+
+void markBound(void* list) {
+    unsigned const count = gMarkCount.load(std::memory_order_relaxed);
+    for (unsigned i = 0; i < count && i < kMarkSlots; ++i) {
+        if (gMarks[i].list == list) {
+            gMarks[i].bound = true;
+            return;
+        }
+    }
+    unsigned const slot = gMarkCount.fetch_add(1, std::memory_order_relaxed);
+    if (slot < kMarkSlots) {
+        gMarks[slot].list  = list;
+        gMarks[slot].bound = true;
+        gMarks[slot].drew  = false;
+    }
+}
+
+void markDrew(void* list) {
+    // Only lists that already bound a back buffer can become the boundary; a draw
+    // on any other list costs one comparison over at most kMarkSlots entries.
+    unsigned const count = gMarkCount.load(std::memory_order_relaxed);
+    for (unsigned i = 0; i < count && i < kMarkSlots; ++i) {
+        if (gMarks[i].list == list) {
+            gMarks[i].drew = true;
+            return;
+        }
+    }
+}
+
 // True when the resource is one of the swap chain's current back buffers. Those
 // must never be AddRef'd (ResizeBuffers would fail and the engine aborts); the
 // size gate below already excludes them, but this is the exact test when the
@@ -281,6 +489,23 @@ bool isSwapChainBuffer(void* resource) {
         releaseComObject(buffers[i]);
     }
     return found;
+}
+
+// A texture the SR pipeline can never use, and which must not push the one it needs
+// out of a ring inventory: the render graph is at most a few times smaller than the
+// display, so anything under display/4 is a mip, a UI atlas or a helper map.
+// 2026-10-25 23:05 is the reason this exists: the engine created a fresh 128x128
+// depth every ~6 s, the depth ring had 8 slots, and the 1689x903 depth - the SR
+// input - was pushed out while the frame still rendered at full size. The next
+// re-pick answered "no render-resolution colour/depth in the inventory" and the
+// injection stopped for the rest of the session.
+bool tooSmallForRenderGraph(unsigned width, unsigned height) {
+    unsigned const dw = gDisplayWidth.load(std::memory_order_relaxed);
+    unsigned const dh = gDisplayHeight.load(std::memory_order_relaxed);
+    if (!dw || !dh) {
+        return false; // display size not known yet: keep everything rather than guess
+    }
+    return width * 4 < dw || height * 4 < dh;
 }
 
 void createRtvDetour(void* device, void* resource, void const* desc, std::uintptr_t handle) {
@@ -318,12 +543,18 @@ void createRtvDetour(void* device, void* resource, void const* desc, std::uintpt
         gSeen[gSeenCount++] = resource;
         gLastRtvTick.store(GetTickCount(), std::memory_order_relaxed);
         auto const info = nr::describe(resource);
-        // The render graph at this engine is <=1000x600 at the current VV factor
-        // (844x475 at 2560x1440, 360x242 windowed); display-sized back buffers,
-        // 1024x2048 atlases and 1937x333 UI strips fall outside. The swap-chain
-        // test is the exact one when the chain is already known.
-        bool const renderSized = info.width <= 1000 && info.height <= 600;
-        if (renderSized && !isSwapChainBuffer(resource)) {
+        // The render graph is <=2048x1200 at this engine's VV factors (844x475 at
+        // 2560x1440, 1689x903 at the user's current 66% setting); display-sized back
+        // buffers, 1024x2048 atlases and 1937x333 UI strips fall outside. The
+        // swap-chain test is the exact one when the chain is already known.
+        bool const renderSized = info.width <= 2048 && info.height <= 1200;
+        // Exclude square textures (UI atlases are 64/128/256/512/1024 squares) so
+        // the ring is not flooded and the render graph's non-square colour stays in
+        // it. The real graph at this engine is 1689x950 / 844x475. Also drop anything
+        // below display/4 (mip chains, helper maps): those are what eventually pushed
+        // the render-sized colour out of a full ring on 2026-10-25.
+        bool const bigEnough = !tooSmallForRenderGraph(static_cast<unsigned>(info.width), static_cast<unsigned>(info.height));
+        if (renderSized && bigEnough && info.width != info.height && !isSwapChainBuffer(resource)) {
             if (gHeldCount == kHeldSlots) {
                 releaseComObject(gHeld[gHeldNext].resource);
             } else {
@@ -350,6 +581,60 @@ void createRtvDetour(void* device, void* resource, void const* desc, std::uintpt
     gOriginalCreateRtv(device, resource, desc, handle);
 }
 
+// The depth side of the frame graph: every depth texture is bound through a
+// depth-stencil view, so CreateRenderTargetView never sees it. Keeping a small
+// reference-counted ring of DSV resources is what makes the main depth reachable
+// from the SR pipeline (2026-10-25: the RTV inventory had the colour but no 43/44).
+void createDsvDetour(void* device, void* resource, void const* desc, std::uintptr_t handle) {
+    if (resource && !inject::recordingOwnView()) {
+        bool known = false;
+        for (unsigned i = 0; i < gHeldDepthCount; ++i) {
+            if (gHeldDepth[i].resource == resource) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            auto const info = nr::describe(resource);
+            if (info.width && info.height && info.width <= 4096 && info.height <= 4096
+                && !tooSmallForRenderGraph(static_cast<unsigned>(info.width), static_cast<unsigned>(info.height))) {
+                if (gHeldDepthCount == kHeldDepthSlots) {
+                    auto const& victim = gHeldDepth[gHeldDepthNext];
+                    // A large depth leaving the ring means the SR input can disappear
+                    // mid-session; say so instead of failing silently later.
+                    if (!tooSmallForRenderGraph(victim.width, victim.height)) {
+                        utils::logger().warn(
+                            "[vv] depth ring ({} slots) is evicting a {}x{} depth - the SR input may vanish",
+                            kHeldDepthSlots,
+                            victim.width,
+                            victim.height
+                        );
+                    }
+                    releaseComObject(victim.resource);
+                } else {
+                    ++gHeldDepthCount;
+                }
+                addRefComObject(resource);
+                gHeldDepth[gHeldDepthNext] = HeldDepth{
+                    resource,
+                    static_cast<unsigned>(info.width),
+                    static_cast<unsigned>(info.height),
+                    info.format
+                };
+                gHeldDepthNext = (gHeldDepthNext + 1) % kHeldDepthSlots;
+                utils::logger().info(
+                    "[vv] dsv res={:#x} {}x{} fmt={}",
+                    reinterpret_cast<std::uintptr_t>(resource),
+                    static_cast<unsigned>(info.width),
+                    static_cast<unsigned>(info.height),
+                    info.format
+                );
+            }
+        }
+    }
+    gOriginalCreateDsv(device, resource, desc, handle);
+}
+
 void closeDetour(void* list) {
     gOriginalClose(list);
     // Recording the injection list calls Close too; it is not part of the engine's
@@ -358,53 +643,52 @@ void closeDetour(void* list) {
     if (inject::isOwnList(list)) {
         return;
     }
-    if (!gDumpFrame.load(std::memory_order_relaxed)) {
-        return;
-    }
-    unsigned const n = gCloseInFrame.fetch_add(1, std::memory_order_relaxed) + 1;
-    if (n <= 64) {
-        LARGE_INTEGER now{};
-        QueryPerformanceCounter(&now);
-        utils::logger().info("[vv] close #{} list={:#x} tid={} qpc={}", n, reinterpret_cast<std::uintptr_t>(list), GetCurrentThreadId(), now.QuadPart);
-    }
+    // The per-frame "close #N" sampler that used to live here is gone (2026-10-25
+    // 22:46): it logged 49 lines on the render thread every 120th frame and told us
+    // nothing the content-boundary line does not already say.
 }
 
 void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int single, std::uintptr_t const* dsv) {
-    // Diagnose the slot itself: the first calls print their raw arguments, so a
-    // wrong vtable index shows up as impossible numbers instead of silently
-    // producing nonsense resource pointers.
-    static std::atomic<unsigned> calls{0};
-    auto const                  n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
-    if (n <= 3) {
-        utils::logger().info(
-            "[vv] slot25 raw #{} this={:#x} a1={:#x} a2={:#x} a3={:#x} a4={:#x}",
-            n,
-            reinterpret_cast<std::uintptr_t>(list),
-            static_cast<std::uintptr_t>(count),
-            reinterpret_cast<std::uintptr_t>(rtvs),
-            static_cast<std::uintptr_t>(static_cast<unsigned>(single)),
-            reinterpret_cast<std::uintptr_t>(dsv)
-        );
-    }
-    if (gDumpFrame.load(std::memory_order_relaxed) && rtvs && count) {
-        auto* const resource = static_cast<void*>(lookupRtv(rtvs[0]));
-        auto const  info     = nr::describe(resource);
-        auto const  depth    = dsv ? static_cast<void*>(lookupRtv(dsv[0])) : nullptr;
-        auto const  depthInfo = nr::describe(depth);
-        utils::logger().info(
-            "[vv] rt list={:#x} n={} handle={:#x} res={:#x} {}x{} fmt={} | depth res={:#x} {}x{} fmt={}",
-            reinterpret_cast<std::uintptr_t>(list),
-            count,
-            static_cast<std::uintptr_t>(rtvs[0]),
-            reinterpret_cast<std::uintptr_t>(resource),
-            static_cast<unsigned>(info.width),
-            static_cast<unsigned>(info.height),
-            info.format,
-            reinterpret_cast<std::uintptr_t>(depth),
-            static_cast<unsigned>(depthInfo.width),
-            static_cast<unsigned>(depthInfo.height),
-            depthInfo.format
-        );
+    // Pure forward: nothing here changes an argument or a state. What it adds is the
+    // one fact the frame does not expose anywhere else - which list binds a back
+    // buffer. The frame's world composite is the first such list (B1c, 2026-10-25).
+    if (list && rtvs && count) {
+        static std::atomic<unsigned> calls{0};
+        unsigned const               bbCount   = gBackBufferHandleCount.load(std::memory_order_relaxed);
+        unsigned const               increment = gDescriptorIncrement.load(std::memory_order_relaxed);
+        unsigned const               limit     = count > 8 ? 8 : count;
+        bool                         touches   = false;
+        for (unsigned i = 0; i < limit && !touches; ++i) {
+            std::uintptr_t const handle =
+                (single && increment) ? rtvs[0] + static_cast<std::uintptr_t>(i) * increment : rtvs[i];
+            for (unsigned b = 0; b < bbCount && b < kBackBufferHandles; ++b) {
+                if (handle == gBackBufferHandles[b].load(std::memory_order_relaxed)) {
+                    touches = true;
+                    break;
+                }
+            }
+        }
+        if (touches) {
+            markBound(list);
+        }
+        if (auto* const sig = sigFor(list)) {
+            sig->dsv |= dsv ? 1u : 0u;
+        }
+        unsigned const n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 2) {
+            // Shape check for the slot itself: a real OMSetRenderTargets arrives with
+            // count 1..8, a small single flag and a valid descriptor handle.
+            utils::logger().info(
+                "[vv] om rt #{} list={:#x} count={} single={} handle0={:#x} bbHandles={} increment={}",
+                n,
+                reinterpret_cast<std::uintptr_t>(list),
+                count,
+                single,
+                static_cast<std::uintptr_t>(rtvs[0]),
+                bbCount,
+                increment
+            );
+        }
     }
     gOriginalOmSetRtv(list, count, rtvs, single, dsv);
 }
@@ -578,6 +862,9 @@ void hookDevice(void* device) {
     if (!gEngineDevice.load(std::memory_order_relaxed)) {
         gEngineDevice.store(device, std::memory_order_relaxed);
     }
+    // Needed when the engine passes a single RTV handle for a contiguous range; the
+    // content boundary computes the i-th handle from it.
+    gDescriptorIncrement.store(rtvDescriptorIncrement(device), std::memory_order_relaxed);
     auto* const* vtbl = *reinterpret_cast<void* const* const*>(device);
     if (!vtbl || !readable(vtbl, 30 * sizeof(void*))) {
         utils::logger().warn("[vv] device vtable unreadable; render targets will not resolve");
@@ -602,6 +889,33 @@ void hookDevice(void* device) {
         );
     } else {
         utils::logger().warn("[vv] could not hook CreateRenderTargetView for device {:#x}", reinterpret_cast<std::uintptr_t>(device));
+    }
+
+    // Depth-stencil views: device vtable slot 21 (CreateRenderTargetView is 20, and
+    // both follow the SDK header's declaration order).
+    auto* const dsvTarget = const_cast<void*>(vtbl[21]);
+    static void* hookedDsv[4]{};
+    static unsigned dsvHooks = 0;
+    bool dsvHooked = false;
+    for (unsigned i = 0; i < dsvHooks; ++i) {
+        if (hookedDsv[i] == dsvTarget) {
+            dsvHooked = true;
+        }
+    }
+    if (!dsvHooked
+        && MH_CreateHook(dsvTarget, reinterpret_cast<void*>(&createDsvDetour), reinterpret_cast<void**>(&gOriginalCreateDsv))
+               == MH_OK
+        && MH_EnableHook(dsvTarget) == MH_OK) {
+        if (dsvHooks < 4) {
+            hookedDsv[dsvHooks++] = dsvTarget;
+        }
+        utils::logger().info(
+            "[vv] CreateDepthStencilView hooked on device {:#x} (target {:#x})",
+            reinterpret_cast<std::uintptr_t>(device),
+            reinterpret_cast<std::uintptr_t>(dsvTarget)
+        );
+    } else if (!dsvHooked) {
+        utils::logger().warn("[vv] could not hook CreateDepthStencilView for device {:#x}", reinterpret_cast<std::uintptr_t>(device));
     }
 
     // Resource creation: slots 27 (CreateCommittedResource) and 29
@@ -655,6 +969,13 @@ void hookDevice(void* device) {
 }
 
 void drawInstancedDetour(void* list, unsigned vertexCount, unsigned instanceCount, unsigned startVertex, unsigned startInstance) {
+    markDrew(list);
+    if (auto* const sig = sigFor(list)) {
+        if (sig->draws++ == 0) {
+            sig->firstVerts = vertexCount;
+            sig->firstInst  = instanceCount;
+        }
+    }
     auto const n = gDrawInstancedCalls.fetch_add(1, std::memory_order_relaxed) + 1;
     if (n <= 8) {
         utils::logger().info(
@@ -670,7 +991,26 @@ void drawInstancedDetour(void* list, unsigned vertexCount, unsigned instanceCoun
     gOriginalDrawInstanced(list, vertexCount, instanceCount, startVertex, startInstance);
 }
 
+// Pure forward. Only used while the content boundary is being established: the
+// composite and the UI are the lists that draw at the display resolution, the world
+// passes do not, so the per-list viewport is the signature that survives even when
+// the back buffers' render-target views were created before the mod loaded.
+void rssSetViewportsDetour(void* list, unsigned count, void const* viewports) {
+    if (list && viewports && count) {
+        // D3D12_VIEWPORT = { TopLeftX, TopLeftY, Width, Height, MinDepth, MaxDepth }
+        auto const* values = static_cast<float const*>(viewports);
+        noteViewport(list, static_cast<unsigned>(values[2] + 0.5f), static_cast<unsigned>(values[3] + 0.5f));
+    }
+    gOriginalSetViewports(list, count, viewports);
+}
+
 void drawIndexedInstancedDetour(void* list, unsigned indexCount, unsigned instanceCount, unsigned startIndex, int baseVertex, unsigned startInstance) {
+    markDrew(list);
+    if (auto* const sig = sigFor(list)) {
+        if (sig->draws++ == 0) {
+            sig->firstIndices = indexCount;
+        }
+    }
     auto const n = gDrawIndexedCalls.fetch_add(1, std::memory_order_relaxed) + 1;
     if (n <= 8) {
         utils::logger().info(
@@ -707,6 +1047,7 @@ void hookCommandList(void* list) {
     // Identity, not behaviour: which vtable the engine's lists actually use, and what
     // its slots point at. Pure reads - this is what tells us whether a table measured
     // on a command list of our own can be applied to the engine's lists at all.
+    gEngineListVtable.store(const_cast<void*>(reinterpret_cast<void const*>(vtbl)), std::memory_order_relaxed);
     utils::logger().info(
         "[vv] engine list vtable={:#x} slot9={} slot12={} slot13={} slot25={} slot28={}",
         reinterpret_cast<std::uintptr_t>(vtbl),
@@ -725,6 +1066,9 @@ void hookCommandList(void* list) {
     if (!gDeviceHooked.exchange(true, std::memory_order_acq_rel)) {
         if (void* const device = engineDeviceFromCommandList(list)) {
             utils::logger().info("[vv] engine device {:#x}", reinterpret_cast<std::uintptr_t>(device));
+            // This device came from an engine submission, so it is authoritative -
+            // the overlay's throw-away device may have been created first.
+            gEngineDevice.store(device, std::memory_order_relaxed);
             hookDevice(device);
             // The boundary experiment records on the engine's device too; it only
             // needs to be told which one that is (docs/specs/vv.md §12 A).
@@ -738,16 +1082,17 @@ void hookCommandList(void* list) {
         utils::logger().info("[vv] command list slot {} ({}) hooked={}", index, what, ok);
         return ok;
     };
-    // Only Close is hooked. Slots 12/13/25 were guessed from the published D3D12
-    // vtable order and slot 25 forwards garbage into the runtime (the client died on
-    // its second call), so the render-target route is parked until the index is
-    // proven - see docs/O-vv-path.md §6. Close is proven: it is called ~48 times per
-    // frame, once per list, with no arguments to get wrong.
+    // Close = 9 is proven (one call per list, no arguments). The other three are the
+    // content boundary (B1d): OMSetRenderTargets = 46 and DrawInstanced /
+    // DrawIndexedInstanced = 12 / 13, all straight out of the SDK header's
+    // declaration order, which the working slots above already matched. Each detour
+    // forwards every argument unchanged, so a wrong guess would mis-observe, not
+    // corrupt - and the first call logs its shape, which is the check.
     hookAt(9, reinterpret_cast<void*>(&closeDetour), reinterpret_cast<void**>(&gOriginalClose), "Close");
-    // Slot 25 is NOT OMSetRenderTargets on this runtime: the first call arrives with
-    // rdx = a heap pointer and r8 = a hash-like 56-bit value, i.e. (ptr) not (UINT,
-    // descriptors). Forwarding it crashes inside D3D12Core.dll (2026-10-24 22:0x,
-    // AV at 0x6F214130+0xCC). Do not re-enable without a *measured* table.
+    hookAt(12, reinterpret_cast<void*>(&drawInstancedDetour), reinterpret_cast<void**>(&gOriginalDrawInstanced), "DrawInstanced");
+    hookAt(13, reinterpret_cast<void*>(&drawIndexedInstancedDetour), reinterpret_cast<void**>(&gOriginalDrawIndexed), "DrawIndexedInstanced");
+    hookAt(46, reinterpret_cast<void*>(&omSetRtvDetour), reinterpret_cast<void**>(&gOriginalOmSetRtv), "OMSetRenderTargets");
+    hookAt(21, reinterpret_cast<void*>(&rssSetViewportsDetour), reinterpret_cast<void**>(&gOriginalSetViewports), "RSSetViewports");
 }
 
 long WINAPI createDeviceDetour(void* adapter, int minFeatureLevel, void const* riid, void** device) {
@@ -1152,6 +1497,8 @@ void taauDetour(
     gCameraData.store(camera, std::memory_order_relaxed);
 #endif
     if (width && height && up.factor > 0.0f && up.factor <= 1.0f) {
+        gDisplayWidth.store(width, std::memory_order_relaxed);
+        gDisplayHeight.store(height, std::memory_order_relaxed);
         // The engine truncates (1131 x 0.33 -> 373x239, not 373x240), so this must
         // truncate too; findTarget still allows a two-pixel tolerance.
         gRenderWidth.store(static_cast<unsigned>(static_cast<float>(width) * up.factor), std::memory_order_relaxed);
@@ -1435,8 +1782,120 @@ void samplePinnedMatrices(void const* object, unsigned batch, unsigned sample) {
 }
 #endif // TEST
 
-void drawDetour(void* self, void* context, void* third, void* fourth) {
-    auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
+// Content boundary (B1b): find the engine command list that was recording when
+// the TAAU draw callback ran. The callback's execution context (and the objects
+// around it) are scanned for a qword whose vtable is the engine list's vtable -
+// or whose slot 9 is the known Close target. Read-only: a wrong qword only fails
+// `readable`, it is never called.
+//
+// 2026-10-25 04:4x: the one-level scan found nothing ("not captured"), so the
+// deep scan walks up to three pointer hops with a node/visited budget. It only
+// runs on request (or when no capture exists), never every frame.
+struct ListScan {
+    void*    visited[512]{};
+    unsigned visitedCount{};
+    unsigned nodes{};
+    unsigned frame{};
+    bool     found{};
+};
+
+bool scanVisited(ListScan& scan, void* pointer) {
+    for (unsigned i = 0; i < scan.visitedCount; ++i) {
+        if (scan.visited[i] == pointer) {
+            return true;
+        }
+    }
+    if (scan.visitedCount < std::size(scan.visited)) {
+        scan.visited[scan.visitedCount++] = pointer;
+    }
+    return false;
+}
+
+void scanNodeForList(void const* object, char const* label, unsigned depth, ListScan& scan) {
+    if (scan.found || !object || scan.nodes >= 512 || !readable(object, 0x100) || scanVisited(scan, const_cast<void*>(object))) {
+        return;
+    }
+    ++scan.nodes;
+    void* const listVtable = gEngineListVtable.load(std::memory_order_relaxed);
+    auto* const bytes      = static_cast<unsigned char const*>(object);
+    for (std::size_t off = 0; off < 0x100; off += 8) {
+        std::uint64_t value = 0;
+        std::memcpy(&value, bytes + off, sizeof(value));
+        if (!value) {
+            continue;
+        }
+        auto* const candidate = reinterpret_cast<void*>(value);
+        if (!readable(candidate, sizeof(void*))) {
+            continue;
+        }
+        void* const candidateVtable = *static_cast<void* const*>(candidate);
+        bool        isList          = listVtable && candidateVtable == listVtable;
+        if (!isList && gOriginalClose && candidateVtable && readable(candidateVtable, 10 * sizeof(void*))) {
+            auto* const methods = static_cast<void* const*>(candidateVtable);
+            isList              = methods[9] == reinterpret_cast<void*>(gOriginalClose);
+        }
+        if (isList) {
+            gTaauList.store(candidate, std::memory_order_relaxed);
+            gTaauListFrame.store(scan.frame, std::memory_order_relaxed);
+            scan.found = true;
+            unsigned const n = gTaauListLogs.fetch_add(1, std::memory_order_relaxed);
+            if (n < 4) {
+                utils::logger().info(
+                    "[vv] taau list={:#x} from {} +{:#x} (frame {}, depth {})",
+                    reinterpret_cast<std::uintptr_t>(candidate),
+                    label,
+                    off,
+                    scan.frame,
+                    3 - depth
+                );
+            }
+            return;
+        }
+        if (depth && readable(candidate, 0x100)) {
+            scanNodeForList(candidate, label, depth - 1, scan);
+            if (scan.found) {
+                return;
+            }
+        }
+    }
+}
+
+void scanTaauList(void* self, void* context, void* third, void* fourth, unsigned frame) {
+    ListScan scan{};
+    scan.frame = frame;
+    scanNodeForList(context, "exec", 3, scan);
+    scanNodeForList(third, "ctx", 2, scan);
+    scanNodeForList(self, "self", 2, scan);
+    scanNodeForList(fourth, "fourth", 2, scan);
+    if (!scan.found) {
+        unsigned const n = gTaauListLogs.fetch_add(1, std::memory_order_relaxed);
+        if (n < 4) {
+            utils::logger().info("[vv] taau list: deep scan found nothing ({} nodes, frame {})", scan.nodes, frame);
+        }
+    }
+}
+
+void drawDetour(void* self, void* context, void* third, void* fourth) {    auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
+    gTaaContext.store(third, std::memory_order_relaxed);
+    gExecContext.store(context, std::memory_order_relaxed);
+    // Content boundary: the engine reuses the same command-list objects across
+    // frames, so a capture from the previous frame is assumed to still be this
+    // frame's TAAU list. If it is not (frame shape changed), scan again.
+    void* const previous = gTaauList.load(std::memory_order_relaxed);
+    bool const  requested = gTaauScanRequested.exchange(false, std::memory_order_relaxed);
+    if (previous && gTaauListFrame.load(std::memory_order_relaxed) == index - 1) {
+        gTaauListFrame.store(index, std::memory_order_relaxed);
+    } else {
+        gTaauList.store(nullptr, std::memory_order_relaxed);
+        // Not on a timer any more (2026-10-25 22:46): the deep scan walks the
+        // frame-graph object graph on the render thread, and its 120-draw retry never
+        // found the list in practice (269/225/279/276 nodes, four failures in one
+        // session) while costing a regular hitch. It now runs only when the probe
+        // asks for it (F11 / panel) or during the first frames after load.
+        if (requested || index < 4) {
+            scanTaauList(self, context, third, fourth, static_cast<unsigned>(index));
+        }
+    }
     if (index <= 12 || index % 600 == 0) {
         LARGE_INTEGER now{};
         QueryPerformanceCounter(&now);
@@ -1889,6 +2348,7 @@ void noteWorldEntered() {
     logNgxSession("world enter");
 #endif
     gWorldEnteredTick.store(GetTickCount(), std::memory_order_relaxed);
+    gRenderGeneration.fetch_add(1, std::memory_order_relaxed);
     utils::logger().info("[vv] semantics: world entered (B0: manual dump only; press F11, then F9)");
 }
 
@@ -1929,6 +2389,23 @@ bool install() {
     gTaauTarget = target;
     gInstalled.store(true, std::memory_order_release);
     utils::logger().info("[vv] taau hooked at {:#x} (rva {:#x})", reinterpret_cast<std::uintptr_t>(target), kTaauRva);
+
+    // Level presence for the SR gate: the same event pair the RT path uses, so the
+    // flag follows every world enter/exit instead of a poll that latches once.
+    {
+        auto& bus          = ll::event::EventBus::getInstance();
+        gJoinLevelListener = bus.emplaceListener<ll::event::client::ClientJoinLevelEvent>([](auto&) {
+            gWorldLoaded.store(true, std::memory_order_relaxed);
+        });
+        gExitLevelListener = bus.emplaceListener<ll::event::client::ClientExitLevelEvent>([](auto&) {
+            gWorldLoaded.store(false, std::memory_order_relaxed);
+        });
+        utils::logger().info(
+            "[vv] level listeners join={} exit={}",
+            gJoinLevelListener != nullptr,
+            gExitLevelListener != nullptr
+        );
+    }
 
     // Second, independent signal: the draw callback. Counted only - see the header.
     auto* const drawTarget = reinterpret_cast<void*>(base + kTaauDrawRva);
@@ -1982,6 +2459,18 @@ void uninstall() {
     // The boundary experiment created objects on the engine's device, so it has to
     // let go of them before the probe's own hooks come down.
     inject::release();
+    {
+        auto& bus = ll::event::EventBus::getInstance();
+        if (gJoinLevelListener) {
+            bus.removeListener<ll::event::client::ClientJoinLevelEvent>(gJoinLevelListener);
+            gJoinLevelListener = nullptr;
+        }
+        if (gExitLevelListener) {
+            bus.removeListener<ll::event::client::ClientExitLevelEvent>(gExitLevelListener);
+            gExitLevelListener = nullptr;
+        }
+        gWorldLoaded.store(false, std::memory_order_relaxed);
+    }
     // gSeen holds raw pointers only (no references - see createRtvDetour); the
     // reference-counted inventories are gTextures and gHeld, released here.
     gSeenCount = 0;
@@ -2033,30 +2522,135 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
         // cut saw one Close and zero draws.
         if (listCount > 8) {
             hookCommandList(const_cast<void*>(lists[0]));
-        }
-        // Only the engine's own frame is big enough to matter; the overlay's own
-        // 1-list D3D11On12 submission arrives in the middle of the swap and must not
-        // arm or disarm the sample (it did in the first cut, which is why only one
-        // Close was ever logged).
-        if (listCount > 8) {
-            if (gDumpFrame.load(std::memory_order_relaxed)) {
-                utils::logger().info(
-                    "[vv] frame lists[0]={:#x} lists[1]={:#x} lists[2]={:#x} closes={}",
-                    reinterpret_cast<std::uintptr_t>(lists[0]),
-                    reinterpret_cast<std::uintptr_t>(lists[1]),
-                    reinterpret_cast<std::uintptr_t>(lists[2]),
-                    gCloseInFrame.load(std::memory_order_relaxed)
-                );
-                gDumpFrame.store(false, std::memory_order_relaxed);
-            } else {
-                unsigned const n = gBigFrames.fetch_add(1, std::memory_order_relaxed) + 1;
-                // Sample one frame every 120 engine frames (~2 s at 60 fps).
-                if (n % 120 == 0) {
-                    gCloseInFrame.store(0, std::memory_order_relaxed);
-                    gDumpFrame.store(true, std::memory_order_relaxed);
+            // Content boundary (B1d). Two independent ways to find the world composite:
+            //
+            //  1. its measured signature (2026-10-25, 18 frame shapes from 48 to 108
+            //     lists): a display-sized viewport, a depth-stencil view bound, and
+            //     exactly ONE draw. `tail 4` in every one of them, but the signature is
+            //     what is used, so the frame's list count does not matter. The world
+            //     passes render at the render resolution; the UI lists have their own
+            //     viewports or many draws;
+            //  2. the back-buffer view handle, when the RTV inventory happens to hold it.
+            unsigned split = 0;
+            void*    found = nullptr;
+            char const* via = "none";
+            unsigned const marks = gMarkCount.load(std::memory_order_relaxed);
+            unsigned const sigs  = gSigCount.load(std::memory_order_relaxed);
+            unsigned const displayW = gDisplayWidth.load(std::memory_order_relaxed);
+            unsigned const displayH = gDisplayHeight.load(std::memory_order_relaxed);
+            // Not named `near`: <Windows.h> still defines that as a macro.
+            auto const aboutSame = [](unsigned a, unsigned b) { return a > b ? a - b <= 2 : b - a <= 2; };
+            if (displayW && displayH && sigs) {
+                auto const sigAt = [&](unsigned i) -> ListSig const* {
+                    for (unsigned s = 0; s < sigs && s < kSigSlots; ++s) {
+                        if (gSigs[s].list == lists[i]) {
+                            return &gSigs[s];
+                        }
+                    }
+                    return nullptr;
+                };
+                unsigned firstMatch = 0;
+                unsigned beforeHud  = 0;
+                for (unsigned i = 0; i < listCount; ++i) {
+                    auto const* sig = sigAt(i);
+                    if (!sig || !sig->dsv || sig->draws != 1) {
+                        continue;
+                    }
+                    if (!aboutSame(sig->width, displayW) || !aboutSame(sig->height, displayH)) {
+                        continue;
+                    }
+                    if (!firstMatch) {
+                        firstMatch = i + 1;
+                    }
+                    // The world composite is immediately followed by the HUD, which is
+                    // the many-draw list. Preferring that pairing keeps a stray
+                    // single-draw blit in front of the composite from being picked (it
+                    // happened: a 48-list frame cut one list early and the injected
+                    // frame was overwritten again). When the HUD itself is a single
+                    // draw, no candidate qualifies here and the first match wins.
+                    auto const* next = (i + 1 < listCount) ? sigAt(i + 1) : nullptr;
+                    if (next && next->draws >= 5) {
+                        beforeHud = i + 1;
+                    }
+                }
+                if (beforeHud) {
+                    split = beforeHud;
+                    found = lists[beforeHud - 1];
+                    via   = "signature+hud";
+                } else if (firstMatch) {
+                    split = firstMatch;
+                    found = lists[firstMatch - 1];
+                    via   = "signature";
                 }
             }
+            if (!split) {
+                for (unsigned i = 0; i < listCount && !split; ++i) {
+                    for (unsigned m = 0; m < marks && m < kMarkSlots; ++m) {
+                        if (gMarks[m].list == lists[i] && gMarks[m].bound && gMarks[m].drew) {
+                            split = i + 1;
+                            found = lists[i];
+                            via   = "handle";
+                            break;
+                        }
+                    }
+                }
+            }
+            gBoundarySplit.store(split, std::memory_order_relaxed);
+            gBoundaryList.store(found, std::memory_order_relaxed);
+            gMarkCount.store(0, std::memory_order_relaxed);
+            unsigned const logs = gBoundaryLogs.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (logs <= 6 || (split == 0 && logs % 600 == 0) || (logs % 1200 == 0 && split)) {
+                utils::logger().info(
+                    "[vv] content boundary split={}/{} list={:#x} via={} marks={} sigs={}",
+                    split,
+                    listCount,
+                    reinterpret_cast<std::uintptr_t>(found),
+                    via,
+                    marks,
+                    sigs
+                );
+            }
+            // Diagnostic for the fallback anchor: one compact line that describes what
+            // each list did this frame (viewport, depth bound, draw shape). Logged when
+            // the frame changes shape (menu 48 / world 70 / ...), plus the first frames
+            // and a slow sample - the world frame is what we need, and it only appears
+            // after the player has entered a world.
+            unsigned const sigFrame = gSigFrames.load(std::memory_order_relaxed);
+            gSigFrames.store(sigFrame + 1, std::memory_order_relaxed);
+            static unsigned lastLogged = 0;
+            if (sigFrame < 3 || listCount != lastLogged || sigFrame % 600 == 0) {
+                lastLogged = listCount;
+                std::string      line;
+                unsigned const   sigs = gSigCount.load(std::memory_order_relaxed);
+                for (unsigned i = 0; i < listCount; ++i) {
+                    for (unsigned s = 0; s < sigs && s < kSigSlots; ++s) {
+                        if (gSigs[s].list != lists[i]) {
+                            continue;
+                        }
+                        auto const& sig = gSigs[s];
+                        line += " " + std::to_string(i) + ":v" + std::to_string(sig.width) + "x"
+                                + std::to_string(sig.height);
+                        if (sig.dsv) {
+                            line += "z";
+                        }
+                        line += " d" + std::to_string(sig.draws);
+                        if (sig.firstVerts) {
+                            line += " s" + std::to_string(sig.firstVerts) + "x" + std::to_string(sig.firstInst);
+                        }
+                        if (sig.firstIndices) {
+                            line += " x" + std::to_string(sig.firstIndices);
+                        }
+                        break;
+                    }
+                }
+                utils::logger().info("[vv] frame #{} lists={}:{}", sigFrame + 1, listCount, line);
+            }
+            gSigCount.store(0, std::memory_order_relaxed);
         }
+        // Only the engine's own frame is big enough to matter. The frame-list sample
+        // that used to be armed here (one frame in 120, 49 synchronous log lines on
+        // the render thread) was removed on 2026-10-25 22:46: the shape line below
+        // already prints every list's viewport/draws whenever the frame changes.
     }
     unsigned previous = gMaxListsPerSubmit.load(std::memory_order_relaxed);
     while (listCount > previous
@@ -2173,10 +2767,36 @@ void onPresent() {
     (void)gLastSeenCount;
     (void)gSeenStableSince;
     (void)gDumpPasses;
+    // Frame-time marker. A hitch is a fact the user can feel, so it is measured here
+    // instead of guessed at: only frames that lose >= 25 ms are logged (first ten, then
+    // every fiftieth), which is enough to tell "the periodic diagnostics are gone" from
+    // "something else is stalling" without turning the log into a counter dump.
+    static LARGE_INTEGER lastPresent{};
+    static long long     frequency{};
+    if (!frequency) {
+        LARGE_INTEGER f{};
+        if (QueryPerformanceFrequency(&f)) {
+            frequency = f.QuadPart;
+        }
+    }
+    LARGE_INTEGER now{};
+    QueryPerformanceCounter(&now);
+    if (frequency && lastPresent.QuadPart) {
+        double const ms = 1000.0 * static_cast<double>(now.QuadPart - lastPresent.QuadPart)
+                        / static_cast<double>(frequency);
+        if (ms >= 25.0) {
+            static unsigned long long longFrames = 0;
+            if (++longFrames <= 10 || longFrames % 50 == 0) {
+                utils::logger().info("[vv] long frame {:.1f} ms at present #{}", ms, presents);
+            }
+        }
+    }
+    lastPresent = now;
 }
 
 void onSwapChainResize() {
     resetTextureInventory();
+    gRenderGeneration.fetch_add(1, std::memory_order_relaxed);
     utils::logger().info("[vv] resize: released the old render-graph inventory");
 }
 
@@ -2203,9 +2823,119 @@ void noteSwapChain(void* swapChain) {
         gLoggedExclusion = true;
         utils::logger().info("[vv] {} back buffer(s) excluded from the dump", count);
     }
+    // The content boundary compares bound RTV handles against the back buffers' own
+    // views; this maps the two once per change of the chain.
+    refreshBackBufferHandles();
 }
 
 void setGameQueue(void* queue) { gGameQueue.store(queue, std::memory_order_relaxed); }
+
+void* engineDevice() { return gEngineDevice.load(std::memory_order_relaxed); }
+bool  worldLoaded() { return gWorldLoaded.load(std::memory_order_relaxed); }
+
+bool taaMatrices(float* current, float* previous, float* camera, float* jitter) {    void const* const ctx = gTaaContext.load(std::memory_order_relaxed);
+    if (!ctx || !current || !previous || !readable(ctx, 0x2a0)) {
+        return false;
+    }
+    auto const* const base = static_cast<unsigned char const*>(ctx);
+    std::memcpy(current, base + 0x200, 16 * sizeof(float));
+    std::memcpy(previous, base + 0x240, 16 * sizeof(float));
+    if (camera) {
+        std::memcpy(camera, base + 0x280, 6 * sizeof(float));
+    }
+    if (jitter) {
+        std::memcpy(jitter, base + 0x1e4, 2 * sizeof(float));
+    }
+    return true;
+}
+
+void dumpTaaContextWindows() {
+#ifdef TEST
+    void* const ctx  = gTaaContext.load(std::memory_order_relaxed);
+    void* const exec = gExecContext.load(std::memory_order_relaxed);
+    void* const cam  = gCameraData.load(std::memory_order_relaxed);
+    utils::logger().info(
+        "[vv] ctxw ctx={:#x} exec={:#x} cam={:#x}",
+        reinterpret_cast<std::uintptr_t>(ctx),
+        reinterpret_cast<std::uintptr_t>(exec),
+        reinterpret_cast<std::uintptr_t>(cam)
+    );
+    if (ctx) {
+        sampleFloatWindow(ctx, "ctx", 90, 0);
+    }
+    if (exec && exec != ctx) {
+        sampleFloatWindow(exec, "exec", 90, 0);
+    }
+    if (cam && cam != ctx && cam != exec) {
+        sampleFloatWindow(cam, "cam", 90, 0);
+    }
+#endif
+}
+void* gameQueue() { return gGameQueue.load(std::memory_order_relaxed); }
+unsigned renderWidth() { return gRenderWidth.load(std::memory_order_relaxed); }
+unsigned renderHeight() { return gRenderHeight.load(std::memory_order_relaxed); }
+unsigned displayWidth() { return gDisplayWidth.load(std::memory_order_relaxed); }
+unsigned displayHeight() { return gDisplayHeight.load(std::memory_order_relaxed); }
+
+unsigned renderTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance) {    if (!out || !max) {
+        return 0;
+    }
+    unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
+    unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
+    if (!w || !h) {
+        return 0;
+    }
+    // Not named `near`: <Windows.h> still defines that as a macro.
+    auto const close = [tolerance](unsigned a, unsigned b) { return (a > b ? a - b : b - a) <= tolerance; };
+    unsigned   count = 0;
+    for (unsigned i = 0; i < gHeldCount && count < max; ++i) {
+        unsigned const idx = (gHeldNext + kHeldSlots - 1 - i) % kHeldSlots;
+        auto const&    e   = gHeld[idx];
+        if (!e.resource || !close(e.width, w) || !close(e.height, h)) {
+            continue;
+        }
+        out[count++] = RenderTargetInfo{e.resource, e.width, e.height, e.format};
+    }
+    return count;
+}
+
+unsigned depthTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance) {
+    if (!out || !max) {
+        return 0;
+    }
+    unsigned const w = gRenderWidth.load(std::memory_order_relaxed);
+    unsigned const h = gRenderHeight.load(std::memory_order_relaxed);
+    if (!w || !h) {
+        return 0;
+    }
+    auto const close = [tolerance](unsigned a, unsigned b) { return (a > b ? a - b : b - a) <= tolerance; };
+    unsigned   count = 0;
+    for (unsigned i = 0; i < gHeldDepthCount && count < max; ++i) {
+        unsigned const idx = (gHeldDepthNext + kHeldDepthSlots - 1 - i) % kHeldDepthSlots;
+        auto const&    e   = gHeldDepth[idx];
+        if (!e.resource || !close(e.width, w) || !close(e.height, h)) {
+            continue;
+        }
+        out[count++] = RenderTargetInfo{e.resource, e.width, e.height, e.format};
+    }
+    return count;
+}
+
+unsigned renderGeneration() { return gRenderGeneration.load(std::memory_order_relaxed); }
+
+void* taauListForFrame() {
+    void* const list = gTaauList.load(std::memory_order_relaxed);
+    if (!list) {
+        return nullptr;
+    }
+    unsigned const frame = gTaauListFrame.load(std::memory_order_relaxed);
+    return frame == gDrawHits.load(std::memory_order_relaxed) ? list : nullptr;
+}
+
+void requestTaauListScan() { gTaauScanRequested.store(true, std::memory_order_relaxed); }
+
+unsigned backBufferWriterSplit() { return gBoundarySplit.load(std::memory_order_relaxed); }
+void*    backBufferWriterList() { return gBoundaryList.load(std::memory_order_relaxed); }
 
 void requestContextSample(unsigned frames, unsigned delayMs) {
 #ifdef TEST

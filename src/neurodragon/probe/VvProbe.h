@@ -74,4 +74,76 @@ void requestContextSample(unsigned frames, unsigned delayMs);
 // Runs one render-resolution dump synchronously (the same path F9 uses).
 void requestDumpNow();
 
+// Frame facts for the B1a NGX-session probe. `engineDevice`/`gameQueue` are the
+// objects the renderer submits through, latched by the existing hooks; the sizes
+// are the render resolution (viewport x factor) and the display viewport.
+[[nodiscard]] void*    engineDevice();
+[[nodiscard]] void*    gameQueue();
+[[nodiscard]] unsigned renderWidth();
+[[nodiscard]] unsigned renderHeight();
+[[nodiscard]] unsigned displayWidth();
+[[nodiscard]] unsigned displayHeight();
+
+// B1b: the render-resolution textures the RTV inventory is holding references to,
+// newest first. Only resources whose size matches the current render resolution
+// are returned. `format` is the DXGI_FORMAT number (26 = R11G11B10, 44 = R24G8,
+// 41 = R32F, ...). The references are owned by the probe inventory, so the caller
+// must not release them.
+struct RenderTargetInfo {
+    void*    resource;
+    unsigned width;
+    unsigned height;
+    unsigned format;
+};
+[[nodiscard]] unsigned renderTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance = 2);
+
+// The same shape for depth-stencil targets (they are created through
+// CreateDepthStencilView, so renderTargets() never holds them). `format` is the
+// resource's own DXGI format - 43 (R24G8_TYPELESS) or 44 in practice. Newest first,
+// references owned by the probe.
+[[nodiscard]] unsigned depthTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance = 2);
+
+// Bumped whenever the render graph may have been replaced (swap-chain resize,
+// world enter). The B1b bypass caches the selected colour texture and uses this
+// to drop the cache instead of holding a stale generation across a rebuild.
+[[nodiscard]] unsigned renderGeneration();
+
+// Content boundary (B1b, 2026-10-25): the engine command list that was recording
+// when the TAAU draw callback ran, if the draw-side scanner could prove it from
+// an engine-list vtable match. Valid only for the current frame; null when the
+// scan found nothing. This is what replaces "tail k=4" once it works.
+[[nodiscard]] void* taauListForFrame();
+
+// Whether a level is loaded, maintained by LeviLamina's client join/exit events
+// (the same pair the RT path uses). `ll::service::getLevel()` was measured useless
+// here: non-empty in the first world, still empty after leaving and re-entering
+// (2026-10-25 23:36). Event-driven, so it survives world changes.
+[[nodiscard]] bool worldLoaded();
+
+// The per-frame numbers the motion-vector pass needs, read from the TAAContext
+// captured at the TAAU draw: current/previous view-projection (16 floats each),
+// camera origins (6 floats at +0x280) and sub-pixel jitter (2 floats at +0x1e4).
+// Returns false when no draw has been seen yet. Read-only.
+bool taaMatrices(float* current, float* previous, float* camera, float* jitter);
+
+// TEST only: dumps the 0x300-byte float windows of the TAAU draw's context, the
+// execution context and the camera object, so the view-projection packing can be
+// settled offline from one labelled in-world frame (0x1e0..0x2a0 covers jitter,
+// the current/previous pair and the camera origins).
+void dumpTaaContextWindows();
+
+// Asks for a deeper scan of the draw callback's object graph on the next frame
+// (up to three pointer hops, bounded). Only runs on request: the first shallow
+// scan (2026-10-25) found nothing in the execution context's first level.
+void requestTaauListScan();
+
+// Content boundary (B1d): the index of the list in the current frame after which
+// the world composite has just finished, i.e. the first list that bound a back
+// buffer and drew (1-based; 0 when no such list was seen). This is the anchor that
+// does not move with the frame's list count - see docs/specs/vv.md §14.5. The value
+// describes the submission that just arrived, so it must be read from the same
+// ExecuteCommandLists hook that computes it (inject::prepare does).
+[[nodiscard]] unsigned backBufferWriterSplit();
+[[nodiscard]] void*    backBufferWriterList();
+
 } // namespace neurodragon::probe::vv

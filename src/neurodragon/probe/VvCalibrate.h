@@ -19,6 +19,12 @@ using SlotReporter = void (*)(char const*, int);
 // never sees it. The reference returned is owned by the caller.
 void* engineDeviceFromCommandList(void* list);
 
+// Size of one RTV descriptor in a descriptor heap, straight from the device. The
+// content boundary compares bound render-target handles against the handles the
+// back buffer's views were created with; when the engine passes a single handle for
+// a contiguous range, the i-th handle is first + i * increment.
+unsigned rtvDescriptorIncrement(void* device);
+
 // One-shot readback of a texture into a 24-bit BMP (bottom-up rows). Only the
 // formats VV actually uses are converted - R8G8B8A8 (typeless/unorm/sRGB) and
 // R16G16B16A16_FLOAT - anything else is reported as unsupported instead of being
@@ -45,6 +51,18 @@ enum class DumpState : unsigned {
 };
 
 bool dumpTextureRawAs(void* device, void* queue, void* resource, wchar_t const* path, DumpState state);
+
+// Writes a 24-bit BMP from an RGBA8 image that is already in CPU memory (the mapped
+// readback of a copy we recorded ourselves). Used by the B1c cut capture: it copies
+// the back buffer at the injection boundary, so there is no engine texture to copy
+// and no device/queue work left to do - only the file.
+bool writeBmpRgba8(
+    wchar_t const*       path,
+    unsigned char const* rgba,
+    unsigned             width,
+    unsigned             height,
+    unsigned             rowPitch
+);
 
 // Back-buffer resources of a swap chain (2 for a flip-model chain). Used only to keep
 // the BMP dump away from resources that live in PRESENT.

@@ -1,0 +1,79 @@
+agentflow gate: 2 finding(s), 0 error(s), 0 waived
+  WARN             shader.out-of-scope      HLSL chunk kEncodeHlsl (src/neurodragon/nr/D3D12Bridge.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+  WARN             shader.out-of-scope      HLSL chunk kRcasHlsl (src/neurodragon/sr/SrSharpening.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\input\KeyBind.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\MemoryOperators.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\NeuroDragon.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\nr\D3D12Bridge.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\probe\RenderProbe.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\probe\VvCalibrate.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\probe\VvInject.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\probe\VvProbe.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\sr\SrSharpening.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\GameNotice.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\InputGuard.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\Menu.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\Overlay.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\Screenshot.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\Theme.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\ui\Widgets.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\utils\Utils.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\vv\VvBypass.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\vv\VvCapture.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\vv\VvDlssSr.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\vv\VvSr.cpp[0m
+[0m[32;1m[  6%]:[0m [35;1m<NeuroDragon>[0m cache compiling.release src\neurodragon\Config.cpp[0m
+[0m[33;1msrc\neurodragon\ui\InputGuard.cpp(33,1): warning: unused variable '_AutoHookCount' [-Wunused-variable]
+   33 | LL_TYPE_INSTANCE_HOOK(
+      | ^~~~~~~~~~~~~~~~~~~~~~
+   34 |     GuardMouseHook,
+      |     ~~~~~~~~~~~~~~~
+   35 |     ll::memory::HookPriority::Highest,
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   36 |     MouseDevice,[0m
+[0m[33;1msrc\neurodragon\probe\VvInject.cpp(63,23): warning: unused variable 'gLastLoggedInjected' [-Wunused-variable]
+   63 | std::atomic<unsigned> gLastLoggedInjected{0};
+      |                       ^~~~~~~~~~~~~~~~~~~
+1 warning generated.[0m
+[0m[33;1msrc\neurodragon\nr\D3D12Bridge.cpp(1993,16): warning: unused variable 'stamps' [-Wunused-variable]
+ 1993 |     bool const stamps = ensureStamps(device);
+      |                ^~~~~~
+src\neurodragon\nr\D3D12Bridge.cpp(2071,16): warning: unused variable 'sessionClaimed' [-Wunused-variable]
+ 2071 |     bool const sessionClaimed = false;
+      |                ^~~~~~~~~~~~~~
+src\neurodragon\nr\D3D12Bridge.cpp(589,23): warning: unused variable 'kNrProjectId' [-Wunused-const-variable]
+  589 | constexpr char const* kNrProjectId     = "f1b2e5d8-9c4a-4e7b-8a36-5d2e90c47a11";[0m
+[0m[33;1msrc\neurodragon\NeuroDragon.cpp(82,101): warning: 'u8path<std::basic_string<char>, 0>' is deprecated: warning STL4021: The std::filesystem::u8path() overloads are deprecated in C++20. The constructors of std::filesystem::path provide equivalent functionality via construction from u8string, u8string_view, or iterators with value_type char8_t. You can define _SILENCE_CXX20_U8PATH_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to suppress this warning. [-Wdeprecated-declarations]
+   82 |         if (std::filesystem::exists(std::filesystem::path(getSelf().getModDir()) / std::filesystem::u8path(configured), error)) {
+      |                                                                                                     ^
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.51.36231\include/filesystem(1410,5): note: 'u8path<std::basic_string<char>, 0>' has been explicitly marked deprecated here
+ 1410 |     _CXX20_DEPRECATE_U8PATH _NODISCARD path u8path(const _Src& _Source) { // construct a path from UTF-8 _Source
+      |     ^
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.51.36231\include/yvals_core.h(1251,7): note: expanded from macro '_CXX20_DEPRECATE_U8PATH'
+ 1251 |     [[deprecated("warning STL4021: "                                                                                 \[0m
+[0m[33;1msrc\neurodragon\probe\VvProbe.cpp(323,23): warning: unused variable 'gSemanticsMask' [-Wunused-variable]
+  323 | std::atomic<unsigned> gSemanticsMask{0};
+      |                       ^~~~~~~~~~~~~~
+src\neurodragon\probe\VvProbe.cpp(345,6): warning: unused function 'calibrateSlots' [-Wunused-function]
+  345 | void calibrateSlots(ID3D12GraphicsCommandList* list);
+      |      ^~~~~~~~~~~~~~
+src\neurodragon\probe\VvProbe.cpp(355,7): warning: unused function 'lookupRtv' [-Wunused-function]
+  355 | void* lookupRtv(std::uintptr_t handle) {[0m
+[0m[33;1msrc\neurodragon\ui\Menu.cpp(1205,9): warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+ 1205 |         vv::sr::dumpInputs();
+      |         ^~~~~~~~~~~~~~~~~~~~
+1 warning generated.[0m
+Running prelink...
+[Prelink]: Generating bedrock_runtime_api.lib...
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\l\levilamina\26.51.7\8f1f8259ffe64d71918ea56d11f57a4a\lib\LeviLamina.lib
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\f\fmt\11.2.0\ee1902dd7cff4195a287949f80dbce70\lib\fmt.lib
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\l\leveldb\1.23\2532d000dc9d47cbb618c80ba0e6d806\lib\leveldb.lib
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\s\snappy\1.2.2\b3244272357b4994abb43dc0aa939d28\lib\snappy.lib
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\s\symbolprovider\v1.3.0\8ef9d781a7854895b90a561f7f9be0ea\lib\SymbolProvider.lib
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\i\imgui\v1.91.9\6a6d0e79ad884c1cbb84817ecca3057d\lib\imgui.lib
+[Prelink]: Processing archive: C:\Users\Eragon\AppData\Local\.xmake\packages\m\minhook\v1.3.4\8d05c08468c74988ab277784c71fd71a\lib\minhook.lib
+[Prelink]: Done.
+[0m[32;1m[ 81%]:[0m [35;1m<NeuroDragon>[0m [35;1mlinking.release NeuroDragon.dll[0m
+[0m[1;32m[mod Packer]: [0mlang/ (2 files)[0m
+[0m[1;32m[mod Packer]: [0mmod already generated to D:\Documents\NeuroDragon-agent2\bin\NeuroDragon[0m
+[0m[32;1m[100%]:[0m [32;1mbuild ok, spent 31.281s[0m

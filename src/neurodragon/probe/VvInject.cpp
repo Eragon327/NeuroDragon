@@ -1,4 +1,8 @@
 #include "neurodragon/probe/VvInject.h"
+#include "neurodragon/probe/VvProbe.h"
+#include "neurodragon/vv/VvBypass.h"
+#include "neurodragon/vv/VvCapture.h"
+#include "neurodragon/vv/VvSr.h"
 
 #include <Windows.h>
 #include <d3d12.h>
@@ -40,8 +44,13 @@ struct Injector {
 Injector g;
 
 std::atomic<int>      gMode{static_cast<int>(Mode::Off)};
+std::atomic<int>      gAction{static_cast<int>(Action::Clear)};
+std::atomic<bool>     gUseTaauList{false};
+std::atomic<bool>     gUseBackBuffer{false};
+std::atomic<unsigned> gContentLogs{0};
 std::atomic<unsigned> gK{1};
 std::atomic<unsigned> gHold{20};
+std::atomic<unsigned> gDepth{0};
 std::atomic<unsigned> gHoldLeft{20};
 std::atomic<unsigned> gLists{0};
 std::atomic<unsigned> gInjected{0};
@@ -74,7 +83,7 @@ void setReason(SkipReason reason) {
     case SkipReason::FenceBusy:      text = "the previous injection is still on the GPU"; break;
     case SkipReason::NoBackBuffer:   text = "GetBuffer failed"; break;
     case SkipReason::PipelineFailed: text = "could not build the injection pipeline"; break;
-    case SkipReason::RecordFailed:   text = "recording the clear failed"; break;
+    case SkipReason::RecordFailed:   text = "recording the injected work failed"; break;
     default: break;
     }
     if (text && (n <= 3 || n % 120 == 0)) {
@@ -190,6 +199,30 @@ bool record(ID3D12Resource* buffer) {
     if (FAILED(g.allocator->Reset()) || FAILED(g.list->Reset(g.allocator, nullptr))) {
         return false;
     }
+    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Capture)) {
+        // B1c: copy the back buffer into our own readback. Nothing on screen changes;
+        // the picture is written to disk after the submission's fence passes.
+        if (!neurodragon::vv::capture::record(g.list, buffer)) {
+            return false;
+        }
+        return SUCCEEDED(g.list->Close());
+    }
+    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Sr)) {
+        // B2: our own render-resolution buffers (colour / depth / motion) and the
+        // pass that writes them back, encoded, over the back buffer.
+        if (!neurodragon::vv::sr::record(g.list, buffer)) {
+            return false;
+        }
+        return SUCCEEDED(g.list->Close());
+    }
+    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Bypass)) {
+        // B1b-1: our own compute reads the render-resolution colour and ACESes it
+        // over the back buffer. No RTV/clear, no engine texture writes.
+        if (!neurodragon::vv::bypass::record(g.list, buffer)) {
+            return false;
+        }
+        return SUCCEEDED(g.list->Close());
+    }
     D3D12_RENDER_TARGET_VIEW_DESC  desc{};
     bool                           useDesc = false;
     makeRtvDesc(buffer->GetDesc().Format, desc, useDesc);
@@ -242,6 +275,14 @@ void setMode(Mode mode) {
 
 Mode mode() { return static_cast<Mode>(gMode.load(std::memory_order_relaxed)); }
 
+void setAction(Action action) { gAction.store(static_cast<int>(action), std::memory_order_relaxed); }
+Action action() { return static_cast<Action>(gAction.load(std::memory_order_relaxed)); }
+void setUseTaauList(bool use) { gUseTaauList.store(use, std::memory_order_relaxed); }
+bool useTaauList() { return gUseTaauList.load(std::memory_order_relaxed); }
+
+void setUseBackBuffer(bool use) { gUseBackBuffer.store(use, std::memory_order_relaxed); }
+bool useBackBuffer() { return gUseBackBuffer.load(std::memory_order_relaxed); }
+
 void setK(unsigned k) { gK.store(k < 1 ? 1 : k, std::memory_order_relaxed); }
 
 void setFromTail(bool fromTail) {
@@ -261,11 +302,15 @@ void setHoldFrames(unsigned frames) {
     gHoldLeft.store(value, std::memory_order_relaxed);
 }
 
+void setSweepDepth(unsigned depth) { gDepth.store(depth > 240 ? 240 : depth, std::memory_order_relaxed); }
+
+unsigned sweepDepth() { return gDepth.load(std::memory_order_relaxed); }
+
 void setDevice(void* device) { g.device = static_cast<ID3D12Device*>(device); }
 
 void noteSwapChain(void* swapChain) { g.swapChain = static_cast<IDXGISwapChain*>(swapChain); }
 
-unsigned prepare(void* queueVoid, unsigned listCount) {
+unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Off)) {
         return 0;
     }
@@ -319,22 +364,66 @@ unsigned prepare(void* queueVoid, unsigned listCount) {
 
     unsigned const setting = gK.load(std::memory_order_relaxed);
     unsigned       k       = 0;
-    if (gFromTail.load(std::memory_order_relaxed)) {
-        // k = 1 means "after the whole frame", k = 2 "before the last list", ...
-        unsigned back = setting < 1 ? 1 : setting;
-        if (back > listCount) {
-            back = listCount;
+    bool           content = false;
+    if (gUseBackBuffer.load(std::memory_order_relaxed) && lists) {
+        // The frame's world composite is the first list that bound a back buffer and
+        // drew; the probe found it in this submission. Cutting after it is the only
+        // anchor that follows the frame's shape instead of counting from an end.
+        unsigned const split = probe::vv::backBufferWriterSplit();
+        if (split > 0 && split <= listCount) {
+            k       = split;
+            content = true;
+            unsigned const n = gContentLogs.fetch_add(1, std::memory_order_relaxed);
+            if (n < 4 || n % 600 == 0) {
+                utils::logger().info(
+                    "[vv] inject: back-buffer boundary split={}/{} list={:#x}",
+                    k,
+                    listCount,
+                    reinterpret_cast<std::uintptr_t>(probe::vv::backBufferWriterList())
+                );
+            }
         }
-        k = listCount - back + 1;
-        if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Fixed)) {
-            gK.store(back, std::memory_order_relaxed);
+    }
+    if (!content && gUseTaauList.load(std::memory_order_relaxed) && lists) {
+        if (void* const taau = probe::vv::taauListForFrame()) {
+            for (unsigned i = 0; i < listCount; ++i) {
+                if (lists[i] == taau) {
+                    // Content boundary: everything up to and including the list that
+                    // was recording when the TAAU draw ran. No tail/head count.
+                    k       = i + 1;
+                    content = true;
+                    unsigned const n = gContentLogs.fetch_add(1, std::memory_order_relaxed);
+                    if (n < 4 || n % 600 == 0) {
+                        utils::logger().info(
+                            "[vv] inject: taau-list boundary head={}/{} (captured list={:#x})",
+                            k,
+                            listCount,
+                            reinterpret_cast<std::uintptr_t>(taau)
+                        );
+                    }
+                    break;
+                }
+            }
         }
-    } else {
-        k = clampK(listCount, setting);
-        if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Fixed)) {
-            // Store the clamped value back so the panel's "boundary now" is the boundary
-            // that was actually used, not the slider position that asked for it.
-            gK.store(k, std::memory_order_relaxed);
+    }
+    if (!content) {
+        if (gFromTail.load(std::memory_order_relaxed)) {
+            // k = 1 means "after the whole frame", k = 2 "before the last list", ...
+            unsigned back = setting < 1 ? 1 : setting;
+            if (back > listCount) {
+                back = listCount;
+            }
+            k = listCount - back + 1;
+            if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Fixed)) {
+                gK.store(back, std::memory_order_relaxed);
+            }
+        } else {
+            k = clampK(listCount, setting);
+            if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Fixed)) {
+                // Store the clamped value back so the panel's "boundary now" is the boundary
+                // that was actually used, not the slider position that asked for it.
+                gK.store(k, std::memory_order_relaxed);
+            }
         }
     }
     gSplit.store(k, std::memory_order_relaxed);
@@ -353,6 +442,15 @@ void submitted(unsigned splitAt, unsigned listCount) {
     if (g.queue && g.fence) {
         g.queue->Signal(g.fence, ++g.fenceValue);
     }
+    // B1c: the cut picture is copied in our own list, so the fence that says "the GPU
+    // has finished the copy" has to be signalled on the same queue right after the
+    // split submission. No-op unless this frame recorded a capture.
+    neurodragon::vv::capture::onSubmitted(
+        g.queue,
+        splitAt,
+        listCount,
+        gFromTail.load(std::memory_order_relaxed)
+    );
     // The reference has to go now: ResizeBuffers fails while any reference to a back
     // buffer is outstanding, and that failure ends in abort() (docs/specs/vv.md §9).
     if (g.pending) {
@@ -361,6 +459,21 @@ void submitted(unsigned splitAt, unsigned listCount) {
     }
 
     unsigned const mode = static_cast<unsigned>(gMode.load(std::memory_order_relaxed));
+    if (mode == static_cast<unsigned>(Mode::Fixed)
+        && gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Capture)) {
+        // One shot. A capture left armed in Fixed mode writes a full display-resolution
+        // BMP on every frame (2026-10-25 16:58: 1941 files, 21 GB) - the boundary test
+        // only needs the frame that was captured.
+        gMode.store(static_cast<int>(Mode::Off), std::memory_order_relaxed);
+        auto const captured = neurodragon::vv::capture::stats();
+        utils::logger().info(
+            "[vvc] capture done captured={} skipped={} pending={}",
+            captured.captured,
+            captured.skipped,
+            captured.pending
+        );
+        return;
+    }
     if (mode == static_cast<unsigned>(Mode::Fixed)) {
         unsigned const n = gInjected.load(std::memory_order_relaxed);
         if (n <= 3 || n % 120 == 0) {
@@ -386,15 +499,19 @@ void submitted(unsigned splitAt, unsigned listCount) {
     gHoldLeft.store(gHold.load(std::memory_order_relaxed), std::memory_order_relaxed);
     bool     wrapped = false;
     unsigned next    = 0;
+    // A capture pass only needs the tail; `depth` keeps it from writing one full
+    // display-resolution BMP per list of the frame.
+    unsigned const depth = gDepth.load(std::memory_order_relaxed);
+    unsigned const limit = (depth && depth < listCount) ? depth : listCount;
     if (gFromTail.load(std::memory_order_relaxed)) {
         next = gK.load(std::memory_order_relaxed) + 1;
-        if (next > listCount) {
+        if (next > limit) {
             next    = 1;
             wrapped = true;
         }
     } else {
         next = splitAt + 1;
-        if (next > listCount) {
+        if (next > limit) {
             next    = 1;
             wrapped = true;
         }
@@ -408,6 +525,20 @@ void submitted(unsigned splitAt, unsigned listCount) {
             gInjected.load(std::memory_order_relaxed),
             gSkipped.load(std::memory_order_relaxed)
         );
+        if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Capture)) {
+            // One pass is exactly one picture per boundary. A second pass would only
+            // overwrite the files with pictures of a later frame - and for the cut
+            // sweep the whole point is "one frame per cut".
+            gMode.store(static_cast<int>(Mode::Off), std::memory_order_relaxed);
+            auto const captured = neurodragon::vv::capture::stats();
+            utils::logger().info(
+                "[vvc] capture pass done captured={} skipped={} pending={}",
+                captured.captured,
+                captured.skipped,
+                captured.pending
+            );
+            return;
+        }
     }
     gK.store(next, std::memory_order_relaxed);
     unsigned const logged = gKLogCount.fetch_add(1, std::memory_order_relaxed);

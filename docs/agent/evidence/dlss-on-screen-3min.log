@@ -1,0 +1,41 @@
+# EXP-0004 / S4 evidence: DLSS evaluated and stayed on for 3 min 14 s
+# run 2026-10-25 23:13:17 - 23:16:31, build 1337c1958d62a87a (EXP-0004), 2560x1440 fullscreen, render 1689x950 (66%)
+
+## every [eval] sample of this run (all ret=0x1)
+[2026-10-25 23:13:17.500 DBG][NeuroDragon] [eval] f=1 … ret=0x1
+[2026-10-25 23:13:17.515 DBG][NeuroDragon] [eval] f=2 … ret=0x1
+[2026-10-25 23:13:17.524 DBG][NeuroDragon] [eval] f=3 … ret=0x1
+[2026-10-25 23:13:23.574 DBG][NeuroDragon] [eval] f=600 … ret=0x1
+[2026-10-25 23:13:30.394 DBG][NeuroDragon] [eval] f=1200 … ret=0x1
+[2026-10-25 23:13:36.450 DBG][NeuroDragon] [eval] f=1800 … ret=0x1
+[2026-10-25 23:13:42.462 DBG][NeuroDragon] [eval] f=2400 … ret=0x1
+[2026-10-25 23:13:48.663 DBG][NeuroDragon] [eval] f=3000 … ret=0x1
+[2026-10-25 23:13:55.712 DBG][NeuroDragon] [eval] f=3600 … ret=0x1
+[2026-10-25 23:14:01.717 DBG][NeuroDragon] [eval] f=4200 … ret=0x1
+[2026-10-25 23:14:07.748 DBG][NeuroDragon] [eval] f=4800 … ret=0x1
+[2026-10-25 23:14:14.408 DBG][NeuroDragon] [eval] f=5400 … ret=0x1
+[2026-10-25 23:14:20.449 DBG][NeuroDragon] [eval] f=6000 … ret=0x1
+[2026-10-25 23:14:26.521 DBG][NeuroDragon] [eval] f=6600 … ret=0x1
+[2026-10-25 23:14:33.301 DBG][NeuroDragon] [eval] f=7200 … ret=0x1
+[2026-10-25 23:14:39.311 DBG][NeuroDragon] [eval] f=7800 … ret=0x1
+[2026-10-25 23:14:45.341 DBG][NeuroDragon] [eval] f=8400 … ret=0x1
+[2026-10-25 23:14:51.362 DBG][NeuroDragon] [eval] f=9000 … ret=0x1
+[2026-10-25 23:14:58.637 DBG][NeuroDragon] [eval] f=9600 … ret=0x1
+[2026-10-25 23:15:04.653 DBG][NeuroDragon] [eval] f=10200 … ret=0x1
+[2026-10-25 23:15:10.664 DBG][NeuroDragon] [eval] f=10800 … ret=0x1
+[2026-10-25 23:15:17.519 DBG][NeuroDragon] [eval] f=11400 … ret=0x1
+[2026-10-25 23:15:23.524 DBG][NeuroDragon] [eval] f=12000 … ret=0x1
+[2026-10-25 23:15:29.536 DBG][NeuroDragon] [eval] f=12600 … ret=0x1
+[2026-10-25 23:15:36.215 DBG][NeuroDragon] [eval] f=13200 … ret=0x1
+[2026-10-25 23:15:42.216 DBG][NeuroDragon] [eval] f=13800 … ret=0x1
+[2026-10-25 23:15:48.237 DBG][NeuroDragon] [eval] f=14400 … ret=0x1
+[2026-10-25 23:15:54.247 DBG][NeuroDragon] [eval] f=15000 … ret=0x1
+[2026-10-25 23:16:00.897 DBG][NeuroDragon] [eval] f=15600 … ret=0x1
+[2026-10-25 23:16:06.908 DBG][NeuroDragon] [eval] f=16200 … ret=0x1
+[2026-10-25 23:16:12.983 DBG][NeuroDragon] [eval] f=16800 … ret=0x1
+[2026-10-25 23:16:20.303 DBG][NeuroDragon] [eval] f=17400 … ret=0x1
+[2026-10-25 23:16:25.699 DBG][NeuroDragon] [eval] f=18000 … ret=0x1
+[2026-10-25 23:16:31.148 DBG][NeuroDragon] [eval] f=18600 … ret=0x1
+
+## injection never skipped in this run
+matching lines: 0

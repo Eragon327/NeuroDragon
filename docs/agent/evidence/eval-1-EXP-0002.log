@@ -1,0 +1,17 @@
+# EXP-0002 evidence: NGX EvaluateFeature after the dotted-key fix
+# deployed build: EXP-0003 3078ed57 (tree 95174e66) - contains this experiment's change
+# run: 2026-10-25 23:04:43-23:05:30, user pressed SR + DLSS at ~23:05:03
+
+[2026-10-25 23:05:02.960 IFO][NeuroDragon] [vvsr] sr readback Width: u32 ret=1 val=1689 | f32 ret=1 val=1689.000
+[2026-10-25 23:05:02.960 IFO][NeuroDragon] [vvsr] sr readback OutWidth: u32 ret=1 val=2560 | f32 ret=1 val=2560.000
+[2026-10-25 23:05:02.960 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=0.000
+[2026-10-25 23:05:02.960 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+[2026-10-25 23:05:03.105 DBG][NeuroDragon] [eval] f=1 tid=25280 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1
+[2026-10-25 23:05:03.116 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=0.000
+[2026-10-25 23:05:03.116 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+[2026-10-25 23:05:03.116 DBG][NeuroDragon] [eval] f=2 tid=25280 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1
+[2026-10-25 23:05:03.126 DBG][NeuroDragon] [eval] f=3 tid=25280 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1
+[2026-10-25 23:05:09.103 DBG][NeuroDragon] [eval] f=600 tid=25280 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1
+[2026-10-25 23:05:15.332 DBG][NeuroDragon] [eval] f=1200 tid=25280 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1
+[2026-10-25 23:05:21.387 DBG][NeuroDragon] [eval] f=1800 tid=21268 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1
+[2026-10-25 23:05:28.245 DBG][NeuroDragon] [eval] f=2400 tid=25280 cl=0x1c167459fb0 h=0x1c1388a6450 1689x903 c=0x1c16745f4b0 d=0x1c16745d800 mv=0x1c167462e10 o=0x1c167461160 ret=0x1

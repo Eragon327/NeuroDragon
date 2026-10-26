@@ -37,6 +37,18 @@ enum class Mode : int {
     Sweep = 2, ///< advance k every setHoldFrames() frames, one pass at a time
 };
 
+/// What our inserted command list does. Clear is the M5 boundary experiment;
+/// Bypass is B1b-1 (read the render-resolution colour, ACES it over the back
+/// buffer); Capture is B1c (copy the back buffer into a readback and save a BMP,
+/// changing no pixel). All write only our own resources and are off unless a Mode
+/// is active.
+enum class Action : int {
+    Clear   = 0,
+    Bypass  = 1,
+    Capture = 2,
+    Sr      = 3,
+};
+
 /// Why an injection attempt did nothing. The panel turns these into text (the probe
 /// itself writes English log lines only).
 enum class SkipReason : unsigned {
@@ -66,6 +78,23 @@ struct Stats {
 void setMode(Mode mode);
 [[nodiscard]] Mode mode();
 
+void setAction(Action action);
+[[nodiscard]] Action action();
+
+/// When set, `prepare()` first tries to cut immediately after the engine list that
+/// was recording during the TAAU draw (probe::vv::taauListForFrame()). This is the
+/// content boundary; if the list was not captured it falls back to k.
+void setUseTaauList(bool use);
+[[nodiscard]] bool useTaauList();
+
+/// When set, `prepare()` cuts immediately after the list that just finished the
+/// world composite (probe::vv::backBufferWriterSplit()): the first list that bound a
+/// back buffer and drew. That anchor is independent of how many lists the frame has,
+/// which a tail count is not (docs/specs/vv.md §14.5). Falls back to k when the probe
+/// did not see a back-buffer writer.
+void setUseBackBuffer(bool use);
+[[nodiscard]] bool useBackBuffer();
+
 /// Which end `k` is measured from. From the head (default) k is "after the k-th list";
 /// from the tail k = 1 means "after the whole frame", k = 2 "before the last list", and
 /// so on. The engine's list count is NOT constant (69 in the main-menu dressing room,
@@ -77,6 +106,11 @@ void setFromTail(bool fromTail);
 
 void setK(unsigned k);
 void setHoldFrames(unsigned frames);
+/// How many boundaries one Sweep pass visits (0 = the whole frame). The B1c cut
+/// capture only needs the tail: tail k=1..8 is "the last eight lists", and a full
+/// pass would write one 13 MB BMP per list.
+void setSweepDepth(unsigned depth);
+[[nodiscard]] unsigned sweepDepth();
 
 /// The engine's own device (VvProbe passes it once the first engine submission is
 /// seen). The pipeline is built lazily on it, at the first injection attempt.
@@ -90,7 +124,7 @@ void noteSwapChain(void* swapChain);
 /// Returns the boundary to cut at (0 = forward the call unchanged). When it returns
 /// non-zero, `list()` is a closed command list ready to be submitted between
 /// lists[k-1] and lists[k].
-unsigned prepare(void* queue, unsigned listCount);
+unsigned prepare(void* queue, unsigned listCount, void* const* lists);
 
 /// The command list recorded by the last prepare(). Valid until submitted().
 [[nodiscard]] void* list();

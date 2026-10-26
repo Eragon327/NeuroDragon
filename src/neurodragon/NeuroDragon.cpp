@@ -6,6 +6,10 @@
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
+#include "neurodragon/vv/VvBypass.h"
+#include "neurodragon/vv/VvCapture.h"
+#include "neurodragon/vv/VvDlssSr.h"
+#include "neurodragon/vv/VvSr.h"
 
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/player/PlayerJoinEvent.h"
@@ -131,6 +135,10 @@ bool NeuroDragon::disable() {
     // Take the panel down first: it owns the window procedure and hooks Present,
     // both of which must be in their original state before the NR hooks are dropped.
     ui::Overlay::getInstance().uninstall();
+    vv::bypass::release();
+    vv::capture::release();
+    vv::sr::release();
+    vv::dlss::release();
     probe::vv::uninstall();
     probe::uninstall();
     return true;

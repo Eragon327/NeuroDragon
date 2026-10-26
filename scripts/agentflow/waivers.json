@@ -1,16 +1,1 @@
-[
-  {
-    "check": "ngx.required",
-    "match": "'Jitter.Offset.X'",
-    "reason": "known open defect, not a pass: the DLSS-SR evaluate does not write Jitter.Offset.X. Proven by the NGX feature log at 2026-10-25 18:57 (could not find Jitter.Offset.X parameter -> 0xBAD00005). Fix = write the dot-named keys through slot 6, which the NR bridge already does.",
-    "expires": "2026-11-08",
-    "owner": "user"
-  },
-  {
-    "check": "ngx.required",
-    "match": "'Jitter.Offset.Y'",
-    "reason": "same defect as Jitter.Offset.X: the pair is required by DLSS-SR.",
-    "expires": "2026-11-08",
-    "owner": "user"
-  }
-]
+[]

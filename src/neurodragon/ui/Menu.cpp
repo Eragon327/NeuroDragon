@@ -11,6 +11,10 @@
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/ui/Widgets.h"
 #include "neurodragon/utils/Utils.h"
+#include "neurodragon/vv/VvBypass.h"
+#include "neurodragon/vv/VvCapture.h"
+#include "neurodragon/vv/VvDlssSr.h"
+#include "neurodragon/vv/VvSr.h"
 
 #include "ll/api/i18n/I18n.h"
 
@@ -1051,6 +1055,271 @@ void drawB0Probe() {
     ImGui::SameLine();
     if (ImGui::Button("Sample 24 frames in 2 s (then walk)")) {
         probe::vv::requestContextSample(24, 2000);
+    }
+
+    // B1a: self-built NGX session probe. Creates and releases DLSS feature 1 on
+    // the game's device; it does not evaluate and does not touch a frame.
+    widgets::sectionHeader("VV DLSS B1a (TEST)");
+    if (ImGui::Button("Probe self-init NGX + CreateFeature(1)")) {
+        vv::dlss::requestProbe();
+    }
+    auto const ngx = vv::dlss::probeState();
+    char       buffer[128]{};
+    std::snprintf(buffer, sizeof(buffer), "%s", ngx.done ? "done" : "idle");
+    widgets::statRow("B1a state", buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "init=0x%08X caps=0x%08X create=0x%08X",
+        static_cast<unsigned>(ngx.initRet),
+        static_cast<unsigned>(ngx.capsRet),
+        static_cast<unsigned>(ngx.createRet)
+    );
+    widgets::statRow("B1a NGX returns", buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%ux%u -> %ux%u  core=%d session=%d",
+        ngx.renderWidth,
+        ngx.renderHeight,
+        ngx.displayWidth,
+        ngx.displayHeight,
+        ngx.coreLoaded ? 1 : 0,
+        ngx.initialized ? 1 : 0
+    );
+    widgets::statRow("B1a sizes", buffer);
+
+    // B1c: cut capture. One pass over tail k = 1..8, one picture per boundary, no
+    // pixel changed. The pictures answer "what does each of the last lists draw"
+    // (the first one that shows the HUD is the UI block) and give the offline tool
+    // TAAU's own output as the reference for colour / tone fitting.
+    widgets::sectionHeader("VV B1c cut capture (TEST)");
+    if (ImGui::Button("Capture at content boundary (1 frame)")) {
+        // The self-check for the new anchor: with the boundary taken from the first
+        // back-buffer writer, the picture must never contain the HUD or the hand -
+        // whatever the frame's list count is.
+        vv::capture::start();
+        probe::vv::inject::setAction(probe::vv::inject::Action::Capture);
+        probe::vv::inject::setUseTaauList(false);
+        probe::vv::inject::setUseBackBuffer(true);
+        // If the probe has not seen a writer yet, fall back to the last measured
+        // boundary instead of capturing the top of the frame (k=1 is useless there).
+        probe::vv::inject::setFromTail(true);
+        probe::vv::inject::setK(4);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Capture sweep: tail k=1..8 (one pass)")) {
+        vv::capture::start();
+        probe::vv::inject::setAction(probe::vv::inject::Action::Capture);
+        probe::vv::inject::setUseTaauList(false);
+        probe::vv::inject::setUseBackBuffer(false);
+        probe::vv::inject::setFromTail(true);
+        // One frame per boundary: the capture is the only action, so a "hold" of one
+        // frame gives exactly one picture per tail k instead of three identical ones.
+        probe::vv::inject::setHoldFrames(1);
+        probe::vv::inject::setSweepDepth(8);
+        probe::vv::inject::setK(1);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Sweep);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Stop capture")) {
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
+    }
+    widgets::hint("Stand still. After a capture, press \"Dump now\" (B0) at once: the pictures and the");
+    widgets::hint("candidates must describe the same frame. F11 first, or the dump finds no textures.");
+    auto const cut = vv::capture::stats();
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "captured=%u skipped=%u pending=%u",
+        cut.captured,
+        cut.skipped,
+        cut.pending
+    );
+    widgets::statRow("B1c frames", buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "tail=%u split=%u/%u  %ux%u",
+        cut.tail,
+        cut.split,
+        cut.listCount,
+        cut.width,
+        cut.height
+    );
+    widgets::statRow("B1c last cut", buffer);
+    if (cut.lastFile[0]) {
+        int const needed = ::WideCharToMultiByte(CP_UTF8, 0, cut.lastFile, -1, buffer, sizeof(buffer), nullptr, nullptr);
+        widgets::statRow("B1c last file", needed > 0 ? buffer : "?");
+    }
+
+    // B2: the SR pipeline's own buffers. Same boundary as the bypass, but the world
+    // colour and depth are first copied into our render-resolution textures; the
+    // final pass encodes and writes the result. The depth / motion buttons are the
+    // visual check that those inputs are sane before DLSS is wired in.
+    widgets::sectionHeader("VV B2 SR (TEST)");
+    auto const startSr = [&](vv::sr::View view) {
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
+        probe::vv::inject::setFromTail(true);
+        probe::vv::inject::setK(4);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Sr);
+        probe::vv::inject::setUseTaauList(false);
+        probe::vv::inject::setUseBackBuffer(true);
+        vv::sr::setView(view);
+    };
+    // One row per pair: seven buttons on one line ran off the panel's right edge, so
+    // the last ones (Next SR depth / Dump SR inputs) were invisible (2026-10-25).
+    if (ImGui::Button("SR colour bypass")) {
+        startSr(vv::sr::View::Bypass);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("SR depth view")) {
+        startSr(vv::sr::View::Depth);
+    }
+    if (ImGui::Button("SR raw colour (no encode)")) {
+        startSr(vv::sr::View::Raw);
+    }
+    if (ImGui::Button("SR + DLSS")) {
+        startSr(vv::sr::View::Dlss);
+    }
+    if (ImGui::Button("SR motion view")) {
+        startSr(vv::sr::View::Motion);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Stop SR")) {
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
+    }
+    if (ImGui::Button("Next SR colour")) {
+        vv::sr::cycleColor();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Next SR depth")) {
+        vv::sr::cycleDepth();
+    }
+    if (ImGui::Button("Dump SR inputs")) {
+        vv::sr::dumpInputs();
+    }
+    auto const sr = vv::sr::stats();
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%s  view=%d  %ux%u -> %ux%u",
+        sr.pipelineReady ? "ready" : "not built",
+        sr.view,
+        sr.renderWidth,
+        sr.renderHeight,
+        sr.displayWidth,
+        sr.displayHeight
+    );
+    widgets::statRow("B2 pipeline", buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "feature=%d create=0x%08X eval=0x%08X",
+        sr.dlssReady ? 1 : 0,
+        static_cast<unsigned>(sr.dlssCreateRet),
+        static_cast<unsigned>(sr.dlssEvaluateRet)
+    );
+    widgets::statRow("B2 DLSS", buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "colour=%p/%u (%d/%u)  depth=%p/%u (%d/%u)  rec=%d",
+        sr.colorSource,
+        sr.colorFormat,
+        static_cast<int>(sr.colorChoice) % (sr.colorCandidates ? static_cast<int>(sr.colorCandidates) : 1),
+        sr.colorCandidates,
+        sr.depthSource,
+        sr.depthFormat,
+        static_cast<int>(sr.depthChoice) % (sr.depthCandidates ? static_cast<int>(sr.depthCandidates) : 1),
+        sr.depthCandidates,
+        sr.recorded ? 1 : 0
+    );
+    widgets::statRow("B2 inputs", buffer);
+    if (sr.lastError) {
+        std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(sr.lastError));
+        widgets::statRow("B2 last error", buffer);
+    }
+
+    // B1b-1: our colour bypass. The boundary is the content anchor now (the first
+    // list that bound a back buffer and drew = the world composite), so this follows
+    // the frame instead of counting from its end; tail 4 stays as the fallback when
+    // the probe did not see a writer.
+    widgets::sectionHeader("VV DLSS B1b (TEST)");
+    if (ImGui::Button("Colour bypass at content boundary (fallback tail 4)")) {
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
+        probe::vv::inject::setFromTail(true);
+        probe::vv::inject::setK(4);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Bypass);
+        probe::vv::inject::setUseTaauList(false);
+        probe::vv::inject::setUseBackBuffer(true);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Stop injection")) {
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
+        probe::vv::inject::setUseTaauList(false);
+        probe::vv::inject::setUseBackBuffer(false);
+    }
+    widgets::statRow(
+        "B1b boundary",
+        probe::vv::inject::useBackBuffer() ? "content: back-buffer writer"
+            : probe::vv::inject::useTaauList() ? "taau list (dead)"
+            : "head/tail k (count)",
+        probe::vv::inject::useBackBuffer() ? ImGui::GetColorU32(ImGuiCol_Text) : 0
+    );
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "split=%u  list=%p",
+        probe::vv::backBufferWriterSplit(),
+        probe::vv::backBufferWriterList()
+    );
+    widgets::statRow(
+        "B1d writer",
+        buffer,
+        probe::vv::backBufferWriterSplit() ? ImGui::GetColorU32(ImGuiCol_Text) : 0
+    );
+    auto const bypass = vv::bypass::stats();
+    if (ImGui::Button("Next colour candidate")) {
+        vv::bypass::cycleColor();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cycle encode (table / gamma / ACES+g)")) {
+        vv::bypass::cycleTonemap();
+    }
+    widgets::statRow("B1b pipeline", bypass.pipelineReady ? "ready" : "not built",
+                     bypass.pipelineReady ? ImGui::GetColorU32(ImGuiCol_Text) : 0);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "choice=%d/%u  tonemap=%d  ptr=%p",
+        bypass.colorChoice,
+        bypass.colorCandidates,
+        bypass.tonemap,
+        bypass.colorResource
+    );
+    widgets::statRow("B1b colour", buffer);
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%ux%u -> %ux%u  fmt=%u  recorded=%d",
+        bypass.srcWidth,
+        bypass.srcHeight,
+        bypass.dstWidth,
+        bypass.dstHeight,
+        bypass.colorFormat,
+        bypass.recorded ? 1 : 0
+    );
+    widgets::statRow("B1b sizes", buffer);
+    if (bypass.lastError) {
+        std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(bypass.lastError));
+        widgets::statRow("B1b last error", buffer);
     }
 }
 #endif
