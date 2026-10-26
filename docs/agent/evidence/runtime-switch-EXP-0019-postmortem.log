@@ -1,0 +1,10 @@
+# EXP-0019 postmortem: the hand-off logged, the client-thread task never ran.
+# log E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log offset=8515199 window_bytes=175304
+# [vv] options: lines: 3   [vv] taau #: 201
+# every options line of the run, verbatim:
+[2026-10-26 15:45:15.740 IFO][NeuroDragon] [vv] options: marker './mods/NeuroDragon\config\force_bilinear.flag' present=1 (mod dir './mods/NeuroDragon'), 'E:\LeviLauncher\versions\1.26.51.01-agent2\force_bilinear.flag' present=1
+[2026-10-26 15:45:15.740 IFO][NeuroDragon] [vv] options: bilinear switch requested at load time
+[2026-10-26 15:45:18.500 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+# the task entry line ('client-thread task running') is absent above; taau kept running:
+[2026-10-26 15:45:16.744 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-26 15:47:54.456 IFO][NeuroDragon] [vv] taau #25500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=0 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=50999 lists=1249450

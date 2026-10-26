@@ -1,0 +1,11 @@
+# EXP-0016 postmortem: raw game-log window after the smoke offset.
+# log E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log  offset=7791489  window_bytes=412753
+# taau declarations in window: 554  first at 15:02:14.315, before the 25 s dwell existed
+# the smoke read stopped at its last poll: forbidden=[] and PASS was recorded at 15:02:14.914
+# requires lines (loader init, they arrive before the renderer logs anything):
+[2026-10-26 15:02:13.191 IFO][NeuroDragon] [vv] level listeners join=true exit=true
+[2026-10-26 15:02:13.309 IFO][NeuroDragon] [vv] session (install): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a300000 engineInit=0 appId=0x0 dataPath=<none>
+# first two taau declarations after the requires:
+[2026-10-26 15:02:14.315 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-26 15:02:14.359 IFO][NeuroDragon] [vv] taau #1 in.history this=0xae501fe7f0 id=0x8beb3c381fb2f1fe res=0x1cbc6735670 +10=0x7ff88000f490 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[] mod0= secondText=[]
+# last taau in window at kill time: [2026-10-26 15:09:04.332 IFO][NeuroDragon] [vv] taau #73800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clip

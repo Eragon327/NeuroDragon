@@ -1,0 +1,17 @@
+# EXP-0021: mce::Camera probe in TAAU mode (user entered a world, F11, SR + DLSS)
+# E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log: 2035 lines in the run, taau # lines 66, eval ret=0x1 lines 9
+# cam sample groups: 42 lines; only the last sample (#3000) has a real basis
+# the #3000 group, verbatim (basis agrees with the taau context when normalised):
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 valid=1 pos=(-0.0000,+0.0000,-0.0000) right=(+0.1150,+0.0000,-0.9934) up=(-0.1352,+0.9907,-0.0156) fwd=(-0.9841,-0.1361,-0.1139) aspect=0.0000 fov=0.0000 near=0.0000 far=0.0000
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 view=[ +1.00000 +0.00000 +0.00000 +0.00000 +0.00000 +1.00000 +0.00000 +0.00000 +0.00000 +0.00000 +1.00000 +0.00000 +0.00000 +0.00000 +0.00000 +1.00000]
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 proj=[ +0.00391 +0.00000 +0.00000 +0.00000 +0.00000 -0.00694 +0.00000 +0.00000 +0.00000 +0.00000 -0.00200 +0.00000 -1.00000 +1.00000 -1.00000 +1.00000]
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 invview=[ +0.11495 +0.00000 -0.99337 -0.00000 -0.13520 +0.99069 -0.01565 +0.00000 +0.98413 +0.13610 +0.11388 -0.00000 -0.00000 +0.00000 -0.00000 +1.00000]
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 taau cur=[ +0.08802 -0.18405 -0.98414 -0.98413 +0.00000 +1.34867 -0.13610 -0.13610 -0.76067 -0.02130 -0.11388 -0.11388 +0.00000 +0.00000 -0.02500 +0.00000]
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 taau prev=[ +0.08802 -0.18405 -0.98414 -0.98413 +0.00000 +1.34867 -0.13610 -0.13610 -0.76067 -0.02130 -0.11388 -0.11388 +0.00000 +0.00000 -0.02500 +0.00000]
+[2026-10-26 16:17:21.845 IFO][NeuroDragon] [vv] cam #3000 taau origin=(+110.8242,-74.5206,-55.5176) prev=(+110.8242,-74.5206,-55.5176) jitter=(-0.1875,-0.1296)
+[2026-10-26 16:17:27.058 IFO][NeuroDragon] [vvsr] mv decode valid=1 prev_same=1 jitter=(-0.4375,+0.3889) delta=(+0.0000,+0.0000,+0.0000) near=+0.0250 sx=0.7658 sy=1.3613
+[2026-10-26 16:17:29.438 IFO][NeuroDragon] [vvsr] mv snapshot: previous VP differs from current at frame 298 (delta=(+0.0366,+0.0000,+0.0042))
+# the first four cam groups had pos/right/up/fwd/aspect/fov/near/far = 0 (main menu: camera not populated)
+# taau declarations in the run (TAAU was running, markers removed):
+[2026-10-26 16:16:57.276 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-26 16:17:59.992 IFO][NeuroDragon] [vv] taau #6600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=9 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=13851 lists=412588

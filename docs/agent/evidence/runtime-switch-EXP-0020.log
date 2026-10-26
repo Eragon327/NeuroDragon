@@ -1,0 +1,39 @@
+# EXP-0020: runtime switch through the engine's option registry (L2, user entered a world)
+# log E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log offset=8690743 window_bytes=143787
+# taau declarations 55 (first 0-26 16:07:13.738 I, last 0-26 16:07:47.879 I), [vv] options: lines 29
+# registry inventory (id=tag=value) and the switch, verbatim:
+[2026-10-26 16:07:12.919 IFO][NeuroDragon] [vv] options: marker './mods/NeuroDragon\config\force_bilinear.flag' present=1 (mod dir './mods/NeuroDragon'), 'E:\LeviLauncher\versions\1.26.51.01-agent2\force_bilinear.flag' present=1
+[2026-10-26 16:07:12.919 IFO][NeuroDragon] [vv] options: bilinear switch requested at load time
+[2026-10-26 16:07:14.781 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:17.899 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:19.901 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:21.902 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:23.902 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:25.902 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:27.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:29.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:31.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:33.908 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:35.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:37.908 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:39.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:41.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:43.907 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:45.909 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:47.918 IFO][NeuroDragon] [vv] options: handing the switch request to the client thread
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: client-thread task running (attempt 0)
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: registry reached (attempt 0)
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: id=579 upscaling_percentage=66
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: id=580 upscaling_mode=0
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: id=581 gfx_upscaling=1
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: id=582 target_resolution=1
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: id=703 graphics_mode=2
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: scan done valid=470 upscaling_mode id=580 value=0
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: load upscaling_mode 0 -> 1
+[2026-10-26 16:07:49.452 IFO][NeuroDragon] [vv] options: reread upscaling_mode = 1
+# taau stops: the last declaration is 1.6 s before the load call, 0 after it
+[2026-10-26 16:07:13.738 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-26 16:07:47.879 IFO][NeuroDragon] [vv] taau #5700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=11399 lists=279760
+# the world was entered 2 s after the switch; taau never ran in it
+[2026-10-26 16:07:51.431 IFO][NeuroDragon] [vv] session (world enter): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fffa19a0000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 16:07:51.431 IFO][NeuroDragon] [vv] semantics: world entered (B0: manual dump only; press F11, then F9)

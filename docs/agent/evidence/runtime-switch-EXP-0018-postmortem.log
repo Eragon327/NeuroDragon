@@ -1,0 +1,8 @@
+# EXP-0018 postmortem: the runtime options probe logged nothing at all.
+# log E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log offset=8270405 window_bytes=244554
+# [vv] options: lines in the whole window: 0
+# [vv] taau declarations: 302 (first 0-26 15:40:22.315 I, last 0-26 15:43:56.280 I)
+# the marker file existed before launch: <instance>/mods/NeuroDragon/config/force_bilinear.flag (mtime 15:39)
+# first and last taau line of the window:
+[2026-10-26 15:40:22.315 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-26 15:43:56.280 IFO][NeuroDragon] [vv] taau #39000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=77999 lists=1910952

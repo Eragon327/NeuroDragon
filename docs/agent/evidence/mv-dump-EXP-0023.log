@@ -1,0 +1,39 @@
+# EXP-0023: six SR dump sets taken while the player kept moving with the seam visible.
+# The 2026-10-26 17:11 dump (state=Common) read MV as all zeros and depth as all 1.0;
+# this build dumps with NON_PIXEL_SHADER_RESOURCE and the readings are real now.
+
+## dump files
+sr_depth_r32_1689x950.bin  6566276
+sr_depth_r32_1689x950_1.bin  6566276
+sr_depth_r32_1689x950_2.bin  6566276
+sr_depth_r32_1689x950_3.bin  6566276
+sr_depth_r32_1689x950_4.bin  6566276
+sr_depth_r32_1689x950_5.bin  6566276
+sr_depth_r32_1689x950_6.bin  6566276
+sr_dlssout_2560x1440_1.bin  29491232
+sr_dlssout_2560x1440_2.bin  29491232
+sr_dlssout_2560x1440_3.bin  29491232
+sr_dlssout_2560x1440_4.bin  29491232
+sr_dlssout_2560x1440_5.bin  29491232
+sr_dlssout_2560x1440_6.bin  29491232
+sr_final_rgba8_1.bin  14745632
+sr_final_rgba8_2.bin  14745632
+sr_final_rgba8_3.bin  14745632
+sr_final_rgba8_4.bin  14745632
+sr_final_rgba8_5.bin  14745632
+sr_final_rgba8_6.bin  14745632
+sr_mid_colourhalf_1.bin  12889576
+sr_mid_colourhalf_2.bin  12889576
+sr_mid_colourhalf_3.bin  12889576
+sr_mid_colourhalf_4.bin  12889576
+sr_mid_colourhalf_5.bin  12889576
+sr_mid_colourhalf_6.bin  12889576
+sr_mv_rg32_1689x950.bin  6566276
+sr_mv_rg32_1689x950_1.bin  6566276
+sr_mv_rg32_1689x950_2.bin  6566276
+sr_mv_rg32_1689x950_3.bin  6566276
+sr_mv_rg32_1689x950_4.bin  6566276
+sr_mv_rg32_1689x950_5.bin  6566276
+sr_mv_rg32_1689x950_6.bin  6566276
+
+## per-set analysis (vv_seam_sets.py)

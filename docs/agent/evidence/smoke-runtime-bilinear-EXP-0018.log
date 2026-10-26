@@ -1,0 +1,848 @@
+# agentflow smoke runtime-bilinear on EXP-0018
+# started 2026-10-26T15:39:28.404+08:00  verdict=FAIL elapsed=180s
+# tree c15da0575915c190  head 2323309a
+# dll faef14ac5a890ddc
+# profile D:\Documents\NeuroDragon\agent2\scripts\agentflow\smoke\runtime-bilinear.json
+# requires=['\\[vv\\] options: reread upscaling_mode = 1']
+# missing=['\\[vv\\] options: reread upscaling_mode = 1', '\\[vv\\] options: reread upscaling_mode = 1 x0/1']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log offset 8270405 -> 8436113
+[2026-10-26 15:39:40.160 IFO][LeviLamina]                                                                       
+[2026-10-26 15:39:40.160 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-26 15:39:40.160 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-26 15:39:40.160 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-26 15:39:40.160 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-26 15:39:40.160 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-26 15:39:40.160 IFO][LeviLamina]                                                                       
+[2026-10-26 15:39:40.160 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-26 15:39:40.160 IFO][LeviLamina]                                                                       
+[2026-10-26 15:39:40.160 IFO][LeviLamina]                                                                       
+[2026-10-26 15:39:40.160 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-26 15:39:40.160 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-26 15:39:40.171 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-26 15:39:40.171 IFO][LeviLamina] 正在加载模组……
+[2026-10-26 15:39:40.172 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-26 15:39:40.509 DBG][NeuroDragon] NR model already in place, skipping (E:\LeviLauncher\versions\1.26.51.01-agent2\nvngx_dlssnr.dll , 254 MB)
+[2026-10-26 15:39:40.509 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-26 15:39:40.509 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-26 15:40:18.484 WRN][Server] <LVL|2576771616> Migration started
+[2026-10-26 15:40:18.504 WRN][Server] <LVL|2576771616> Migration completed in 0.019000 seconds
+[2026-10-26 15:40:21.031 WRN][Server] <LVL|2298676448> Time played notifier not required for 'zh_CN'
+[2026-10-26 15:40:21.049 IFO][LeviLamina] 正在启用模组……
+[2026-10-26 15:40:21.049 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-26 15:40:21.049 DBG][NeuroDragon] [probe] 模块已 PIN（禁用后仍需重启游戏才能彻底卸载）
+[2026-10-26 15:40:21.049 IFO][NeuroDragon] NR 未启用：config/config.json 里 nr.enabled = false
+[2026-10-26 15:40:21.142 IFO][NeuroDragon] [sr] frame-context hook @ 0x7ff7f12853c0
+[2026-10-26 15:40:21.208 IFO][NeuroDragon] [vv] taau hooked at 0x7ff7eea0f860 (rva 0xb74f860)
+[2026-10-26 15:40:21.320 IFO][NeuroDragon] [vv] level listeners join=true exit=true
+[2026-10-26 15:40:21.376 IFO][NeuroDragon] [vv] taau draw hooked at 0x7ff7eea12820 (rva 0xb752820)
+[2026-10-26 15:40:21.429 IFO][NeuroDragon] [vv] D3D12CreateDevice hooked
+[2026-10-26 15:40:21.430 IFO][NeuroDragon] [vv] session (install): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:21.430 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:21.430 IFO][NeuroDragon] [vv] B0: F9 = dump now (stand still, then F2), F8 = context sample in 2 s (press, then walk); file markers vv_dump_now.txt / vv_ctx_now.txt still work
+[2026-10-26 15:40:21.486 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-26 15:40:21.488 IFO][NeuroDragon] [vv] device created 0x278b434e5f0
+[2026-10-26 15:40:21.550 IFO][NeuroDragon] [vv] CreateRenderTargetView hooked on device 0x278b434e5f0 (target 0x7fff9a7c4700)
+[2026-10-26 15:40:21.602 IFO][NeuroDragon] [vv] CreateDepthStencilView hooked on device 0x278b434e5f0 (target 0x7fff9a7d1d90)
+[2026-10-26 15:40:21.656 IFO][NeuroDragon] [vv] CreateCommittedResource hooked
+[2026-10-26 15:40:21.710 IFO][NeuroDragon] [vv] CreatePlacedResource hooked
+[2026-10-26 15:40:22.242 DBG][NeuroDragon] overlay: ready (End opens the panel)
+[2026-10-26 15:40:22.242 IFO][NeuroDragon] 安装游戏内面板：完成，用时 756 ms
+[2026-10-26 15:40:22.242 IFO][LeviLamina] 已在 1.2 秒内启用 1 个模组
+[2026-10-26 15:40:22.315 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-26 15:40:22.360 IFO][NeuroDragon] [vv] taau #1 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2788b43cb00 +10=0x0 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[llba|ock:|skCa|animation.turtle] mod0= secondText=[]
+[2026-10-26 15:40:22.471 IFO][NeuroDragon] [vv] taau #1 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2788b441b10 +10=0x2798c002560 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[-this|animation.vindicator.attack|allba|LoadMana] mod0= secondText=[metalness_emissive_roughness_subsurface|ures@|side_m ]
+[2026-10-26 15:40:22.636 IFO][NeuroDragon] [vv] taau #1 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2788b43c740 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18b43c600 resText=[ManaV&|variablep|ceTaskCaY&|ng::Asyn_&|eLoa|&1.k&|BlitUncompressed] mod0= secondText=[]
+[2026-10-26 15:40:22.810 IFO][NeuroDragon] [vv] taau #1 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2788b441ba0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[LoadMana|-this|set_right|this|[q)c|urce|32_t)|animation.piglin.hand.attack|ading::Asyn|[w)i|animation.piglin] mod0= secondText=[]
+[2026-10-26 15:40:22.846 IFO][NeuroDragon] [vv] taau #1 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2788b43cb00 +10=0x0 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[llba|ock:|skCa|animation.turtle] mod0= secondText=[]
+[2026-10-26 15:40:22.936 IFO][NeuroDragon] [vv] taau #1 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2788b441b10 +10=0x2798c002560 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[-this|animation.vindicator.attack|allba|LoadMana] mod0= secondText=[metalness_emissive_roughness_subsurface|ures@|side_m ]
+[2026-10-26 15:40:23.093 IFO][NeuroDragon] [vv] taau #1 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2788b43c740 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18b43c600 resText=[ManaV&|skCaY&|ng::Asyn_&|eLoa|&1.k&|BlitUncompressed] mod0= secondText=[]
+[2026-10-26 15:40:23.265 IFO][NeuroDragon] [vv] taau #1 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2788b441ba0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[LoadMana|-this|set_right|this|[q)c|urce|32_t)|animation.piglin.hand.attack|ading::Asyn|[w)i|animation.piglin] mod0= secondText=[]
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taau list: deep scan found nothing (237 nodes, frame 1)
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taau draw #1 self=0x2798c6aa960 tid=42048 qpc=851963844772
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 base=0x2798cddb078 words=96
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x0 = 0x2788b43c770 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x8 = 0x2788b43c798 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x10 = 0x2788b43c798 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x18 = 0x4 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x20 = 0x7ff7f1a35460 mod=Minecraft.Windows.exe+0xe775460
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x28 = 0x27886814ce0 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x30 = 0x27886814cd0 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x38 = 0x2789b5dc203 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x48 = 0x6 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x50 = 0x278866c7700 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x58 = 0x27889f0ce10 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x60 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x70 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x88 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x98 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xa0 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xb0 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xc8 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xd8 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xe0 = 0x5a00a0000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xe8 = 0x5a00a0000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0xf0 = 0x3f80000000000001 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x108 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x118 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x130 = 0x3f8000003f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x148 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x158 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x170 = 0x3f800000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x188 = 0x2d7c000f mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x190 = 0x2f020000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x198 = 0x8cddae00 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1b8 = 0x69687408 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1c8 = 0x7c7308 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1d8 = 0x75ff0000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1e0 = 0xbec0000005a00a00 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1e8 = 0x1bd638e38 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1f0 = 0x3f4000003f28f5c3 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x1f8 = 0x13fa00000 mod=
+[2026-10-26 15:40:24.265 IFO][NeuroDragon] [vv] taa ctx #1 +0x200 = 0x3f3baa1a mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x210 = 0x3fa6d01700000000 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x228 = 0xbf800000bf8020cd mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x238 = 0xbdcd0148 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x240 = 0x3f3baa1a mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x250 = 0x3fa6d01700000000 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x268 = 0xbf800000bf8020cd mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x278 = 0xbdcd0148 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x298 = 0x6163737055414154 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2a0 = 0x676e696c mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2a8 = 0xc mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2b0 = 0xf mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2b8 = 0x27888614f50 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2c0 = 0x8000d2203710c113 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2c8 = 0x27888615250 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2d0 = 0x8000d3223711c114 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2d8 = 0x27888615490 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2e0 = 0x8000d4203712c115 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2e8 = 0x656d756c6f76 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2f0 = 0x8000d5683713c116 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] taa ctx #1 +0x2f8 = 0x27888614d70 mod=
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x00: -0.0000 +0.0000 -0.0000 +0.0000 | -0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x20: -1617537910941095377240164663296.0000 +0.0000 -0.0000 +0.0000 | -0.0000 +0.0000 -0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x40: +0.0000 +0.0000 +0.0000 +0.0000 | -0.0000 +0.0000 -0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x60: +1.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x80: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0xa0: +1.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0xc0: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0xe0: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x100: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x120: +0.0000 +0.0000 +0.0000 +0.0000 | +1.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x140: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x160: +0.0000 +0.0000 +0.0000 +0.0000 | +1.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x180: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 -0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x1a0: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +17563670764784964815814656.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x1c0: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +646501806116396994763318634741760.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x1e0: +0.0000 -0.3750 -0.0556 +0.0000 | +0.6600 +0.7500 +1.2500 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x200: +0.7331 +0.0000 +0.0000 +0.0000 | +0.0000 +1.3032 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x220: +0.0000 +0.0000 -1.0010 -1.0000 | +0.0000 +0.0000 -0.1001 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x240: +0.7331 +0.0000 +0.0000 +0.0000 | +0.0000 +1.3032 +0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x260: +0.0000 +0.0000 -1.0010 -1.0000 | +0.0000 +0.0000 -0.1001 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x280: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +13280395395072.0000 +262233065827738845184.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] ctxf +0x2a0: +1125867913270871159996416.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 -0.0000 +0.0000
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] 2 back buffer(s) excluded from the dump
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] back-buffer view handles=0 (chain buffers=2, rtv views=0)
+[2026-10-26 15:40:24.266 IFO][NeuroDragon] [vv] presents=1 submits=0 lists=0 maxListsPerSubmit=0 taau=1 draws=1 seen=0 dumps=0 | submits/frame=0.00 lists/frame=0.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:24.324 IFO][NeuroDragon] [vv] submit #1 tid=19580 lists=1 qpc=851964430651
+[2026-10-26 15:40:24.324 IFO][NeuroDragon] [vv] rtv res=0x2788a1c11d0 2560x1440 fmt=26 flags=0x1
+[2026-10-26 15:40:24.325 IFO][NeuroDragon] [sr] ctx call #1 engine=00000278AFC8A040 ctx=00000278A2F53DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:24.325 IFO][NeuroDragon] [sr] ctx #1 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:24.329 IFO][NeuroDragon] [vv] submit #2 tid=19580 lists=48 qpc=851964478022
+[2026-10-26 15:40:24.329 IFO][NeuroDragon] [vv] engine list vtable=0x7fff9aa8a830 slot9=D3D12Core.dll+0x232dd0 slot12=D3D12Core.dll+0x234f30 slot13=D3D12Core.dll+0x234c80 slot25=D3D12Core.dll+0x238f50 slot28=D3D12Core.dll+0x238900
+[2026-10-26 15:40:24.329 IFO][NeuroDragon] [vv] engine device 0x278b434e5f0
+[2026-10-26 15:40:24.329 IFO][NeuroDragon] [vv] device created 0x278b434e5f0
+[2026-10-26 15:40:24.385 IFO][NeuroDragon] [vv] command list slot 9 (Close) hooked=true
+[2026-10-26 15:40:24.436 IFO][NeuroDragon] [vv] command list slot 12 (DrawInstanced) hooked=true
+[2026-10-26 15:40:24.489 IFO][NeuroDragon] [vv] command list slot 13 (DrawIndexedInstanced) hooked=true
+[2026-10-26 15:40:24.540 IFO][NeuroDragon] [vv] command list slot 46 (OMSetRenderTargets) hooked=true
+[2026-10-26 15:40:24.593 IFO][NeuroDragon] [vv] command list slot 21 (RSSetViewports) hooked=true
+[2026-10-26 15:40:24.593 IFO][NeuroDragon] [vv] content boundary split=0/48 list=0x0 via=none marks=0 sigs=0
+[2026-10-26 15:40:24.593 IFO][NeuroDragon] [vv] frame #1 lists=48:
+[2026-10-26 15:40:24.595 IFO][NeuroDragon] [vv] taau #2 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=4 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2 lists=49
+[2026-10-26 15:40:24.633 IFO][NeuroDragon] [vv] taau #2 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2788b439bc0 +10=0x27897000000 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[ock:|variable.legspeedmultiplier|sourceTaskCa|#s!c<|#y!i>|able] mod0= secondText=[]
+[2026-10-26 15:40:24.716 IFO][NeuroDragon] [vv] taau #2 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2788b43b3f0 +10=0x2798c005920 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[adCallbag!|animation.wither_boss.move] mod0= secondText=[textures/items/potion_bottle_digSpeed_mers|textures/items/potion_bottle_digSpeed|textures/items/potion_bottle_digSpeed|ive_mers]
+[2026-10-26 15:40:24.810 IFO][NeuroDragon] [vv] taau #2 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2788b4395c0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18b439800 resText=[WaterDepthBufferBlit|ceTaskCaA#|SampleCascadedShadows|ll_default_client_thread|ng::AsynG#|ourceLoaJ#|animation.turtle] mod0= secondText=[]
+[2026-10-26 15:40:24.858 IFO][NeuroDragon] [vv] taau #2 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2788b43b240 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[WaterDepthBufferBlit|ceTaskCaA#|-18.0 - this|atio`|-this|32_t)|[ClearDepth][Ite] mod0= secondText=[]
+[2026-10-26 15:40:24.895 IFO][NeuroDragon] [vv] taau #2 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2788b439bc0 +10=0x27897000000 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[ock:|variable.legspeedmultiplier|sourceTaskCa|#s!c<|#y!i>|able] mod0= secondText=[]
+[2026-10-26 15:40:24.968 IFO][NeuroDragon] [vv] taau #2 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2788b43b3f0 +10=0x2798c005920 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[adCallbag!|animation.wither_boss.move] mod0= secondText=[textures/items/potion_bottle_digSpeed_mers|textures/items/potion_bottle_digSpeed|textures/items/potion_bottle_digSpeed|ive_mers]
+[2026-10-26 15:40:25.060 IFO][NeuroDragon] [vv] taau #2 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2788b4395c0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18b439800 resText=[WaterDepthBufferBlit|ceTaskCaA#|SampleCascadedShadows|ll_default_client_thread|ng::AsynG#|ourceLoaJ#|animation.turtle] mod0= secondText=[]
+[2026-10-26 15:40:25.103 IFO][NeuroDragon] [vv] taau #2 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2788b43b240 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[WaterDepthBufferBlit|ceTaskCaA#|-18.0 - this|atio`|-this|32_t)|[ClearDepth][Ite] mod0= secondText=[]
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taau list: deep scan found nothing (210 nodes, frame 2)
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taau draw #2 self=0x2798c6a9560 tid=19252 qpc=851983721316
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 base=0x27997fb0b08 words=96
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x0 = 0x2788b43aee0 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x8 = 0x2788b43af08 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x10 = 0x2788b43af08 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x18 = 0x4 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x20 = 0x7ff7f1a35460 mod=Minecraft.Windows.exe+0xe775460
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x28 = 0x27886814ce0 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x30 = 0x27886814cd0 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x38 = 0x3 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x48 = 0x6 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x50 = 0x278866c7c40 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x58 = 0x27888260520 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x60 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x70 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x88 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x98 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xa0 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xb0 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xc8 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xd8 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xe0 = 0x5a00a0000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xe8 = 0x5a00a0000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0xf0 = 0x3f80000000000001 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x108 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x118 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x130 = 0x3f8000003f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x148 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x158 = 0x3f80000000000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x170 = 0x3f800000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x188 = 0xf mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x190 = 0x2f020000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1b8 = 0x8 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1c8 = 0x8 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1d8 = 0xff0000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1e0 = 0x3e00000005a00a00 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1e8 = 0x13e8e38e4 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1f0 = 0x3f4000003f28f5c3 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x1f8 = 0x13fa00000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x200 = 0x3f3baa1a mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x210 = 0x3fa6d01700000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x228 = 0xbf800000bf8020cd mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x238 = 0xbdcd0148 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x240 = 0x3f3baa1a mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x250 = 0x3fa6d01700000000 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x268 = 0xbf800000bf8020cd mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x278 = 0xbdcd0148 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x298 = 0x6163737055414154 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2a0 = 0x676e696c mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2a8 = 0xc mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2b0 = 0xf mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2c0 = 0x8000040036a2aafc mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2c8 = 0x27997268a70 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2d0 = 0x27997268720 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2d8 = 0x279851f93c0 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2e0 = 0x101 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] taa ctx #2 +0x2f8 = 0x1 mod=
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x00: -0.0000 +0.0000 -0.0000 +0.0000 | -0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x20: -1617537910941095377240164663296.0000 +0.0000 -0.0000 +0.0000 | -0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x40: +0.0000 +0.0000 +0.0000 +0.0000 | -0.0000 +0.0000 -0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x60: +1.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x80: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0xa0: +1.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0xc0: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0xe0: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x100: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x120: +0.0000 +0.0000 +0.0000 +0.0000 | +1.0000 +1.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x140: +0.0000 +0.0000 +1.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +1.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x160: +0.0000 +0.0000 +0.0000 +0.0000 | +1.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x180: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x1a0: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x1c0: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x1e0: +0.0000 +0.1250 +0.2778 +0.0000 | +0.6600 +0.7500 +1.2500 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x200: +0.7331 +0.0000 +0.0000 +0.0000 | +0.0000 +1.3032 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x220: +0.0000 +0.0000 -1.0010 -1.0000 | +0.0000 +0.0000 -0.1001 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x240: +0.7331 +0.0000 +0.0000 +0.0000 | +0.0000 +1.3032 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x260: +0.0000 +0.0000 -1.0010 -1.0000 | +0.0000 +0.0000 -0.1001 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x280: +0.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +13280395395072.0000 +262233065827738845184.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] ctxf +0x2a0: +1125867913270871159996416.0000 +0.0000 +0.0000 +0.0000 | +0.0000 +0.0000 +0.0000 +0.0000
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] presents=2 submits=2 lists=49 maxListsPerSubmit=48 taau=2 draws=2 seen=1 dumps=0 | submits/frame=1.00 lists/frame=24.50 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:26.253 IFO][NeuroDragon] [vv] long frame 1986.7 ms at present #2
+[2026-10-26 15:40:26.267 IFO][NeuroDragon] [vv] rtv res=0x0 0x0 fmt=0 flags=0x0
+[2026-10-26 15:40:26.281 DBG][NeuroDragon] overlay: ImGui context created on window 0x320e98
+[2026-10-26 15:40:26.299 IFO][NeuroDragon] [vv] tex res=0x27984f92d40 1024x2048 fmt=28 src=committed
+[2026-10-26 15:40:26.301 IFO][NeuroDragon] [vv] submit #3 tid=19580 lists=1 qpc=851984207464
+[2026-10-26 15:40:26.302 IFO][NeuroDragon] [vv] submit #4 tid=19580 lists=1 qpc=851984212207
+[2026-10-26 15:40:26.303 IFO][NeuroDragon] [vv] tex res=0x27984f936d0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.303 IFO][NeuroDragon] [vv] tex res=0x27984f94060 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.303 IFO][NeuroDragon] [vv] tex res=0x27984f949f0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.303 IFO][NeuroDragon] [vv] tex res=0x27984f91a20 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.303 IFO][NeuroDragon] [vv] tex res=0x27984f95380 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x27984f95d10 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x27984f966a0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x27984f97030 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x27984f979c0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a88ffb0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a88f620 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a893910 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a8925f0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a892f80 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a8912d0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a890940 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a8942a0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a894c30 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.304 IFO][NeuroDragon] [vv] tex res=0x2788a891c60 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.305 IFO][NeuroDragon] [vv] tex res=0x2788a895f50 256x256 fmt=28 src=placed
+[2026-10-26 15:40:26.305 IFO][NeuroDragon] [vv] rtv res=0x2788a1c24f0 2560x1440 fmt=26 flags=0x1
+[2026-10-26 15:40:26.305 IFO][NeuroDragon] [sr] ctx call #2 engine=00000278AFC8A040 ctx=00000278A3DD4780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:26.305 IFO][NeuroDragon] [sr] ctx #2 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] om rt #1 list=0x27944833a60 count=1 single=1 handle0=0x2796d6bc8a0 bbHandles=0 increment=32
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] om rt #2 list=0x27944833a60 count=1 single=1 handle0=0x2796d6bc8a0 bbHandles=0 increment=32
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #1 this=0x27964c02610 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #2 this=0x27965701d90 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #3 this=0x27964c00960 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #4 this=0x279656fbdf0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #5 this=0x279657030b0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #8 this=0x2796570a370 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #6 this=0x279656fc780 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.306 IFO][NeuroDragon] [vv] slot13 raw #7 this=0x279656fd110 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 15:40:26.308 IFO][NeuroDragon] [vv] submit #5 tid=19580 lists=48 qpc=851984267114
+[2026-10-26 15:40:26.308 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279662367d0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:26.308 IFO][NeuroDragon] [vv] frame #2 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d11 x6 46:v1x1z d0
+[2026-10-26 15:40:26.308 IFO][NeuroDragon] [vv] taau #3 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5 lists=99
+[2026-10-26 15:40:27.753 IFO][NeuroDragon] [vv] taau list: deep scan found nothing (224 nodes, frame 3)
+[2026-10-26 15:40:27.753 IFO][NeuroDragon] [vv] taau draw #3 self=0x27995b31840 tid=38632 qpc=851998717951
+[2026-10-26 15:40:27.753 IFO][NeuroDragon] [vv] presents=3 submits=5 lists=99 maxListsPerSubmit=48 taau=3 draws=3 seen=3 dumps=0 | submits/frame=1.67 lists/frame=33.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.753 IFO][NeuroDragon] [vv] long frame 1499.5 ms at present #3
+[2026-10-26 15:40:27.754 IFO][NeuroDragon] [vv] submit #6 tid=19580 lists=1 qpc=851998725826
+[2026-10-26 15:40:27.754 IFO][NeuroDragon] [vv] tex res=0x279873f89c0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279873f6380 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c33e0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c20c0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c2a50 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c6d40 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c4700 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c5a20 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.755 IFO][NeuroDragon] [vv] tex res=0x279833c3d70 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x279833c9380 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x279833c89f0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x279833c63b0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x279833c76d0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x2798528b6e0 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x2798528c070 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x2798528dd20 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.756 IFO][NeuroDragon] [vv] tex res=0x2798528d390 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.757 IFO][NeuroDragon] [vv] tex res=0x2798528ca00 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.757 IFO][NeuroDragon] [vv] tex res=0x2798528ad50 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.757 IFO][NeuroDragon] [vv] tex res=0x27985291680 256x256 fmt=28 src=placed
+[2026-10-26 15:40:27.757 IFO][NeuroDragon] [sr] ctx call #3 engine=00000278AFC8A040 ctx=00000278A2F53DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.757 IFO][NeuroDragon] [sr] ctx #3 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:27.760 IFO][NeuroDragon] [vv] submit #7 tid=19580 lists=48 qpc=851998784772
+[2026-10-26 15:40:27.760 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279678e5b10 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:27.760 IFO][NeuroDragon] [vv] frame #3 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d40 x66 46:v1x1z d0
+[2026-10-26 15:40:27.760 IFO][NeuroDragon] [vv] taau #4 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7 lists=148
+[2026-10-26 15:40:27.761 IFO][NeuroDragon] [vv] taau draw #4 self=0x2798c6aae60 tid=19580 qpc=851998795461
+[2026-10-26 15:40:27.761 IFO][NeuroDragon] [vv] presents=4 submits=7 lists=148 maxListsPerSubmit=48 taau=4 draws=4 seen=3 dumps=0 | submits/frame=1.75 lists/frame=37.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.761 IFO][NeuroDragon] [vv] submit #8 tid=19580 lists=1 qpc=851998800293
+[2026-10-26 15:40:27.762 IFO][NeuroDragon] [sr] ctx call #4 engine=00000278AFC8A040 ctx=00000278A3DD4780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.762 IFO][NeuroDragon] [sr] ctx #4 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:27.768 IFO][NeuroDragon] [vv] submit #9 tid=19580 lists=48 qpc=851998863422
+[2026-10-26 15:40:27.768 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796b145df0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:27.769 IFO][NeuroDragon] [vv] taau draw #5 self=0x2798c6a9420 tid=44020 qpc=851998877696
+[2026-10-26 15:40:27.769 IFO][NeuroDragon] [vv] presents=5 submits=9 lists=197 maxListsPerSubmit=48 taau=5 draws=5 seen=3 dumps=0 | submits/frame=1.80 lists/frame=39.40 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.769 IFO][NeuroDragon] [vv] submit #10 tid=19580 lists=1 qpc=851998882599
+[2026-10-26 15:40:27.770 IFO][NeuroDragon] [sr] ctx call #5 engine=00000278AFC8A040 ctx=00000278A2F53DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.770 IFO][NeuroDragon] [sr] ctx #5 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:27.772 IFO][NeuroDragon] [vv] submit #11 tid=19580 lists=48 qpc=851998911485
+[2026-10-26 15:40:27.772 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796bc73320 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:27.773 IFO][NeuroDragon] [vv] taau draw #6 self=0x279833a2e10 tid=12684 qpc=851998920568
+[2026-10-26 15:40:27.773 IFO][NeuroDragon] [vv] presents=6 submits=11 lists=246 maxListsPerSubmit=48 taau=6 draws=6 seen=3 dumps=0 | submits/frame=1.83 lists/frame=41.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.774 IFO][NeuroDragon] [vv] submit #12 tid=19580 lists=1 qpc=851998924822
+[2026-10-26 15:40:27.774 IFO][NeuroDragon] [sr] ctx call #6 engine=00000278AFC8A040 ctx=00000278A3DD4780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.778 IFO][NeuroDragon] [vv] submit #13 tid=19580 lists=48 qpc=851998963826
+[2026-10-26 15:40:27.778 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279441ff950 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:27.779 IFO][NeuroDragon] [vv] taau draw #7 self=0x2798cde0f10 tid=12684 qpc=851998975851
+[2026-10-26 15:40:27.779 IFO][NeuroDragon] [vv] presents=7 submits=13 lists=295 maxListsPerSubmit=48 taau=7 draws=7 seen=3 dumps=0 | submits/frame=1.86 lists/frame=42.14 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.779 IFO][NeuroDragon] [vv] submit #14 tid=19252 lists=1 qpc=851998980014
+[2026-10-26 15:40:27.780 IFO][NeuroDragon] [sr] ctx call #7 engine=00000278AFC8A040 ctx=00000278A2F53DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.782 IFO][NeuroDragon] [vv] submit #15 tid=19252 lists=48 qpc=851999018228
+[2026-10-26 15:40:27.784 IFO][NeuroDragon] [vv] presents=8 submits=15 lists=344 maxListsPerSubmit=48 taau=8 draws=8 seen=3 dumps=0 | submits/frame=1.88 lists/frame=43.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.784 IFO][NeuroDragon] [vv] submit #16 tid=19252 lists=1 qpc=851999031663
+[2026-10-26 15:40:27.783 IFO][NeuroDragon] [vv] taau draw #8 self=0x27987f3fa80 tid=43224 qpc=851999026119
+[2026-10-26 15:40:27.784 IFO][NeuroDragon] [sr] ctx call #8 engine=00000278AFC8A040 ctx=00000278A3DD4780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.788 IFO][NeuroDragon] [vv] submit #17 tid=19252 lists=48 qpc=851999064628
+[2026-10-26 15:40:27.788 IFO][NeuroDragon] [vv] taau draw #9 self=0x2798339ef90 tid=24164 qpc=851999072973
+[2026-10-26 15:40:27.789 IFO][NeuroDragon] [vv] presents=9 submits=17 lists=393 maxListsPerSubmit=48 taau=9 draws=9 seen=3 dumps=0 | submits/frame=1.89 lists/frame=43.67 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.789 IFO][NeuroDragon] [vv] submit #18 tid=19580 lists=1 qpc=851999078579
+[2026-10-26 15:40:27.789 IFO][NeuroDragon] [sr] ctx call #9 engine=00000278AFC8A040 ctx=00000278A2F53DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.793 IFO][NeuroDragon] [vv] submit #19 tid=19580 lists=48 qpc=851999115798
+[2026-10-26 15:40:27.793 IFO][NeuroDragon] [vv] taau draw #10 self=0x279833a2f50 tid=19252 qpc=851999124599
+[2026-10-26 15:40:27.794 IFO][NeuroDragon] [vv] presents=10 submits=19 lists=442 maxListsPerSubmit=48 taau=10 draws=10 seen=3 dumps=0 | submits/frame=1.90 lists/frame=44.20 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:27.794 IFO][NeuroDragon] [vv] submit #20 tid=19580 lists=1 qpc=851999128452
+[2026-10-26 15:40:27.794 IFO][NeuroDragon] [sr] ctx call #10 engine=00000278AFC8A040 ctx=00000278A3DD4780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-26 15:40:27.798 IFO][NeuroDragon] [vv] submit #21 tid=19580 lists=48 qpc=851999165198
+[2026-10-26 15:40:27.798 IFO][NeuroDragon] [vv] taau draw #11 self=0x2798339ee50 tid=9352 qpc=851999173390
+[2026-10-26 15:40:27.799 IFO][NeuroDragon] [vv] submit #22 tid=19580 lists=1 qpc=851999178015
+[2026-10-26 15:40:27.802 IFO][NeuroDragon] [vv] submit #23 tid=19580 lists=48 qpc=851999211736
+[2026-10-26 15:40:27.803 IFO][NeuroDragon] [vv] taau draw #12 self=0x279833a2e10 tid=6632 qpc=851999221410
+[2026-10-26 15:40:27.803 IFO][NeuroDragon] [vv] submit #24 tid=19580 lists=1 qpc=851999225820
+[2026-10-26 15:40:28.010 IFO][NeuroDragon] [vv] long frame 160.9 ms at present #22
+[2026-10-26 15:40:28.014 IFO][NeuroDragon] [vv] tex res=0x279876626b0 128x128 fmt=28 src=placed
+[2026-10-26 15:40:28.014 IFO][NeuroDragon] [vv] tex res=0x279876639d0 128x128 fmt=28 src=placed
+[2026-10-26 15:40:28.019 IFO][NeuroDragon] [vv] tex res=0x27987665680 128x128 fmt=28 src=placed
+[2026-10-26 15:40:28.019 IFO][NeuroDragon] [vv] tex res=0x27987667cc0 128x128 fmt=28 src=placed
+[2026-10-26 15:40:28.019 IFO][NeuroDragon] [vv] tex res=0x27987668650 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.019 IFO][NeuroDragon] [vv] tex res=0x27987668fe0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x27987669970 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x279876669a0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766d2d0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766ac90 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766e5f0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766b620 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766dc60 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766ef80 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x2798766c940 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x279876715c0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x27987671f50 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x27987673270 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.020 IFO][NeuroDragon] [vv] tex res=0x279876702a0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x27987673c00 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x27987676240 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x27987674590 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x27987679210 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x27987679ba0 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x27987676bd0 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x2798767a530 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x2798767c1e0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x2798767d500 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x2798eb7af10 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.021 IFO][NeuroDragon] [vv] tex res=0x2798eb79260 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb7cbc0 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb7d550 128x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb7a580 128x128 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb80520 128x128 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb7fb90 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb80eb0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb7dee0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb821d0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.022 IFO][NeuroDragon] [vv] tex res=0x2798eb84810 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb83e80 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb89490 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb86e50 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb877e0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb864c0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb89e20 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb8a7b0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb8b140 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb88170 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb8eaa0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.023 IFO][NeuroDragon] [vv] tex res=0x2798eb8bad0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.025 IFO][NeuroDragon] [vv] tex res=0x2798eb9a050 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.025 IFO][NeuroDragon] [vv] tex res=0x2798eb97080 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.025 IFO][NeuroDragon] [vv] tex res=0x2798eb9a9e0 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.025 IFO][NeuroDragon] [vv] tex res=0x2798eb97a10 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.025 IFO][NeuroDragon] [vv] tex res=0x2798eb9e340 64x64 fmt=28 src=placed
+[2026-10-26 15:40:28.133 IFO][NeuroDragon] [vv] frame #36 lists=49: 1:v0x0z d0 3:v2560x1440z d0 4:v1689x950 d0 5:v1x1z d0 6:v1x1z d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950 d0 10:v1689x950z d0 11:v1689x950 d0 13:v1689x950 d1 x6 14:v1689x950z d1 x6 15:v1x1z d0 16:v1x1z d0 17:v1689x950 d1 x6 18:v1689x950 d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950z d1 x6 23:v1689x950 d1 x6 24:v1689x950 d0 25:v1689x950z d1 x36 26:v2560x1440 d1 x6 27:v1x1z d0 28:v844x475 d1 x6 29:v422x237 d1 x6 30:v211x118 d1 x6 31:v105x59 d1 x6 32:v52x29 d1 x6 33:v26x14 d1 x6 34:v52x29 d1 x6 35:v1x1z d0 36:v1x1z d0 37:v105x59 d1 x6 38:v105x59 d1 x6 39:v211x118 d1 x6 40:v422x237 d1 x6 41:v844x475 d1 x6 42:v1x1z d0 43:v1689x950 d1 x6 44:v1689x950 d1 x6 45:v2560x1440z d1 x6 46:v2560x1440z d46 x78 47:v1x1z d0
+[2026-10-26 15:40:28.137 IFO][NeuroDragon] [vv] frame #37 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x78 46:v1x1z d0
+[2026-10-26 15:40:29.448 IFO][NeuroDragon] [vv] taau #300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=599 lists=14653
+[2026-10-26 15:40:30.953 IFO][NeuroDragon] [vv] taau #600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=1199 lists=29353
+[2026-10-26 15:40:30.954 IFO][NeuroDragon] [vv] taau draw #600 self=0x279874ff9c0 tid=12684 qpc=852030726051
+[2026-10-26 15:40:30.954 IFO][NeuroDragon] [vv] presents=600 submits=1199 lists=29353 maxListsPerSubmit=49 taau=600 draws=600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.92 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:30.954 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:30.954 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:30.955 IFO][NeuroDragon] [sr] ctx #600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:30.962 IFO][NeuroDragon] [vv] frame #601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x66 46:v1x1z d0
+[2026-10-26 15:40:32.454 IFO][NeuroDragon] [vv] taau #900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=1799 lists=44053
+[2026-10-26 15:40:33.952 IFO][NeuroDragon] [vv] taau #1200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2399 lists=58753
+[2026-10-26 15:40:33.953 IFO][NeuroDragon] [vv] taau draw #1200 self=0x279874ffd80 tid=19580 qpc=852060721085
+[2026-10-26 15:40:33.953 IFO][NeuroDragon] [vv] presents=1200 submits=2399 lists=58753 maxListsPerSubmit=49 taau=1200 draws=1200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.96 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:33.954 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:33.954 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:33.954 IFO][NeuroDragon] [sr] ctx #1200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:33.958 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796b14d0b0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:33.962 IFO][NeuroDragon] [vv] frame #1201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x54 46:v1x1z d0
+[2026-10-26 15:40:35.453 IFO][NeuroDragon] [vv] taau #1500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2999 lists=73453
+[2026-10-26 15:40:36.954 IFO][NeuroDragon] [vv] taau #1800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=3599 lists=88153
+[2026-10-26 15:40:36.954 IFO][NeuroDragon] [vv] taau draw #1800 self=0x27983aa9000 tid=8392 qpc=852090731759
+[2026-10-26 15:40:36.955 IFO][NeuroDragon] [vv] presents=1800 submits=3599 lists=88153 maxListsPerSubmit=49 taau=1800 draws=1800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.97 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:36.955 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:36.955 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:36.955 IFO][NeuroDragon] [sr] ctx #1800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:36.963 IFO][NeuroDragon] [vv] frame #1801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x72 46:v1x1z d0
+[2026-10-26 15:40:38.005 IFO][NeuroDragon] [vv] taau #2000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798735b370 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearGBuffer][ScenePrepass]|UUubA|BlitUncompressed] mod0= secondText=[]
+[2026-10-26 15:40:38.031 IFO][NeuroDragon] [vv] taau #2000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798735c3c0 +10=0x27984009930 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearDepth][ItemInHandObject]|[ClearDepth][ItemInHandObject]|.v4f32] mod0= secondText=[b/evocat|sounds/mob/baby_cat/ambient4|ion_illager|sounds/sound_definitions.json|idle3","so|sounds/mob/baby_cat/ambient3|mob.evocati|sounds/mob/baby_cat/ambient7|ostile","so|sounds/sound_definitions.json|ast1","sou]
+[2026-10-26 15:40:38.115 IFO][NeuroDragon] [vv] taau #2000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798735b160 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18735a800 resText=[[ClearGBuffer][ScenePrepass]|fY>A|WaterDepthBufferBlit|WaterDepthBuffer] mod0= secondText=[]
+[2026-10-26 15:40:38.196 IFO][NeuroDragon] [vv] taau #2000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798735c510 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[[ClearGBuffer][ScenePrepass]|] mod0= secondText=[]
+[2026-10-26 15:40:38.264 IFO][NeuroDragon] [vv] taau #2000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798735b370 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearGBuffer][ScenePrepass]|UUubA|BlitUncompressed] mod0= secondText=[]
+[2026-10-26 15:40:38.297 IFO][NeuroDragon] [vv] taau #2000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798735c3c0 +10=0x27984009930 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearDepth][ItemInHandObject]|[ClearDepth][ItemInHandObject]|.v4f32] mod0= secondText=[b/evocat|sounds/mob/baby_cat/ambient4|ion_illager|sounds/sound_definitions.json|idle3","so|sounds/mob/baby_cat/ambient3|mob.evocati|sounds/mob/baby_cat/ambient7|ostile","so|sounds/sound_definitions.json|ast1","sou]
+[2026-10-26 15:40:38.384 IFO][NeuroDragon] [vv] taau #2000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798735b160 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18735a800 resText=[[ClearGBuffer][ScenePrepass]|fY>A|WaterDepthBufferBlit|WaterDepthBuffer] mod0= secondText=[]
+[2026-10-26 15:40:38.447 IFO][NeuroDragon] [vv] taau #2000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798735c510 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[ss]||[ClearGBuffer][ScenePrepass]|] mod0= secondText=[]
+[2026-10-26 15:40:38.448 IFO][NeuroDragon] [vv] long frame 498.1 ms at present #2000
+[2026-10-26 15:40:38.953 IFO][NeuroDragon] [vv] taau #2100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=4199 lists=102853
+[2026-10-26 15:40:40.454 IFO][NeuroDragon] [vv] taau #2400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=4799 lists=117553
+[2026-10-26 15:40:40.454 IFO][NeuroDragon] [vv] taau draw #2400 self=0x279833a5890 tid=9352 qpc=852125731257
+[2026-10-26 15:40:40.455 IFO][NeuroDragon] [vv] presents=2400 submits=4799 lists=117553 maxListsPerSubmit=49 taau=2400 draws=2400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.98 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:40.455 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:40.455 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:40.455 IFO][NeuroDragon] [sr] ctx #2400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:40.458 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279678e64a0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:40.464 IFO][NeuroDragon] [vv] frame #2401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x60 46:v1x1z d0
+[2026-10-26 15:40:41.954 IFO][NeuroDragon] [vv] taau #2700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5399 lists=132253
+[2026-10-26 15:40:43.453 IFO][NeuroDragon] [vv] taau #3000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5999 lists=146953
+[2026-10-26 15:40:43.454 IFO][NeuroDragon] [vv] taau draw #3000 self=0x2798ceab6d0 tid=43004 qpc=852155736111
+[2026-10-26 15:40:43.454 IFO][NeuroDragon] [vv] presents=3000 submits=5999 lists=146953 maxListsPerSubmit=49 taau=3000 draws=3000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.98 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:43.454 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:43.455 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:43.455 IFO][NeuroDragon] [sr] ctx #3000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:43.464 IFO][NeuroDragon] [vv] frame #3001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x78 46:v1x1z d0
+[2026-10-26 15:40:44.954 IFO][NeuroDragon] [vv] taau #3300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=6599 lists=161653
+[2026-10-26 15:40:46.454 IFO][NeuroDragon] [vv] taau #3600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7199 lists=176353
+[2026-10-26 15:40:46.455 IFO][NeuroDragon] [vv] taau draw #3600 self=0x2798ceab6d0 tid=12684 qpc=852185742818
+[2026-10-26 15:40:46.455 IFO][NeuroDragon] [vv] presents=3600 submits=7199 lists=176353 maxListsPerSubmit=49 taau=3600 draws=3600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:46.456 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:46.456 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:46.457 IFO][NeuroDragon] [sr] ctx #3600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:46.459 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x27965704d60 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:46.464 IFO][NeuroDragon] [vv] frame #3601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x66 46:v1x1z d0
+[2026-10-26 15:40:47.953 IFO][NeuroDragon] [vv] taau #3900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7799 lists=191053
+[2026-10-26 15:40:48.520 IFO][NeuroDragon] [vv] taau #4000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27987e1f820 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[SampleCascadedShadows|[ClearGBuffer][ScenePrepass]|[ClearDepth][ItemInHandObject]|PreDeferredLightingPhase|jg`T] mod0= secondText=[]
+[2026-10-26 15:40:48.573 IFO][NeuroDragon] [vv] taau #4000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x27987e1ed40 +10=0x2798e00ce70 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[WaterDepthBufferBlit|ClearDiffuseLightingBuffers] mod0= secondText=[]
+[2026-10-26 15:40:48.656 IFO][NeuroDragon] [vv] taau #4000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27987e1f7f0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x187e1f400 resText=[SampleCascadedShadows|[ClearGBuffer][ScenePrepass]|[ClearDepth][ItemInHandObject]|PreDeferredLight] mod0= secondText=[]
+[2026-10-26 15:40:48.729 IFO][NeuroDragon] [vv] taau #4000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27987e1ef20 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[SampleCascadedShadows||DoDeferredLightingPhase|VolumeScattering] mod0= secondText=[]
+[2026-10-26 15:40:48.812 IFO][NeuroDragon] [vv] taau #4000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27987e1f820 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[SampleCascadedShadows|[ClearGBuffer][ScenePrepass]|[ClearDepth][ItemInHandObject]|PreDeferredLightingPhase|jg`T] mod0= secondText=[]
+[2026-10-26 15:40:48.880 IFO][NeuroDragon] [vv] taau #4000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x27987e1ed40 +10=0x2798e00ce70 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[WaterDepthBufferBlit|ClearDiffuseLightingBuffers] mod0= secondText=[]
+[2026-10-26 15:40:48.956 IFO][NeuroDragon] [vv] taau #4000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27987e1f7f0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x187e1f400 resText=[SampleCascadedShadows|[ClearGBuffer][ScenePrepass]|[ClearDepth][ItemInHandObject]|PreDeferredLight] mod0= secondText=[]
+[2026-10-26 15:40:49.044 IFO][NeuroDragon] [vv] taau #4000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27987e1ef20 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[SampleCascadedShadows||DoDeferredLightingPhase|VolumeScattering] mod0= secondText=[]
+[2026-10-26 15:40:49.044 IFO][NeuroDragon] [vv] long frame 594.9 ms at present #4000
+[2026-10-26 15:40:50.054 IFO][NeuroDragon] [vv] taau #4200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=8399 lists=205753
+[2026-10-26 15:40:50.055 IFO][NeuroDragon] [vv] taau draw #4200 self=0x2798ceaaf50 tid=9352 qpc=852221741363
+[2026-10-26 15:40:50.056 IFO][NeuroDragon] [vv] presents=4200 submits=8399 lists=205753 maxListsPerSubmit=49 taau=4200 draws=4200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:50.056 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:50.056 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:50.056 IFO][NeuroDragon] [sr] ctx #4200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:50.064 IFO][NeuroDragon] [vv] frame #4201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x60 46:v1x1z d0
+[2026-10-26 15:40:51.555 IFO][NeuroDragon] [vv] taau #4500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=8999 lists=220453
+[2026-10-26 15:40:53.055 IFO][NeuroDragon] [vv] taau #4800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=9599 lists=235153
+[2026-10-26 15:40:53.055 IFO][NeuroDragon] [vv] taau draw #4800 self=0x27983aa93c0 tid=19580 qpc=852251738957
+[2026-10-26 15:40:53.056 IFO][NeuroDragon] [vv] presents=4800 submits=9599 lists=235153 maxListsPerSubmit=49 taau=4800 draws=4800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:53.056 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:53.056 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:53.056 IFO][NeuroDragon] [sr] ctx #4800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:53.059 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x27944129460 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:53.065 IFO][NeuroDragon] [vv] frame #4801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x72 46:v1x1z d0
+[2026-10-26 15:40:54.556 IFO][NeuroDragon] [vv] taau #5100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=10199 lists=249853
+[2026-10-26 15:40:56.055 IFO][NeuroDragon] [vv] taau #5400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=10799 lists=264553
+[2026-10-26 15:40:56.055 IFO][NeuroDragon] [vv] taau draw #5400 self=0x2798c6a7da0 tid=43004 qpc=852281743897
+[2026-10-26 15:40:56.056 IFO][NeuroDragon] [vv] presents=5400 submits=10799 lists=264553 maxListsPerSubmit=49 taau=5400 draws=5400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:56.056 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:56.056 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:56.057 IFO][NeuroDragon] [sr] ctx #5400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:56.064 IFO][NeuroDragon] [vv] frame #5401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d46 x60 46:v1x1z d0
+[2026-10-26 15:40:56.517 IFO][NeuroDragon] [vv] long frame 247.2 ms at present #5443
+[2026-10-26 15:40:56.519 IFO][NeuroDragon] [vv] frame #5443 lists=47: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v1x1z d0
+[2026-10-26 15:40:56.530 IFO][NeuroDragon] [vv] frame #5444 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d1 x6 46:v1x1z d0
+[2026-10-26 15:40:57.805 IFO][NeuroDragon] [vv] taau #5700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=11399 lists=279252
+[2026-10-26 15:40:59.306 IFO][NeuroDragon] [vv] taau #6000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=11999 lists=293952
+[2026-10-26 15:40:59.330 IFO][NeuroDragon] [vv] taau #6000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27983247af0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[sounds/mob/nautilus/ambient2|s":["sounds|sounds/mob/nautilus/ambient1|er/step2","|sounds/mob/nautilus/ambient1|/ravager/st|sounds/sound_definitions.json|.ravager.s|sounds/sound_def] mod0= secondText=[]
+[2026-10-26 15:40:59.350 IFO][NeuroDragon] [vv] taau #6000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x279832417c0 +10=0x2788b005020 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[^[@3ox|sounds/mob/ravager/idle2|_loop"]},"game.|[M3ey|mob.imitate.shulker|dle5|{"name":"soun|[J3oz|sounds/mob/shulker/ambient3|:0.2},{"name|sounds/mob/shulker/ambient1|volume":0.2,|sounds/mob/shulk] mod0= secondText=[global|global|global]
+[2026-10-26 15:40:59.396 IFO][NeuroDragon] [vv] taau #6000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27983248a50 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x183248600 resText=[sounds/sound_definitions.json|h":1.05}|sounds/sound_definitions.json|pitch":1.0|sounds/mob/nautilus/eat1|eat4","pitch":1|sounds/mob/nauti] mod0= secondText=[]
+[2026-10-26 15:40:59.444 IFO][NeuroDragon] [vv] taau #6000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27983240f20 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[e":0|sounds/mob/polarbear/idle1|:"block","sou|sounds/mob/pillager/idle3|h","volume":0.|sounds/mob/pillager/idle2|":"block","sou|sounds/sound_definitions.json|},"conduit [|sounds/mob/polar] mod0= secondText=[]
+[2026-10-26 15:40:59.477 IFO][NeuroDragon] [vv] taau #6000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27983247af0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[sounds/mob/nautilus/ambient2|s":["sounds|sounds/mob/nautilus/ambient1|er/step2","|sounds/mob/nautilus/ambient1|/ravager/st|sounds/sound_definitions.json|.ravager.s|sounds/sound_def] mod0= secondText=[]
+[2026-10-26 15:40:59.503 IFO][NeuroDragon] [vv] taau #6000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x279832417c0 +10=0x2788b005020 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[^[@3ox|sounds/mob/ravager/idle2|_loop"]},"game.|[M3ey|mob.imitate.shulker|dle5|{"name":"soun|[J3oz|sounds/mob/shulker/ambient3|:0.2},{"name|sounds/mob/shulker/ambient1|volume":0.2,|sounds/mob/shulk] mod0= secondText=[global|global|global]
+[2026-10-26 15:40:59.547 IFO][NeuroDragon] [vv] taau #6000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27983248a50 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x183248600 resText=[sounds/sound_definitions.json|h":1.05}|sounds/sound_definitions.json|pitch":1.0|sounds/mob/nautilus/eat1|eat4","pitch":1|sounds/mob/nauti] mod0= secondText=[]
+[2026-10-26 15:40:59.594 IFO][NeuroDragon] [vv] taau #6000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27983240f20 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[e":0|sounds/mob/polarbear/idle1|:"block","sou|sounds/mob/pillager/idle3|h","volume":0.|sounds/mob/pillager/idle2|":"block","sou|sounds/sound_definitions.json|},"conduit [|sounds/mob/polar] mod0= secondText=[]
+[2026-10-26 15:40:59.595 IFO][NeuroDragon] [vv] taau draw #6000 self=0x2798c6aae60 tid=44020 qpc=852317140634
+[2026-10-26 15:40:59.595 IFO][NeuroDragon] [vv] presents=6000 submits=11999 lists=293952 maxListsPerSubmit=49 taau=6000 draws=6000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:40:59.595 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:40:59.595 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:40:59.595 IFO][NeuroDragon] [vv] long frame 295.0 ms at present #6000
+[2026-10-26 15:40:59.596 IFO][NeuroDragon] [sr] ctx #6000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:40:59.600 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796bc6f030 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:40:59.604 IFO][NeuroDragon] [vv] frame #6001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:01.095 IFO][NeuroDragon] [vv] taau #6300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=12599 lists=308652
+[2026-10-26 15:41:02.596 IFO][NeuroDragon] [vv] taau #6600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=13199 lists=323352
+[2026-10-26 15:41:02.597 IFO][NeuroDragon] [vv] taau draw #6600 self=0x2798c6a7b20 tid=8392 qpc=852347154791
+[2026-10-26 15:41:02.597 IFO][NeuroDragon] [vv] presents=6600 submits=13199 lists=323352 maxListsPerSubmit=49 taau=6600 draws=6600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:02.597 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:02.597 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:02.598 IFO][NeuroDragon] [sr] ctx #6600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:02.605 IFO][NeuroDragon] [vv] frame #6601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:04.095 IFO][NeuroDragon] [vv] taau #6900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=13799 lists=338052
+[2026-10-26 15:41:05.595 IFO][NeuroDragon] [vv] taau #7200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=14399 lists=352752
+[2026-10-26 15:41:05.596 IFO][NeuroDragon] [vv] taau draw #7200 self=0x2798c6aa960 tid=43224 qpc=852377150717
+[2026-10-26 15:41:05.596 IFO][NeuroDragon] [vv] presents=7200 submits=14399 lists=352752 maxListsPerSubmit=49 taau=7200 draws=7200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:05.596 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:05.596 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:05.596 IFO][NeuroDragon] [sr] ctx #7200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:05.600 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279678ec440 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:05.606 IFO][NeuroDragon] [vv] frame #7201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:07.097 IFO][NeuroDragon] [vv] taau #7500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=14999 lists=367452
+[2026-10-26 15:41:08.596 IFO][NeuroDragon] [vv] taau #7800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=15599 lists=382152
+[2026-10-26 15:41:08.596 IFO][NeuroDragon] [vv] taau draw #7800 self=0x27995b32100 tid=26756 qpc=852407151831
+[2026-10-26 15:41:08.597 IFO][NeuroDragon] [vv] presents=7800 submits=15599 lists=382152 maxListsPerSubmit=49 taau=7800 draws=7800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:08.597 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:08.597 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:08.598 IFO][NeuroDragon] [sr] ctx #7800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:08.605 IFO][NeuroDragon] [vv] frame #7801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:09.665 IFO][NeuroDragon] [vv] taau #8000 in.history this=0xb92f2fe560 id=0x8beb3c381fb2f1fe res=0x2798e666990 +10=0xb92f00e620 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearGBuffer][ScenePrepass]|DoDeferredLighti] mod0= secondText=[]
+[2026-10-26 15:41:09.699 IFO][NeuroDragon] [vv] taau #8000 in.color this=0xb92f2fe680 id=0x8beb3c381fb2f1ff res=0x2798e666a20 +10=0x2798300c5b0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearGBuffer][ScenePrepass]|DoDeferredLightingPhase|ForceForwardPBROpaque] mod0= secondText=[]
+[2026-10-26 15:41:09.794 IFO][NeuroDragon] [vv] taau #8000 in.output this=0xb92f2fdee0 id=0x8beb3c381fb2f1ff res=0x2798e666810 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f2f0000,0x18e666b00 resText=[ForwardPBRTransparent|ingPhase|DoDeferredLighti] mod0= secondText=[]
+[2026-10-26 15:41:09.878 IFO][NeuroDragon] [vv] taau #8000 in.motion this=0xb92f2feb90 id=0x8beb3c381fb2f1fe res=0x2798e666780 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[VolumeScattering|ForwardPBRTransparent|ingPhase] mod0= secondText=[]
+[2026-10-26 15:41:09.960 IFO][NeuroDragon] [vv] taau #8000 out.history this=0xb92f2fe560 id=0x8beb3c381fb2f1fe res=0x2798e666990 +10=0xb92f00e620 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearGBuffer][ScenePrepass]|DoDeferredLighti] mod0= secondText=[]
+[2026-10-26 15:41:10.008 IFO][NeuroDragon] [vv] taau #8000 out.color this=0xb92f2fe680 id=0x8beb3c381fb2f1ff res=0x2798e666a20 +10=0x2798300c5b0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearGBuffer][ScenePrepass]|DoDeferredLightingPhase|ForceForwardPBROpaque] mod0= secondText=[]
+[2026-10-26 15:41:10.123 IFO][NeuroDragon] [vv] taau #8000 out.output this=0xb92f2fdee0 id=0x8beb3c381fb2f1ff res=0x2798e666810 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f2f0000,0x18e666b00 resText=[ForwardPBRTransparent| ngPhase|DoDeferredLighti] mod0= secondText=[]
+[2026-10-26 15:41:10.223 IFO][NeuroDragon] [vv] taau #8000 out.motion this=0xb92f2feb90 id=0x8beb3c381fb2f1fe res=0x2798e666780 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[VolumeScattering|ForwardPBRTransparent||ngPhase|] mod0= secondText=[]
+[2026-10-26 15:41:10.223 IFO][NeuroDragon] [vv] long frame 631.5 ms at present #8000
+[2026-10-26 15:41:10.721 IFO][NeuroDragon] [vv] taau #8100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=16199 lists=396852
+[2026-10-26 15:41:12.222 IFO][NeuroDragon] [vv] taau #8400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=16799 lists=411552
+[2026-10-26 15:41:12.222 IFO][NeuroDragon] [vv] taau draw #8400 self=0x2798ebe20f0 tid=42652 qpc=852443411214
+[2026-10-26 15:41:12.223 IFO][NeuroDragon] [vv] presents=8400 submits=16799 lists=411552 maxListsPerSubmit=49 taau=8400 draws=8400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:12.223 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:12.223 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:12.223 IFO][NeuroDragon] [sr] ctx #8400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:12.226 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x27966238480 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:12.231 IFO][NeuroDragon] [vv] frame #8401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:13.722 IFO][NeuroDragon] [vv] taau #8700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=17399 lists=426252
+[2026-10-26 15:41:15.222 IFO][NeuroDragon] [vv] taau #9000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=17999 lists=440952
+[2026-10-26 15:41:15.222 IFO][NeuroDragon] [vv] taau draw #9000 self=0x279851fc4a0 tid=44020 qpc=852473415240
+[2026-10-26 15:41:15.223 IFO][NeuroDragon] [vv] presents=9000 submits=17999 lists=440952 maxListsPerSubmit=49 taau=9000 draws=9000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:15.223 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:15.223 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:15.224 IFO][NeuroDragon] [sr] ctx #9000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:15.231 IFO][NeuroDragon] [vv] frame #9001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:16.721 IFO][NeuroDragon] [vv] taau #9300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=18599 lists=455652
+[2026-10-26 15:41:18.222 IFO][NeuroDragon] [vv] taau #9600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=19199 lists=470352
+[2026-10-26 15:41:18.222 IFO][NeuroDragon] [vv] taau draw #9600 self=0x27995b310c0 tid=43224 qpc=852503416170
+[2026-10-26 15:41:18.223 IFO][NeuroDragon] [vv] presents=9600 submits=19199 lists=470352 maxListsPerSubmit=49 taau=9600 draws=9600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=48.99 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:18.223 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:18.223 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:18.224 IFO][NeuroDragon] [sr] ctx #9600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:18.226 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2794482f770 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:18.232 IFO][NeuroDragon] [vv] frame #9601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:19.722 IFO][NeuroDragon] [vv] taau #9900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=19799 lists=485052
+[2026-10-26 15:41:20.281 IFO][NeuroDragon] [vv] taau #10000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798e2d89f0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[DoDeferredLightingPhase|DoDeferredShadingPhase|ForceForwardPBROpaque|[ClearDepth][ItemInHandObject]] mod0= secondText=[]
+[2026-10-26 15:41:20.331 IFO][NeuroDragon] [vv] taau #10000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798e2d8390 +10=0x2798300f000 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[DoIndirectSpecularShadingPhase|[ClearStencil][ForwardPBR]|ride ]] mod0= secondText=[]
+[2026-10-26 15:41:20.423 IFO][NeuroDragon] [vv] taau #10000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798e2d8cc0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18e2d8b00 resText=[jg`T] mod0= secondText=[]
+[2026-10-26 15:41:20.544 IFO][NeuroDragon] [vv] taau #10000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798e2d8b70 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[SurfaceRadianceUpscalePass|[ClearStencil][ForwardPBR]] mod0= secondText=[]
+[2026-10-26 15:41:20.610 IFO][NeuroDragon] [vv] taau #10000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798e2d89f0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[DoDeferredLightingPhase|DoDeferredShadingPhase|ForceForwardPBROpaque|[ClearDepth][ItemInHandObject]] mod0= secondText=[]
+[2026-10-26 15:41:20.667 IFO][NeuroDragon] [vv] taau #10000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798e2d8390 +10=0x2798300f000 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[DoIndirectSpecularShadingPhase|[ClearStencil][ForwardPBR]|ride ]] mod0= secondText=[]
+[2026-10-26 15:41:20.773 IFO][NeuroDragon] [vv] taau #10000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798e2d8cc0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18e2d8b00 resText=[jg`T] mod0= secondText=[]
+[2026-10-26 15:41:20.878 IFO][NeuroDragon] [vv] taau #10000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798e2d8b70 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[14617288734025566595|dPBR]] mod0= secondText=[]
+[2026-10-26 15:41:20.880 IFO][NeuroDragon] [vv] long frame 662.3 ms at present #10000
+[2026-10-26 15:41:21.882 IFO][NeuroDragon] [vv] taau #10200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=20399 lists=499752
+[2026-10-26 15:41:21.883 IFO][NeuroDragon] [vv] taau draw #10200 self=0x27983df42e0 tid=42048 qpc=852540017762
+[2026-10-26 15:41:21.883 IFO][NeuroDragon] [vv] presents=10200 submits=20399 lists=499752 maxListsPerSubmit=49 taau=10200 draws=10200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:21.883 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:21.883 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:21.884 IFO][NeuroDragon] [sr] ctx #10200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:21.892 IFO][NeuroDragon] [vv] frame #10201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:23.382 IFO][NeuroDragon] [vv] taau #10500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=20999 lists=514452
+[2026-10-26 15:41:24.882 IFO][NeuroDragon] [vv] taau #10800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=21599 lists=529152
+[2026-10-26 15:41:24.882 IFO][NeuroDragon] [vv] taau draw #10800 self=0x279838d90d0 tid=8392 qpc=852570014720
+[2026-10-26 15:41:24.882 IFO][NeuroDragon] [vv] presents=10800 submits=21599 lists=529152 maxListsPerSubmit=49 taau=10800 draws=10800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:24.883 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:24.883 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:24.883 IFO][NeuroDragon] [sr] ctx #10800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:24.887 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796bc76c80 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:24.892 IFO][NeuroDragon] [vv] frame #10801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:26.382 IFO][NeuroDragon] [vv] taau #11100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=22199 lists=543852
+[2026-10-26 15:41:27.882 IFO][NeuroDragon] [vv] taau #11400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=22799 lists=558552
+[2026-10-26 15:41:27.882 IFO][NeuroDragon] [vv] taau draw #11400 self=0x27988176750 tid=24164 qpc=852600018974
+[2026-10-26 15:41:27.883 IFO][NeuroDragon] [vv] presents=11400 submits=22799 lists=558552 maxListsPerSubmit=49 taau=11400 draws=11400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:27.883 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:27.883 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:27.884 IFO][NeuroDragon] [sr] ctx #11400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:27.891 IFO][NeuroDragon] [vv] frame #11401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:29.382 IFO][NeuroDragon] [vv] taau #11700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=23399 lists=573252
+[2026-10-26 15:41:30.882 IFO][NeuroDragon] [vv] taau #12000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=23999 lists=587952
+[2026-10-26 15:41:30.912 IFO][NeuroDragon] [vv] taau #12000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27888d480a0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[sounds/sound_definitions.json|sounds/sound_definitions.json|sounds/sound_definitions.json|subtitles.block.generic.break|sounds/block/tuf] mod0= secondText=[]
+[2026-10-26 15:41:30.940 IFO][NeuroDragon] [vv] taau #12000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x27888d3fdc0 +10=0x2798e004580 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[sounds/sound_definitions.json|sounds/sound_definitions.json|sounds/sound_definitions.json|block.sweet_berry_bush.place|sounds/block/sul] mod0= secondText=[ is ]
+[2026-10-26 15:41:30.974 IFO][NeuroDragon] [vv] taau #12000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27888d49660 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x188d48f00 resText=[HS+)x|sounds/bubbles/bubble3|KS.)|sounds/sound_definitions.json|NS!)|sounds/bubbles/upwards_inside|QS$)x|sounds/bubbles/upwards_ambient5|TS')|sounds/bubbles/w] mod0= secondText=[]
+[2026-10-26 15:41:31.016 IFO][NeuroDragon] [vv] taau #12000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27888d40ae0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[Zc"x|sounds/block/roots/break2|sounds/block/roots/break3|sounds/block/roots/break4|Z|"x|sounds/block/roots/break5|sounds/sound_def] mod0= secondText=[]
+[2026-10-26 15:41:31.040 IFO][NeuroDragon] [vv] taau #12000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27888d480a0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[sounds/sound_definitions.json|sounds/sound_definitions.json|sounds/sound_definitions.json|subtitles.block.generic.break|sounds/block/tuf] mod0= secondText=[]
+[2026-10-26 15:41:31.070 IFO][NeuroDragon] [vv] taau #12000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x27888d3fdc0 +10=0x2798e004580 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[sounds/sound_definitions.json|sounds/sound_definitions.json|sounds/sound_definitions.json|block.sweet_berry_bush.place|sounds/block/sul] mod0= secondText=[ is ]
+[2026-10-26 15:41:31.112 IFO][NeuroDragon] [vv] taau #12000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27888d49660 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x188d48f00 resText=[HS+)x|sounds/bubbles/bubble3|KS.)|sounds/sound_definitions.json|NS!)|sounds/bubbles/upwards_inside|QS$)x|sounds/bubbles/upwards_ambient5|TS')|sounds/bubbles/w] mod0= secondText=[]
+[2026-10-26 15:41:31.156 IFO][NeuroDragon] [vv] taau #12000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27888d40ae0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[Zc"x|sounds/block/roots/break2|sounds/block/roots/break3|sounds/block/roots/break4|Z|"x|sounds/block/roots/break5|sounds/sound_def] mod0= secondText=[]
+[2026-10-26 15:41:31.157 IFO][NeuroDragon] [vv] taau draw #12000 self=0x27995b30800 tid=19580 qpc=852632769876
+[2026-10-26 15:41:31.158 IFO][NeuroDragon] [vv] presents=12000 submits=23999 lists=587952 maxListsPerSubmit=49 taau=12000 draws=12000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:31.158 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:31.158 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:31.158 IFO][NeuroDragon] [vv] long frame 280.2 ms at present #12000
+[2026-10-26 15:41:31.159 IFO][NeuroDragon] [sr] ctx #12000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:31.162 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279678f23e0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:31.167 IFO][NeuroDragon] [vv] frame #12001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:32.659 IFO][NeuroDragon] [vv] taau #12300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=24599 lists=602652
+[2026-10-26 15:41:34.159 IFO][NeuroDragon] [vv] taau #12600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=25199 lists=617352
+[2026-10-26 15:41:34.159 IFO][NeuroDragon] [vv] taau draw #12600 self=0x27995b333c0 tid=19580 qpc=852662776054
+[2026-10-26 15:41:34.159 IFO][NeuroDragon] [vv] presents=12600 submits=25199 lists=617352 maxListsPerSubmit=49 taau=12600 draws=12600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:34.160 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:34.160 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:34.160 IFO][NeuroDragon] [sr] ctx #12600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:34.168 IFO][NeuroDragon] [vv] frame #12601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:35.658 IFO][NeuroDragon] [vv] taau #12900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=25799 lists=632052
+[2026-10-26 15:41:37.158 IFO][NeuroDragon] [vv] taau #13200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=26399 lists=646752
+[2026-10-26 15:41:37.159 IFO][NeuroDragon] [vv] taau draw #13200 self=0x27995b33140 tid=6632 qpc=852692777344
+[2026-10-26 15:41:37.159 IFO][NeuroDragon] [vv] presents=13200 submits=26399 lists=646752 maxListsPerSubmit=49 taau=13200 draws=13200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:37.159 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:37.159 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:37.160 IFO][NeuroDragon] [sr] ctx #13200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:37.162 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796623e420 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:37.167 IFO][NeuroDragon] [vv] frame #13201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:38.659 IFO][NeuroDragon] [vv] taau #13500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=26999 lists=661452
+[2026-10-26 15:41:40.159 IFO][NeuroDragon] [vv] taau #13800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=27599 lists=676152
+[2026-10-26 15:41:40.159 IFO][NeuroDragon] [vv] taau draw #13800 self=0x2798cea9dd0 tid=8392 qpc=852722779362
+[2026-10-26 15:41:40.160 IFO][NeuroDragon] [vv] presents=13800 submits=27599 lists=676152 maxListsPerSubmit=49 taau=13800 draws=13800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:40.160 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:40.160 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:40.160 IFO][NeuroDragon] [sr] ctx #13800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:40.168 IFO][NeuroDragon] [vv] frame #13801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:41.229 IFO][NeuroDragon] [vv] taau #14000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798e66c6f0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[] mod0= secondText=[]
+[2026-10-26 15:41:41.280 IFO][NeuroDragon] [vv] taau #14000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798e66c540 +10=0x27888004630 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[DoDeferredShadingPhase|DoIndirectSpecularShading|DoDeferredShadin] mod0= secondText=[t"},"r]
+[2026-10-26 15:41:41.341 IFO][NeuroDragon] [vv] taau #14000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798e66c7e0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18e66c900 resText=[[ClearStencil][ForwardPBR]|DoDeferredLightingPhase|DoDeferredShadingPhase|[ClearDepth][ItemInHandObject]|WaterDepthBuffer] mod0= secondText=[]
+[2026-10-26 15:41:41.460 IFO][NeuroDragon] [vv] taau #14000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798e66c3f0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[] mod0= secondText=[]
+[2026-10-26 15:41:41.545 IFO][NeuroDragon] [vv] taau #14000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798e66c6f0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[] mod0= secondText=[]
+[2026-10-26 15:41:41.606 IFO][NeuroDragon] [vv] taau #14000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798e66c540 +10=0x27888004630 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[DoDeferredShadingPhase|DoIndirectSpecularShading|DoDeferredShadin] mod0= secondText=[t"},"r]
+[2026-10-26 15:41:41.666 IFO][NeuroDragon] [vv] taau #14000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798e66c7e0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18e66c900 resText=[[ClearStencil][ForwardPBR]|DoDeferredLightingPhase|DoDeferredShadingPhase|[ClearDepth][ItemInHandObject]|WaterDepthBuffer] mod0= secondText=[]
+[2026-10-26 15:41:41.783 IFO][NeuroDragon] [vv] taau #14000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798e66c3f0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[] mod0= secondText=[]
+[2026-10-26 15:41:42.284 IFO][NeuroDragon] [vv] taau #14100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=28199 lists=690852
+[2026-10-26 15:41:43.784 IFO][NeuroDragon] [vv] taau #14400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=28799 lists=705552
+[2026-10-26 15:41:43.784 IFO][NeuroDragon] [vv] taau draw #14400 self=0x279830e4940 tid=6632 qpc=852759033251
+[2026-10-26 15:41:43.785 IFO][NeuroDragon] [vv] presents=14400 submits=28799 lists=705552 maxListsPerSubmit=49 taau=14400 draws=14400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:43.785 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:43.785 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:43.785 IFO][NeuroDragon] [sr] ctx #14400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:43.789 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x279448330d0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:43.793 IFO][NeuroDragon] [vv] frame #14401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:45.284 IFO][NeuroDragon] [vv] taau #14700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=29399 lists=720252
+[2026-10-26 15:41:46.785 IFO][NeuroDragon] [vv] taau #15000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=29999 lists=734952
+[2026-10-26 15:41:46.785 IFO][NeuroDragon] [vv] taau draw #15000 self=0x279851fc860 tid=12684 qpc=852789036710
+[2026-10-26 15:41:46.785 IFO][NeuroDragon] [vv] presents=15000 submits=29999 lists=734952 maxListsPerSubmit=49 taau=15000 draws=15000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:46.785 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:46.785 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:46.786 IFO][NeuroDragon] [sr] ctx #15000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:46.793 IFO][NeuroDragon] [vv] frame #15001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:48.285 IFO][NeuroDragon] [vv] taau #15300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=30599 lists=749652
+[2026-10-26 15:41:49.785 IFO][NeuroDragon] [vv] taau #15600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=31199 lists=764352
+[2026-10-26 15:41:49.785 IFO][NeuroDragon] [vv] taau draw #15600 self=0x27995b32740 tid=8392 qpc=852819045131
+[2026-10-26 15:41:49.786 IFO][NeuroDragon] [vv] presents=15600 submits=31199 lists=764352 maxListsPerSubmit=49 taau=15600 draws=15600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:49.786 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:49.786 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:49.787 IFO][NeuroDragon] [sr] ctx #15600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:49.789 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796bc72000 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:49.794 IFO][NeuroDragon] [vv] frame #15601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:51.285 IFO][NeuroDragon] [vv] taau #15900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=31799 lists=779052
+[2026-10-26 15:41:51.864 IFO][NeuroDragon] [vv] taau #16000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798ecf9180 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearGBuffer][ScenePrepass]] mod0= secondText=[]
+[2026-10-26 15:41:51.915 IFO][NeuroDragon] [vv] taau #16000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798ecf9a50 +10=0x27888001db0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[VolumeScattering|[ClearDepth][ItemInHandObject]|[ClearDepth][Ite] mod0= secondText=[&dx.valverS|V'7V67%x*]
+[2026-10-26 15:41:52.008 IFO][NeuroDragon] [vv] taau #16000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798ecf9720 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18ecf9700 resText=[DoDeferredLighti] mod0= secondText=[]
+[2026-10-26 15:41:52.084 IFO][NeuroDragon] [vv] taau #16000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798ecf9a80 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[VolumeScattering|[ClearDepth][ItemInHandObject]|[ClearDepth][ItemInHandObject]] mod0= secondText=[]
+[2026-10-26 15:41:52.170 IFO][NeuroDragon] [vv] taau #16000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798ecf9180 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearGBuffer][ScenePrepass]] mod0= secondText=[]
+[2026-10-26 15:41:52.225 IFO][NeuroDragon] [vv] taau #16000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798ecf9a50 +10=0x27888001db0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[VolumeScattering|[ClearDepth][ItemInHandObject]|[ClearDepth][Ite] mod0= secondText=[&dx.valverS|V'7V67%x*]
+[2026-10-26 15:41:52.322 IFO][NeuroDragon] [vv] taau #16000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798ecf9720 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18ecf9700 resText=[DoDeferredLighti] mod0= secondText=[]
+[2026-10-26 15:41:52.405 IFO][NeuroDragon] [vv] taau #16000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798ecf9a80 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[VolumeScattering|[ClearDepth][ItemInHandObject]|[ClearDepth][ItemInHandObject]] mod0= secondText=[]
+[2026-10-26 15:41:53.405 IFO][NeuroDragon] [vv] taau #16200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=32399 lists=793752
+[2026-10-26 15:41:53.405 IFO][NeuroDragon] [vv] taau draw #16200 self=0x27995b306c0 tid=43004 qpc=852855241314
+[2026-10-26 15:41:53.405 IFO][NeuroDragon] [vv] presents=16200 submits=32399 lists=793752 maxListsPerSubmit=49 taau=16200 draws=16200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:53.405 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:53.405 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:53.406 IFO][NeuroDragon] [sr] ctx #16200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:53.414 IFO][NeuroDragon] [vv] frame #16201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:54.905 IFO][NeuroDragon] [vv] taau #16500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=32999 lists=808452
+[2026-10-26 15:41:56.405 IFO][NeuroDragon] [vv] taau #16800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=33599 lists=823152
+[2026-10-26 15:41:56.405 IFO][NeuroDragon] [vv] taau draw #16800 self=0x27995b30940 tid=9352 qpc=852885243776
+[2026-10-26 15:41:56.406 IFO][NeuroDragon] [vv] presents=16800 submits=33599 lists=823152 maxListsPerSubmit=49 taau=16800 draws=16800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:56.406 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:56.406 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:56.407 IFO][NeuroDragon] [sr] ctx #16800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:56.410 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796a56a530 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:41:56.415 IFO][NeuroDragon] [vv] frame #16801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:41:57.906 IFO][NeuroDragon] [vv] taau #17100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=34199 lists=837852
+[2026-10-26 15:41:59.406 IFO][NeuroDragon] [vv] taau #17400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=34799 lists=852552
+[2026-10-26 15:41:59.406 IFO][NeuroDragon] [vv] taau draw #17400 self=0x27995b33780 tid=19252 qpc=852915250411
+[2026-10-26 15:41:59.407 IFO][NeuroDragon] [vv] presents=17400 submits=34799 lists=852552 maxListsPerSubmit=49 taau=17400 draws=17400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:41:59.407 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:41:59.407 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:41:59.407 IFO][NeuroDragon] [sr] ctx #17400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:41:59.415 IFO][NeuroDragon] [vv] frame #17401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:00.906 IFO][NeuroDragon] [vv] taau #17700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=35399 lists=867252
+[2026-10-26 15:42:02.466 IFO][NeuroDragon] [vv] taau #18000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=35999 lists=881952
+[2026-10-26 15:42:02.524 IFO][NeuroDragon] [vv] taau #18000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27888cc0310 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[DoDeferredLightingPhase|VolumeScattering|[ClearGBuffer][S] mod0= secondText=[]
+[2026-10-26 15:42:02.587 IFO][NeuroDragon] [vv] taau #18000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x27888cc06a0 +10=0x2798e00b8c0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[ClearDiffuseLightingBuffers|DoDeferredShadingPhase] mod0= secondText=[]
+[2026-10-26 15:42:02.656 IFO][NeuroDragon] [vv] taau #18000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27888cc0430 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x188cc0c00 resText=[DoDeferredShadingPhase|DoDeferredShadingPhase|ary)|DoIndirectSpecul] mod0= secondText=[]
+[2026-10-26 15:42:02.739 IFO][NeuroDragon] [vv] taau #18000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27888cc05b0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[[ClearStencil][ForwardPBR]|[ClearStencil][ForwardPBR]|ForceForwardPBROpaque|sample|[ClearDepth][ItemInHandObject]] mod0= secondText=[]
+[2026-10-26 15:42:02.803 IFO][NeuroDragon] [vv] taau #18000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x27888cc0310 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[DoDeferredLightingPhase|VolumeScattering|[ClearGBuffer][S] mod0= secondText=[]
+[2026-10-26 15:42:02.863 IFO][NeuroDragon] [vv] taau #18000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x27888cc06a0 +10=0x2798e00b8c0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[ClearDiffuseLightingBuffers|DoDeferredShadingPhase] mod0= secondText=[]
+[2026-10-26 15:42:02.952 IFO][NeuroDragon] [vv] taau #18000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x27888cc0430 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x188cc0c00 resText=[DoDeferredShadingPhase|DoDeferredShadingPhase|ary)|DoIndirectSpecul] mod0= secondText=[]
+[2026-10-26 15:42:03.042 IFO][NeuroDragon] [vv] taau #18000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x27888cc05b0 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[[ClearStencil][ForwardPBR]|[ClearStencil][ForwardPBR]|ForceForwardPBROpaque|sample|[ClearDepth][ItemInHandObject]] mod0= secondText=[]
+[2026-10-26 15:42:03.043 IFO][NeuroDragon] [vv] taau draw #18000 self=0x27888e21a40 tid=42048 qpc=852951614063
+[2026-10-26 15:42:03.043 IFO][NeuroDragon] [vv] presents=18000 submits=35999 lists=881952 maxListsPerSubmit=49 taau=18000 draws=18000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:03.043 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:03.043 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:03.043 IFO][NeuroDragon] [sr] ctx #18000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:03.045 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x27966dc1780 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:42:03.050 IFO][NeuroDragon] [vv] frame #18001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:04.546 IFO][NeuroDragon] [vv] taau #18300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=36599 lists=896652
+[2026-10-26 15:42:06.046 IFO][NeuroDragon] [vv] taau #18600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=37199 lists=911352
+[2026-10-26 15:42:06.046 IFO][NeuroDragon] [vv] taau draw #18600 self=0x27888e21900 tid=43224 qpc=852981649069
+[2026-10-26 15:42:06.046 IFO][NeuroDragon] [vv] presents=18600 submits=37199 lists=911352 maxListsPerSubmit=49 taau=18600 draws=18600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:06.046 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:06.046 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:06.047 IFO][NeuroDragon] [sr] ctx #18600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:06.055 IFO][NeuroDragon] [vv] frame #18601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:07.546 IFO][NeuroDragon] [vv] taau #18900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=37799 lists=926052
+[2026-10-26 15:42:09.045 IFO][NeuroDragon] [vv] taau #19200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=38399 lists=940752
+[2026-10-26 15:42:09.046 IFO][NeuroDragon] [vv] taau draw #19200 self=0x27888e1de40 tid=6416 qpc=853011653799
+[2026-10-26 15:42:09.046 IFO][NeuroDragon] [vv] presents=19200 submits=38399 lists=940752 maxListsPerSubmit=49 taau=19200 draws=19200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:09.046 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:09.046 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:09.047 IFO][NeuroDragon] [sr] ctx #19200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:09.050 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x27964bfbce0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:42:09.055 IFO][NeuroDragon] [vv] frame #19201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:10.546 IFO][NeuroDragon] [vv] taau #19500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=38999 lists=955452
+[2026-10-26 15:42:12.045 IFO][NeuroDragon] [vv] taau #19800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=39599 lists=970152
+[2026-10-26 15:42:12.046 IFO][NeuroDragon] [vv] taau draw #19800 self=0x27985128a00 tid=12684 qpc=853041653200
+[2026-10-26 15:42:12.046 IFO][NeuroDragon] [vv] presents=19800 submits=39599 lists=970152 maxListsPerSubmit=49 taau=19800 draws=19800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:12.047 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:12.047 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:12.047 IFO][NeuroDragon] [sr] ctx #19800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:12.056 IFO][NeuroDragon] [vv] frame #19801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:13.092 IFO][NeuroDragon] [vv] taau #20000 in.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798c0e01c0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearDepth][ItemInHandObject]|Minecraft Classic Texture Pack|[ClearDepth][ItemInHandObject]||[ClearGBuffer][S] mod0= secondText=[]
+[2026-10-26 15:42:13.132 IFO][NeuroDragon] [vv] taau #20000 in.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798c0dfc80 +10=0x2788b004ea0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearGBuffer][ScenePrepass]|Cubeir|VolumeScattering] mod0= secondText=[pressed|global|view|global|view|pressed|pressed|focused]
+[2026-10-26 15:42:13.194 IFO][NeuroDragon] [vv] taau #20000 in.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798c0e0280 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18c0e0400 resText=[[ClearGBuffer][ScenePrepass]|SampleCascadedShadows|DoDeferredLightingPhase] mod0= secondText=[]
+[2026-10-26 15:42:13.283 IFO][NeuroDragon] [vv] taau #20000 in.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798c0dfc20 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[[ClearGBuffer][ScenePrepass]|Cubeir] mod0= secondText=[]
+[2026-10-26 15:42:13.336 IFO][NeuroDragon] [vv] taau #20000 out.history this=0xb92f1fe940 id=0x8beb3c381fb2f1fe res=0x2798c0e01c0 +10=0xb92f00ea00 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[[ClearDepth][ItemInHandObject]|Minecraft Classic Texture Pack|ss]||[ClearGBuffer][S] mod0= secondText=[]
+[2026-10-26 15:42:13.380 IFO][NeuroDragon] [vv] taau #20000 out.color this=0xb92f1fea60 id=0x8beb3c381fb2f1ff res=0x2798c0dfc80 +10=0x2788b004ea0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearGBuffer][ScenePrepass]|Cubeir|VolumeScattering] mod0= secondText=[pressed|global|view|global|view|pressed|pressed|focused]
+[2026-10-26 15:42:13.443 IFO][NeuroDragon] [vv] taau #20000 out.output this=0xb92f1fe2c0 id=0x8beb3c381fb2f1ff res=0x2798c0e0280 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f1f0000,0x18c0e0400 resText=[[ClearGBuffer][ScenePrepass]|SampleCascadedShadows|DoDeferredLightingPhase] mod0= secondText=[]
+[2026-10-26 15:42:13.526 IFO][NeuroDragon] [vv] taau #20000 out.motion this=0xb92f1fef70 id=0x8beb3c381fb2f1fe res=0x2798c0dfc20 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[[ClearGBuffer][ScenePrepass]|Cubeir] mod0= secondText=[]
+[2026-10-26 15:42:14.026 IFO][NeuroDragon] [vv] taau #20100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=40199 lists=984852
+[2026-10-26 15:42:15.527 IFO][NeuroDragon] [vv] taau #20400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=40799 lists=999552
+[2026-10-26 15:42:15.527 IFO][NeuroDragon] [vv] taau draw #20400 self=0x2798ceaa7d0 tid=25004 qpc=853076461011
+[2026-10-26 15:42:15.527 IFO][NeuroDragon] [vv] presents=20400 submits=40799 lists=999552 maxListsPerSubmit=49 taau=20400 draws=20400 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:15.527 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:15.527 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:15.528 IFO][NeuroDragon] [sr] ctx #20400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:15.531 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796c8330e0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:42:15.536 IFO][NeuroDragon] [vv] frame #20401 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:17.026 IFO][NeuroDragon] [vv] taau #20700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=41399 lists=1014252
+[2026-10-26 15:42:18.527 IFO][NeuroDragon] [vv] taau #21000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=41999 lists=1028952
+[2026-10-26 15:42:18.527 IFO][NeuroDragon] [vv] taau draw #21000 self=0x2798c6a7ee0 tid=43004 qpc=853106461277
+[2026-10-26 15:42:18.528 IFO][NeuroDragon] [vv] presents=21000 submits=41999 lists=1028952 maxListsPerSubmit=49 taau=21000 draws=21000 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:18.528 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:18.528 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:18.529 IFO][NeuroDragon] [sr] ctx #21000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:18.536 IFO][NeuroDragon] [vv] frame #21001 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:20.027 IFO][NeuroDragon] [vv] taau #21300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=42599 lists=1043652
+[2026-10-26 15:42:21.528 IFO][NeuroDragon] [vv] taau #21600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=43199 lists=1058352
+[2026-10-26 15:42:21.528 IFO][NeuroDragon] [vv] taau draw #21600 self=0x27988175c10 tid=9352 qpc=853136469512
+[2026-10-26 15:42:21.529 IFO][NeuroDragon] [vv] presents=21600 submits=43199 lists=1058352 maxListsPerSubmit=49 taau=21600 draws=21600 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:21.529 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:21.529 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:21.530 IFO][NeuroDragon] [sr] ctx #21600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:21.532 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x2796a56e820 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:42:21.536 IFO][NeuroDragon] [vv] frame #21601 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:23.028 IFO][NeuroDragon] [vv] taau #21900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=43799 lists=1073052
+[2026-10-26 15:42:23.571 IFO][NeuroDragon] [vv] taau #22000 in.history this=0xb92f2fe560 id=0x8beb3c381fb2f1fe res=0x27984d37d50 +10=0x0 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[ClearDiffuseLightingBuffers|DoDeferredLightingPhase|DoDeferredShadingPhase|PreDeferredLightingPhase|[ClearStencil][F] mod0= secondText=[]
+[2026-10-26 15:42:23.610 IFO][NeuroDragon] [vv] taau #22000 in.color this=0xb92f2fe680 id=0x8beb3c381fb2f1ff res=0x27984d37ea0 +10=0x2788800bcf0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearDepth][ItemInHandObject]|[ClearDepth][ItemInHandObject]|RasterizedObjects] mod0= secondText=[OSG1|SV_Position]
+[2026-10-26 15:42:23.711 IFO][NeuroDragon] [vv] taau #22000 in.output this=0xb92f2fdee0 id=0x8beb3c381fb2f1ff res=0x27984d384a0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f2f0000,0x184d38200 resText=[] mod0= secondText=[]
+[2026-10-26 15:42:23.767 IFO][NeuroDragon] [vv] taau #22000 in.motion this=0xb92f2feb90 id=0x8beb3c381fb2f1fe res=0x27984d38020 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[$"J=|DoDeferredLightingPhase|'"M=|RasterizedObjects|*"@=|DoIndirectSpecularShadingPhase|-"C=|0"F=|SampleCascadedSh] mod0= secondText=[]
+[2026-10-26 15:42:23.823 IFO][NeuroDragon] [vv] taau #22000 out.history this=0xb92f2fe560 id=0x8beb3c381fb2f1fe res=0x27984d37d50 +10=0x0 head=0x7ff7f1bf93c0,0x1a03b60699,0x0,0x100000000 resText=[ClearDiffuseLightingBuffers|DoDeferredLightingPhase|DoDeferredShadingPhase|PreDeferredLightingPhase|[ClearStencil][F] mod0= secondText=[]
+[2026-10-26 15:42:23.871 IFO][NeuroDragon] [vv] taau #22000 out.color this=0xb92f2fe680 id=0x8beb3c381fb2f1ff res=0x27984d37ea0 +10=0x2788800bcf0 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e11030,0x27889e11020 resText=[[ClearDepth][ItemInHandObject]|ject]||$"J=|DoDeferredLightingPhase|] mod0= secondText=[OSG1|SV_Position]
+[2026-10-26 15:42:23.975 IFO][NeuroDragon] [vv] taau #22000 out.output this=0xb92f2fdee0 id=0x8beb3c381fb2f1ff res=0x27984d384a0 +10=0x0 head=0x7ff7f1bf93c0,0xa03b60699,0x2f2f0000,0x184d38200 resText=[] mod0= secondText=[]
+[2026-10-26 15:42:24.031 IFO][NeuroDragon] [vv] taau #22000 out.motion this=0xb92f2feb90 id=0x8beb3c381fb2f1fe res=0x27984d38020 +10=0x5242 head=0x7ff7f1bf94b0,0x7ff7f1a35460,0x27889e105f0,0x27889e105e0 resText=[$"J=|DoDeferredLightingPhase|'"M=|RasterizedObjects|*"@=|DoIndirectSpecularShadingPhase|-"C=|0"F=|SampleCascadedSh] mod0= secondText=[]
+[2026-10-26 15:42:25.032 IFO][NeuroDragon] [vv] taau #22200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=10 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=44399 lists=1087752
+[2026-10-26 15:42:25.033 IFO][NeuroDragon] [vv] taau draw #22200 self=0x27988176b10 tid=19252 qpc=853171521217
+[2026-10-26 15:42:25.033 IFO][NeuroDragon] [vv] presents=22200 submits=44399 lists=1087752 maxListsPerSubmit=49 taau=22200 draws=22200 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:25.033 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:25.033 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:25.034 IFO][NeuroDragon] [sr] ctx #22200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:25.042 IFO][NeuroDragon] [vv] frame #22201 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
+[2026-10-26 15:42:26.548 IFO][NeuroDragon] [vv] taau #22500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=44999 lists=1102452
+[2026-10-26 15:42:28.099 IFO][NeuroDragon] [vv] taau #22800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=45599 lists=1117152
+[2026-10-26 15:42:28.099 IFO][NeuroDragon] [vv] taau draw #22800 self=0x27988176890 tid=6632 qpc=853202180287
+[2026-10-26 15:42:28.100 IFO][NeuroDragon] [vv] presents=22800 submits=45599 lists=1117152 maxListsPerSubmit=49 taau=22800 draws=22800 seen=3 dumps=0 | submits/frame=2.00 lists/frame=49.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-26 15:42:28.100 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7fff9a780000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-26 15:42:28.100 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-26 15:42:28.100 IFO][NeuroDragon] [sr] ctx #22800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-26 15:42:28.102 IFO][NeuroDragon] [vv] content boundary split=45/48 list=0x27966dca6f0 via=signature+hud marks=0 sigs=45
+[2026-10-26 15:42:28.107 IFO][NeuroDragon] [vv] frame #22801 lists=48: 1:v0x0z d0 2:v2560x1440z d0 3:v1689x950 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x950 d0 7:v1689x950 d0 8:v1689x950 d0 9:v1689x950z d0 10:v1689x950 d0 12:v1689x950 d1 x6 13:v1689x950z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x950 d1 x6 17:v1689x950 d1 x6 18:v1689x950z d1 x6 19:v1689x950z d1 x6 20:v1689x950z d1 x6 21:v1689x950z d1 x6 22:v1689x950 d1 x6 23:v1689x950 d0 24:v1689x950z d1 x36 25:v2560x1440 d1 x6 26:v1x1z d0 27:v844x475 d1 x6 28:v422x237 d1 x6 29:v211x118 d1 x6 30:v105x59 d1 x6 31:v52x29 d1 x6 32:v26x14 d1 x6 33:v52x29 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x59 d1 x6 37:v105x59 d1 x6 38:v211x118 d1 x6 39:v422x237 d1 x6 40:v844x475 d1 x6 41:v1x1z d0 42:v1689x950 d1 x6 43:v1689x950 d1 x6 44:v2560x1440z d1 x6 45:v2560x1440z d43 x6 46:v1x1z d0
