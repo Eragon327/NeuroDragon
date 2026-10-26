@@ -45,9 +45,10 @@ bool dumpTextureRaw(void* device, void* queue, void* resource, wchar_t const* pa
 // textures came back as all zeros with the obvious guess). The probe dumps the same
 // resource once per plausible state and the one that yields real data wins.
 enum class DumpState : unsigned {
-    Common         = 0,    // D3D12_RESOURCE_STATE_COMMON / PRESENT
-    RenderTarget   = 4,    // D3D12_RESOURCE_STATE_RENDER_TARGET
-    ShaderResource = 0x80, // D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    Common                 = 0,    // D3D12_RESOURCE_STATE_COMMON / PRESENT
+    RenderTarget           = 4,    // D3D12_RESOURCE_STATE_RENDER_TARGET
+    NonPixelShaderResource = 0x40, // D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+    ShaderResource         = 0x80, // D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 };
 
 bool dumpTextureRawAs(void* device, void* queue, void* resource, wchar_t const* path, DumpState state);

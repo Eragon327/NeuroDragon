@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstring>
 #include <cwchar>
+#include <filesystem>
 #include <mutex>
 #include <string>
 
@@ -577,6 +578,11 @@ bool dumpInputs() {
     if (!device || !queue || !snapshot.colorSource || !snapshot.depthSource) {
         return false;
     }
+    // One number per dump so a repeated trigger (the present-side marker file) keeps
+    // every frame instead of overwriting the previous one.
+    static std::atomic<unsigned> dumpNo{0};
+    unsigned const               run = dumpNo.fetch_add(1, std::memory_order_relaxed) + 1;
+    utils::logger().info("[vvsr] sr dump #{} start", run);
     std::wstring const directory = utils::applicationDirectory();
     wchar_t            name[128]{};
     std::swprintf(
@@ -599,15 +605,55 @@ bool dumpInputs() {
         snapshot.renderHeight
     );
     bool const depthOk = probe::vv::dumpTextureRaw(device, queue, snapshot.depthSource, (directory + L"\\" + name).c_str());
-    bool midOk   = false;
-    bool finalOk = false;
+    bool midOk      = false;
+    bool finalOk    = false;
+    bool mvOk       = false;
+    bool depthR32Ok = false;
+    bool dlssOk     = false;
+    // Our own textures are left in NON_PIXEL_SHADER_RESOURCE by the record path; the
+    // 2026-10-26 dump read the MV as all zeros and the depth as all 1.0 with the
+    // Common hint, which is the stale-byte failure the DumpState comment describes.
+    auto const state = probe::vv::DumpState::NonPixelShaderResource;
     if (gPipeline.colorHalf && gPipeline.finalRgba8) {
-        std::swprintf(name, std::size(name), L"sr_mid_colourhalf.bin");
-        midOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.colorHalf, (directory + L"\\" + name).c_str(), probe::vv::DumpState::Common);
-        std::swprintf(name, std::size(name), L"sr_final_rgba8.bin");
-        finalOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.finalRgba8, (directory + L"\\" + name).c_str(), probe::vv::DumpState::Common);
+        std::swprintf(name, std::size(name), L"sr_mid_colourhalf_%u.bin", run);
+        midOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.colorHalf, (directory + L"\\" + name).c_str(), state);
+        std::swprintf(name, std::size(name), L"sr_final_rgba8_%u.bin", run);
+        finalOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.finalRgba8, (directory + L"\\" + name).c_str(), state);
     }
-    utils::logger().info("[vvsr] sr dump inputs colour={} depth={} mid={} final={}", colorOk ? 1 : 0, depthOk ? 1 : 0, midOk ? 1 : 0, finalOk ? 1 : 0);
+    // The three textures that decide the reprojection: the prepared motion vectors
+    // (RG16F), the prepared linear depth (R32F) and DLSS's own output. A localised
+    // seam is either a bad value in one of them or the frame is clean and the problem
+    // is elsewhere - this dump is what tells those apart.
+    if (gPipeline.mvRg32) {
+        std::swprintf(name, std::size(name), L"sr_mv_rg32_%ux%u_%u.bin", snapshot.renderWidth, snapshot.renderHeight, run);
+        mvOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.mvRg32, (directory + L"\\" + name).c_str(), state);
+    }
+    if (gPipeline.depthR32) {
+        std::swprintf(name, std::size(name), L"sr_depth_r32_%ux%u_%u.bin", snapshot.renderWidth, snapshot.renderHeight, run);
+        depthR32Ok = probe::vv::dumpTextureRawAs(device, queue, gPipeline.depthR32, (directory + L"\\" + name).c_str(), state);
+    }
+    if (gPipeline.dlssOut) {
+        std::swprintf(
+            name,
+            std::size(name),
+            L"sr_dlssout_%ux%u_%u.bin",
+            snapshot.displayWidth,
+            snapshot.displayHeight,
+            run
+        );
+        dlssOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.dlssOut, (directory + L"\\" + name).c_str(), state);
+    }
+    utils::logger().info(
+        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} final={} mv={} depth32={} dlss={}",
+        run,
+        colorOk ? 1 : 0,
+        depthOk ? 1 : 0,
+        midOk ? 1 : 0,
+        finalOk ? 1 : 0,
+        mvOk ? 1 : 0,
+        depthR32Ok ? 1 : 0,
+        dlssOk ? 1 : 0
+    );
     return colorOk && depthOk;
 }
 
@@ -640,6 +686,8 @@ struct MvFrame {
     float jitterY{};
     bool  reset{true};
     bool  valid{false};
+    bool  prevSame{true}; ///< the two 16-float halves are identical (no camera motion,
+                          ///< or the snapshot was not taken before the engine's draw)
 };
 
 MvFrame decodeMvFrame() {
@@ -651,6 +699,7 @@ MvFrame decodeMvFrame() {
     if (!probe::vv::taaMatrices(cur, prev, cam, jitter)) {
         return frame;
     }
+    frame.prevSame = std::memcmp(cur, prev, sizeof(cur)) == 0;
     // The four logged rows are the columns of (right, up, fwd, w); near = -m14.
     auto const axis = [](float const* m, int i, float* out) {
         out[0] = m[i];
@@ -724,6 +773,23 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     // against what that frame shows.
     static std::atomic<unsigned> srFrames{0};
     unsigned const frameNo = srFrames.fetch_add(1, std::memory_order_relaxed) + 1;
+    // TEST: `vv_sr_spatial.txt` in the game directory forces a purely spatial
+    // evaluate (zero jitter/motion, Reset every frame). The user's 2 px seam appears
+    // only with SR+DLSS and only in motion, while every single dumped frame (engine
+    // colour, DLSS output, final write-back) is clean - so it lives in the temporal
+    // path. This toggles that path off at runtime, from the agent side.
+    static std::atomic<bool> spatialMode{false};
+    if (frameNo % 30 == 1) {
+        std::error_code error;
+        spatialMode.store(
+            std::filesystem::exists(
+                std::filesystem::path(utils::applicationDirectory()) / "vv_sr_spatial.txt",
+                error
+            ),
+            std::memory_order_relaxed
+        );
+    }
+    bool const spatial = spatialMode.load(std::memory_order_relaxed);
     // Three labelled in-world windows: a single still frame cannot separate a
     // row-vector layout from a column-vector one (cur == prev), so the camera has to
     // move between samples (walk / look around during the first ~15 s).
@@ -734,8 +800,9 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     if (frameNo == 60) {
         MvFrame const probeFrame = decodeMvFrame();
         utils::logger().info(
-            "[vvsr] mv decode valid={} jitter=({:+.4f},{:+.4f}) delta=({:+.4f},{:+.4f},{:+.4f}) near={:+.4f} sx={:.4f} sy={:.4f}",
+            "[vvsr] mv decode valid={} prev_same={} jitter=({:+.4f},{:+.4f}) delta=({:+.4f},{:+.4f},{:+.4f}) near={:+.4f} sx={:.4f} sy={:.4f}",
             probeFrame.valid ? 1 : 0,
+            probeFrame.prevSame ? 1 : 0,
             probeFrame.jitterX,
             probeFrame.jitterY,
             probeFrame.rows[6][0],
@@ -771,11 +838,28 @@ bool record(void* commandListVoid, void* backBufferVoid) {
             utils::logger().warn("[vvsr] mv: no TAAContext captured yet");
         }
     }
-    unsigned const renderWidth  = probe::vv::renderWidth();
-    unsigned const renderHeight = probe::vv::renderHeight();
+    unsigned       renderWidth  = probe::vv::renderWidth();
+    unsigned       renderHeight = probe::vv::renderHeight();
     D3D12_RESOURCE_DESC const backDesc = back->GetDesc();
     unsigned const displayWidth  = static_cast<unsigned>(backDesc.Width);
     unsigned const displayHeight = backDesc.Height;
+    if ((!renderWidth || !renderHeight) && displayWidth && displayHeight) {
+        // Bilinear never runs the taau declarator, which is the only thing that used
+        // to fill the render size. The engine still creates its render-resolution
+        // colour target, so take the newest fmt=26 that is smaller than the display
+        // and matches its aspect.
+        if (probe::vv::renderSizeHint(displayWidth, displayHeight, &renderWidth, &renderHeight)) {
+            probe::vv::latchRenderSize(renderWidth, renderHeight);
+            static std::atomic<bool> logged{false};
+            if (!logged.exchange(true, std::memory_order_relaxed)) {
+                utils::logger().info(
+                    "[vvsr] sr: TAAU is not running; render size from the inventory = {}x{}",
+                    renderWidth,
+                    renderHeight
+                );
+            }
+        }
+    }
     if (!renderWidth || !renderHeight || !displayWidth || !displayHeight) {
         return false;
     }
@@ -870,7 +954,26 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     list->SetPipelineState(gPipeline.prep);
     unsigned const prepParams[4] = {renderWidth, renderHeight, 0, 0};
     list->SetComputeRoot32BitConstants(0, 4, prepParams, 0);
-    MvFrame const mv = decodeMvFrame();
+    MvFrame mv = decodeMvFrame();
+    if (spatial) {
+        // Zero motion, zero jitter, invalid -> the DLSS branch also forces Reset.
+        mv = MvFrame{};
+    }
+    // One-shot proof that the draw-time snapshot is doing its job: with a moving camera
+    // the previous half differs from the current one. The post-frame read this replaced
+    // could never log this line (prev==cur both halves), so it doubles as a regression.
+    {
+        static std::atomic<bool> logged{false};
+        if (mv.valid && !mv.prevSame && !logged.exchange(true, std::memory_order_relaxed)) {
+            utils::logger().info(
+                "[vvsr] mv snapshot: previous VP differs from current at frame {} (delta=({:+.4f},{:+.4f},{:+.4f}))",
+                frameNo,
+                mv.rows[6][0],
+                mv.rows[6][1],
+                mv.rows[6][2]
+            );
+        }
+    }
     if (gPipeline.mvCb && gPipeline.mvMapped) {
         std::memcpy(gPipeline.mvMapped, mv.rows, sizeof(mv.rows));
         list->SetComputeRootConstantBufferView(4, gPipeline.mvCb->GetGPUVirtualAddress());
@@ -919,7 +1022,7 @@ bool record(void* commandListVoid, void* backBufferVoid) {
             if (pending > 0) {
                 resetFrames.store(pending - 1, std::memory_order_relaxed);
             }
-            bool const reset = pending > 0 || !mv.valid;
+            bool const reset = spatial || pending > 0 || !mv.valid;
             dlssEvaluated = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,

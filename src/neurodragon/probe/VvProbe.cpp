@@ -1,9 +1,12 @@
 #include "neurodragon/probe/VvProbe.h"
 
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/RuntimeOptions.h"
 #include "neurodragon/probe/VvCalibrate.h"
+#include "neurodragon/probe/VvCamera.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/utils/Utils.h"
+#include "neurodragon/vv/VvSr.h"
 
 #include <MinHook.h>
 #include <Windows.h>
@@ -275,6 +278,20 @@ std::atomic<void*> gTaaContext{nullptr};
 // out to be unchanged under pure forward movement (2026-10-25 03:23), which is only
 // right for a camera-relative pair, so this object is dumped next to it.
 std::atomic<void*> gExecContext{nullptr};std::atomic<void*> gGameQueue{nullptr};
+// The draw callback runs *before* the engine's own draw, and that draw updates the
+// TAA history: by the time our injection records (ExecuteCommandLists, after the whole
+// frame) the previous pair has already been collapsed onto the current one. Measured
+// 2026-10-26: samples taken inside the callback satisfy prev(n)=cur(n-1), while samples
+// taken after the frame are prev==cur - so the pair has to be copied here, not read
+// later. Offsets: +0x200 current VP, +0x240 previous VP, +0x1e4 jitter, +0x280 origins.
+struct TaaSnapshot {
+    float current[16]{};
+    float previous[16]{};
+    float camera[6]{};
+    float jitter[2]{};
+};
+TaaSnapshot       gTaaSnapshot{};
+std::atomic<bool> gTaaSnapshotValid{false};
 void*              gExcluded[4]{};
 bool               gLoggedExclusion = false;
 unsigned           gExcludedCount = 0;
@@ -335,6 +352,9 @@ std::atomic<unsigned> gRenderWidth{0};
 std::atomic<unsigned> gRenderHeight{0};
 std::atomic<unsigned> gDisplayWidth{0};
 std::atomic<unsigned> gDisplayHeight{0};
+// True when gRenderWidth/Height came from the inventory fallback instead of taauDetour.
+// A resize invalidates them; a taauDetour write takes over again on its own.
+std::atomic<bool> gRenderDerived{false};
 // Bumped on resize / world enter; the B1b bypass drops its cached colour then.
 std::atomic<unsigned> gRenderGeneration{1};
 // Bit per candidate that has been dumped successfully: the inventory is not always
@@ -1878,6 +1898,17 @@ void scanTaauList(void* self, void* context, void* third, void* fourth, unsigned
 void drawDetour(void* self, void* context, void* third, void* fourth) {    auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
     gTaaContext.store(third, std::memory_order_relaxed);
     gExecContext.store(context, std::memory_order_relaxed);
+    // Before the engine's own draw overwrites the previous-frame half of the pair.
+    if (third && readable(third, 0x2a0)) {
+        auto const* const base = static_cast<unsigned char const*>(third);
+        TaaSnapshot       snap{};
+        std::memcpy(snap.current, base + 0x200, sizeof(snap.current));
+        std::memcpy(snap.previous, base + 0x240, sizeof(snap.previous));
+        std::memcpy(snap.camera, base + 0x280, sizeof(snap.camera));
+        std::memcpy(snap.jitter, base + 0x1e4, sizeof(snap.jitter));
+        gTaaSnapshot = snap;
+        gTaaSnapshotValid.store(true, std::memory_order_release);
+    }
     // Content boundary: the engine reuses the same command-list objects across
     // frames, so a capture from the previous frame is assumed to still be this
     // frame's TAAU list. If it is not (frame shape changed), scan again.
@@ -2396,6 +2427,10 @@ bool install() {
         auto& bus          = ll::event::EventBus::getInstance();
         gJoinLevelListener = bus.emplaceListener<ll::event::client::ClientJoinLevelEvent>([](auto&) {
             gWorldLoaded.store(true, std::memory_order_relaxed);
+            // TEST: the client thread is right here, so the runtime option switch
+            // (A2) does not have to wait for the executor queue that did not deliver
+            // during startup (EXP-0018/0019). No-op when nothing is pending.
+            options::applyNow();
         });
         gExitLevelListener = bus.emplaceListener<ll::event::client::ClientExitLevelEvent>([](auto&) {
             gWorldLoaded.store(false, std::memory_order_relaxed);
@@ -2762,6 +2797,113 @@ void onPresent() {
     if (!gSessionReady.load(std::memory_order_relaxed) && presents % 600 == 0) {
         logNgxSession("present poll");
     }
+    // TEST: one-shot SR input dump triggered by a file marker. The panel button needs
+    // the mouse, which means standing still - and the ghosting only shows in motion, so
+    // the agent arms this marker while the player keeps walking and the next present
+    // captures that frame.
+    if (presents % 30 == 0) {
+        std::error_code error;
+        auto const      marker = std::filesystem::path(utils::applicationDirectory()) / "vv_dump_sr.txt";
+        if (std::filesystem::exists(marker, error)) {
+            std::filesystem::remove(marker, error);
+            utils::logger().info("[vv] sr dump requested by file marker");
+            ::neurodragon::vv::sr::dumpInputs();
+        }
+    }
+    // A2 camera probe: once a world is loaded, up to six samples ~10 s apart. The
+    // menu leaves the camera unpopulated (EXP-0021), so the world gate is what makes
+    // the samples meaningful. The raw window is only logged for the first two, and a
+    // matrix stack is only read when it is non-empty (the projection stack was empty
+    // in EXP-0021 and back() on it produced garbage).
+    {
+        static unsigned camSamples = 0;
+        if (worldLoaded() && camSamples < 6 && presents % 600 == 0) {
+            auto const     sample = camera::read();
+            unsigned const n      = ++camSamples;
+            utils::logger().info(
+                "[vv] cam #{} valid={} view_ok={} world_ok={} proj_ok={} pos=({:+.4f},{:+.4f},{:+.4f}) "
+                "right=({:+.4f},{:+.4f},{:+.4f}) up=({:+.4f},{:+.4f},{:+.4f}) fwd=({:+.4f},{:+.4f},{:+.4f}) "
+                "aspect={:.4f} fov={:.4f} near={:.4f} far={:.4f}",
+                presents,
+                sample.valid ? 1 : 0,
+                sample.viewOk ? 1 : 0,
+                sample.worldOk ? 1 : 0,
+                sample.projectionOk ? 1 : 0,
+                sample.position[0],
+                sample.position[1],
+                sample.position[2],
+                sample.right[0],
+                sample.right[1],
+                sample.right[2],
+                sample.up[0],
+                sample.up[1],
+                sample.up[2],
+                sample.forward[0],
+                sample.forward[1],
+                sample.forward[2],
+                sample.aspect,
+                sample.fov,
+                sample.zNear,
+                sample.zFar
+            );
+            auto const text = [](float const* m) {
+                std::string out;
+                char        one[32]{};
+                for (int i = 0; i < 16; ++i) {
+                    std::snprintf(one, sizeof(one), " %+.5f", m[i]);
+                    out += one;
+                }
+                return out;
+            };
+            if (sample.viewOk) {
+                utils::logger().info("[vv] cam #{} view=[{}]", presents, text(sample.view));
+            }
+            if (sample.worldOk) {
+                utils::logger().info("[vv] cam #{} world=[{}]", presents, text(sample.world));
+            }
+            if (sample.projectionOk) {
+                utils::logger().info("[vv] cam #{} proj=[{}]", presents, text(sample.projection));
+            }
+            utils::logger().info("[vv] cam #{} invview=[{}]", presents, text(sample.inverseView));
+            if (n <= 2) {
+                for (std::size_t offset = 0; offset < std::size(sample.raw); offset += 8) {
+                    utils::logger().info(
+                        "[vv] camraw #{} +{:#05x}: {:+.5f} {:+.5f} {:+.5f} {:+.5f} | {:+.5f} {:+.5f} {:+.5f} {:+.5f}",
+                        presents,
+                        offset * sizeof(float),
+                        static_cast<double>(sample.raw[offset + 0]),
+                        static_cast<double>(sample.raw[offset + 1]),
+                        static_cast<double>(sample.raw[offset + 2]),
+                        static_cast<double>(sample.raw[offset + 3]),
+                        static_cast<double>(sample.raw[offset + 4]),
+                        static_cast<double>(sample.raw[offset + 5]),
+                        static_cast<double>(sample.raw[offset + 6]),
+                        static_cast<double>(sample.raw[offset + 7])
+                    );
+                }
+            }
+            float cur[16]{};
+            float prev[16]{};
+            float camOrigin[6]{};
+            float jitter[2]{};
+            if (taaMatrices(cur, prev, camOrigin, jitter)) {
+                utils::logger().info("[vv] cam #{} taau cur=[{}]", presents, text(cur));
+                utils::logger().info("[vv] cam #{} taau prev=[{}]", presents, text(prev));
+                utils::logger().info(
+                    "[vv] cam #{} taau origin=({:+.4f},{:+.4f},{:+.4f}) prev=({:+.4f},{:+.4f},{:+.4f}) jitter=({:+.4f},{:+.4f})",
+                    presents,
+                    camOrigin[0],
+                    camOrigin[1],
+                    camOrigin[2],
+                    camOrigin[3],
+                    camOrigin[4],
+                    camOrigin[5],
+                    jitter[0],
+                    jitter[1]
+                );
+            }
+        }
+    }
 #endif
     (void)gSeenCount;
     (void)gLastSeenCount;
@@ -2792,11 +2934,21 @@ void onPresent() {
         }
     }
     lastPresent = now;
+    // TEST only: hand a queued runtime option request (upscaling_mode -> Bilinear)
+    // over to the client thread. Cheap when nothing is queued.
+    options::applyRequested();
 }
 
 void onSwapChainResize() {
     resetTextureInventory();
     gRenderGeneration.fetch_add(1, std::memory_order_relaxed);
+    // A derived render size is stale after a rebuild; the next record re-derives it
+    // from the new inventory (a TAAU-set size is left alone: the declarator refreshes
+    // it on its own).
+    if (gRenderDerived.exchange(false, std::memory_order_relaxed)) {
+        gRenderWidth.store(0, std::memory_order_relaxed);
+        gRenderHeight.store(0, std::memory_order_relaxed);
+    }
     utils::logger().info("[vv] resize: released the old render-graph inventory");
 }
 
@@ -2812,6 +2964,19 @@ void noteSwapChain(void* swapChain) {
     // list would let the dump touch a back buffer (which lives in PRESENT).
     void*    buffers[2]{};
     unsigned const count = swapChainBuffers(swapChain, buffers, 2);
+    // The back buffer is the display size, and it is the only source that does not
+    // depend on the TAAU pass: `upscaling_mode` Bilinear never runs taauDetour, so
+    // without this the inventory filter (tooSmallForRenderGraph) and the SR fallback
+    // would both work with display = 0.
+    if (count && buffers[0]) {
+        // nr::describe goes through the resource vtable the probe already validated
+        // (CreateRenderTargetView's first argument); no d3d12.h types are needed here.
+        auto const info = nr::describe(buffers[0]);
+        if (info.width >= 64 && info.height >= 64) {
+            gDisplayWidth.store(static_cast<unsigned>(info.width), std::memory_order_relaxed);
+            gDisplayHeight.store(static_cast<unsigned>(info.height), std::memory_order_relaxed);
+        }
+    }
     gExcludedCount       = 0;
     for (unsigned i = 0; i < count && gExcludedCount < 4; ++i) {
         gExcluded[gExcludedCount++] = buffers[i];
@@ -2833,18 +2998,20 @@ void setGameQueue(void* queue) { gGameQueue.store(queue, std::memory_order_relax
 void* engineDevice() { return gEngineDevice.load(std::memory_order_relaxed); }
 bool  worldLoaded() { return gWorldLoaded.load(std::memory_order_relaxed); }
 
-bool taaMatrices(float* current, float* previous, float* camera, float* jitter) {    void const* const ctx = gTaaContext.load(std::memory_order_relaxed);
-    if (!ctx || !current || !previous || !readable(ctx, 0x2a0)) {
+bool taaMatrices(float* current, float* previous, float* camera, float* jitter) {
+    // The snapshot taken in drawDetour, not the live context: the engine's own draw
+    // rewrites the previous half, so a post-frame read would return prev==cur.
+    if (!current || !previous || !gTaaSnapshotValid.load(std::memory_order_acquire)) {
         return false;
     }
-    auto const* const base = static_cast<unsigned char const*>(ctx);
-    std::memcpy(current, base + 0x200, 16 * sizeof(float));
-    std::memcpy(previous, base + 0x240, 16 * sizeof(float));
+    TaaSnapshot const snap = gTaaSnapshot;
+    std::memcpy(current, snap.current, sizeof(snap.current));
+    std::memcpy(previous, snap.previous, sizeof(snap.previous));
     if (camera) {
-        std::memcpy(camera, base + 0x280, 6 * sizeof(float));
+        std::memcpy(camera, snap.camera, sizeof(snap.camera));
     }
     if (jitter) {
-        std::memcpy(jitter, base + 0x1e4, 2 * sizeof(float));
+        std::memcpy(jitter, snap.jitter, sizeof(snap.jitter));
     }
     return true;
 }
@@ -2874,6 +3041,55 @@ void dumpTaaContextWindows() {
 void* gameQueue() { return gGameQueue.load(std::memory_order_relaxed); }
 unsigned renderWidth() { return gRenderWidth.load(std::memory_order_relaxed); }
 unsigned renderHeight() { return gRenderHeight.load(std::memory_order_relaxed); }
+
+bool renderSizeHint(unsigned displayWidth, unsigned displayHeight, unsigned* width, unsigned* height) {
+    if (!width || !height || !displayWidth || !displayHeight || !gHeldCount) {
+        return false;
+    }
+    float const  aspect = static_cast<float>(displayWidth) / static_cast<float>(displayHeight);
+    unsigned     logged = 0;
+    for (unsigned i = 0; i < gHeldCount; ++i) {
+        unsigned const idx = (gHeldNext + kHeldSlots - 1 - i) % kHeldSlots;
+        auto const&    e   = gHeld[idx];
+        if (!e.resource || e.format != 26 || !e.width || !e.height) {
+            continue;
+        }
+        bool const  below = e.width < displayWidth && e.height < displayHeight;
+        float const ratio = static_cast<float>(e.width) / static_cast<float>(e.height);
+        float       delta = ratio - aspect;
+        if (delta < 0.0f) {
+            delta = -delta;
+        }
+        bool const fits = below && delta <= aspect * 0.02f;
+        if (logged < 6) {
+            ++logged;
+            utils::logger().info(
+                "[vv] render size hint: candidate {}x{} fmt26 fits={}",
+                e.width,
+                e.height,
+                fits ? 1 : 0
+            );
+        }
+        if (fits) {
+            *width  = e.width;
+            *height = e.height;
+            return true;
+        }
+    }
+    return false;
+}
+
+void latchRenderSize(unsigned width, unsigned height) {
+    if (!width || !height) {
+        return;
+    }
+    if (gRenderWidth.load(std::memory_order_relaxed) || gRenderHeight.load(std::memory_order_relaxed)) {
+        return;
+    }
+    gRenderWidth.store(width, std::memory_order_relaxed);
+    gRenderHeight.store(height, std::memory_order_relaxed);
+    gRenderDerived.store(true, std::memory_order_relaxed);
+}
 unsigned displayWidth() { return gDisplayWidth.load(std::memory_order_relaxed); }
 unsigned displayHeight() { return gDisplayHeight.load(std::memory_order_relaxed); }
 

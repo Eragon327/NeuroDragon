@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/probe/RenderProbe.h"
+#include "neurodragon/probe/RuntimeOptions.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
@@ -103,6 +104,34 @@ bool NeuroDragon::enable() {
     // that shows whether the VV upscaler is live and with which numbers
     // (docs/O-vv-path.md). It touches nothing the game owns.
     probe::vv::install();
+
+#ifdef TEST
+    // A2 groundwork: switch the engine out of the TAAU branch through its own option
+    // registry instead of editing options.txt. Explicitly opt-in through a marker file
+    // so a TEST build used for other diagnostics keeps the engine as it is. Both
+    // locations are checked because `getModDir()` has not been observed in this
+    // context yet: the mod's own config folder and the game root next to the exe.
+    {
+        std::error_code error;
+        auto const      modFlag =
+            std::filesystem::path(getSelf().getModDir()) / "config" / "force_bilinear.flag";
+        auto const gameFlag =
+            std::filesystem::path(utils::applicationDirectory()) / "force_bilinear.flag";
+        bool const modSet  = std::filesystem::exists(modFlag, error);
+        bool const gameSet = std::filesystem::exists(gameFlag, error);
+        utils::logger().info(
+            "[vv] options: marker '{}' present={} (mod dir '{}'), '{}' present={}",
+            modFlag.string(),
+            modSet ? 1 : 0,
+            getSelf().getModDir().string(),
+            gameFlag.string(),
+            gameSet ? 1 : 0
+        );
+        if (modSet || gameSet) {
+            probe::options::requestBilinear();
+        }
+    }
+#endif
 
     // The semantic dump is only meaningful inside a world (the main menu leaves the
     // render-resolution textures empty), so it is armed by the join event instead of a

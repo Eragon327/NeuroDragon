@@ -84,6 +84,15 @@ void requestDumpNow();
 [[nodiscard]] unsigned displayWidth();
 [[nodiscard]] unsigned displayHeight();
 
+// TAAU-less render size (upscaling_mode Bilinear): the newest fmt=26 render target
+// that is smaller than the display and matches its aspect ratio. False when the
+// inventory holds none (no F11 rebuild yet, or the graph is display-sized).
+bool renderSizeHint(unsigned displayWidth, unsigned displayHeight, unsigned* width, unsigned* height);
+
+// Store a derived size as the render size once; a no-op when taauDetour already set
+// one. onSwapChainResize() drops it again so the next record re-derives.
+void latchRenderSize(unsigned width, unsigned height);
+
 // B1b: the render-resolution textures the RTV inventory is holding references to,
 // newest first. Only resources whose size matches the current render resolution
 // are returned. `format` is the DXGI_FORMAT number (26 = R11G11B10, 44 = R24G8,
@@ -120,9 +129,11 @@ struct RenderTargetInfo {
 // (2026-10-25 23:36). Event-driven, so it survives world changes.
 [[nodiscard]] bool worldLoaded();
 
-// The per-frame numbers the motion-vector pass needs, read from the TAAContext
-// captured at the TAAU draw: current/previous view-projection (16 floats each),
-// camera origins (6 floats at +0x280) and sub-pixel jitter (2 floats at +0x1e4).
+// The per-frame numbers the motion-vector pass needs: current/previous
+// view-projection (16 floats each), camera origins (6 floats at +0x280) and sub-pixel
+// jitter (2 floats at +0x1e4). Read from the snapshot taken *inside* the TAAU draw
+// callback, before the engine's own draw collapses the previous pair onto the current
+// one; reading the live context after the frame returns prev==cur (2026-10-26).
 // Returns false when no draw has been seen yet. Read-only.
 bool taaMatrices(float* current, float* previous, float* camera, float* jitter);
 
