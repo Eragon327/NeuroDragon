@@ -1,0 +1,45 @@
+# EXP-0027 F7 motion-pair result
+
+Build DLL SHA-256 prefix: 432f6ee23abccdf6
+Binary evidence: E:\LeviLauncher\versions\1.26.51.01-agent2\sr_cand_<run>_*,
+picked colour pointer 0x288257d12e0, picked depth 0x28a63b80a60, runs 1 and 2
+from the 22:54 process (distinct from the earlier 22:34 process's run numbers).
+
+## User report (verbatim)
+
+已完成，只按一次f7，边走边晃动视角。确实有两次卡顿，应该没被fn拦截
+
+## Collection and VP evidence
+
+[2026-10-26 22:54:34.066 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-26 22:54:36.066 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1383 mv valid=1 prev_same=0 delta=(+0.0243,+0.0000,+0.0926) jitter=(+0.0625,-0.4630)
+[2026-10-26 22:54:36.249 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1383 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x288257d12e0 idx=0 pickedDepth=0x28a63b80a60 idx=0
+[2026-10-26 22:54:36.249 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=1 ok=1
+[2026-10-26 22:54:38.242 IFO][NeuroDragon] [vvsr] sr dump #2 frame=1579 mv valid=1 prev_same=0 delta=(-0.0155,+0.0000,-0.0393) jitter=(+0.1875,-0.0185)
+[2026-10-26 22:54:38.480 IFO][NeuroDragon] [vvsr] sr dump #2 frame=1579 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x288257d12e0 idx=0 pickedDepth=0x28a63b80a60 idx=0
+[2026-10-26 22:54:38.480 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=2 ok=1 (pair done runs=1,2)
+
+pre-hud hit=1..1800, missed=0; sampled NGX eval f=1,2,3,600,1200,1800 all ret=1.
+
+## Hash and change table
+
+picked colour run1 32f59b08d6c2baad7546481c23c719b3f7d50fa6a5ba7166ed83c16aa4b3f9b0
+picked colour run2 fbaec051a87c6b4892d2e747d057d9cd86473a42ce06e1076798ae4bce52360c
+picked depth run1 c824399fc9b78ff5b53dbc9f8f62c2ad8792df08c9c6c63db5e741e1b2b8c3fa
+picked depth run2 9bdd0be626a0f76878cc85e1d4a19d1f9877376857aa3827fa4eb8d7c920fd58
+
+resource | changed bytes / total | ratio
+picked colour idx0 | 168351 / 6566276 | 2.5639%
+colour idx1 | 187394 / 6566276 | 2.8539%
+colour idx2 | 6064990 / 6566276 | 92.3657%
+colour idx3 | 1631158 / 6566276 | 24.8414%
+colour idx4 | 2591205 / 6566276 | 39.4623%
+picked depth idx0 | 1979368 / 6809220 | 29.0689%
+colour idx5..14 | 0 | 0%
+
+## Verdict
+
+FAIL / near-stale hypothesis falsified under the preregistered rule. Both captures have
+valid and changing VP, but picked colour changed 2.5639%, above the 1% falsification
+threshold. Do not move the threshold. This does NOT prove the picked resource is the
+correct InputFinalColor; its semantic identity and the output path remain open.

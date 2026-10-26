@@ -1,0 +1,30 @@
+# EXP-0028 postmortem: Windows handle bridge located offline
+
+New analysis after EXP-0028 close used one serial Mac IDA task and raw Windows PE/capstone.
+
+Mac:
+- InputFinalColor's BindFramebufferColor+0x10 (Windows +8) points to
+  ResolvedTextureResource; its +0 uint16 is bgfx::TextureHandle.idx, 0xFFFF invalid.
+- Mac renderer getInternal maps that handle to a renderer texture table entry whose
+  first qword is the native texture. Mac cannot provide D3D12 offsets.
+
+Windows 1.26.51 (ImageBase 0x140000000):
+- Context::wrapExternalTexture RVA 0xB735A60.
+- Renderer createTexture/install RVA 0xDF9D680. Signature:
+  void(ctx, uint16 handle, uintptr unknown, void* native, void* texRef).
+  r9 is ID3D12Resource; fifth argument is mandatory for forwarding.
+- destroyTexture RVA 0xDF9EE00, void(ctx, uint16 handle).
+- getInternal RVA 0xDF9ECD0; renderer m_textures +0xBDE170, entry size 0xB8,
+  entry+0 is ID3D12Resource. For handle<=0xFFF direct read is possible; getInternal
+  itself writes a guard byte, so the read-only path should not call it.
+- Install prologue has a 37-byte fingerprint and a complete 5-byte hook boundary;
+  destroy needs 7 bytes. Hooks must preserve the fifth install argument and use the
+  project's approved LeviLamina hook mechanism, not ad-hoc MinHook hot-hook code.
+
+Next single runtime unknown:
+Does InputFinalColor's ResolvedTextureResource+0 handle appear in the install map and
+resolve to a native resource in the existing RTV inventory? F11 after mod load is required
+so the installation hook sees the rebuilt resources.
+
+This experiment only observes handle/native mapping and logs the intersection. It does
+not change the selected colour or any GPU work.

@@ -59,6 +59,7 @@ enum class SkipReason : unsigned {
     NoBackBuffer,
     PipelineFailed,
     RecordFailed,
+    NoBoundary,
 };
 
 struct Stats {
@@ -87,11 +88,10 @@ void setAction(Action action);
 void setUseTaauList(bool use);
 [[nodiscard]] bool useTaauList();
 
-/// When set, `prepare()` cuts immediately after the list that just finished the
-/// world composite (probe::vv::backBufferWriterSplit()): the first list that bound a
-/// back buffer and drew. That anchor is independent of how many lists the frame has,
-/// which a tail count is not (docs/specs/vv.md §14.5). Falls back to k when the probe
-/// did not see a back-buffer writer.
+/// Uses the content boundary computed by VvProbe. Normal DLSS overlay mode cuts after
+/// the world composite. Once the original TAAU draw is suppressed, the probe instead
+/// cuts before the display-sized HUD list; a missing pre-HUD boundary disarms replacement
+/// rather than falling back to a UI-unsafe writer or counted boundary.
 void setUseBackBuffer(bool use);
 [[nodiscard]] bool useBackBuffer();
 

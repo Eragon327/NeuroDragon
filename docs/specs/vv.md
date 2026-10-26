@@ -1106,13 +1106,15 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 - **近平面不一致**：相机投影 v14 = -0.05，taau context = -0.025（2×）。
   MV 的 `depth = near/(1-d)` 用 0.025；若深度其实来自 0.05 的投影，平移项会差 2×。**未定论**。
 
-### 17.5 快照时机（P0-2，已实机验证）
+### 17.5 快照时机（P0-2，已实机验证；2026-10-26 反编译更正）
 
-- TAAU draw callback 拿到的 context 里，`+0x240` 还是**上一帧**的 VP；引擎在自己的 draw 里会把
-  prev 覆盖成 cur。所以在提交后（ExecuteCommandLists）再读，永远是 `prev == cur`。
-- 修法：`drawDetour` 转发前快照 `+0x200/+0x240/+0x1e4/+0x280`，`taaMatrices()` 只读快照。
+- TAAU draw callback 拿到的 context 里，`+0x240` 是**上一帧**的 VP；提交后再读会变成
+  `prev == cur`，所以 `drawDetour` 必须在转发前快照 `+0x200/+0x240/+0x1e4/+0x280`。
 - EXP-0021 实机：走动时 `[vvsr] mv snapshot: previous VP differs from current (frame 298, delta=…)`；
   站定 `prev_same=1`。
+- **更正**：Mac 全符号反编译和 Windows 26.51 全函数 store 扫描均表明 callback 只读 TAAContext；
+  `prev=cur` 的推进在更上游，不是这个 draw 自己写的。因此不转发 callback 不会冻结相机历史，
+  也不需要另写一份 previous VP。
 
 ### 17.6 bilinear 档的 render size fallback（编译通过、待实机）
 
@@ -1136,3 +1138,375 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 我们自己的纹理在写回后处于 `NON_PIXEL_SHADER_RESOURCE`。用 `DumpState::Common` 去拷会读到
 stale 字节（MV 全 0、depth 全 1.0），看起来像"MV 坏了"。`dumpTextureRawAs` 必须传对应状态；
 `DumpState` 里已补 `NonPixelShaderResource = 0x40`。
+
+## 18. S5：callback 级替换（EXP-0025 失败，见 §19）
+
+### 18.1 反编译依据
+
+- Windows 26.51：declarator RVA `0xB74F860`，draw callback RVA `0xB752820`。
+  对 callback 全函数的 store 扫描显示它只读 TAAContext，写本 pass 的 bgfx view、材质 uniform
+  和 draw 命令；不写相机历史、不换历史纹理、不做 barrier、不提交 command list。
+- Mac 全符号：declarator `0x10B772140`、functor `0x10B774160`、
+  `ConcretePass::execute 0x10B773F80`。declarator 把 `UpscalingCameraData/UpscalingData`
+  拷进 TAAContext，functor 只把这些值灌进材质并录 draw。
+- 因此保留 declarator、在 draw detour 快照后不转发，是候选的最小替换点；不需要切 Bilinear，
+  也不需要自管 previous VP。Mac 的 `WaitOnUpscalingOutput` 提示下游知道该输出依赖，
+  Windows 只写后缓冲是否足够仍是本轮实机要回答的未知，不能由静态分析提前宣称通过。
+
+### 18.2 安全门与边界
+
+实现位于 `probe/VvProbe.cpp` 与 `probe/VvInject.cpp`：
+
+1. 首次点击 `SR + DLSS` 仍走原 TAAU；只有本次 DLSS 录制成功、`eval=1` 且有内容边界，
+   才 arm 下一帧替换。
+2. arm 后 `drawDetour` 仍快照相机，但不调用 `gOriginalDraw`；分别记录
+   `declared/callbacks/forwarded/suppressed`，避免把“callback 还执行”误写成“原 draw 还执行”。
+3. 原合成 draw 消失后，旧的 `draws==1` 签名不再可用。替换态改认显示分辨率、绑 DSV、
+   多 draw 的 HUD list，并切在它**之前**（`via=pre-hud`）。不使用 first-back-buffer-writer
+   或固定 head/tail，因为它们可能落在 HUD 后。
+4. `prepare()` 以失败守卫保持默认回退；录制失败、eval 失败、mode off 或 pre-HUD 边界丢失
+   都会 disarm，让下一帧恢复原 TAAU。替换帧没有可靠边界时，当前帧也不注入，避免覆盖 UI。
+   **EXP-0025 实测**：这条门没有按设计生效 —— 小提交的提前返回就 disarm、进菜单后靠陈旧 ready
+   继续 suppress，`via=pre-hud` 全程 0 次。两处缺陷与修法见 §19.2。
+
+本轮只验证 callback 级替换，不顺带修改 MV、2 px 缝、颜色选择或 Bilinear fallback。
+日志断言为 `scripts/agentflow/smoke/taau-callback.json`。
+
+### 18.3 旧证据归因更正
+
+- EXP-0013 没发生 suppression；EXP-0014 只证伪“callback 后第一次 draw”的匹配规则；
+  二者没有证伪 callback 级 skip。
+- EXP-0015 的 drop 与 UI 损坏相符，但 13:34 崩溃早于首次 drop；13:36 栈为
+  `taauDetour → logDependencies → scanForKnownTargets → nr::describe → D3D12Core`，
+  不是 drop/提交路径。不能把两次崩溃都记成 drop 导致。
+- EXP-0023 没有完成空间 A/B，dump 也未与 F2 同帧对齐；2 px 缝仍不能归因为纯时间路径。
+
+## 19. EXP-0026 计划：skip 后 picked colour 是否 stale（2026-10-26 夜）
+
+> EXP-0025 已失败关闭（`U-taau-callback-skip`）；EXP-0026 打开：
+> `U-taau-skip-colour-freshness`，attempt 1，tier L2，源码树 `31257d1ff8fe866c`。
+> **本轮唯一未知**：跳过原 TAAU callback 之后，`pickInputs` 选中的那张 fmt26 颜色是否还在被写。
+> 唯一判据是两批全候选 dump 的字节哈希；症状（冻结 / 闪烁）只当线索，不当证据。
+
+### 19.1 EXP-0025 的冻结与菜单异常
+
+时间线（`docs/agent/evidence/taau-callback-EXP-0025.log`，sha256 `a37459db…`；
+源 `logs/latest.log` 21:33:40–21:34:46，构建 DLL sha 前缀 `ccff2f3093212cd0`）：
+
+| 时刻 | 日志 | 含义 |
+|---|---|---|
+| 21:33:38.023 | `sr pick: render=1689x950 colourTargets=36 fmt26=15 depthTargets=9` | 颜色候选 15 张，选一张 |
+| 21:33:40.117 | `[eval] f=1 … c=0x21ce74ce560 d=0x21ce74ceef0 ret=0x1` | 首帧 NGX 成功；随即 arm，首个 `suppressed=1`（.123） |
+| 21:33:40.118 | `inject: back-buffer boundary split=66/69` | 切点走的仍是老的 `draws==1` 签名 |
+| 21:34:12.334 | `[eval] f=3000 … ret=0x1`（此后无 eval） | 录制停了 |
+| 21:34:44.126 | `declared=11428 callbacks=11428 forwarded=3028 suppressed=8400` | suppress 一路涨，forwarded 不动 |
+
+- **已确认（原始日志）**：原 callback 被连续 suppress（`suppressed` 1→8400），同期 NGX 返回 1；
+  `forwarded` 停在 3027，21:34:18 只 +1 到 3028。替换在**提交**里发生了，但世界输出不是活的替换。
+- **已确认（原始日志）**：`via=pre-hud` 全程 **0 次**，替换态切点一次都没启用；
+  实际用的是老 back-buffer-boundary（17 次）。本轮说的"替换"从未按设计切点跑过。
+- **已确认（用户原话，摘要）**：进存档按两次 F11 → 开菜单点 `SR + DLSS` → 画面冻结，转头时**左上角区域有波动**；
+  退出存档后主菜单背景在「开启 SR+DLSS 那一帧」与「退出存档那一帧」之间极快交替闪烁
+  （不是叠加；单张截图抓不到两帧，视觉暂留像叠加）。
+- **菜单异常的机制（部分证实）**：`eval` 在 21:34:12 停，suppression 却涨到 21:34:44 ——
+  arm 用的是跨世界的陈旧 ready（见 19.2 缺陷 2）。闪烁本身与"逐帧在 suppressed/forwarded 之间交替"
+  一致（`forwarded` 停住后偶发 +1），但**没有逐帧证据**，标为待验证。
+- **未证实**：冻结的原因。「输入 stale」（本轮假设）与「输出/切点不对」（备用解释）都还没被区分；
+  不能从"看起来冻住"推出"颜色 stale"。同理，`d` 指针在同轮 `eval` 里也没变，但**指针稳定只说明
+  pick 没换面，不说明那张面的内容在更新** —— 这正是要用字节哈希的原因。
+
+### 19.2 两个已证实的代码缺陷（本轮已改，只经构建、未部署）
+
+**缺陷 1：小提交把安全门 disarm 了（位置错）**
+
+- `VvInject::prepare()` 的替换失败守卫原先建在 `listCount<8` 与 queue 过滤**之前**：overlay 自己每帧
+  几条单 list 提交一进来就 disarm，随后引擎帧再 arm。
+- 证据：`arm1=8653 / arm0=8653`；`via=pre-hud count=0`；老 `back-buffer-boundary` 17 次。
+- 修法：守卫移到 queue 过滤**之后**（`listCount>=8`、`DIRECT` 队列类型、队列身份三项都过）——
+  只有引擎帧的提前返回才 disarm；`setMode(Off)` 同时立刻 disarm，Stop SR 当帧恢复原 callback。
+- 顺带：替换态的切点由 probe 自己算（显示分辨率、绑 DSV、`draws>=5` 的 HUD list **之前**，`via=pre-hud`）；
+  拿不到就 `SkipReason::NoBoundary`，本帧不注入 —— 宁可不动画面，也不覆盖 UI。
+
+**缺陷 2：没有世界时的陈旧 ready（判据不足）**
+
+- `VvSr::record()` 在 `!inWorld()` 时**不录制但返回 true**（原意：避免"回到世界后 SR 动作死掉"）。
+  于是 `sr.dlssReady` 跨菜单存活，`prepare()` 只看 ready 就 arm，菜单里继续 suppress。
+- 证据：`eval` 停在 21:34:12（f=3000），suppression 继续到 21:34:44 的 8400。
+- 修法：arm 条件改成 `Action::Sr && view==Dlss && dlssReady && dlssEvaluateRet==1 && content && worldLoaded()`。
+  `record()` 的 no-op 成功语义**保持不动** —— 改的是消费方，不是生产方。
+  断言见 `scripts/agentflow/smoke/taau-callback.json`。
+
+**安全门的新语义（审查修正，四条）**
+
+1. pre-hud 命中改成**独立计数**的日志：
+   `[vv] inject: replacement boundary split=k/N via=pre-hud hit=n missed=m`，自有计数器，前 3 次 + 每 120 次。
+   原先用 `suppressed<=1` 判断"首次"是错的 —— `suppressed` 是整场累计的 draw 计数，那条线最多只打一次，
+   之后再有合法的 pre-hud 边界也看不见。
+2. `TaauDrawStats` 增加 `missed`：**armed 了、原 draw 也 suppress 了，但这一帧什么都没注入**
+   （没有 pre-hud 边界、没有后缓冲、录制失败）。这种帧在下一帧恢复 TAAU，画面不至于冻住；
+   `missed` 持续增长的含义是"suppression 跑在替换前面"，而不是"替换在生效"。周期行里也带上了：
+   `[vv] taau replace declared=… callbacks=… forwarded=… suppressed=… missed=…`。
+3. `missed` 只在**引擎帧**上累加：守卫先看 `replacing`（在 queue 过滤之后取的），小提交/外来队列
+   根本走不到这条路径，所以它们不会把 `missed` 灌大。
+4. `missed` 单独一行 warn（前 3 次 + 每 120 次）：
+   `[vv] taau replacement missed=N suppressed=M (armed frame injected nothing; TAAU restored next frame)`。
+
+两处修法只经 `xmake -y` 通过、尚未部署。**构建通过 ≠ 门修好了**，本轮实机才能回答。
+
+### 19.3 Mac 静态资源语义：哪些资源跟 TAAU 是否执行无关
+
+来自 Mac 全符号（静态结论，尚无 Windows 侧逐字段对齐）：
+
+| 资源 | Mac 类型 | 谁写 |
+|---|---|---|
+| `InputFinalColor`、`InputBufferMotionVectors` | ExternalImage（包裹引擎的 `ResolvedTextureResource`） | TAAU **上游**，与 TAAU 跑不跑无关 |
+| `InputTAAHistory`、upscaling 输出 | TransientImage（池资源） | TAAU / 池自己 |
+
+- `pickInputs` 并**没有绑定** `InputFinalColor`：它选的是"最新创建、渲染尺寸的 fmt26 RTV"。
+  EXP-0025 那帧 `colourTargets=36 / fmt26=15`，`eval` 采样 f=1..3000 的 `c=0x21ce74ce560` 一直没变。
+- 两种解释都与"选了 fmt26"相容：
+  (a) 选中的那张属于 TAAU 的 transient/历史侧，skip 后没人再写 → 冻结；
+  (b) 选中的是上游某张，但写回或切点让画面没变成活的替换。
+- 静态语义只说明「`pickInputs` 的选面规则与 `InputFinalColor` 不是同一个对象」，
+  **不能**据此宣称颜色 stale —— 那正是本轮要测的。
+
+### 19.4 本轮两批全候选 dump：文件名与判定表
+
+两批 = 同一次运行里两次点 `Dump SR inputs`；批号是进程内计数器 `dumpNo`（`run`），从 1 起，写进每个文件名：
+
+| 文件 | 内容 |
+|---|---|
+| `sr_cand_<run>_colour_<i>_p<PTR>_<W>x<H>_fmt26.bin` | 第 `run` 批第 `i` 个 fmt26 颜色候选（`tolerance=64`，与 pick 同源，最多 16 个） |
+| `sr_cand_<run>_depth_<i>_p<PTR>_<W>x<H>_fmt<fmt>.bin` | 第 `run` 批第 `i` 个深度候选（`tolerance=64`，最多 16 个，格式集与 pick 一致） |
+| `sr_colour_<run>_p<PTR>_<W>x<H>_fmt<fmt>.bin` | 该批 `pickInputs` 实际选中的颜色 |
+| `sr_depth_<run>_p<PTR>_<W>x<H>_fmt<fmt>.bin` | 该批实际选中的深度 |
+| `sr_mid_colourhalf_<run>.bin`、`sr_final_rgba8_<run>.bin` | 引擎侧半分辨率颜色、写回后的最终画面 |
+| `sr_mv_rg32_<W>x<H>_<run>.bin`、`sr_depth_r32_<W>x<H>_<run>.bin`、`sr_dlssout_<W>x<H>_<run>.bin` | MV、`R32` 深度、DLSS 输出 |
+
+- 批号在**每个**名字里：上一版 picked 那一对没带号，第二批会覆盖第一批（本轮已修）。
+  批号是进程内计数，**重启游戏会回到 1**，所以两批必须来自同一次运行。
+- **配对键是 `p<PTR>` + 尺寸，不是索引 `i`**（`i` 只是当批的枚举顺序，下一帧可能重排）。
+- 候选批用的是 **pick 自己的 `tolerance=64`**（上一版用 2：几张只差几个像素的候选会被排除，
+  连 picked 本身都可能不在批里）。同源之后 picked 一定在批内，日志同时给出下标 `idx=…`；
+  `idx=-1` 只可能是撞上 16 个上限、或 record 与 dump 之间清单变了 —— 这时读作"这一批不能比"，
+  不是"颜色 stale"。
+- 候选名里带各自的真实 `<W>x<H>`：resize 在途时会出现几张不是 latch 尺寸的候选，按指针+尺寸配对即可。
+- 注意旧产物：游戏根里 10-26 17:xx–18:xx 那批 picked 用的是旧命名 `sr_colour_<PTR>_fmt26_<W>x<H>.bin`
+  （无批号），跟本轮 `sr_colour_<run>_p<PTR>_…` 并存；辅助名（`sr_final_rgba8_<n>.bin` 等）新旧相同，
+  只能靠时间戳区分。比哈希只认本轮两种新名。
+- 目录是游戏根（`utils::applicationDirectory()`）。`bin` 不进 git，账本只记文件名 + sha256：
+
+```bash
+cd "E:/LeviLauncher/versions/1.26.51.01-agent2"
+sha256sum sr_cand_*_colour_* sr_cand_*_depth_* sr_colour_* sr_depth_*
+```
+
+先读这几行日志，确认这一批不是空采集（`N` = 批号，`F` = 这批读到的那次录制的 in-world SR 帧号）：
+
+```
+[vvsr] sr dump #N frame=F start
+[vvsr] sr dump #N inputs colour=… depth=… mid=… final=… mv=… depth32=… dlss=…
+[vvsr] sr dump #N cand summary colour ok=x/C depth ok=y/D pickedColour=0x… idx=… pickedDepth=0x… idx=…
+```
+
+**比哈希之前先比 `frame=`：两批的 `F` 必须不同。** `F` 相同说明第二次 dump 读的还是同一次录制
+（没进世界 / record 没推进 / 同一个 present），此时颜色哈希相等是构造出来的，什么都证明不了。
+这一步不过就不用往下比。
+
+判定表（同一指针跨两批比；`hash1 == hash2` 表示两批字节相同 = 这张面在两批之间没有新内容）：
+
+| 观察 | 判定 | 下一步 |
+|---|---|---|
+| 两批 `frame=` 相同 / `idx=-1` / `cand summary ok=0/C` | **采集无效**：同一帧重复 dump、picked 不在批内（16 上限或清单变了）、或整批拷贝失败 | 不判定；重采两批，先确认 `frame` 递增、`idx>=0`、`ok` 非零 |
+| picked colour 同哈希 **且** picked depth 不同哈希 | **假设成立**：skip 后选中颜色冻结、深度仍新鲜 ⇒ 选面语义错（选了 TAAU 独占写的面） | 改颜色来源（绑上游 `InputFinalColor`，或只在 TAAU 写面的下一帧 skip），再单独验证 |
+| picked colour 不同哈希 | **假设证伪**：颜色是新鲜的，冻结另有原因 | 转查输出路径：写回是否被后缓冲覆盖、pre-hud 切点是否真在 DLSS 之后、`dlssout` 是否在变 |
+| picked colour 同哈希 **且** picked depth 同哈希 | **证据不足**，不是通过 | 先证转视角确实发生（`[vvsr] mv snapshot … previous VP differs`、`sr_mv` 非零）再重采；不猜下一条 |
+| 所有 fmt26 候选两批全同哈希 | 上游整帧没写任何 fmt26（不只是选中那张） | 比第二行更强：选面必然错，优先修来源 |
+| 只有 picked 那张同哈希、其他候选有变化 | 选面错误（选了不再更新的那张），不是上游停写 | 修候选规则（新→旧、外部 vs 池），复核挑选日志 |
+| 两批的指针集合不同（出现新 `p<PTR>`） | 分配在变，按指针配对失效 | 本表结论降级为参考；缩短两批间隔或改按 (尺寸, 格式, 序号) 对齐后再判 |
+
+`reset`、`jitter`、`MV` 都不在本轮判据里，只能从 `sr_mv` / `sr_dlssout` 取旁证。
+
+### 19.5 本轮不宣称
+
+- **颜色 stale 尚未证实**。19.4 的表才是判据；"冻结""闪烁"只是症状，不能当结论。
+- **pre-hud 切点机制成立，但输出未证**。EXP-0025 的 `via=pre-hud` 是 0；EXP-0026 已连续命中
+  （`hit=1..3360`，`missed=0`），说明切点本身可用，但这不等于世界输出是活的替换。
+- **不宣称画质通过**。F2（无整体偏色）与 §17.7 的 2 px 缝都不在本轮范围；用户说"看不出区别"也不能当验收。
+- **不宣称 callback 级替换不可行**。EXP-0025 只证明当前实现失败：门是错的、切点没启用、输入新鲜度未知。
+- **不宣称已解决 §16 第 1 条**（回主菜单背景被覆盖）。本轮只是把"菜单里继续 suppress"这个门缺陷修掉，
+  颜色是否跟着引擎声明走仍未回答。
+- 落到"证据不足"行时按 AGENTS.md §2 停手补证据，不猜下一版；下一轮实验必须带新的原始产物。
+
+## 20. EXP-0027：运动窗口里的近 stale 判定（2026-10-26 夜）
+
+> EXP-0026 已失败关闭（`U-taau-skip-colour-freshness` 的第 1 次尝试）；EXP-0027 打开：
+> attempt 2，tier L2，源码树 `fcc3a7ba62fb2320`。相对 EXP-0026 只加了 F7 双采与逐批运动日志，
+> 选面/替换逻辑未再改。
+
+### 20.1 EXP-0026 为什么算失败、又留下了什么
+
+三批采集都有效（`docs/agent/evidence/colour-freshness-EXP-0026.log`，sha256 `d2b41106…`，
+DLL 前缀 `c9145929d6053820`）：`frame=774/2098/2722` 递增，每批 `colour ok=15/15 depth ok=9/9`，
+picked `idx=0` 且三次同指针（`colour 0x29717e82680` / `depth 0x29716e43380`），
+采集窗口内 `pre-hud hit=1..3360 missed=0`。
+
+| 对比 | picked colour | picked depth |
+|---|---|---|
+| 1↔2 | 6052 / 6566276 B（0.09%） | 18.52% |
+| 1↔3 | 6077 B（0.09%） | 20.19% |
+| **2↔3** | **25 B（0.0004%）** | **19.80%** |
+
+- **按预注册的字面判据 FAIL**：三批 picked colour 哈希互不相同，所以"完全停止更新 / 哈希相等"被证伪。
+- **但等值判据本身太脆**：2↔3 只有 25 字节差异，深度却变了 19.8%，其他活跃颜色候选变 9–96%
+  （候选 5..14、深度 3..8 静止）。近冻结是真信号，不能改写成 pass，也不能因为"哈希不等"就宣布颜色新鲜。
+- **run3 缺逐批 VP 证据**：菜单会吞掉移动输入（用户原话：无法在菜单打开时移动），其中一次还是完全静止，
+  所以三批里没有一批能独立证明"画面确实在动"。
+- 结论：§19.4 的等值判定表自此被相对阈值取代 —— 稀疏写入下 25 B 就能让哈希不等。
+
+### 20.2 本轮操作与逐批日志
+
+F7（TEST 热键，present 线程轮询，边沿触发；一对还在跑时拒绝并 `F7 ignored`；不占用 F8/F10/V 的采样）：
+
+- 按 F7 后 **+2 s 第一批**，**再 +2 s 第二批**；两批文件名仍带批号 `run`，与 §19.4 同规则。
+- 菜单保持关闭，整个 ~4 s 窗口内持续晃头。用户只负责按一下 F7、晃头、报"好了/异常"。
+- 每批一行运动状态（无节流，每批都有）：
+  `[vvsr] sr dump #N frame=F mv valid=V prev_same=P delta=(dx,dy,dz) jitter=(jx,jy)`。
+  `prev_same=1` = 两帧 VP 相同（没动或快照没取到），这一批不能当运动证据。
+- 采集有效性仍按 §19.4：`frame=` 两批必须不同、`idx>=0`、`ok` 非零；`pair 1/2`、`pair 2/2` 两行给出 `run=` 与 `ok=`。
+
+### 20.3 预注册判据（相对阈值，先写死再跑）
+
+变化率口径与 EXP-0026 相同：逐字节不同数 / 文件字节数。
+
+| 条件 | 判定 |
+|---|---|
+| 两批都 `mv valid=1` **且** `prev_same=0`（`delta` 非零），`frame` 不同 | **前提成立**，否则本表其余行不适用 |
+| picked colour 变化 **≤ 0.01%**，且至少一个其他颜色候选 **≥ 1%** | **支持近 stale / 选面语义错**：选中的面几乎不随画面更新 |
+| picked colour 变化 **≥ 1%** | **证伪**：近冻结假设不成立，颜色是新鲜的，冻结另有原因 |
+| 缺 VP 运动（`prev_same=1` / `valid=0` 且 delta 为零）、dump 无效、`frame` 相同 | **无效**：不记 pass 也不记 fail，不猜下一条 |
+
+- 0.01% 与 1% 是**跑之前**定的相对阈值，不是事后按观测挑的；落在 0.01%–1% 之间按"未定论"处理，
+  只能说"比 EXP-0026 更接近冻结/更远离冻结"，不许改阈值重算。
+- 仍**不宣称颜色 stale 已证实**：本表只区分"近 stale"与"新鲜"，不等同于证明资源归属；
+  §19.5 的边界（pre-hud 未实机验证、不宣称画质、不宣称替换不可行）继续有效。
+- 证据落点：游戏根 `sr_cand_<run>_*` 新两批 + `docs/agent/evidence/colour-freshness-motion-EXP-0027.log`。
+
+## 21. EXP-0028：InputFinalColor 里有没有原生资源（2026-10-26 深夜）
+
+> EXP-0027 已失败关闭（`U-taau-skip-colour-freshness` 第 2 次尝试）；EXP-0028 打开：
+> `U-taau-color-dep-native`，attempt 1，tier L2，源码树 `24799b2f7f0cfe69`。
+> 本轮是**只读身份实验**：不改选面、不改 DLSS、不改 TAAU suppress、不碰任何 GPU 资源。
+
+### 21.1 EXP-0027 与离线内容审查的结论
+
+- EXP-0027 两批 VP 均有效、`prev_same=0`、`delta` 非零，picked colour 变化 **2.5639% ≥ 1%**，
+  按预注册判据**近冻结假设证伪**（其他候选 2.85–92.37%，深度 29.07%）。
+- 离线解析同一轮的全候选内容（`_local/scratch/colour_sem/`）：picked `idx0` 是**完整的渲染分辨率世界图**，
+  `idx1` 是同一张图换增益；`idx4` 是 HDR 天空/远景层，地形被裁掉。**不支持盲换 idx4** ——
+  B1c 已表明颜色缓冲里已经做过 tone mapping，"HDR 值更大"不是"更完整"。
+- 同一轮 run1/run2 的 picked 图实测**零像素位移**，所以 2.56% 的字节变化不能当作"语义新鲜"的证据。
+- 旧 DFS 依赖扫描不是"不存在原生资源"的证明：全局预算会被模块指针吃掉；运行时对象只能靠 vtable
+  区分 ExternalImage（颜色/MV）与 TransientImage（历史/输出）。语义来源本来就在 taau arg10，
+  缺的只是**依赖 → 原生资源的身份**。
+
+### 21.2 本轮扫描（有界、扁平、只读）
+
+`decl` 侧只在 replacement 已 arm 时扫；`draw` 侧读的是上一个 armed declarator 存下的 dep，
+在 suppress/forward 判定**之前**执行 —— 原 callback 跑不跑都要读这一份。两侧都只听前几次调用，
+之后对象图就是同一张。
+
+- **两个 phase，各自 3 次调用预算**：`decl`（declarator，声明阶段）与 `draw`（draw callback，引擎已解析的阶段）。
+  分开计数，避免 declarator 把预算花光、draw 一次都跑不到。
+- **四个固定区，全部扁平 qword**：`dep` 0x40、`node`(`dep+8`) 0x200、`dep16`(`dep+16`) 0x200、
+  `node16`(`node+16`) 0x200；每个区整块 `readable()` 通过才读，不递归、不做 DFS、没有预算概念。
+- 每个 qword **按值**与当帧 `renderTargets()`/`depthTargets()`（tolerance 64，与 pick 同源）以及
+  `gSeen`（`createRtvDetour` 同一渲染线程追加的原始清单）比较。
+- 未命中的值**永不**被解引用、`describe()` 或交给虚调用 —— 指针过期只花一次比较。
+
+日志（`phase` 取值 `decl`/`draw`）：
+
+```
+[vv] in.color nativeHIT phase=… cand=colour|depth|seen idx=… ptr=… at=<region>+<off> fmt=…
+[vv] in.color nativeSCAN|nativeNONE phase=… dep=… node=… dep16=… node16=… scanned=… candidates=… hits=… call=i/3 seq=…
+```
+
+每个区的大小也打进那行（`none` = 不存在或不可读），这样"四个区确实都走过了"能从日志读出来，
+而不是靠"没有命中"去推断。
+
+### 21.3 判据与边界
+
+| 观察 | 判定 | 下一步 |
+|---|---|---|
+| 任一 phase 出现 `nativeHIT` | **身份成立**：InputFinalColor 依赖里带着原生 RTV/DSV/`gSeen` 指针（日志给出候选 index 与依赖偏移） | 做**语义绑定**：把该候选当作颜色来源，而不是"最新 fmt26"；绑定后仍需单独证明它在 skip 后是新鲜的 |
+| `draw` phase 四区**完整扫描**后 `nativeNONE` | 这一跳不存在 | 转向 `mce::Texture` / bgfx 解析，**不再手摇候选、不再调阈值** |
+| 只有 `decl` 是 `nativeNONE` | **不算否定** | 该指针可能只在执行期才填；以 `draw` 的结果为准 |
+
+- "四区完整扫描"指那行里四个尺寸都不是 `none` 且 `scanned` 非零；缺区或不可读时只能记"未覆盖"。
+- 本轮只解决**身份**，不解决**新鲜度**：命中不等于颜色在 skip 后仍被写。
+  §20.3 的 0.01%/1% 阈值与 §19.4 的哈希表都不在本轮复用。
+- §19.5 的其余边界继续有效：不宣称画质，也不宣称 callback 级替换可行或不可行。
+  pre-hud 切点在 EXP-0026 实机已连续命中（`hit=1..3360 missed=0`），但那是切点生效，不是"世界输出是活的替换"。
+- 证据落点：`docs/agent/evidence/color-dep-native-EXP-0028.log` 里的 `nativeHIT` / `nativeNONE` 原始行。
+
+## 22. EXP-0029：bgfx handle → native 映射（2026-10-27 凌晨）
+
+> EXP-0028 失败关闭（`U-taau-color-dep-native`）；EXP-0029 打开：`U-bgfx-handle-native`，
+> attempt 1，tier L2，源码树 `96d88e3a3f4da255`。
+> 本轮仍是观察实验：不改选面、不改 DLSS、不改 suppress，只记录 handle→native 映射与它和 RTV 清单的交集。
+
+### 22.1 为什么直接指针扫描必然 none
+
+- EXP-0028 的 `nativeNONE` 不是"扫得不够"：`draw` 第 2 次已是预注册的完整样本 ——
+  四个区、200 qword、150 个候选，0 命中（另两次 `scanned=8` / `136` 是部分区不可读，不削弱这个完整负样本）。
+- Mac 全符号给出了真实身份：`InputFinalColor` → `ResolvedTextureResource`，其 **+0 是一个 uint16 的 bgfx
+  `TextureHandle.idx`**（`0xFFFF` = 无效）。所以依赖里根本不会出现 `ID3D12Resource*`，按值比指针必然全 none。
+- Windows 1.26.51 静态定位（ImageBase `0x140000000`）：
+  `createTexture`/install RVA **`0xDF9D680`**（5 参：`ctx, uint16 handle, unknown, void* native, void* texRef`，
+  第 5 参必须原样转发）；`destroyTexture` RVA **`0xDF9EE00`**（`ctx, uint16 handle`）；
+  renderer `m_textures` 在 `+0xBDE170`，entry 0xB8，**entry+0 即 native**。
+  `handle<=0xFFF` 时可直接读表；`getInternal` 自身会写保护字节，所以本实验不走它。
+
+### 22.2 运行时安装（指纹校验后才 patch）
+
+- 用项目的 `LL_STATIC_HOOK`（AGENTS §7 的宏，**不手写 MinHook**）；`hook()` 只在指纹通过后调用。
+- 指纹：install 41 字节、destroy 20 字节的前缀逐字节比对。不匹配 ⇒ 打 error 并保持**未安装**，
+  probe 其余部分照常工作（换了构建不会半挂）。
+- 表是 `handle → native` 的定长数组（`0xFFFF` 无效），install 写入、destroy 清 `nullptr`；
+  `atomic` 每槽一个，install/destroy 可在不同引擎线程调用。
+- 同时统计 install 的**上下文个数**（最多记 4 个）：>1 说明句柄可能来自另一张表，命中就不能算干净。
+- F11 的作用：mod 加载后引擎会重建渲染资源，只有按过 F11，install hook 才看得到这批新资源。
+
+### 22.3 采样与日志
+
+三个相位，各自 3 次预算：`decl`（armed declarator）、`draw`（armed draw callback）、
+**Stop 后 forwarded**（`armed=0 forwarded=1`，预算在 armed→disarmed 时补），所以能回答
+"Stop 前就能解析，还是 suppress 改变了依赖带的东西"。
+
+```
+[vv] in.color handle=0xHHHH valid=… mapped=… phase=… armed=… forwarded=… decl=… res0=… res8=… native=… dep=… res=… candidates=… call=i/3 seq=… sets=… destroys=… nonNull=… contexts=… hooked=…
+[vv] in.color bgfxHIT cand=colour idx=… idxRtv=… idx26=… ptr=… w=… h=… fmt=… at=handle handle=0xHHHH phase=… ambiguous=…
+[vv] in.color bgfxNONE reason=invalidHandle|notMapped|notInRtv handle=0xHHHH res=… native=… at=handle phase=… contexts=… sets=… destroys=… nonNull=…
+```
+
+（上面三条各自是一整行，这里按字段换行只为可读。）
+
+- HIT 的判据是**映射出来的 native 指针命中当帧 `renderTargets()`（tolerance 64）里的某一项**，
+  并且必须同时满足 `ambiguous=0` 且带出 `idx26`（在 fmt26 候选里的序号，与 `sr_cand` dump 同序）、
+  `w/h/fmt`。
+- **`valid=1` / `mapped=1` 只是诊断，不是证据**：读得出、映射得到，仍可能指向的不是 SR 实际读的那张颜色。
+- `bgfxNONE` 的 `reason` 直接决定下一步：`invalidHandle` → 布局/偏移复核；`notMapped` → 安装覆盖率
+  （F11、安装时机、上下文数）；`notInRtv` → 清单口径复核（是否只认 RTV、tolerance、尺寸）。
+
+### 22.4 判据与边界
+
+| 观察 | 判定 | 下一步 |
+|---|---|---|
+| `bgfxHIT` 且 `ambiguous=0`、`idx26`/`w/h/fmt` 齐全 | **handle 桥成立**：`InputFinalColor` 的 u16 handle 能解析到当帧某张颜色候选 | 用该候选做语义绑定；绑定后仍需单独证明 skip 后新鲜 |
+| `bgfxHIT` 但 `ambiguous=1` | 句柄有多张来源表，命中不唯一 | 先定位上下文，不据此绑定 |
+| `valid=1 mapped=1` 但 `notInRtv` | 映射本身通，指向的不在当帧清单 | 复核清单口径与时机，不换候选 |
+| 三个相位都 `notMapped` / `invalidHandle` | 这一跳在当前构建上不成立 | 按 `reason` 转布局复核或退出该路线，不手摇候选 |
+
+- 本轮只回答**身份**，不回答**新鲜度**，也不解决 EXP-0025 以来的画面冻结；
+  §20.3 的相对阈值、§19.4 的哈希表都不复用，§19.5 的边界继续有效。
+- 证据落点：`docs/agent/evidence/bgfx-handle-native-EXP-0029.log` 里的 `bgfxHIT` / `bgfxNONE` 原始行。

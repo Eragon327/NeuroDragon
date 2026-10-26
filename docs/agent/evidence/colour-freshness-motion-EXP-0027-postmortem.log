@@ -1,0 +1,29 @@
+# EXP-0027 postmortem and offline semantic review
+
+New evidence after EXP-0027 close:
+- colour-freshness-motion-EXP-0027.log (VP-labelled hashes and preregistered failure).
+- _local/scratch/colour_sem/sheet_E_roles.png and proof_picked_static.png plus metrics.json,
+  decoded from the same run's original fmt26 dumps.
+
+Corrections and constraints:
+1. Picked idx0 is a complete render-resolution world image, not a mask. idx1 is nearly
+   the same image with a different gain. Do not switch to idx4 merely because it has HDR
+   values: the earlier B1c evidence says the colour buffer already contains tone mapping,
+   and idx4 is an HDR sky/remote layer with clipped terrain, not the complete final world.
+2. The run1/run2 picked images have zero measured pixel shift; the 2.56% byte change is
+   not proof of semantic freshness or camera-visible motion. The near-stale experiment
+   remains failed under its own threshold, but resource identity is still unresolved.
+3. Existing deep dependency scans are not exhaustive proof of native-resource absence:
+   their global DFS budget can be consumed by module pointers. A flat, read-only qword
+   comparison against the live native-resource inventory has not been tried.
+4. Existing runtime objects distinguish ExternalImage color/motion from TransientImage
+   history/output by vtable. The semantic source is already available as taau arg10;
+   the missing step is only dependency -> native resource identity.
+
+Next single unknown:
+Can a bounded flat scan of the InputFinalColor dependency and its immediate objects find
+an exact pointer match in the current native resource inventory?
+
+This is a read-only identity experiment. It does not change the selected colour, DLSS,
+TAAU suppression, exposure, or any GPU resource. A hit enables semantic binding; no hit
+justifies investigating mce::Texture/bgfx resolution rather than trying more candidates.

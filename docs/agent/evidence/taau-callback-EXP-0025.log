@@ -1,0 +1,48 @@
+# EXP-0025 raw evidence excerpts
+
+Source: E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log
+Source SHA-256: 26696dccbb769515451f898688e8e6db002284e72c07f1b8f70458dda3f27546
+Build DLL SHA-256 prefix: ccff2f3093212cd0
+Run: 2026-10-26 21:33:40 through 21:34:46 +08:00
+
+## Activation and original-callback suppression
+
+[2026-10-26 21:33:40.117 DBG][NeuroDragon] [eval] f=1 tid=34128 cl=0x21ce74c99f0 h=0x21cc8f9afd0 1689x950 c=0x21ce74ce560 d=0x21ce74ceef0 mv=0x21ce7bbfa60 o=0x21ce7bbca90 ret=0x1
+[2026-10-26 21:33:40.118 IFO][NeuroDragon] [vv] inject: back-buffer boundary split=66/69 list=0x21c4e29a770
+[2026-10-26 21:33:40.118 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-26 21:33:40.123 IFO][NeuroDragon] [vv] taau replace declared=3028 callbacks=3028 forwarded=3027 suppressed=1
+[2026-10-26 21:33:40.125 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-26 21:33:40.130 DBG][NeuroDragon] [eval] f=2 tid=7820 cl=0x21ce74c99f0 h=0x21cc8f9afd0 1689x950 c=0x21ce74ce560 d=0x21ce74ceef0 mv=0x21ce7bbfa60 o=0x21ce7bbca90 ret=0x1
+[2026-10-26 21:33:40.132 IFO][NeuroDragon] [vv] taau replace declared=3029 callbacks=3029 forwarded=3027 suppressed=2
+[2026-10-26 21:33:40.134 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-26 21:34:44.126 IFO][NeuroDragon] [vv] taau replace declared=11428 callbacks=11428 forwarded=3028 suppressed=8400
+
+After the first armed line: arm1=8653, arm0=8653, via=pre-hud count=0,
+old back-buffer-boundary count=17, sampled eval ret=1 count=7, sampled eval failures=0,
+no-pre-HUD failures=0, record failures=0. The original callback was therefore suppressed
+continuously, but the intended replacement-state boundary was not engaged.
+
+## Gate defect shown by the source and the log sequence
+
+VvInject::prepare() installed a failure guard before its listCount<8 early return.
+The small overlay submission therefore disarmed the gate after the engine submission.
+The next engine submission armed it again. This explains the 8653+8653 transitions and
+why onExecuteCommandLists used the old signature path instead of via=pre-hud.
+
+## Frame shape after suppression (excerpt)
+
+[2026-10-26 21:33:40.129 IFO][NeuroDragon] [vv] frame #3028 lists=68: ... 62:v1689x950 d1 x6 63:v1689x950 d1 x6 64:v2560x1440z d1 x6 65:v2560x1440z d30 x6 66:v1024x1024 d170 x6
+
+The display-sized single-draw list still exists even while gOriginalDraw is not called;
+it cannot be used as proof that the TAAU functor itself executed.
+
+## User report (verbatim)
+
+已完成。进入存档，我先点击两次f11，然后打开菜单，点击SR + DLSS，观察到画面冻结，而转头时左上角的区域有波动。直接退出存档后，主菜单背景被替换成开启SR + DLSS那一帧和退出存档的那一帧（也许不是退出存档那帧，但是不是第一帧或者头几帧）闪烁，并非叠加而是闪烁，单独截屏截不到两张叠加的画面，只是交替极快，视觉暂留是叠加。
+
+## Verdict
+
+FAIL. Suppression and NGX calls executed, but the world output was not a live replacement.
+The small-submission gate defect is proven by the log. Whether the selected colour/depth
+resources stop being current when TAAU is skipped is not proven by this run and must not
+be guessed from the visual symptom alone.

@@ -1,0 +1,25 @@
+{
+  "name": "taau-callback",
+  "tier": "L2",
+  "timeout_s": 300,
+  "window_after": "\\[vv\\] taau replacement armed=1",
+  "why": "EXP-0025: with the TAAU declarator still alive, the original draw callback stays suppressed while DLSS evaluates and the injection remains at the pre-HUD content boundary.",
+  "requires": [
+    "\\[vv\\] taau replace declared=\\d+ callbacks=\\d+ forwarded=\\d+ suppressed=[1-9]\\d*",
+    "\\[vv\\] inject: replacement boundary split=[1-9]\\d*/\\d+ via=pre-hud",
+    "\\[vv\\] taau #\\d+ ",
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)"
+  ],
+  "forbids": [
+    "no pre-HUD boundary",
+    "recording the injected work failed",
+    "Unhandled exception",
+    "Panic:"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] taau replace declared=\\d+ callbacks=\\d+ forwarded=\\d+ suppressed=[1-9]\\d*": 1,
+    "\\[vv\\] inject: replacement boundary split=[1-9]\\d*/\\d+ via=pre-hud": 1,
+    "\\[vv\\] taau #\\d+ ": 1,
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)": 1
+  }
+}

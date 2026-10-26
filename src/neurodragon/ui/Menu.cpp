@@ -1037,6 +1037,8 @@ std::string skipReasonText(probe::vv::inject::SkipReason reason) {
         return "ui.diag.vvReasonPipeline"_tr();
     case probe::vv::inject::SkipReason::RecordFailed:
         return "ui.diag.vvReasonRecord"_tr();
+    case probe::vv::inject::SkipReason::NoBoundary:
+        return "no pre-HUD boundary; TAAU restored";
     default:
         return {};
     }
@@ -1064,7 +1066,7 @@ void drawB0Probe() {
         vv::dlss::requestProbe();
     }
     auto const ngx = vv::dlss::probeState();
-    char       buffer[128]{};
+    char       buffer[256]{};
     std::snprintf(buffer, sizeof(buffer), "%s", ngx.done ? "done" : "idle");
     widgets::statRow("B1a state", buffer);
     std::snprintf(
@@ -1186,9 +1188,6 @@ void drawB0Probe() {
     if (ImGui::Button("SR + DLSS")) {
         startSr(vv::sr::View::Dlss);
     }
-    // S5: replace instead of overlay. Suppresses only the TAAU fullscreen draw; the
-    // pass keeps its place in the frame graph, so ordering and the content boundary
-    // stay exactly as they are.
     if (ImGui::Button("SR motion view")) {
         startSr(vv::sr::View::Motion);
     }
@@ -1207,6 +1206,9 @@ void drawB0Probe() {
     if (ImGui::Button("Dump SR inputs")) {
         vv::sr::dumpInputs();
     }
+    // TEST: the hotkey path, so a pair can be taken while the panel is closed and the
+    // player keeps turning the camera (EXP-0027).
+    widgets::hint("F7 (TEST): two input dumps 2 s apart - keep turning; the menu may stay closed.");
     auto const sr = vv::sr::stats();
     std::snprintf(
         buffer,
@@ -1229,6 +1231,19 @@ void drawB0Probe() {
         static_cast<unsigned>(sr.dlssEvaluateRet)
     );
     widgets::statRow("B2 DLSS", buffer);
+    auto const taau = probe::vv::taauDrawStats();
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "armed=%d declared=%llu callbacks=%llu forwarded=%llu suppressed=%llu missed=%llu",
+        probe::vv::taauDrawReplacementArmed() ? 1 : 0,
+        static_cast<unsigned long long>(taau.declared),
+        static_cast<unsigned long long>(taau.callbacks),
+        static_cast<unsigned long long>(taau.forwarded),
+        static_cast<unsigned long long>(taau.suppressed),
+        static_cast<unsigned long long>(taau.missed)
+    );
+    widgets::statRow("TAAU replacement", buffer);
     std::snprintf(
         buffer,
         sizeof(buffer),

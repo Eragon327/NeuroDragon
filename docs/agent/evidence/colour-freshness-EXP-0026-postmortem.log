@@ -1,0 +1,28 @@
+# EXP-0026 postmortem for attempt 2
+
+New evidence after EXP-0026 close: colour-freshness-EXP-0026.log contains the three
+collection summaries, picked hashes, byte-difference ratios and the user's verbatim report.
+
+What the previous attempt proved:
+- The collection and pre-hud paths worked: all candidate dumps succeeded, SR frame numbers
+  advanced (774, 2098, 2722), and replacement hit=3360 with missed=0 before Stop.
+- Picked colour is near-static: run2 to run3 changed only 25/6566276 bytes, while picked
+  depth changed 19.80% and other active colour candidates changed 9–96%.
+- The original exact hypothesis 'stops updating / hashes equal' is nevertheless falsified;
+  the hashes differ. Exact equality was too brittle for the resource's sparse writes.
+
+What remains unknown:
+Whether a deliberately moving, VP-labelled capture still shows picked colour near-static
+while an upstream/live candidate changes substantially. Run3 lacked per-batch VP evidence,
+and the menu consumes movement input until it is closed.
+
+Attempt 2 change:
+Add a hotkey that waits 2 seconds, captures one batch, waits another 2 seconds and captures
+a second batch automatically. Log valid/prevSame/camera delta/jitter for every batch.
+The user keeps the menu closed and moves throughout the 4-second window.
+
+Discriminating criterion:
+Both batches must have valid VP data with prevSame=0 (or a documented nonzero camera delta).
+Picked colour relative change <=0.01% while at least one other colour candidate changes
+>=1% supports near-stale/wrong semantic selection. Picked change >=1% falsifies it.
+Missing VP motion or invalid dumps makes the run inconclusive, not a pass.

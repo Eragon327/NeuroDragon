@@ -14,6 +14,7 @@
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
 #include "ll/api/event/client/ClientJoinLevelEvent.h"
+#include "ll/api/memory/Hook.h"
 
 
 #include <array>
@@ -72,6 +73,10 @@ using DrawFn = void (*)(void*, void*, void*, void*);
 
 std::atomic<std::uint64_t> gTaauHits{0};
 std::atomic<std::uint64_t> gDrawHits{0};
+std::atomic<std::uint64_t> gDrawForwarded{0};
+std::atomic<std::uint64_t> gDrawSuppressed{0};
+std::atomic<std::uint64_t> gReplacementMissed{0};
+std::atomic<bool>          gReplaceTaauDraw{false};
 std::atomic<std::uint64_t> gPresents{0};
 std::atomic<std::uint64_t> gSubmits{0};
 std::atomic<std::uint64_t> gSubmittedLists{0};
@@ -278,6 +283,12 @@ std::atomic<void*> gTaaContext{nullptr};
 // out to be unchanged under pure forward movement (2026-10-25 03:23), which is only
 // right for a camera-relative pair, so this object is dumped next to it.
 std::atomic<void*> gExecContext{nullptr};std::atomic<void*> gGameQueue{nullptr};
+// EXP-0028: the InputFinalColor dependency (declarator arg 10) of the last *armed*
+// frame. The declarator-phase scan sees the pass only declared; the draw callback is
+// where the engine has resolved it, so the same flat scan runs there too, on this
+// pointer. Only ever read (each level guarded by readable()), never dereferenced
+// through an unmatched value - a stale pointer costs comparisons, not a fault.
+std::atomic<void*> gInputColorDependency{nullptr};
 // The draw callback runs *before* the engine's own draw, and that draw updates the
 // TAA history: by the time our injection records (ExecuteCommandLists, after the whole
 // frame) the previous pair has already been collapsed onto the current one. Measured
@@ -1421,6 +1432,467 @@ void scanForKnownTargets(
     }
 }
 
+// --- EXP-0028: is there a native resource *inside* InputFinalColor? ----------------
+//
+// The declarator's 10th argument is InputFinalColor (same table that logDependencies
+// names). pickInputs() never binds it - it takes the newest fmt26 RTV at the current
+// render size - so "is the colour we upscale the engine's own colour" reduces to: does
+// this dependency carry a native resource pointer the inventory already knows?
+//
+// Deliberately flat, unlike scanForKnownTargets: four fixed regions (dep 0x40, dep+8
+// node 0x200, dep+16 object 0x200, node+16 object 0x200), each read only when
+// readable() says the whole block is committed. No recursion, no DFS, no budget. Every
+// qword is compared *by value* against this frame's renderTargets()/depthTargets()
+// (tolerance 64 = the pick path's own) and the raw gSeen list, which createRtvDetour
+// appends on this same render thread. A qword that matches nothing is never
+// dereferenced, described or handed to a virtual call, so a stale pointer costs a
+// comparison and nothing else.
+//
+// Two phases, each with its own three-call budget: `decl` (the declarator, pass only
+// declared) and `draw` (the draw callback, where the engine has resolved it). A
+// pointer that is only filled at execution time therefore cannot show up as a false
+// nativeNONE.
+constexpr unsigned kInputColorNativeCalls = 3;
+
+void scanInputColorNative(char const* phase, void* dep, std::uint64_t sequence, unsigned call) {
+    RenderTargetInfo colours[48]{};
+    RenderTargetInfo depths[48]{};
+    unsigned const   colourCount = dep ? renderTargets(colours, 48, 64) : 0;
+    unsigned const   depthCount  = dep ? depthTargets(depths, 48, 64) : 0;
+    unsigned const   candidates  = colourCount + depthCount + gSeenCount;
+
+    // Two hops at most, and only through pointers whose target block is committed.
+    void* node  = nullptr;
+    void* dep16 = nullptr;
+    if (readable(dep, 0x18)) {
+        peek(dep, 8, node);
+        peek(dep, 16, dep16);
+    }
+    void* node16 = nullptr;
+    if (readable(node, 0x18)) {
+        peek(node, 16, node16);
+    }
+
+    unsigned  scanned = 0;
+    unsigned  hits    = 0;
+    auto const report = [&](char const* region, std::size_t offset, std::uint64_t value) {
+        auto* const candidate = reinterpret_cast<void*>(value);
+        for (unsigned i = 0; i < colourCount; ++i) {
+            if (colours[i].resource != candidate) {
+                continue;
+            }
+            ++hits;
+            utils::logger().info(
+                "[vv] in.color nativeHIT phase={} cand=colour idx={} ptr={:#x} at={}+{:#x} fmt={}",
+                phase,
+                i,
+                value,
+                region,
+                offset,
+                colours[i].format
+            );
+            return;
+        }
+        for (unsigned i = 0; i < depthCount; ++i) {
+            if (depths[i].resource != candidate) {
+                continue;
+            }
+            ++hits;
+            utils::logger().info(
+                "[vv] in.color nativeHIT phase={} cand=depth idx={} ptr={:#x} at={}+{:#x} fmt={}",
+                phase,
+                i,
+                value,
+                region,
+                offset,
+                depths[i].format
+            );
+            return;
+        }
+        for (unsigned i = 0; i < gSeenCount; ++i) {
+            if (gSeen[i] != candidate) {
+                continue;
+            }
+            ++hits;
+            // gSeen is raw: no format here without a describe() call, and this scan
+            // deliberately makes none on anything.
+            utils::logger().info(
+                "[vv] in.color nativeHIT phase={} cand=seen idx={} ptr={:#x} at={}+{:#x} fmt=?",
+                phase,
+                i,
+                value,
+                region,
+                offset
+            );
+            return;
+        }
+    };
+    // Returns the bytes actually scanned (0 = region absent or unreadable).
+    auto const scan = [&](char const* region, void const* base, std::size_t bytes) {
+        if (!base || !readable(base, bytes)) {
+            return 0U;
+        }
+        for (std::size_t offset = 0; offset + 8 <= bytes; offset += 8) {
+            std::uint64_t value = 0;
+            if (!peek(base, offset, value)) {
+                break;
+            }
+            ++scanned;
+            if (value) {
+                report(region, offset, value);
+            }
+        }
+        return static_cast<unsigned>(bytes);
+    };
+
+    unsigned const depBytes   = scan("dep", dep, 0x40);
+    unsigned const nodeBytes  = scan("node", node, 0x200);
+    unsigned const dep16Bytes = scan("dep16", dep16, 0x200);
+    unsigned const node16Bytes = scan("node16", node16, 0x200);
+
+    auto const regionText = [](unsigned bytes) {
+        if (!bytes) {
+            return std::string("none");
+        }
+        char text[16]{};
+        std::snprintf(text, sizeof(text), "0x%X", bytes);
+        return std::string(text);
+    };
+    // One bounded line per call, hit or miss, so "all four regions were actually
+    // walked" is readable from the log instead of inferred from the absence of hits.
+    utils::logger().info(
+        "[vv] in.color {} phase={} dep={} node={} dep16={} node16={} scanned={} candidates={}"
+        " hits={} call={}/{} seq={} this={:#x}",
+        hits ? "nativeSCAN" : "nativeNONE",
+        phase,
+        regionText(depBytes),
+        regionText(nodeBytes),
+        regionText(dep16Bytes),
+        regionText(node16Bytes),
+        scanned,
+        candidates,
+        hits,
+        call,
+        kInputColorNativeCalls,
+        sequence,
+        reinterpret_cast<std::uintptr_t>(dep)
+    );
+}
+
+// --- EXP-0029: bgfx handle -> native resource map ---------------------------------
+//
+// bgfx gives the engine a uint16 handle; the resource behind it is a native D3D12
+// object. taau's install/destroy are the only two points where that mapping changes,
+// so the table is filled there and nowhere else. The addresses are the shipped exe's
+// and are verified against the prologues below before anything is patched: a build
+// that moved logs the mismatch and stays unhooked.
+//
+// Hooking uses LeviLamina's macro (LL_STATIC_HOOK = the manual-registration variant),
+// not a hand-written MinHook registration (AGENTS §7): hook()/unhook() are the macro's
+// own entry points and they are called only after the fingerprint check passed.
+constexpr std::uintptr_t kBgfxInstallRva = 0xDF9D680;
+constexpr std::uintptr_t kBgfxDestroyRva = 0xDF9EE00;
+
+// 41 bytes: the >=37-byte prefix the analysis settled on, written out whole (it ends on
+// the instruction boundary of `movzx r14d,dx`). Frame set-up, the stack-cookie xor,
+// then the two moves that carry the context and the handle.
+constexpr unsigned char kBgfxInstallPrologue[] = {
+    0x41, 0x56, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x68, 0x4C, 0x89, 0xCE, 0x48, 0x89,
+    0xCB, 0x48, 0x8B, 0x05, 0xEA, 0xC9, 0x83, 0x03, 0x48, 0x31, 0xE0, 0x48, 0x89, 0x44,
+    0x24, 0x60, 0x48, 0x8D, 0xB9, 0x70, 0xE1, 0xBD, 0x00, 0x44, 0x0F, 0xB7, 0xF2,
+};
+constexpr unsigned char kBgfxDestroyPrologue[] = {
+    0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x89, 0xCF,
+    0x48, 0x8D, 0xB1, 0x70, 0xE1, 0xBD, 0x00, 0x0F, 0xB7, 0xDA,
+};
+
+// The whole uint16 space except bgfx's invalid handle. A direct index needs no hash and
+// no collision handling; one atomic per slot is enough because install and destroy can
+// be called from different engine threads, and destroy only ever writes nullptr.
+constexpr std::uint16_t kHandleInvalid = 0xFFFF;
+constexpr unsigned      kHandleSlots   = kHandleInvalid; // indices 0 .. 0xFFFE
+std::atomic<void*>      gHandleNative[kHandleSlots]{};
+
+// Targets are runtime values (exe base + RVA), so they are passed to the hook macro as
+// the identifier *variable*: the macro resolves it when hook() is called, which is
+// after the prologue check.
+std::uintptr_t     gBgfxInstallTarget{};
+std::uintptr_t     gBgfxDestroyTarget{};
+std::atomic<bool>  gBgfxHooked{false};
+std::atomic<std::uint64_t> gBgfxInstallCalls{0};
+std::atomic<std::uint64_t> gBgfxDestroyCalls{0};
+std::atomic<std::uint64_t> gBgfxNonNullSets{0};
+// Distinct install() contexts, so a `notMapped` can be attributed instead of guessed:
+// one context is a single bgfx instance (what this experiment expects), more than one
+// means handles can come from a table the check never sees.
+constexpr unsigned    kBgfxContextSlots = 4;
+std::atomic<void*>    gBgfxContexts[kBgfxContextSlots]{};
+std::atomic<unsigned> gBgfxContextCount{0};
+// EXP-0029: the declarator sequence of the sample being checked, so a draw-phase line
+// can name the declarator line it belongs to.
+std::atomic<std::uint64_t> gInputColorDeclSeq{0};
+// Refilled (3) when the replacement goes armed -> disarmed: the forwarded draw path
+// then produces the "after Stop" samples this experiment needs.
+std::atomic<unsigned> gForwardedHandleBudget{0};
+
+void noteBgfxContext(void* context) {
+    if (!context) {
+        return;
+    }
+    unsigned count = gBgfxContextCount.load(std::memory_order_acquire);
+    for (unsigned i = 0; i < count && i < kBgfxContextSlots; ++i) {
+        if (gBgfxContexts[i].load(std::memory_order_relaxed) == context) {
+            return;
+        }
+    }
+    if (count >= kBgfxContextSlots) {
+        return; // the set is full; the count is the evidence, not the list
+    }
+    if (gBgfxContextCount.compare_exchange_strong(count, count + 1, std::memory_order_acq_rel)) {
+        gBgfxContexts[count].store(context, std::memory_order_relaxed);
+    }
+}
+
+LL_STATIC_HOOK(
+    BgfxInstallHook,
+    ll::memory::HookPriority::Normal,
+    gBgfxInstallTarget,
+    void,
+    void*         context,
+    std::uint16_t handle,
+    std::uintptr_t unknown,
+    void*         native,
+    void*         texRef
+) {
+    // Record first, forward unchanged. `texRef` (the 5th argument) is passed through
+    // untouched - the engine's own bookkeeping depends on it.
+    if (handle != kHandleInvalid) {
+        gHandleNative[handle].store(native, std::memory_order_release);
+        if (native) {
+            gBgfxNonNullSets.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+    noteBgfxContext(context);
+    auto const n = gBgfxInstallCalls.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (n <= 3 || n % 600 == 0) {
+        utils::logger().info(
+            "[vv] bgfx map set handle=0x{:04X} native={:#x} ctx={:#x} calls={}",
+            handle,
+            reinterpret_cast<std::uintptr_t>(native),
+            reinterpret_cast<std::uintptr_t>(context),
+            n
+        );
+    }
+    origin(context, handle, unknown, native, texRef);
+}
+
+LL_STATIC_HOOK(
+    BgfxDestroyHook,
+    ll::memory::HookPriority::Normal,
+    gBgfxDestroyTarget,
+    void,
+    void*         context,
+    std::uint16_t handle
+) {
+    if (handle != kHandleInvalid) {
+        gHandleNative[handle].store(nullptr, std::memory_order_release);
+    }
+    gBgfxDestroyCalls.fetch_add(1, std::memory_order_relaxed);
+    origin(context, handle);
+}
+
+bool prologueMatches(void* target, unsigned char const* bytes, unsigned size) {
+    return target && readable(target, size) && std::memcmp(target, bytes, size) == 0;
+}
+
+// Called from install() once the main module is known. Failure is logged and leaves the
+// table empty; the rest of the probe keeps working.
+void installBgfxMap(std::uintptr_t base) {
+    if (gBgfxHooked.load(std::memory_order_acquire)) {
+        return;
+    }
+    auto* const installTarget = reinterpret_cast<void*>(base + kBgfxInstallRva);
+    auto* const destroyTarget = reinterpret_cast<void*>(base + kBgfxDestroyRva);
+    if (!prologueMatches(installTarget, kBgfxInstallPrologue, sizeof(kBgfxInstallPrologue))) {
+        utils::logger().error(
+            "[vv] bgfx map: install prologue mismatch at {:#x} (rva {:#x}); native map not hooked",
+            reinterpret_cast<std::uintptr_t>(installTarget),
+            kBgfxInstallRva
+        );
+        return;
+    }
+    if (!prologueMatches(destroyTarget, kBgfxDestroyPrologue, sizeof(kBgfxDestroyPrologue))) {
+        utils::logger().error(
+            "[vv] bgfx map: destroy prologue mismatch at {:#x} (rva {:#x}); native map not hooked",
+            reinterpret_cast<std::uintptr_t>(destroyTarget),
+            kBgfxDestroyRva
+        );
+        return;
+    }
+    gBgfxInstallTarget = reinterpret_cast<std::uintptr_t>(installTarget);
+    gBgfxDestroyTarget = reinterpret_cast<std::uintptr_t>(destroyTarget);
+    int const installStatus = BgfxInstallHook::hook();
+    int const destroyStatus = BgfxDestroyHook::hook();
+    if (installStatus != 0 || destroyStatus != 0) {
+        utils::logger().error(
+            "[vv] bgfx map: hook failed install={} destroy={}; native map disabled",
+            installStatus,
+            destroyStatus
+        );
+        if (installStatus == 0) {
+            BgfxInstallHook::unhook();
+        }
+        if (destroyStatus == 0) {
+            BgfxDestroyHook::unhook();
+        }
+        return;
+    }
+    gBgfxHooked.store(true, std::memory_order_release);
+    utils::logger().info(
+        "[vv] bgfx map hooked install={:#x} (rva {:#x}) destroy={:#x} (rva {:#x})",
+        gBgfxInstallTarget,
+        kBgfxInstallRva,
+        gBgfxDestroyTarget,
+        kBgfxDestroyRva
+    );
+}
+
+// Table first, hooks second: a late install must not write into freed storage.
+void uninstallBgfxMap() {
+    if (!gBgfxHooked.exchange(false, std::memory_order_acq_rel)) {
+        return;
+    }
+    BgfxDestroyHook::unhook();
+    BgfxInstallHook::unhook();
+    for (auto& slot : gHandleNative) {
+        slot.store(nullptr, std::memory_order_relaxed);
+    }
+    utils::logger().info(
+        "[vv] bgfx map unhooked, table cleared (sets={} destroys={})",
+        gBgfxInstallCalls.load(std::memory_order_relaxed),
+        gBgfxDestroyCalls.load(std::memory_order_relaxed)
+    );
+}
+
+// EXP-0029 check: the dependency's +8 is the resolved texture; its first qword is the
+// bgfx handle (uint16). Every level is guarded, the lookup is refreshed on each call,
+// and a handle the engine already destroyed simply reads as "not mapped".
+//
+// `valid`/`mapped` are diagnostics, NOT proof: a handle that reads and maps can still
+// point at a resource that is not the colour the SR pass reads. The only evidence is a
+// `bgfxHIT` line, i.e. the mapped native pointer *is* one of this frame's render
+// targets. The raw qwords of the resolved texture are printed for exactly that reason.
+//
+// Phases: "decl" (armed declarator), "draw" (armed draw callback) and the forwarded
+// draws after the replacement was disarmed (armed=0 forwarded=1). Each phase has its
+// own budget; `decl=` names the declarator sample this line belongs to.
+void checkInputColorHandle(
+    char const*       phase,
+    bool              armed,
+    bool              forwarded,
+    std::uint64_t     sequence,
+    unsigned          call,
+    std::uint64_t     declSequence
+) {
+    void* const dep = gInputColorDependency.load(std::memory_order_relaxed);
+    void*       resource = nullptr;
+    std::uint16_t handle = kHandleInvalid;
+    bool        valid    = false;
+    if (dep && readable(dep, 0x10)) {
+        peek(dep, 8, resource);
+        std::uint16_t raw = kHandleInvalid;
+        if (resource && peek(resource, 0, raw) && raw != kHandleInvalid) {
+            handle = raw;
+            valid  = true;
+        }
+    }
+    std::uint64_t res0 = 0;
+    std::uint64_t res8 = 0;
+    if (resource && readable(resource, 0x10)) {
+        peek(resource, 0, res0);
+        peek(resource, 8, res8);
+    }
+    // No virtual call and no describe(): the table holds the pointer the engine passed
+    // in, and that is all this compares.
+    void* const native = valid ? gHandleNative[handle].load(std::memory_order_acquire) : nullptr;
+    RenderTargetInfo colours[48]{};
+    unsigned const   colourCount = renderTargets(colours, 48, 64);
+    int              index       = -1;
+    int              index26     = -1;
+    for (unsigned i = 0; native && i < colourCount; ++i) {
+        if (colours[i].resource == native) {
+            index = static_cast<int>(i);
+            break;
+        }
+    }
+    if (index >= 0 && colours[index].format == 26) {
+        // Same order the sr_cand dumps use: the position among fmt26 entries only.
+        index26 = 0;
+        for (int i = 0; i < index; ++i) {
+            index26 += colours[i].format == 26 ? 1 : 0;
+        }
+    }
+    unsigned const contexts = gBgfxContextCount.load(std::memory_order_acquire);
+    utils::logger().info(
+        "[vv] in.color handle=0x{:04X} valid={} mapped={} phase={} armed={} forwarded={} decl={}"
+        " res0={:#018x} res8={:#018x} native={:#x} dep={:#x} res={:#x}"
+        " candidates={} call={}/{} seq={} sets={} destroys={} nonNull={} contexts={} hooked={}",
+        handle,
+        valid ? 1 : 0,
+        native ? 1 : 0,
+        phase,
+        armed ? 1 : 0,
+        forwarded ? 1 : 0,
+        declSequence,
+        res0,
+        res8,
+        reinterpret_cast<std::uintptr_t>(native),
+        reinterpret_cast<std::uintptr_t>(dep),
+        reinterpret_cast<std::uintptr_t>(resource),
+        colourCount,
+        call,
+        kInputColorNativeCalls,
+        sequence,
+        gBgfxInstallCalls.load(std::memory_order_relaxed),
+        gBgfxDestroyCalls.load(std::memory_order_relaxed),
+        gBgfxNonNullSets.load(std::memory_order_relaxed),
+        contexts,
+        gBgfxHooked.load(std::memory_order_acquire) ? 1 : 0
+    );
+    if (index >= 0) {
+        bool const ambiguous = contexts > 1;
+        utils::logger().info(
+            "[vv] in.color bgfxHIT cand=colour idx={} idxRtv={} idx26={} ptr={:#x} w={} h={} fmt={}"
+            " at=handle handle=0x{:04X} phase={} ambiguous={}",
+            index,
+            index,
+            index26,
+            reinterpret_cast<std::uintptr_t>(native),
+            colours[index].width,
+            colours[index].height,
+            colours[index].format,
+            handle,
+            phase,
+            ambiguous ? 1 : 0
+        );
+        return;
+    }
+    char const* reason = !valid ? "invalidHandle" : (!native ? "notMapped" : "notInRtv");
+    utils::logger().info(
+        "[vv] in.color bgfxNONE reason={} handle=0x{:04X} res={:#x} native={:#x} at=handle"
+        " phase={} contexts={} sets={} destroys={} nonNull={}",
+        reason,
+        handle,
+        reinterpret_cast<std::uintptr_t>(resource),
+        reinterpret_cast<std::uintptr_t>(native),
+        phase,
+        contexts,
+        gBgfxInstallCalls.load(std::memory_order_relaxed),
+        gBgfxDestroyCalls.load(std::memory_order_relaxed),
+        gBgfxNonNullSets.load(std::memory_order_relaxed)
+    );
+}
+
 // BindFramebufferColor<RenderContext> is opaque (the SDK header is an empty
 // struct). Disassembling the shipped `taau` shows exactly what it reads: one qword
 // at **+0x8** per dependency, handed to the material as the texture override value
@@ -1561,6 +2033,23 @@ void taauDetour(
     bool const dumpDeps = index <= 2 || index % 2000 == 0;
     if (dumpDeps) {
         logDependencies("in", index, dep0, dep1, dep2, dep3);
+    }
+    // EXP-0028: only while the replacement is actually armed (that is the state the
+    // experiment asks about), and only the first few armed frames - after that the
+    // object graph is the same one and per-frame scanning would be pure cost. The
+    // dependency is kept for the draw callback, which is the phase the engine resolves
+    // it in; the two phases count separately.
+    if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
+        gInputColorDependency.store(dep1, std::memory_order_relaxed);
+        static std::atomic<unsigned> declScans{0};
+        unsigned const               call = declScans.fetch_add(1, std::memory_order_relaxed);
+        if (call < kInputColorNativeCalls) {
+            scanInputColorNative("decl", dep1, index, call + 1);
+            // Same handle check the draw callback runs, on the declared state; its own
+            // budget, and the sequence is published so the draw lines can pair with it.
+            gInputColorDeclSeq.store(index, std::memory_order_relaxed);
+            checkInputColorHandle("decl", true, false, index, call + 1, index);
+        }
     }
 
     gOriginalTaau(
@@ -1895,10 +2384,12 @@ void scanTaauList(void* self, void* context, void* third, void* fourth, unsigned
     }
 }
 
-void drawDetour(void* self, void* context, void* third, void* fourth) {    auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
+void drawDetour(void* self, void* context, void* third, void* fourth) {
+    auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
     gTaaContext.store(third, std::memory_order_relaxed);
     gExecContext.store(context, std::memory_order_relaxed);
-    // Before the engine's own draw overwrites the previous-frame half of the pair.
+    // Snapshot the per-frame copy supplied by the declarator. The original callback
+    // only reads these fields; their history is advanced upstream.
     if (third && readable(third, 0x2a0)) {
         auto const* const base = static_cast<unsigned char const*>(third);
         TaaSnapshot       snap{};
@@ -1908,6 +2399,37 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {    auto 
         std::memcpy(snap.jitter, base + 0x1e4, sizeof(snap.jitter));
         gTaaSnapshot = snap;
         gTaaSnapshotValid.store(true, std::memory_order_release);
+    }
+    // EXP-0028 draw phase: the InputFinalColor dependency saved by the last armed
+    // declarator, scanned again where the engine has actually resolved the pass.
+    // Deliberately before the suppress/forward decision below - whether the original
+    // callback runs does not change what this reads. Its own three-call budget, because
+    // sharing the declarator's would spend it before this ever runs. The pointer may be
+    // stale by now; the scan is read-only per level (readable()) and never dereferences
+    // an unmatched value.
+    if (void* const dep = gInputColorDependency.load(std::memory_order_relaxed)) {
+        static std::atomic<unsigned> drawScans{0};
+        unsigned const               call = drawScans.fetch_add(1, std::memory_order_relaxed);
+        if (call < kInputColorNativeCalls) {
+            scanInputColorNative("draw", dep, index, call + 1);
+        }
+    }
+    // EXP-0029: the same dependency's resolved texture carries the bgfx handle in its
+    // first qword. Refreshed on every one of these calls - destroy clears the table, so
+    // a handle is never assumed to still be alive. Own three-call budget again.
+    if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
+        static std::atomic<unsigned> bgfxChecks{0};
+        unsigned const               call = bgfxChecks.fetch_add(1, std::memory_order_relaxed);
+        if (call < kInputColorNativeCalls) {
+            checkInputColorHandle(
+                "draw",
+                true,
+                false,
+                index,
+                call + 1,
+                gInputColorDeclSeq.load(std::memory_order_relaxed)
+            );
+        }
     }
     // Content boundary: the engine reuses the same command-list objects across
     // frames, so a capture from the previous frame is assumed to still be this
@@ -1959,6 +2481,48 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {    auto 
         samplePinnedMatrices(third, batch, sample);
     }
 #endif
+    if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
+        auto const suppressed = gDrawSuppressed.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (suppressed <= 3 || suppressed % 600 == 0) {
+            utils::logger().info(
+                "[vv] taau replace declared={} callbacks={} forwarded={} suppressed={} missed={}",
+                gTaauHits.load(std::memory_order_relaxed),
+                gDrawHits.load(std::memory_order_relaxed),
+                gDrawForwarded.load(std::memory_order_relaxed),
+                suppressed,
+                gReplacementMissed.load(std::memory_order_relaxed)
+            );
+        }
+        return;
+    }
+    gDrawForwarded.fetch_add(1, std::memory_order_relaxed);
+    // EXP-0029 forwarded phase: the budget is refilled only when the replacement goes
+    // armed -> disarmed, so these are the "after Stop" samples that prove the handle
+    // still resolves on the normal path. Sampling here (before the original draw) reads
+    // the same declared/resolved state the armed samples read.
+    {
+        unsigned budget = gForwardedHandleBudget.load(std::memory_order_acquire);
+        while (budget > 0
+               && !gForwardedHandleBudget.compare_exchange_weak(
+                   budget,
+                   budget - 1,
+                   std::memory_order_acq_rel,
+                   std::memory_order_acquire
+               )) {
+        }
+        if (budget > 0) {
+            static std::atomic<unsigned> forwardChecks{0};
+            unsigned const call = forwardChecks.fetch_add(1, std::memory_order_relaxed) + 1;
+            checkInputColorHandle(
+                "draw",
+                false,
+                true,
+                index,
+                call,
+                gInputColorDeclSeq.load(std::memory_order_relaxed)
+            );
+        }
+    }
     gOriginalDraw(self, context, third, fourth);
 }
 
@@ -2459,6 +3023,10 @@ bool install() {
         utils::logger().warn("[vv] taau draw prologue mismatch at {:#x} ({})", reinterpret_cast<std::uintptr_t>(drawTarget), kTaauDrawRva);
     }
 
+    // EXP-0029: bgfx handle -> native resource map. Independent of the taau hooks: if
+    // this build's prologues moved, only the map stays empty and the log says so.
+    installBgfxMap(base);
+
     // v4: take the engine's D3D12 device early. LeviLamina loads mods before the
     // renderer is built, so the export hook is normally in place before the first
     // device exists; if it is not, the render-target map stays empty and the log says
@@ -2491,6 +3059,9 @@ bool install() {
 }
 
 void uninstall() {
+    setTaauDrawReplacement(false);
+    // EXP-0029: the map's hooks go down first, then the table is cleared inside.
+    uninstallBgfxMap();
     // The boundary experiment created objects on the engine's device, so it has to
     // let go of them before the probe's own hooks come down.
     inject::release();
@@ -2584,41 +3155,57 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                     }
                     return nullptr;
                 };
-                unsigned firstMatch = 0;
-                unsigned beforeHud  = 0;
-                for (unsigned i = 0; i < listCount; ++i) {
-                    auto const* sig = sigAt(i);
-                    if (!sig || !sig->dsv || sig->draws != 1) {
-                        continue;
+                if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
+                    // The suppressed composite no longer satisfies draws==1. Cut
+                    // immediately before the display-sized, many-draw HUD list instead;
+                    // unlike the back-buffer-writer fallback, this cannot cover the HUD.
+                    for (unsigned i = 1; i < listCount; ++i) {
+                        auto const* sig = sigAt(i);
+                        if (!sig || !sig->dsv || sig->draws < 5) {
+                            continue;
+                        }
+                        if (!aboutSame(sig->width, displayW) || !aboutSame(sig->height, displayH)) {
+                            continue;
+                        }
+                        split = i;
+                        found = lists[i - 1];
+                        via   = "pre-hud";
+                        break;
                     }
-                    if (!aboutSame(sig->width, displayW) || !aboutSame(sig->height, displayH)) {
-                        continue;
+                } else {
+                    unsigned firstMatch = 0;
+                    unsigned beforeHud  = 0;
+                    for (unsigned i = 0; i < listCount; ++i) {
+                        auto const* sig = sigAt(i);
+                        if (!sig || !sig->dsv || sig->draws != 1) {
+                            continue;
+                        }
+                        if (!aboutSame(sig->width, displayW) || !aboutSame(sig->height, displayH)) {
+                            continue;
+                        }
+                        if (!firstMatch) {
+                            firstMatch = i + 1;
+                        }
+                        // The world composite is immediately followed by the HUD, which is
+                        // the many-draw list. Preferring that pairing keeps a stray
+                        // single-draw blit in front of the composite from being picked.
+                        auto const* next = (i + 1 < listCount) ? sigAt(i + 1) : nullptr;
+                        if (next && next->draws >= 5) {
+                            beforeHud = i + 1;
+                        }
                     }
-                    if (!firstMatch) {
-                        firstMatch = i + 1;
+                    if (beforeHud) {
+                        split = beforeHud;
+                        found = lists[beforeHud - 1];
+                        via   = "signature+hud";
+                    } else if (firstMatch) {
+                        split = firstMatch;
+                        found = lists[firstMatch - 1];
+                        via   = "signature";
                     }
-                    // The world composite is immediately followed by the HUD, which is
-                    // the many-draw list. Preferring that pairing keeps a stray
-                    // single-draw blit in front of the composite from being picked (it
-                    // happened: a 48-list frame cut one list early and the injected
-                    // frame was overwritten again). When the HUD itself is a single
-                    // draw, no candidate qualifies here and the first match wins.
-                    auto const* next = (i + 1 < listCount) ? sigAt(i + 1) : nullptr;
-                    if (next && next->draws >= 5) {
-                        beforeHud = i + 1;
-                    }
-                }
-                if (beforeHud) {
-                    split = beforeHud;
-                    found = lists[beforeHud - 1];
-                    via   = "signature+hud";
-                } else if (firstMatch) {
-                    split = firstMatch;
-                    found = lists[firstMatch - 1];
-                    via   = "signature";
                 }
             }
-            if (!split) {
+            if (!split && !gReplaceTaauDraw.load(std::memory_order_acquire)) {
                 for (unsigned i = 0; i < listCount && !split; ++i) {
                     for (unsigned m = 0; m < marks && m < kMarkSlots; ++m) {
                         if (gMarks[m].list == lists[i] && gMarks[m].bound && gMarks[m].drew) {
@@ -2710,6 +3297,8 @@ void onPresent() {
     // B0 hotkeys, polled here so they work regardless of the panel/input focus and
     // need no file creation while playing:
     //   F9 = dump now (stand still, then press F2 for the screenshot)
+    //   F7 = two SR input dumps, 2 s and then 2 s later (EXP-0027): the pair is the
+    //        freshness evidence, and the player keeps turning the camera in between.
     //   F8 / F10 / V = arm 24 consecutive context samples that START IN 2 s, so the
     //        player can press while standing and then walk/turn during the wait.
     // Three keys because a laptop may route F8 (and sometimes F10) to a media
@@ -2744,6 +3333,48 @@ void onPresent() {
     f9Down  = f9;
     f10Down = f10;
     vDown   = v;
+    // F7: two SR input dumps 2 s apart, polled on the present thread so the panel can
+    // stay closed and the timing does not depend on the UI. Edge-triggered (a held key
+    // or a key repeat must not reschedule) and refused while a pair is still running;
+    // it arms no context sample, so it cannot collide with F8/F10/V.
+    static bool     f7Down     = false;
+    static unsigned f7Stage    = 0; ///< 0 idle, 1 first dump due, 2 second dump due
+    static unsigned f7FirstRun = 0;
+    static DWORD    f7Due      = 0;
+    bool const      f7         = (GetAsyncKeyState(VK_F7) & 0x8000) != 0;
+    if (f7 && !f7Down) {
+        if (f7Stage == 0) {
+            f7Stage = 1;
+            f7Due   = ::GetTickCount() + 2000;
+            utils::logger().info("[vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later");
+        } else {
+            utils::logger().warn("[vvsr] sr dump pair already running (stage={}); F7 ignored", f7Stage);
+        }
+    }
+    // Signed difference: GetTickCount wraps every 49 days and a plain `<` would then
+    // wait for the next wrap.
+    if (f7Stage != 0 && static_cast<std::int32_t>(::GetTickCount() - f7Due) >= 0) {
+        unsigned const before = ::neurodragon::vv::sr::dumpRuns();
+        bool const     ok     = ::neurodragon::vv::sr::dumpInputs();
+        unsigned const last   = ::neurodragon::vv::sr::dumpRuns();
+        unsigned const run    = last != before ? last : 0; // 0 = the dump never started
+        if (f7Stage == 1) {
+            f7FirstRun = run;
+            utils::logger().info("[vvsr] sr dump pair 1/2 run={} ok={}", run, ok ? 1 : 0);
+            f7Stage = 2;
+            f7Due   = ::GetTickCount() + 2000;
+        } else {
+            utils::logger().info(
+                "[vvsr] sr dump pair 2/2 run={} ok={} (pair done runs={},{})",
+                run,
+                ok ? 1 : 0,
+                f7FirstRun,
+                run
+            );
+            f7Stage = 0;
+        }
+    }
+    f7Down = f7;
 #endif
     // One shot, a few seconds in: by then the frame graph has been rebuilt at least
     // once (the render targets only become visible after a rebuild, see the header).
@@ -3152,6 +3783,47 @@ void requestTaauListScan() { gTaauScanRequested.store(true, std::memory_order_re
 
 unsigned backBufferWriterSplit() { return gBoundarySplit.load(std::memory_order_relaxed); }
 void*    backBufferWriterList() { return gBoundaryList.load(std::memory_order_relaxed); }
+
+void setTaauDrawReplacement(bool armed) {
+    bool const previous = gReplaceTaauDraw.exchange(armed, std::memory_order_acq_rel);
+    if (previous == armed) {
+        return;
+    }
+    if (!armed) {
+        // EXP-0029: the replacement just stopped, so the next few draws go through the
+        // original callback again. Give that path its own three samples - without them
+        // the run cannot say whether the handle still resolved before Stop or the
+        // suppression changed what the dependency carries.
+        gForwardedHandleBudget.store(kInputColorNativeCalls, std::memory_order_release);
+        utils::logger().info("[vv] bgfx handle: forwarded sample budget={}", kInputColorNativeCalls);
+    }
+    utils::logger().info("[vv] taau replacement armed={}", armed ? 1 : 0);
+}
+
+bool taauDrawReplacementArmed() { return gReplaceTaauDraw.load(std::memory_order_acquire); }
+
+void noteTaauReplacementMiss() {
+    auto const missed = gReplacementMissed.fetch_add(1, std::memory_order_relaxed) + 1;
+    // Same throttle as the restore path: the first few are the interesting ones, and a
+    // frame that keeps missing would otherwise write a line per frame.
+    if (missed <= 3 || missed % 120 == 0) {
+        utils::logger().warn(
+            "[vv] taau replacement missed={} suppressed={} (armed frame injected nothing; TAAU restored next frame)",
+            missed,
+            gDrawSuppressed.load(std::memory_order_relaxed)
+        );
+    }
+}
+
+TaauDrawStats taauDrawStats() {
+    return TaauDrawStats{
+        gTaauHits.load(std::memory_order_relaxed),
+        gDrawHits.load(std::memory_order_relaxed),
+        gDrawForwarded.load(std::memory_order_relaxed),
+        gDrawSuppressed.load(std::memory_order_relaxed),
+        gReplacementMissed.load(std::memory_order_relaxed),
+    };
+}
 
 void requestContextSample(unsigned frames, unsigned delayMs) {
 #ifdef TEST

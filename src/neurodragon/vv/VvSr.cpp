@@ -182,6 +182,10 @@ Stats            gStats{};
 std::atomic<int> gView{static_cast<int>(View::Bypass)};
 std::atomic<int> gColorChoice{0};
 std::atomic<int> gDepthChoice{0};
+// One number per dump so a repeated trigger (panel button, file marker, F7 pair) keeps
+// every frame instead of overwriting the previous one. File scope because the TEST
+// hotkey path has to be able to name the run it just triggered.
+std::atomic<unsigned> gDumpNo{0};
 unsigned         gColorCandidates = 0;
 unsigned         gDepthCandidates = 0;
 float            gToneValues[tone::kValues]{};
@@ -571,6 +575,25 @@ void cycleDepth() {
     utils::logger().info("[vvsr] sr depth choice -> {}", next);
 }
 
+// One frame of motion-vector parameters, decoded from the TAAContext the TAAU draw
+// handed us. Layout matches the b2 constant buffer declared in the prep shader.
+// Declared here (not next to decodeMvFrame) because dumpInputs reports the MV state of
+// every batch it writes; the definition is below, which is all a forward declaration
+// needs.
+struct MvFrame {
+    float rows[7][4]{};
+    float jitterX{};
+    float jitterY{};
+    bool  reset{true};
+    bool  valid{false};
+    bool  prevSame{true}; ///< the two 16-float halves are identical (no camera motion,
+                          ///< or the snapshot was not taken before the engine's draw)
+};
+
+MvFrame decodeMvFrame();
+
+unsigned dumpRuns() { return gDumpNo.load(std::memory_order_relaxed); }
+
 bool dumpInputs() {
     auto* const device = static_cast<ID3D12Device*>(probe::vv::engineDevice());
     auto* const queue  = static_cast<ID3D12CommandQueue*>(probe::vv::gameQueue());
@@ -578,31 +601,49 @@ bool dumpInputs() {
     if (!device || !queue || !snapshot.colorSource || !snapshot.depthSource) {
         return false;
     }
-    // One number per dump so a repeated trigger (the present-side marker file) keeps
-    // every frame instead of overwriting the previous one.
-    static std::atomic<unsigned> dumpNo{0};
-    unsigned const               run = dumpNo.fetch_add(1, std::memory_order_relaxed) + 1;
-    utils::logger().info("[vvsr] sr dump #{} start", run);
+    unsigned const run = gDumpNo.fetch_add(1, std::memory_order_relaxed) + 1;
+    utils::logger().info("[vvsr] sr dump #{} frame={} start", run, snapshot.frame);
+    // Per-batch motion state. A pair of dumps is only evidence if the two frames can be
+    // told apart, and the camera delta is the part the user cannot fake by reporting
+    // "I kept turning". No throttle: every batch gets its own line.
+    MvFrame const mv = decodeMvFrame();
+    utils::logger().info(
+        "[vvsr] sr dump #{} frame={} mv valid={} prev_same={} delta=({:+.4f},{:+.4f},{:+.4f}) jitter=({:+.4f},{:+.4f})",
+        run,
+        snapshot.frame,
+        mv.valid ? 1 : 0,
+        mv.prevSame ? 1 : 0,
+        mv.rows[6][0],
+        mv.rows[6][1],
+        mv.rows[6][2],
+        mv.jitterX,
+        mv.jitterY
+    );
     std::wstring const directory = utils::applicationDirectory();
-    wchar_t            name[128]{};
+    wchar_t            name[192]{};
+    // The run number is in every name, the picked pair included: the open question is
+    // answered by comparing two dumps taken from two camera positions, and a name
+    // without it lets the second batch overwrite the first.
     std::swprintf(
         name,
         std::size(name),
-        L"sr_colour_%llX_fmt%u_%ux%u.bin",
+        L"sr_colour_%u_p%llX_%ux%u_fmt%u.bin",
+        run,
         static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(snapshot.colorSource)),
-        snapshot.colorFormat,
         snapshot.renderWidth,
-        snapshot.renderHeight
+        snapshot.renderHeight,
+        snapshot.colorFormat
     );
     bool const colorOk = probe::vv::dumpTextureRaw(device, queue, snapshot.colorSource, (directory + L"\\" + name).c_str());
     std::swprintf(
         name,
         std::size(name),
-        L"sr_depth_%llX_fmt%u_%ux%u.bin",
+        L"sr_depth_%u_p%llX_%ux%u_fmt%u.bin",
+        run,
         static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(snapshot.depthSource)),
-        snapshot.depthFormat,
         snapshot.renderWidth,
-        snapshot.renderHeight
+        snapshot.renderHeight,
+        snapshot.depthFormat
     );
     bool const depthOk = probe::vv::dumpTextureRaw(device, queue, snapshot.depthSource, (directory + L"\\" + name).c_str());
     bool midOk      = false;
@@ -654,6 +695,118 @@ bool dumpInputs() {
         depthR32Ok ? 1 : 0,
         dlssOk ? 1 : 0
     );
+    // Every candidate the pick path can see, not just the picked one (EXP-0026). The
+    // only open question is whether the picked colour stops changing once the engine's
+    // TAAU draw is suppressed, and that is answered by comparing two batches taken from
+    // two camera positions. The picked pointer alone cannot separate "this texture is
+    // stale" from "pickInputs chose the wrong texture" - EXP-0025 had 15 live fmt26
+    // candidates and kept one of them. tolerance=64 is pickInputs' own value, so the
+    // picked texture is guaranteed to be inside the batch (and its index is logged);
+    // the pick behaviour itself is untouched.
+    probe::vv::RenderTargetInfo targets[48]{};
+    probe::vv::RenderTargetInfo colours[16]{};
+    probe::vv::RenderTargetInfo depths[16]{};
+    unsigned const targetCount = probe::vv::renderTargets(targets, 48, 64);
+    unsigned       colourCount = 0;
+    for (unsigned i = 0; i < targetCount && colourCount < 16; ++i) {
+        if (targets[i].format == 26) {
+            colours[colourCount++] = targets[i];
+        }
+    }
+    unsigned const targetDepthCount = probe::vv::depthTargets(targets, 48, 64);
+    unsigned       depthCount       = 0;
+    for (unsigned i = 0; i < targetDepthCount && depthCount < 16; ++i) {
+        unsigned const format = targets[i].format;
+        // The same format set pickInputs accepts, so index i is the candidate the
+        // panel's depth choice would walk.
+        if (format == 43 || format == 44 || format == 45 || format == 40 || format == 39 || format == 54
+            || format == 41) {
+            depths[depthCount++] = targets[i];
+        }
+    }
+    // Which candidate the SR pass actually read. -1 means the pick is not in this
+    // batch (capped at 16, or the inventory changed between the record and the dump) -
+    // that has to be read as "cannot compare this batch", not as a stale colour.
+    int pickedColourIndex = -1;
+    for (unsigned i = 0; i < colourCount; ++i) {
+        if (colours[i].resource == snapshot.colorSource) {
+            pickedColourIndex = static_cast<int>(i);
+            break;
+        }
+    }
+    int pickedDepthIndex = -1;
+    for (unsigned i = 0; i < depthCount; ++i) {
+        if (depths[i].resource == snapshot.depthSource) {
+            pickedDepthIndex = static_cast<int>(i);
+            break;
+        }
+    }
+    unsigned colourDumped = 0;
+    for (unsigned i = 0; i < colourCount; ++i) {
+        std::swprintf(
+            name,
+            std::size(name),
+            L"sr_cand_%u_colour_%u_p%llX_%ux%u_fmt%u.bin",
+            run,
+            i,
+            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(colours[i].resource)),
+            colours[i].width,
+            colours[i].height,
+            colours[i].format
+        );
+        bool const ok = probe::vv::dumpTextureRaw(device, queue, colours[i].resource, (directory + L"\\" + name).c_str());
+        colourDumped += ok ? 1U : 0U;
+        utils::logger().info(
+            "[vvsr] sr dump #{} cand colour[{}]={:#x} {}x{} fmt={} ok={}",
+            run,
+            i,
+            reinterpret_cast<std::uintptr_t>(colours[i].resource),
+            colours[i].width,
+            colours[i].height,
+            colours[i].format,
+            ok ? 1 : 0
+        );
+    }
+    unsigned depthDumped = 0;
+    for (unsigned i = 0; i < depthCount; ++i) {
+        std::swprintf(
+            name,
+            std::size(name),
+            L"sr_cand_%u_depth_%u_p%llX_%ux%u_fmt%u.bin",
+            run,
+            i,
+            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(depths[i].resource)),
+            depths[i].width,
+            depths[i].height,
+            depths[i].format
+        );
+        bool const ok = probe::vv::dumpTextureRaw(device, queue, depths[i].resource, (directory + L"\\" + name).c_str());
+        depthDumped += ok ? 1U : 0U;
+        utils::logger().info(
+            "[vvsr] sr dump #{} cand depth[{}]={:#x} {}x{} fmt={} ok={}",
+            run,
+            i,
+            reinterpret_cast<std::uintptr_t>(depths[i].resource),
+            depths[i].width,
+            depths[i].height,
+            depths[i].format,
+            ok ? 1 : 0
+        );
+    }
+    utils::logger().info(
+        "[vvsr] sr dump #{} frame={} cand summary colour ok={}/{} depth ok={}/{}"
+        " pickedColour={:#x} idx={} pickedDepth={:#x} idx={}",
+        run,
+        snapshot.frame,
+        colourDumped,
+        colourCount,
+        depthDumped,
+        depthCount,
+        reinterpret_cast<std::uintptr_t>(snapshot.colorSource),
+        pickedColourIndex,
+        reinterpret_cast<std::uintptr_t>(snapshot.depthSource),
+        pickedDepthIndex
+    );
     return colorOk && depthOk;
 }
 
@@ -679,17 +832,7 @@ bool inWorld() {
 }
 
 // One frame of motion-vector parameters, decoded from the TAAContext the TAAU draw
-// handed us. Layout matches the b2 constant buffer declared in the prep shader.
-struct MvFrame {
-    float rows[7][4]{};
-    float jitterX{};
-    float jitterY{};
-    bool  reset{true};
-    bool  valid{false};
-    bool  prevSame{true}; ///< the two 16-float halves are identical (no camera motion,
-                          ///< or the snapshot was not taken before the engine's draw)
-};
-
+// handed us; the struct lives above dumpInputs, which reports it per batch.
 MvFrame decodeMvFrame() {
     MvFrame frame{};
     float   cur[16]{};
@@ -1100,6 +1243,7 @@ bool record(void* commandListVoid, void* backBufferVoid) {
 
     std::lock_guard lock(gMutex);
     gStats.recorded      = true;
+    gStats.frame         = frameNo;
     gStats.view          = view;
     gStats.dlssReady     = dlssEvaluated;
     gStats.dlssCreateRet = dlssCreateRet;

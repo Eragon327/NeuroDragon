@@ -1,0 +1,30 @@
+# EXP-0025 postmortem (new analysis after EXP-0025 close)
+
+Input evidence: taau-callback-EXP-0025.log and its hashed latest.log.
+
+Confirmed implementation defects:
+1. VvInject::prepare constructs the replacement failure guard before listCount<8 and
+   queue-filter early returns. The small overlay submission therefore disarms the gate.
+   The run logged 8653 arm and 8653 disarm transitions and zero via=pre-hud selections.
+2. VvSr::record returns true without recording when worldLoaded=false. VvInject then
+   consumes stale dlssReady and continues suppression in the menu. The log shows eval
+   stopped at 21:34:12 while suppression continued to 8400 at 21:34:44.
+
+Static resource evidence from the Mac symbols:
+- taau InputFinalColor and InputBufferMotionVectors are ExternalImage wrappers around
+  engine ResolvedTextureResource objects, produced upstream of TAAU.
+- InputTAAHistory and the upscaling output are TransientImage pool resources.
+- pickInputs does not bind InputFinalColor; it chooses the newest-created render-size
+  fmt26 RTV. EXP-0025 had 15 fmt26 candidates and kept one stable pointer.
+
+Unresolved single question for the next experiment:
+Does the picked colour stop changing when the original TAAU callback is suppressed,
+while the picked upstream depth continues changing?
+
+Required discriminating evidence: two complete candidate dumps while the camera moves.
+If picked colour hashes match and picked depth hashes differ, the selected colour is
+stale. If picked colour changes, the frozen-input hypothesis is false and the output
+path becomes the next suspect. A same-hash colour with same-hash depth is inconclusive,
+not pass.
+
+Do not infer the answer from the visible freeze alone.

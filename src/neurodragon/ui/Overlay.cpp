@@ -1376,9 +1376,9 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     unsigned const splitAt = probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
     if (splitAt != 0 && splitAt <= count) {
         if (ID3D12CommandList* const ours = static_cast<ID3D12CommandList*>(probe::vv::inject::list())) {
-            // S5 note: dropping this list (2026-10-26 13:35, EXP-0015) duplicated the
-            // menu UI and crashed twice inside D3D12Core; the pass carries frame-graph
-            // state, so it is submitted unchanged.
+            // EXP-0015: dropping this list duplicated the menu UI. The 13:36 crash
+            // was in the dependency scanner (nr::describe), not in the drop path;
+            // the pass still carries frame-graph state, so submit it unchanged.
             gOriginalExecuteCommandLists(queue, splitAt, lists);
             gOriginalExecuteCommandLists(queue, 1, &ours);
             if (count > splitAt) {

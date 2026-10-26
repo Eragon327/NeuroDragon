@@ -1,0 +1,22 @@
+# EXP-0028 native dependency scan result
+
+Build DLL SHA-256 prefix: 27eeaaeb96504f48
+User report (verbatim): 好了，冻结依旧
+
+[23:20:17.529] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=150 hits=0 call=1/3 seq=1683 this=0xaab68fe950
+[23:20:17.530] [vv] in.color nativeNONE phase=draw dep=0x40 node=none dep16=none node16=none scanned=8 candidates=150 hits=0 call=1/3 seq=1683 this=0xaab68fe950
+[23:20:17.541] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=150 hits=0 call=2/3 seq=1684 this=0xaab67fe330
+[23:20:17.543] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=150 hits=0 call=2/3 seq=1684 this=0xaab67fe330
+[23:20:17.550] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=150 hits=0 call=3/3 seq=1685 this=0xaab67fe330
+[23:20:17.552] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=150 hits=0 call=3/3 seq=1685 this=0xaab67fe330
+
+The second draw sample is the preregistered complete execution-time scan: all four
+regions, 200 qwords, 150 native candidates, zero hits. No nativeHIT occurred anywhere.
+The incomplete first/third draw samples do not weaken that complete negative sample.
+Replacement reached pre-hud hit=1440 with missed=0; sampled eval returned 1. The scan
+caused no crash or hook failure. The visible freeze remains unresolved.
+
+FAIL the positive direct-binding hypothesis. The next route is mce::Texture/bgfx
+resolution, not another candidate swap. Sampling covered the first three armed frames;
+steady-state resource layouts may differ, so this is not a claim about every possible
+framegraph lifetime state.

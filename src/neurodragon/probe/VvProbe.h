@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace neurodragon::probe::vv {
 
 // ---------------------------------------------------------------------------
@@ -23,8 +25,9 @@ namespace neurodragon::probe::vv {
 //   3. how many command lists the game submits per presented frame, which decides
 //      whether work can be injected between two passes at all.
 //
-// Nothing here writes to the engine, and no resource is read as pixels: the
-// detours copy a few POD fields out of the argument block and forward.
+// By default the detours only copy POD fields and forward. The explicitly armed
+// DLSS replacement path suppresses just the original TAAU draw callback; all other
+// engine callbacks and command lists continue unchanged.
 //
 // The two addresses are file offsets established offline from the shipped
 // executable (no PDB): the strings "InputFinalColor" / "InputBufferMotionVectors"
@@ -131,11 +134,35 @@ struct RenderTargetInfo {
 
 // The per-frame numbers the motion-vector pass needs: current/previous
 // view-projection (16 floats each), camera origins (6 floats at +0x280) and sub-pixel
-// jitter (2 floats at +0x1e4). Read from the snapshot taken *inside* the TAAU draw
-// callback, before the engine's own draw collapses the previous pair onto the current
-// one; reading the live context after the frame returns prev==cur (2026-10-26).
+// jitter (2 floats at +0x1e4). Read from the snapshot taken inside the TAAU draw
+// callback. The callback only reads this context; the engine advances the pair upstream.
 // Returns false when no draw has been seen yet. Read-only.
 bool taaMatrices(float* current, float* previous, float* camera, float* jitter);
+
+struct TaauDrawStats {
+    std::uint64_t declared{};
+    std::uint64_t callbacks{};
+    std::uint64_t forwarded{};
+    std::uint64_t suppressed{};
+    /// Times the gate was armed, the engine's TAAU draw was suppressed, and the frame
+    /// that should have come with it never injected (no boundary, no back buffer,
+    /// record failure). Those frames are restored on the next one; a non-zero, growing
+    /// number means suppression is outrunning the replacement instead of replacing it.
+    std::uint64_t missed{};
+};
+
+// Arms replacement only after the injector has produced a valid DLSS frame and a
+// pre-HUD boundary. While armed, drawDetour still snapshots the context but does not
+// call the engine's draw callback. Disarming restores the original path directly.
+void setTaauDrawReplacement(bool armed);
+[[nodiscard]] bool taauDrawReplacementArmed();
+[[nodiscard]] TaauDrawStats taauDrawStats();
+
+// Called by the injector only when this submission *is* the engine's frame and the
+// armed gate could not be honoured (so it is about to be disarmed again). The overlay's
+// own small submissions and every non-engine queue must never call this: they do not
+// own the frame the suppression applies to.
+void noteTaauReplacementMiss();
 
 // TEST only: dumps the 0x300-byte float windows of the TAAU draw's context, the
 // execution context and the camera object, so the view-projection packing can be

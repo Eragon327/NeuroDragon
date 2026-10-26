@@ -1,0 +1,57 @@
+# EXP-0026 raw result and hash comparison
+
+Build DLL SHA-256 prefix: c9145929d6053820
+Binary evidence directory: E:\LeviLauncher\versions\1.26.51.01-agent2
+Files: sr_cand_<run>_* and sr_colour_<run>_* / sr_depth_<run>_*, runs 1..3.
+The 72 candidate files were compared by pointer+dimensions+format+byte size; picked
+files were byte-identical to candidate index 0 in each corresponding run.
+
+## Collection validity
+
+[2026-10-26 22:34:30.629 IFO][NeuroDragon] [vvsr] sr dump #1 frame=774 start
+[2026-10-26 22:34:30.813 IFO][NeuroDragon] [vvsr] sr dump #1 frame=774 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x29717e82680 idx=0 pickedDepth=0x29716e43380 idx=0
+[2026-10-26 22:34:44.561 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2098 start
+[2026-10-26 22:34:44.740 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2098 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x29717e82680 idx=0 pickedDepth=0x29716e43380 idx=0
+[2026-10-26 22:34:51.096 IFO][NeuroDragon] [vvsr] sr dump #3 frame=2722 start
+[2026-10-26 22:34:51.280 IFO][NeuroDragon] [vvsr] sr dump #3 frame=2722 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x29717e82680 idx=0 pickedDepth=0x29716e43380 idx=0
+
+pre-hud engaged continuously from hit=1 through hit=3360 with missed=0 during collection.
+The later missed=1 occurred at Stop/world exit, outside the three collection windows.
+
+## Picked hashes
+
+colour idx0 p29717E82680:
+run1 b3bf1eb4ae3c74c60d01bb0d375cbfbac14429bffb0f72f47c0bbb8acc0f1a99
+run2 cb1a8fe2e3df0ea64dc8209d5c445b980108c2c213f7a63c19ab801fc820c4d4
+run3 9cdfa3d7ac624286ad6b6a37126574d4e5e41741d5af1f251ad39e2ee76a5fa1
+
+depth idx0 p29716E43380:
+run1 3b09fb594af2f340ac5f5da4f68d8daa49416d17fd6a602b6e6e9f89f3147556
+run2 9ca16c232212ccd9498d7e058846f5c698de3d8bc4976e40469499ff45939e1f
+run3 12287a5a60170a8e8e08890d951af733c415daf3294088398ae5e5cb00202917
+
+## Byte differences
+
+pair | picked colour | picked depth
+1<->2 | 6052 / 6566276 bytes (0.09%) | 1260809 bytes (18.52%)
+1<->3 | 6077 bytes (0.09%) | 1374637 bytes (20.19%)
+2<->3 | 25 bytes (0.0004%) | 1347923 bytes (19.80%)
+
+Other same-run colour candidates changed by approximately 9–96%; colour candidates
+5..14 and depth candidates 3..8 were static. Files were not all zero or repeated fill.
+The picked colour is therefore nearly static, not literally byte-for-byte frozen.
+
+## User report (verbatim)
+
+我这边完成了，其中一次完全静止，第二次是点击后立即关闭菜单开始晃头。我先说明，我无法在打开菜单时移动，因为这个菜单会吞掉所有按键。如果没有录上运动的状态，麻烦帮我绑定个快捷键我再测试。
+
+## Verdict and next discriminating requirement
+
+FAIL under the preregistered literal criterion: picked colour hashes differ, so the exact
+'hypothesis stops updating / hashes equal' statement is falsified. The much stronger
+near-static signal must not be rewritten into a pass. Run3 also lacks a per-batch camera
+VP marker, so it does not independently prove a moving capture.
+
+Next: one delayed hotkey-triggered pair with prevSame/camera delta logged for every batch.
+Compare relative change against live candidates and VP evidence; do not reuse exact hash
+equality as the sole criterion.

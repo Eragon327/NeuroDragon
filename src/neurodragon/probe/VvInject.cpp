@@ -84,6 +84,7 @@ void setReason(SkipReason reason) {
     case SkipReason::NoBackBuffer:   text = "GetBuffer failed"; break;
     case SkipReason::PipelineFailed: text = "could not build the injection pipeline"; break;
     case SkipReason::RecordFailed:   text = "recording the injected work failed"; break;
+    case SkipReason::NoBoundary:     text = "no pre-HUD boundary; TAAU restored"; break;
     default: break;
     }
     if (text && (n <= 3 || n % 120 == 0)) {
@@ -259,6 +260,9 @@ bool record(ID3D12Resource* buffer) {
 
 void setMode(Mode mode) {
     int const value = static_cast<int>(mode);
+    if (value == static_cast<int>(Mode::Off)) {
+        probe::vv::setTaauDrawReplacement(false);
+    }
     int const previous = gMode.exchange(value, std::memory_order_relaxed);
     if (previous == value) {
         return;
@@ -330,6 +334,30 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     if (g.queue && g.queue != queue) {
         return 0;
     }
+    // Only from here on is this submission the engine's frame - the one the replacement
+    // promise is about - so only from here on may a return disarm TAAU. The guard used
+    // to sit above the filters, and the overlay's own one-list submissions (several per
+    // frame) then disarmed the gate the engine frame had just armed: EXP-0025 logged
+    // 8653 arm / 8653 disarm transitions and never reached via=pre-hud.
+    bool const replacing = probe::vv::taauDrawReplacementArmed();
+    struct ReplacementGuard {
+        bool armed{}; ///< the gate was armed for this engine frame
+        bool commit{};
+        ~ReplacementGuard() {
+            if (commit) {
+                return;
+            }
+            if (armed) {
+                // Suppressed and not replaced: that frame is restored on the next one,
+                // but the count is what tells "the replacement is keeping up" from
+                // "suppression is outrunning it". Small/foreign submissions never get
+                // here - they return above.
+                probe::vv::noteTaauReplacementMiss();
+            }
+            probe::vv::setTaauDrawReplacement(false);
+        }
+    } guard;
+    guard.armed = replacing;
     noteListCount(listCount);
     if (!g.device) {
         setReason(SkipReason::NoDevice);
@@ -407,6 +435,16 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         }
     }
     if (!content) {
+        if (replacing) {
+            // The original TAAU draw was suppressed for this submission. Without a
+            // proven pre-HUD cut, injecting at a counted/first-writer boundary could
+            // erase the UI. Leave the frame untouched and re-enable TAAU next frame.
+            g.pending->Release();
+            g.pending = nullptr;
+            gSplit.store(0, std::memory_order_relaxed);
+            setReason(SkipReason::NoBoundary);
+            return 0;
+        }
         if (gFromTail.load(std::memory_order_relaxed)) {
             // k = 1 means "after the whole frame", k = 2 "before the last list", ...
             unsigned back = setting < 1 ? 1 : setting;
@@ -426,6 +464,34 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
             }
         }
     }
+    auto const sr = neurodragon::vv::sr::stats();
+    // sr::record() returns success without recording when no world is loaded, so
+    // sr.dlssReady survives the menu and "ready" alone cannot say the inputs of *this*
+    // frame were written. Suppressing TAAU on such a frame is exactly the EXP-0025
+    // picture: eval stopped at 21:34:12 while suppression ran on to 21:34:44.
+    bool const  world     = probe::vv::worldLoaded();
+    bool const  dlssReady = gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Sr)
+        && neurodragon::vv::sr::view() == neurodragon::vv::sr::View::Dlss && sr.dlssReady
+        && sr.dlssEvaluateRet == 1;
+    bool const  arm = dlssReady && content && world;
+    if (replacing && arm) {
+        // Own counter: `suppressed` is a session-wide draw count and the old
+        // `suppressed <= 1` test therefore printed this line at most once, so a later
+        // valid boundary was invisible. First three plus every 2 s at 60 fps.
+        static std::atomic<unsigned> gReplacementHits{0};
+        unsigned const               n = gReplacementHits.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 3 || n % 120 == 0) {
+            utils::logger().info(
+                "[vv] inject: replacement boundary split={}/{} via=pre-hud hit={} missed={}",
+                k,
+                listCount,
+                n,
+                probe::vv::taauDrawStats().missed
+            );
+        }
+    }
+    probe::vv::setTaauDrawReplacement(arm);
+    guard.commit = true;
     gSplit.store(k, std::memory_order_relaxed);
     gReason.store(static_cast<unsigned>(SkipReason::None), std::memory_order_relaxed);
     gInjected.fetch_add(1, std::memory_order_relaxed);
