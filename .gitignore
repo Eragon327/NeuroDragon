@@ -560,3 +560,12 @@ fabric.properties
 # launch lease.  Machine state, not history.
 docs/agent/.commit-proposal.json
 docs/agent/.launch-lease.json
+
+# Evidence binaries stay local: they are large, git is not a backup store, and
+# `flow.py review` only needs the file on disk (the ledger keeps path + sha256).
+docs/agent/evidence/*.png
+docs/agent/evidence/*.jpg
+docs/agent/evidence/*.jpeg
+docs/agent/evidence/*.webp
+docs/agent/evidence/*.bin
+docs/agent/evidence/*.dmp

@@ -125,3 +125,6 @@
 
 
 ## Project specific
+
+# Evidence is hashed byte-for-byte by flow.py review: never normalise line endings.
+docs/agent/evidence/** -text
