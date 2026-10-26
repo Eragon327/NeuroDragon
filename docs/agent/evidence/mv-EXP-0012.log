@@ -1,0 +1,11 @@
+# EXP-0012: MV reconstruction (run 2026-10-26 13:15, build 1cfe4561)
+
+## decode line: valid=1, near=0.025, sx=0.7658 sy=1.3613 (ratio 1.7777 = 2560/1440)
+[2026-10-26 13:15:25.978 IFO][NeuroDragon] [vvsr] mv decode valid=1 jitter=(+0.0000,-0.1667) delta=(+0.0000,+0.0000,+0.0000) near=+0.0250 sx=0.7658 sy=1.3613
+
+## jitter is passed through and evaluate keeps returning 1
+[2026-10-26 13:15:43.350 IFO][NeuroDragon] [vvsr] sr params colour=-2123833136 depth=-2123832208 mv=-2123834192 out=-2123834576 jitter=0.00,-0.17 reset=1
+[2026-10-26 13:15:55.991 DBG][NeuroDragon] [eval] f=1200 tid=2564 cl=0x1c26a5b49a0 h=0x1c268a60770 1689x950 c=0x1c26a5b2250 d=0x1c26a5b6540 mv=0x1c26a5b5bb0 o=0x1c26a5b8b80 ret=0x1
+
+## user report (verbatim)
+好了，motion在运动时是大色块，站定时灰色。dlss sr没明显拖影。

@@ -15,6 +15,7 @@
 
 #include <atomic>
 #include <cstdio>
+#include <cmath>
 #include <cstring>
 #include <cwchar>
 #include <mutex>
@@ -35,6 +36,20 @@ cbuffer P : register(b0)
     uint Mode;
     uint Pad;
 };
+// Camera-relative view-projection, decoded from the TAAContext dump (vv.md §16):
+// the four logged rows are the *columns* of (right, up, forward, w) scaled by the
+// projection; the w row equals the forward row, so ndc.z = 1 - near/viewDepth
+// (infinite far plane, near = -m14).
+cbuffer MV : register(b2)
+{
+    float3 CurRight;  float CurSx;
+    float3 CurUp;     float CurSy;
+    float3 CurFwd;    float CurNear;
+    float3 PrevRight; float PrevSx;
+    float3 PrevUp;    float PrevSy;
+    float3 PrevFwd;   float PrevNear;
+    float3 CamDelta;  float MvPad;
+};
 Texture2D<float4>   Color    : register(t0);
 Texture2D<float>    Depth    : register(t1);
 RWTexture2D<float4> OutColor : register(u0);
@@ -49,10 +64,21 @@ void main(uint3 id : SV_DispatchThreadID)
         return;
     }
     OutColor[id.xy] = float4(Color.Load(int3(id.xy, 0)).rgb, 1.0);
-    OutDepth[id.xy] = Depth.Load(int3(id.xy, 0));
-    // Motion vectors are the next unknown (depth + VP reconstruction); zero is the
-    // honest placeholder - it keeps DLSS spatially correct and temporally still.
-    OutMv[id.xy] = float2(0.0, 0.0);
+    const float d = Depth.Load(int3(id.xy, 0));
+    OutDepth[id.xy] = d;
+
+    // Camera-relative world point of this pixel, then the same point in the previous
+    // frame's space (the camera moved by CamDelta) projected with the previous matrix.
+    float2 ndc    = float2(float(id.x + 0.5) / float(W) * 2.0 - 1.0,
+                           1.0 - float(id.y + 0.5) / float(H) * 2.0);
+    float  depth  = CurNear / max(1.0 - d, 1.0e-6);
+    float3 p      = (ndc.x * depth / CurSx) * CurRight + (ndc.y * depth / CurSy) * CurUp + depth * CurFwd;
+    float3 pp     = p + CamDelta;
+    float  wp     = dot(PrevFwd, pp);
+    float2 ndcPrev = float2(dot(PrevRight, pp) * PrevSx / max(wp, 1.0e-6),
+                            dot(PrevUp,    pp) * PrevSy / max(wp, 1.0e-6));
+    // DLSS wants the offset from the current pixel to where it was in the last frame.
+    OutMv[id.xy] = (ndcPrev - ndc) * 0.5 * float2(float(W), float(H));
 }
 )hlsl";
 
@@ -136,6 +162,8 @@ struct Pipeline {
     ID3D12Resource*             finalRgba8{};
     ID3D12Resource*             dlssOut{};
     ID3D12Resource*             toneCb{};
+    ID3D12Resource*             mvCb{};  ///< per-frame camera-relative matrix rows for the MV pass
+    void*                       mvMapped{};
     D3D12_RESOURCE_STATES       colorState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       depthState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       mvState{D3D12_RESOURCE_STATE_COMMON};
@@ -239,7 +267,7 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
 }
 
 bool ensurePipeline(ID3D12Device* device) {
-    if (gPipeline.prep && gPipeline.final && gPipeline.root && gPipeline.heap && gPipeline.toneCb) {
+    if (gPipeline.prep && gPipeline.final && gPipeline.root && gPipeline.heap && gPipeline.toneCb && gPipeline.mvCb) {
         return true;
     }
     if (gPipeline.device && gPipeline.device != device) {
@@ -270,7 +298,7 @@ bool ensurePipeline(ID3D12Device* device) {
     uavRange.NumDescriptors     = 4;
     uavRange.BaseShaderRegister = 0;
 
-    D3D12_ROOT_PARAMETER params[4]{};
+    D3D12_ROOT_PARAMETER params[5]{};
     params[0].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     params[0].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
     params[0].Constants.ShaderRegister = 0;
@@ -286,6 +314,9 @@ bool ensurePipeline(ID3D12Device* device) {
     params[3].ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
     params[3].ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
     params[3].Descriptor.ShaderRegister = 1;
+    params[4].ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[4].ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+    params[4].Descriptor.ShaderRegister = 2;
 
     D3D12_STATIC_SAMPLER_DESC sampler{};
     sampler.Filter           = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -298,7 +329,7 @@ bool ensurePipeline(ID3D12Device* device) {
     sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
     D3D12_ROOT_SIGNATURE_DESC rootDesc{};
-    rootDesc.NumParameters     = 4;
+    rootDesc.NumParameters     = 5;
     rootDesc.pParameters       = params;
     rootDesc.NumStaticSamplers = 1;
     rootDesc.pStaticSamplers   = &sampler;
@@ -399,9 +430,30 @@ bool ensurePipeline(ID3D12Device* device) {
     std::memcpy(mapped, gToneValues, sizeof(gToneValues));
     gPipeline.toneCb->Unmap(0, nullptr);
 
+    // Motion-vector rows: 7 x (float3 + float) = 112 bytes, mapped once and rewritten
+    // every frame (a torn read costs one frame of odd vectors, not a crash).
+    D3D12_RESOURCE_DESC mvBuffer = buffer;
+    mvBuffer.Width               = 256;
+    hr = device->CreateCommittedResource(
+        &upload,
+        D3D12_HEAP_FLAG_NONE,
+        &mvBuffer,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&gPipeline.mvCb)
+    );
+    if (FAILED(hr) || !gPipeline.mvCb) {
+        setError(hr, "CreateCommittedResource(mv)");
+        return false;
+    }
+    if (FAILED(gPipeline.mvCb->Map(0, nullptr, &gPipeline.mvMapped)) || !gPipeline.mvMapped) {
+        setError(E_FAIL, "Map(mv)");
+        return false;
+    }
+
     std::lock_guard lock(gMutex);
     gStats.pipelineReady = true;
-    utils::logger().info("[vvsr] sr pipeline ready (CBV encode, 4 root parameters)");
+    utils::logger().info("[vvsr] sr pipeline ready (CBV encode, 5 root parameters)");
     return true;
 }
 
@@ -580,6 +632,78 @@ bool inWorld() {
     return present;
 }
 
+// One frame of motion-vector parameters, decoded from the TAAContext the TAAU draw
+// handed us. Layout matches the b2 constant buffer declared in the prep shader.
+struct MvFrame {
+    float rows[7][4]{};
+    float jitterX{};
+    float jitterY{};
+    bool  reset{true};
+    bool  valid{false};
+};
+
+MvFrame decodeMvFrame() {
+    MvFrame frame{};
+    float   cur[16]{};
+    float   prev[16]{};
+    float   cam[6]{};
+    float   jitter[2]{};
+    if (!probe::vv::taaMatrices(cur, prev, cam, jitter)) {
+        return frame;
+    }
+    // The four logged rows are the columns of (right, up, fwd, w); near = -m14.
+    auto const axis = [](float const* m, int i, float* out) {
+        out[0] = m[i];
+        out[1] = m[4 + i];
+        out[2] = m[8 + i];
+    };
+    float curRight[3]{};
+    float curUp[3]{};
+    float curFwd[3]{};
+    float prevRight[3]{};
+    float prevUp[3]{};
+    float prevFwd[3]{};
+    axis(cur, 0, curRight);
+    axis(cur, 1, curUp);
+    axis(cur, 2, curFwd);
+    axis(prev, 0, prevRight);
+    axis(prev, 1, prevUp);
+    axis(prev, 2, prevFwd);
+    float const curNear  = -cur[14];
+    float const prevNear = -prev[14];
+    auto const  length   = [](float const* v) { return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]); };
+    float const curRightLen  = length(curRight);
+    float const curUpLen     = length(curUp);
+    float const curFwdLen    = length(curFwd);
+    float const prevRightLen = length(prevRight);
+    float const prevUpLen    = length(prevUp);
+    float const prevFwdLen   = length(prevFwd);
+    // A wrong decode is worse than no vectors: require a sane basis and near plane.
+    if (curRightLen < 1.0e-3f || curUpLen < 1.0e-3f || curFwdLen < 1.0e-3f || prevRightLen < 1.0e-3f
+        || prevUpLen < 1.0e-3f || prevFwdLen < 1.0e-3f || curNear <= 0.0f || prevNear <= 0.0f) {
+        return frame;
+    }
+    auto const row = [](float* dst, float const* v, float len, float extra) {
+        dst[0] = v[0] / len;
+        dst[1] = v[1] / len;
+        dst[2] = v[2] / len;
+        dst[3] = extra;
+    };
+    row(frame.rows[0], curRight, curRightLen, curRightLen);
+    row(frame.rows[1], curUp, curUpLen, curUpLen);
+    row(frame.rows[2], curFwd, curFwdLen, curNear);
+    row(frame.rows[3], prevRight, prevRightLen, prevRightLen);
+    row(frame.rows[4], prevUp, prevUpLen, prevUpLen);
+    row(frame.rows[5], prevFwd, prevFwdLen, prevNear);
+    frame.rows[6][0] = cam[0] - cam[3];
+    frame.rows[6][1] = cam[1] - cam[4];
+    frame.rows[6][2] = cam[2] - cam[5];
+    frame.jitterX = jitter[0];
+    frame.jitterY = jitter[1];
+    frame.valid   = true;
+    return frame;
+}
+
 bool record(void* commandListVoid, void* backBufferVoid) {
     auto* const list   = static_cast<ID3D12GraphicsCommandList*>(commandListVoid);
     auto* const back   = static_cast<ID3D12Resource*>(backBufferVoid);
@@ -606,6 +730,21 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     if (frameNo == 300 || frameNo == 900 || frameNo == 1500) {
         utils::logger().info("[vvsr] mv sample at frame {}", frameNo);
         probe::vv::dumpTaaContextWindows();
+    }
+    if (frameNo == 60) {
+        MvFrame const probeFrame = decodeMvFrame();
+        utils::logger().info(
+            "[vvsr] mv decode valid={} jitter=({:+.4f},{:+.4f}) delta=({:+.4f},{:+.4f},{:+.4f}) near={:+.4f} sx={:.4f} sy={:.4f}",
+            probeFrame.valid ? 1 : 0,
+            probeFrame.jitterX,
+            probeFrame.jitterY,
+            probeFrame.rows[6][0],
+            probeFrame.rows[6][1],
+            probeFrame.rows[6][2],
+            probeFrame.rows[2][3],
+            probeFrame.rows[0][3],
+            probeFrame.rows[1][3]
+        );
     }
     if (frameNo == 30) {
         float cur[16]{};
@@ -731,6 +870,11 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     list->SetPipelineState(gPipeline.prep);
     unsigned const prepParams[4] = {renderWidth, renderHeight, 0, 0};
     list->SetComputeRoot32BitConstants(0, 4, prepParams, 0);
+    MvFrame const mv = decodeMvFrame();
+    if (gPipeline.mvCb && gPipeline.mvMapped) {
+        std::memcpy(gPipeline.mvMapped, mv.rows, sizeof(mv.rows));
+        list->SetComputeRootConstantBufferView(4, gPipeline.mvCb->GetGPUVirtualAddress());
+    }
     list->Dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
     // The final pass reads all three prepared buffers as SRVs.
@@ -762,7 +906,30 @@ bool record(void* commandListVoid, void* backBufferVoid) {
             gPipeline.dlssState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
             // V1: no jitter, zero motion, Reset every frame -> spatially correct, no
             // ghosting, and it proves the evaluate path before temporal accumulation.
-            dlssEvaluated = dlss::evaluateSr(list, gPipeline.colorHalf, gPipeline.depthR32, gPipeline.mvRg32, gPipeline.dlssOut, 0.0f, 0.0f, true);
+            // Reset only where history cannot be trusted: the first frames of a
+            // session, after a world change and after a resolution change.
+            static std::atomic<unsigned> resetFrames{2};
+            static std::atomic<bool>     lastWorld{false};
+            bool const                   world = probe::vv::worldLoaded();
+            if (frameNo <= 2 || world != lastWorld.load(std::memory_order_relaxed)) {
+                resetFrames.store(2, std::memory_order_relaxed);
+                lastWorld.store(world, std::memory_order_relaxed);
+            }
+            unsigned const pending = resetFrames.load(std::memory_order_relaxed);
+            if (pending > 0) {
+                resetFrames.store(pending - 1, std::memory_order_relaxed);
+            }
+            bool const reset = pending > 0 || !mv.valid;
+            dlssEvaluated = dlss::evaluateSr(
+                list,
+                gPipeline.colorHalf,
+                gPipeline.depthR32,
+                gPipeline.mvRg32,
+                gPipeline.dlssOut,
+                mv.jitterX,
+                mv.jitterY,
+                reset
+            );
             dlss::SrState const state = dlss::srState();
             dlssCreateRet = state.createRet;
             dlssEvalRet   = state.evaluateRet;
@@ -857,7 +1024,7 @@ Stats stats() {
 
 void release() {
     std::lock_guard lock(gMutex);
-    for (ID3D12Resource** resource : {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.finalRgba8, &gPipeline.toneCb}) {
+    for (ID3D12Resource** resource : {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.finalRgba8, &gPipeline.toneCb, &gPipeline.mvCb}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;

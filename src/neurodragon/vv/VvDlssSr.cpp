@@ -573,7 +573,9 @@ bool evaluateSr(void* commandList, void* color, void* depth, void* motionVectors
     int const depthRet = paramPtr(params, "Depth", depth);
     int const mvRet    = paramPtr(params, "MotionVectors", motionVectors);
     int const outRet   = paramPtr(params, "Output", output);
-    paramI32(params, "DepthInverted", 1); // VV depth is reversed-Z: near = 1.0
+    // The TAA-context projection has ndc.z = 1 - near/viewDepth (near = 0.025, far at
+    // infinity, vv.md §16), so depth 0 is the near plane: NOT reversed-Z.
+    paramI32(params, "DepthInverted", 0);
     paramI32(params, "Reset", reset ? 1 : 0);
     paramF32(params, "Jitter.Offset.X", jitterX);
     paramF32(params, "Jitter.Offset.Y", jitterY);

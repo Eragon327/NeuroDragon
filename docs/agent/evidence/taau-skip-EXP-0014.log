@@ -1,0 +1,19 @@
+# EXP-0014: suppression fired but dropped the wrong draws (run 2026-10-26 13:28, build 61de7c75)
+
+## every suppressed call is an indexed draw of a small element, never a fullscreen 3-vertex one
+[2026-10-26 13:28:43.560 IFO][NeuroDragon] [vv] taau draw suppressed (1800 so far) kind=indexed a=24 b=1 c=174232 d=0
+[2026-10-26 13:28:49.830 IFO][NeuroDragon] [vv] taau draw suppressed (2400 so far) kind=indexed a=6 b=1 c=37 d=0
+[2026-10-26 13:28:56.766 IFO][NeuroDragon] [vv] taau draw suppressed (3000 so far) kind=indexed a=1500 b=1 c=204684 d=0
+[2026-10-26 13:29:03.197 IFO][NeuroDragon] [vv] taau draw suppressed (3600 so far) kind=indexed a=1536 b=1 c=282121 d=0
+[2026-10-26 13:29:09.697 IFO][NeuroDragon] [vv] taau draw suppressed (4200 so far) kind=indexed a=6 b=1 c=37 d=0
+[2026-10-26 13:29:16.607 IFO][NeuroDragon] [vv] taau draw suppressed (4800 so far) kind=indexed a=6 b=1 c=37 d=0
+[2026-10-26 13:29:23.378 IFO][NeuroDragon] [vv] taau draw suppressed (5400 so far) kind=indexed a=6 b=1 c=428893 d=0
+[2026-10-26 13:29:29.749 IFO][NeuroDragon] [vv] taau draw suppressed (6000 so far) kind=indexed a=6 b=1 c=37 d=0
+
+## user report (verbatim)
+已测试。画面闪动，无论走着停着都有整块的元素闪烁
+
+## postmortem
+- draw-level suppression matched small indexed elements (6/24/1500 indices), not the upscale pass
+- the pass is a single-draw list already identified by the content boundary, so drop the LIST at submission time instead
+- risk to watch: the back buffer state after dropping that list is whatever the previous list left (our barrier assumes PRESENT)

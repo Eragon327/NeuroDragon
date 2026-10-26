@@ -1,0 +1,13 @@
+# EXP-0015: dropping the boundary list corrupts the frame and crashes (run 2026-10-26 13:35-13:40, build 79caf9f8)
+
+## the drop fired every frame
+[2026-10-26 13:35:31.157 IFO][NeuroDragon] [vv] replace: dropped boundary list 69 of 73 (1 frames so far)
+[2026-10-26 13:35:31.167 IFO][NeuroDragon] [vv] replace: dropped boundary list 69 of 73 (2 frames so far)
+[2026-10-26 13:35:31.177 IFO][NeuroDragon] [vv] replace: dropped boundary list 69 of 73 (3 frames so far)
+lines: 44
+
+## two D3D12Core access violations immediately after (13:34 and 13:36)
+see crash-2026-10-26-1334.log / crash-2026-10-26-1336.log (exception inside D3D12Core.dll, RIP in the runtime)
+
+## user report (verbatim)
+已完成。在存档内有一次闪烁，无法稳定复现。退出存档后出现图片的情况，ui被反复卡住。引发了一次崩溃，13：36那一次，13点另一次是其他问题，后面尝试用vs捕获崩溃，无法复现

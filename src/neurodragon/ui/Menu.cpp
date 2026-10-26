@@ -1186,6 +1186,9 @@ void drawB0Probe() {
     if (ImGui::Button("SR + DLSS")) {
         startSr(vv::sr::View::Dlss);
     }
+    // S5: replace instead of overlay. Suppresses only the TAAU fullscreen draw; the
+    // pass keeps its place in the frame graph, so ordering and the content boundary
+    // stay exactly as they are.
     if (ImGui::Button("SR motion view")) {
         startSr(vv::sr::View::Motion);
     }

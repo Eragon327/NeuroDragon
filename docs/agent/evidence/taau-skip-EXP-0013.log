@@ -1,0 +1,21 @@
+# EXP-0013: suppression never fired (run 2026-10-26 13:22-13:24, build dd899811)
+
+## zero suppressed lines
+count: 0
+
+## and zero slot-12 (DrawInstanced) calls at all in this session
+slot12 raw lines: 0
+
+## only indexed draws are seen (first 8 log slots)
+[2026-10-26 13:22:22.642 IFO][NeuroDragon] [vv] slot13 raw #2 this=0x2616ca8dce0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 13:22:22.642 IFO][NeuroDragon] [vv] slot13 raw #3 this=0x2616d55bdb0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-26 13:22:22.642 IFO][NeuroDragon] [vv] slot13 raw #8 this=0x2616d55aa90 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+
+## the TAAU callback itself keeps firing (#N counter)
+[2026-10-26 13:23:52.275 IFO][NeuroDragon] [vv] taau draw #9000 self=0x261bdee9d90 tid=18404 qpc=770043934442
+[2026-10-26 13:23:57.142 IFO][NeuroDragon] [vv] taau draw #9600 self=0x26197808e40 tid=26632 qpc=770092615078
+
+## postmortem
+- the shape rule (DrawInstanced 3,1,0,0) cannot match: there were no DrawInstanced calls at all
+- the new rule: the first draw of either kind on the recording thread after the TAAU callback
+- the skip log now prints kind/args, so the same run also names the call it dropped
