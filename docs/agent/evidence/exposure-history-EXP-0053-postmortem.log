@@ -1,0 +1,9 @@
+EXP-0053 postmortem.
+
+The mirror experiment is complete: primary and mirror White match in both healthy and abnormal batches. The abnormal four-frame target ring alternates between approximately +2.72 and -8.0, with thousands of zero samples and an all-black mid texture. Do not move the smoother or remove smoothing.
+
+The input identity failure is now specific. onSwapChainResize clears gInputFinalColorNative. SetTextureHook can repopulate it only while gInTaauDraw is true, and that thread-local window exists only around gOriginalDraw. The replacement branch suppresses gOriginalDraw, so after resize there is no semantic recapture path and pickInputs falls back to an unwritten/alternating RTV candidate.
+
+A single forwarded frame is not a sufficient contract: an existing disarm/rearm interval may precede RTV/material readiness. Use a bounded budget of four forwarded draws, stop immediately after a render-size fmt26 match, reset the material log throttle on resize, and warn on budget exhaustion. Do not retain stale native pointers, parse the declarator attachment, or select another frozen candidate; docs/specs/vv.md sections 22-31 already refute those alternatives.
+
+Success requires both mechanism and resulting continuity: semantic nonzero with current render dimensions and match=1, then a stable target ring and non-saturated final. If semantic remains null, the experiment fails without interpreting exposure behavior further.

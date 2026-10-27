@@ -1,0 +1,24 @@
+[2026-10-27 22:23:07.166 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1277 view=3 dlssReady=1 start
+[2026-10-27 22:23:07.184 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x1f4dd930110 ok=1
+[2026-10-27 22:23:07.241 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 22:23:09.365 IFO][NeuroDragon] [vvsr] sr dump #2 frame=1473 view=3 dlssReady=1 start
+[2026-10-27 22:23:09.385 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x1f4dd930110 ok=1
+[2026-10-27 22:23:09.443 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 22:23:21.167 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 22:23:25.203 IFO][NeuroDragon] [vvsr] sr dump #3 frame=2563 view=3 dlssReady=1 start
+[2026-10-27 22:23:25.211 IFO][NeuroDragon] [vvsr] sr dump #3 semantic colour=0x0 ok=0
+[2026-10-27 22:23:25.281 IFO][NeuroDragon] [vvsr] sr dump #3 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 22:23:27.489 IFO][NeuroDragon] [vvsr] sr dump #4 frame=2743 view=3 dlssReady=1 start
+[2026-10-27 22:23:27.501 IFO][NeuroDragon] [vvsr] sr dump #4 semantic colour=0x0 ok=0
+[2026-10-27 22:23:27.571 IFO][NeuroDragon] [vvsr] sr dump #4 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+
+Diagnostic values are HLSL White[x,y].
+run1: White=39.610416, previous=39.510376, mirror=39.610416, count=454, floor=0, targetRing=[5.4250116,5.425762,5.420114,5.420441], final=0.414926
+run2: White=56.535570, previous=56.552258, mirror=56.535570, count=650, floor=0, targetRing=[5.8102007,5.807316,5.8094006,5.808169], final=0.402125
+run3: White=0.15273449, previous=0.1708285, mirror=0.15273449, count=354, floor=3094, meanLog=-11.831028, targetRing=[2.7174683,-7.9334846,2.717761,-8.00909], mid rgb_mean=0, final=0.050299
+run4: White=0.15273537, previous=0.17106877, mirror=0.15273537, count=534, floor=3186, meanLog=-11.896316, targetRing=[2.7186613,-7.998772,2.717988,-7.988087], mid rgb_mean=0, final=0.048433
+
+The mirror and primary White are identical in every batch. The abnormal target ring alternates bright and black every frame; this is target continuity loss, not a primary-state-texel failure.
+F11-after candidate[0] is entirely black in run3/4. Most other current-generation candidates are byte-identical across the pair and cannot be selected as a fresh FinalColor by heuristic.
+Code path: onSwapChainResize clears gInputFinalColorNative; SetTextureHook repopulates it only inside a forwarded original TAAU draw; replacement suppresses that draw. Therefore the semantic input cannot be recaptured after resize under the current gate.
+User result: 已完成，第二次为异常。

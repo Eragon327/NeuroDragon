@@ -1,0 +1,1301 @@
+[2026-10-27 19:25:01.668 IFO][NeuroDragon] [vv] material texture hooked at 0x7ff614de64e0 (rva 0xdff64e0)
+[2026-10-27 19:25:03.200 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:03.200 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1e24232f350 entry=0x1e2688b5518 match=0
+[2026-10-27 19:25:03.200 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:03.982 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:03.982 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1e242332320 entry=0x1e2688b5460 match=0
+[2026-10-27 19:25:03.982 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:03.983 IFO][NeuroDragon] [vv] long frame 782.3 ms at present #2
+[2026-10-27 19:25:05.104 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:05.105 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1e24232f350 entry=0x1e2688b5518 match=0
+[2026-10-27 19:25:05.105 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:05.105 IFO][NeuroDragon] [vv] long frame 1122.3 ms at present #3
+[2026-10-27 19:25:05.113 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:05.113 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1e242332320 entry=0x1e2688b5460 match=0
+[2026-10-27 19:25:05.114 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:05.130 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:05.131 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1e24232f350 entry=0x1e2688b5518 match=0
+[2026-10-27 19:25:05.131 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:05.142 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:05.142 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1e242332320 entry=0x1e2688b5460 match=0
+[2026-10-27 19:25:05.143 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:05.153 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:05.153 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1e24232f350 entry=0x1e2688b5518 match=0
+[2026-10-27 19:25:05.153 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:05.162 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1e242338c50 entry=0x1e2688b5fe0 match=0
+[2026-10-27 19:25:05.163 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1e242332320 entry=0x1e2688b5460 match=0
+[2026-10-27 19:25:05.163 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1e24233c5b0 entry=0x1e2688b6378 match=0
+[2026-10-27 19:25:05.345 IFO][NeuroDragon] [vv] long frame 158.3 ms at present #12
+[2026-10-27 19:25:07.995 IFO][NeuroDragon] [vv] long frame 141.3 ms at present #413
+[2026-10-27 19:25:08.095 IFO][NeuroDragon] [vv] long frame 101.3 ms at present #414
+[2026-10-27 19:25:08.165 IFO][NeuroDragon] [vv] long frame 69.7 ms at present #415
+[2026-10-27 19:25:10.503 IFO][NeuroDragon] [vv] long frame 60.5 ms at present #726
+[2026-10-27 19:25:10.821 IFO][NeuroDragon] [vv] long frame 132.0 ms at present #746
+[2026-10-27 19:25:11.117 IFO][NeuroDragon] [vv] long frame 250.1 ms at present #751
+[2026-10-27 19:25:11.191 IFO][NeuroDragon] [vv] long frame 74.0 ms at present #752
+[2026-10-27 19:25:30.479 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:25:30.495 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:25:30.495 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1e41b563a60 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:25:30.495 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:25:31.865 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 19:25:31.945 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:25:32.066 DBG][NeuroDragon] [eval] f=1 tid=32536 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:32.066 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:25:32.069 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=162 hits=0 call=1/3 seq=2549 this=0x3665fe920
+[2026-10-27 19:25:32.070 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=162 hits=0 call=1/3 seq=2549 this=0x3665fe920
+[2026-10-27 19:25:32.070 IFO][NeuroDragon] [vv] taau replace declared=2549 callbacks=2549 forwarded=2548 suppressed=1 missed=0
+[2026-10-27 19:25:32.079 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:32.079 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1e41b563a60 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:25:32.079 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:25:32.080 DBG][NeuroDragon] [eval] f=2 tid=39608 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:32.081 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=162 hits=0 call=2/3 seq=2550 this=0x3665fe920
+[2026-10-27 19:25:32.082 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=162 hits=0 call=2/3 seq=2550 this=0x3665fe920
+[2026-10-27 19:25:32.083 IFO][NeuroDragon] [vv] taau replace declared=2550 callbacks=2550 forwarded=2548 suppressed=2 missed=0
+[2026-10-27 19:25:32.089 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1e41b563a60 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:25:32.089 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:25:32.089 DBG][NeuroDragon] [eval] f=3 tid=39608 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:32.091 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=162 hits=0 call=3/3 seq=2551 this=0x3665fe920
+[2026-10-27 19:25:32.092 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=162 hits=0 call=3/3 seq=2551 this=0x3665fe920
+[2026-10-27 19:25:32.092 IFO][NeuroDragon] [vv] taau replace declared=2551 callbacks=2551 forwarded=2548 suppressed=3 missed=0
+[2026-10-27 19:25:32.099 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1e41b563a60 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:25:32.099 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:25:32.108 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1e41b563a60 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:25:32.108 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:25:32.118 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1e41b563a60 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:25:33.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:34.084 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:35.079 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:36.085 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:37.079 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:38.083 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:38.114 DBG][NeuroDragon] [eval] f=600 tid=39608 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:38.115 IFO][NeuroDragon] [vv] taau replace declared=3148 callbacks=3148 forwarded=2548 suppressed=600 missed=0
+[2026-10-27 19:25:39.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:40.079 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:41.074 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:42.075 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:43.075 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:44.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:44.170 DBG][NeuroDragon] [eval] f=1200 tid=32536 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:44.171 IFO][NeuroDragon] [vv] taau replace declared=3748 callbacks=3748 forwarded=2548 suppressed=1200 missed=0
+[2026-10-27 19:25:45.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:46.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:47.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:48.081 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:49.081 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:50.082 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:50.261 DBG][NeuroDragon] [eval] f=1800 tid=32536 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:50.262 IFO][NeuroDragon] [vv] taau replace declared=4348 callbacks=4348 forwarded=2548 suppressed=1800 missed=0
+[2026-10-27 19:25:50.536 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-27 19:25:51.081 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:52.075 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:52.531 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2024 start
+[2026-10-27 19:25:52.531 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2024 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.2500,-0.3889)
+[2026-10-27 19:25:52.553 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x1e41b563a60 ok=1
+[2026-10-27 19:25:52.610 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:25:52.619 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[0]=0x1e41b56a390 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.625 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[1]=0x1e41b569070 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.631 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[2]=0x1e41b563a60 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.635 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[3]=0x1e41b55aaf0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.641 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[4]=0x1e41b55b480 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.646 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[5]=0x1e242341230 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.651 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[6]=0x1e2423408a0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.656 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[7]=0x1e242336fa0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.660 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[8]=0x1e242333640 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.667 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[9]=0x1e24233c5b0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:52.673 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[0]=0x1e41b5630d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:52.678 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[1]=0x1e41b560a90 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:52.682 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[2]=0x1e41b55d130 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:52.688 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[3]=0x1e2423382c0 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:52.692 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[4]=0x1e24233a900 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:52.697 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[5]=0x1e242336610 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:52.697 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2024 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x1e41b563a60 idx=2 pickedDepth=0x1e41b5630d0 idx=0
+[2026-10-27 19:25:52.697 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=1 ok=1
+[2026-10-27 19:25:53.080 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:54.081 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:54.685 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2223 start
+[2026-10-27 19:25:54.685 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2223 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.1875,-0.1296)
+[2026-10-27 19:25:54.702 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x1e41b563a60 ok=1
+[2026-10-27 19:25:54.758 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:25:54.762 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[0]=0x1e41b56a390 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.767 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[1]=0x1e41b569070 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.772 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[2]=0x1e41b563a60 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.777 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[3]=0x1e41b55aaf0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.782 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[4]=0x1e41b55b480 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.787 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[5]=0x1e242341230 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.790 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[6]=0x1e2423408a0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.795 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[7]=0x1e242336fa0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.798 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[8]=0x1e242333640 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.803 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[9]=0x1e24233c5b0 1689x950 fmt=26 ok=1
+[2026-10-27 19:25:54.808 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[0]=0x1e41b5630d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:54.812 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[1]=0x1e41b560a90 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:54.815 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[2]=0x1e41b55d130 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:54.821 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[3]=0x1e2423382c0 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:54.825 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[4]=0x1e24233a900 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:54.829 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[5]=0x1e242336610 1689x950 fmt=44 ok=1
+[2026-10-27 19:25:54.829 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2223 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x1e41b563a60 idx=2 pickedDepth=0x1e41b5630d0 idx=0
+[2026-10-27 19:25:54.829 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=2 ok=1 (pair done runs=1,2)
+[2026-10-27 19:25:55.075 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:56.081 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:56.623 DBG][NeuroDragon] [eval] f=2400 tid=39608 cl=0x1e417e44d60 h=0x1e241eddb90 1689x950 c=0x1e417e455e0 d=0x1e417e42610 mv=0x1e417e47290 o=0x1e417e47c20 ret=0x1
+[2026-10-27 19:25:56.625 IFO][NeuroDragon] [vv] taau replace declared=4948 callbacks=4948 forwarded=2548 suppressed=2400 missed=0
+[2026-10-27 19:25:57.076 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:58.075 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:59.077 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:25:59.782 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:25:59.782 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:26:00.785 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:26:01.791 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:31:47.978 IFO][NeuroDragon] [vv] material texture hooked at 0x7ff614de64e0 (rva 0xdff64e0)
+[2026-10-27 19:31:49.635 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:49.636 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1cf922af990 entry=0x1cfb7dab460 match=0
+[2026-10-27 19:31:49.636 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:50.816 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:50.816 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1cf922b0cb0 entry=0x1cfb7dab518 match=0
+[2026-10-27 19:31:50.816 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:50.816 IFO][NeuroDragon] [vv] long frame 1179.9 ms at present #2
+[2026-10-27 19:31:51.767 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:51.767 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1cf922af990 entry=0x1cfb7dab460 match=0
+[2026-10-27 19:31:51.767 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:51.767 IFO][NeuroDragon] [vv] long frame 952.0 ms at present #3
+[2026-10-27 19:31:51.774 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:51.774 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1cf922b0cb0 entry=0x1cfb7dab518 match=0
+[2026-10-27 19:31:51.775 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:51.788 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:51.788 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1cf922af990 entry=0x1cfb7dab460 match=0
+[2026-10-27 19:31:51.788 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:51.945 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:51.945 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1cf922b0cb0 entry=0x1cfb7dab518 match=0
+[2026-10-27 19:31:51.945 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:51.945 IFO][NeuroDragon] [vv] long frame 156.7 ms at present #6
+[2026-10-27 19:31:51.954 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:51.954 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1cf922af990 entry=0x1cfb7dab460 match=0
+[2026-10-27 19:31:51.954 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:51.963 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1d08a894730 entry=0x1cfb7dabfe0 match=0
+[2026-10-27 19:31:51.963 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1cf922b0cb0 entry=0x1cfb7dab518 match=0
+[2026-10-27 19:31:51.963 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1d08a895a50 entry=0x1cfb7dac378 match=0
+[2026-10-27 19:31:52.027 IFO][NeuroDragon] [vv] long frame 27.7 ms at present #11
+[2026-10-27 19:31:54.779 IFO][NeuroDragon] [vv] long frame 136.0 ms at present #503
+[2026-10-27 19:31:54.879 IFO][NeuroDragon] [vv] long frame 100.3 ms at present #504
+[2026-10-27 19:31:54.943 IFO][NeuroDragon] [vv] long frame 64.0 ms at present #505
+[2026-10-27 19:31:57.500 IFO][NeuroDragon] [vv] long frame 65.7 ms at present #909
+[2026-10-27 19:31:57.814 IFO][NeuroDragon] [vv] long frame 114.2 ms at present #938
+[2026-10-27 19:31:58.091 IFO][NeuroDragon] [vv] long frame 237.6 ms at present #942
+[2026-10-27 19:32:23.056 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:32:23.071 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:32:23.071 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1d0d6da7b90 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:32:23.071 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:32:24.427 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 19:32:24.508 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:32:24.629 DBG][NeuroDragon] [eval] f=1 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:24.629 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:32:24.633 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=159 hits=0 call=1/3 seq=3285 this=0xc9674fe560
+[2026-10-27 19:32:24.634 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=159 hits=0 call=1/3 seq=3285 this=0xc9674fe560
+[2026-10-27 19:32:24.634 IFO][NeuroDragon] [vv] taau replace declared=3285 callbacks=3285 forwarded=3284 suppressed=1 missed=0
+[2026-10-27 19:32:24.639 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:24.639 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1d0d6da7b90 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:32:24.639 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:32:24.640 DBG][NeuroDragon] [eval] f=2 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:24.642 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=159 hits=0 call=2/3 seq=3286 this=0xc9674fe560
+[2026-10-27 19:32:24.643 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=159 hits=0 call=2/3 seq=3286 this=0xc9674fe560
+[2026-10-27 19:32:24.643 IFO][NeuroDragon] [vv] taau replace declared=3286 callbacks=3286 forwarded=3284 suppressed=2 missed=0
+[2026-10-27 19:32:24.650 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1d0d6da7b90 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:32:24.650 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:32:24.650 DBG][NeuroDragon] [eval] f=3 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:24.651 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=159 hits=0 call=3/3 seq=3287 this=0xc9674fe560
+[2026-10-27 19:32:24.653 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=159 hits=0 call=3/3 seq=3287 this=0xc9674fe560
+[2026-10-27 19:32:24.653 IFO][NeuroDragon] [vv] taau replace declared=3287 callbacks=3287 forwarded=3284 suppressed=3 missed=0
+[2026-10-27 19:32:24.660 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1d0d6da7b90 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:32:24.660 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:32:24.669 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1d0d6da7b90 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:32:24.669 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:32:24.679 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1d0d6da7b90 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:32:25.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:26.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:27.647 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:28.645 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:29.645 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:30.644 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:30.686 DBG][NeuroDragon] [eval] f=600 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:30.688 IFO][NeuroDragon] [vv] taau replace declared=3884 callbacks=3884 forwarded=3284 suppressed=600 missed=0
+[2026-10-27 19:32:31.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:32.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:33.641 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:34.646 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:35.641 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:36.646 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:36.786 DBG][NeuroDragon] [eval] f=1200 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:36.788 IFO][NeuroDragon] [vv] taau replace declared=4484 callbacks=4484 forwarded=3284 suppressed=1200 missed=0
+[2026-10-27 19:32:37.641 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:38.646 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:39.641 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:40.646 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:41.641 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:42.646 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:42.867 DBG][NeuroDragon] [eval] f=1800 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:42.869 IFO][NeuroDragon] [vv] taau replace declared=5084 callbacks=5084 forwarded=3284 suppressed=1800 missed=0
+[2026-10-27 19:32:43.642 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:44.647 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:45.646 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:46.637 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:47.642 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:48.637 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:48.949 DBG][NeuroDragon] [eval] f=2400 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:48.950 IFO][NeuroDragon] [vv] taau replace declared=5684 callbacks=5684 forwarded=3284 suppressed=2400 missed=0
+[2026-10-27 19:32:49.637 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:50.642 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:51.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:52.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:53.642 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:54.647 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:55.172 DBG][NeuroDragon] [eval] f=3000 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:32:55.175 IFO][NeuroDragon] [vv] taau replace declared=6284 callbacks=6284 forwarded=3284 suppressed=3000 missed=0
+[2026-10-27 19:32:55.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:56.642 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:57.642 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:58.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:32:59.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:00.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:01.239 DBG][NeuroDragon] [eval] f=3600 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:01.241 IFO][NeuroDragon] [vv] taau replace declared=6884 callbacks=6884 forwarded=3284 suppressed=3600 missed=0
+[2026-10-27 19:33:01.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:02.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:03.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:04.644 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:05.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:06.644 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:07.323 DBG][NeuroDragon] [eval] f=4200 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:07.325 IFO][NeuroDragon] [vv] taau replace declared=7484 callbacks=7484 forwarded=3284 suppressed=4200 missed=0
+[2026-10-27 19:33:07.639 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:08.643 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:09.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:10.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:11.639 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:12.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:13.379 DBG][NeuroDragon] [eval] f=4800 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:13.381 IFO][NeuroDragon] [vv] taau replace declared=8084 callbacks=8084 forwarded=3284 suppressed=4800 missed=0
+[2026-10-27 19:33:13.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:14.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:15.638 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:16.639 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:17.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:18.639 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:19.390 DBG][NeuroDragon] [eval] f=5400 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:19.392 IFO][NeuroDragon] [vv] taau replace declared=8684 callbacks=8684 forwarded=3284 suppressed=5400 missed=0
+[2026-10-27 19:33:19.639 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:20.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:21.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:22.645 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:22.666 WRN][NeuroDragon] [vv] taau replacement missed=1 suppressed=5723 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:33:22.666 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:22.677 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:22.685 WRN][NeuroDragon] [vv] taau replacement missed=2 suppressed=5724 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:33:22.685 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:22.695 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:23.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:24.645 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:25.556 DBG][NeuroDragon] [eval] f=6000 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:25.578 IFO][NeuroDragon] [vv] taau replace declared=9286 callbacks=9286 forwarded=3286 suppressed=6000 missed=2
+[2026-10-27 19:33:25.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:26.645 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:27.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:28.645 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:29.006 WRN][NeuroDragon] [vv] taau replacement missed=3 suppressed=6338 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:33:29.006 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:29.021 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:29.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:30.640 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:31.492 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:33:31.492 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:32.485 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:33.484 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:34.489 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:35.484 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:36.490 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:37.485 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:38.490 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:39.485 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:40.490 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:41.486 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:42.486 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:33:42.795 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:33:42.795 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:43.154 IFO][NeuroDragon] [vv] long frame 104.0 ms at present #11021
+[2026-10-27 19:33:43.161 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:43.187 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:43.197 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:43.206 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:43.215 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:43.227 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:43.236 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:43.252 DBG][NeuroDragon] [eval] f=6600 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:43.252 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:43.262 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:33:43.271 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:33:43.338 IFO][NeuroDragon] [vv] taau replace declared=11034 callbacks=11034 forwarded=4434 suppressed=6600 missed=8
+[2026-10-27 19:33:43.796 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:44.802 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:45.797 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:46.801 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:47.797 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:48.797 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:49.308 DBG][NeuroDragon] [eval] f=7200 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:49.388 IFO][NeuroDragon] [vv] taau replace declared=11634 callbacks=11634 forwarded=4434 suppressed=7200 missed=8
+[2026-10-27 19:33:49.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:50.802 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:51.802 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:52.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:53.797 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:54.793 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:55.324 DBG][NeuroDragon] [eval] f=7800 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:33:55.405 IFO][NeuroDragon] [vv] taau replace declared=12234 callbacks=12234 forwarded=4434 suppressed=7800 missed=8
+[2026-10-27 19:33:55.803 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:56.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:57.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:58.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:33:59.797 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:00.803 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:01.353 DBG][NeuroDragon] [eval] f=8400 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:01.435 IFO][NeuroDragon] [vv] taau replace declared=12834 callbacks=12834 forwarded=4434 suppressed=8400 missed=8
+[2026-10-27 19:34:01.804 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:02.797 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:03.793 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:04.793 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:05.799 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:06.793 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:07.438 DBG][NeuroDragon] [eval] f=9000 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:07.521 IFO][NeuroDragon] [vv] taau replace declared=13434 callbacks=13434 forwarded=4434 suppressed=9000 missed=8
+[2026-10-27 19:34:07.795 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:08.794 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:09.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:10.799 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:11.798 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:12.794 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:13.570 DBG][NeuroDragon] [eval] f=9600 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:13.657 IFO][NeuroDragon] [vv] taau replace declared=14034 callbacks=14034 forwarded=4434 suppressed=9600 missed=8
+[2026-10-27 19:34:13.794 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:14.794 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:15.800 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:16.630 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:34:19.490 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:19.490 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:34:20.486 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:21.491 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:22.481 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:22.896 DBG][NeuroDragon] [eval] f=10200 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:22.977 IFO][NeuroDragon] [vv] taau replace declared=14899 callbacks=14899 forwarded=4699 suppressed=10200 missed=8
+[2026-10-27 19:34:23.481 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:24.490 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:25.490 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:26.491 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:27.491 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:28.491 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:28.981 DBG][NeuroDragon] [eval] f=10800 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:29.063 IFO][NeuroDragon] [vv] taau replace declared=15499 callbacks=15499 forwarded=4699 suppressed=10800 missed=8
+[2026-10-27 19:34:29.481 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:30.481 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:31.490 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:32.486 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:33.486 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:34.486 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:35.006 DBG][NeuroDragon] [eval] f=11400 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:35.089 IFO][NeuroDragon] [vv] taau replace declared=16099 callbacks=16099 forwarded=4699 suppressed=11400 missed=8
+[2026-10-27 19:34:35.483 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:36.482 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:37.482 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:38.486 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:39.487 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:40.485 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:41.041 DBG][NeuroDragon] [eval] f=12000 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:41.124 IFO][NeuroDragon] [vv] taau replace declared=16699 callbacks=16699 forwarded=4699 suppressed=12000 missed=8
+[2026-10-27 19:34:41.482 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:42.487 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:43.482 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:44.492 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:45.190 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:34:45.190 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:34:46.185 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:47.186 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:48.186 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:49.190 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:50.185 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:51.186 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:52.186 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:53.186 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:54.186 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:55.191 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:56.347 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:34:56.777 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:34:56.777 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:34:57.178 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:34:57.213 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:34:57.224 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:34:57.238 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:34:57.247 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:34:57.278 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:34:57.762 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:58.767 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:34:59.204 DBG][NeuroDragon] [eval] f=12600 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:34:59.314 IFO][NeuroDragon] [vv] taau replace declared=18790 callbacks=18790 forwarded=6190 suppressed=12600 missed=12
+[2026-10-27 19:34:59.769 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:00.769 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:01.768 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:02.764 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:03.774 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:04.763 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:05.244 DBG][NeuroDragon] [eval] f=13200 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:35:05.355 IFO][NeuroDragon] [vv] taau replace declared=19390 callbacks=19390 forwarded=6190 suppressed=13200 missed=12
+[2026-10-27 19:35:05.763 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:06.763 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:07.764 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:08.763 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:09.764 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:10.764 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:11.314 DBG][NeuroDragon] [eval] f=13800 tid=33684 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:35:11.427 IFO][NeuroDragon] [vv] taau replace declared=19990 callbacks=19990 forwarded=6190 suppressed=13800 missed=12
+[2026-10-27 19:35:11.768 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:12.764 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:12.850 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:35:16.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:16.410 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:35:17.409 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:18.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:19.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:20.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:20.944 DBG][NeuroDragon] [eval] f=14400 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:35:21.057 IFO][NeuroDragon] [vv] taau replace declared=20943 callbacks=20943 forwarded=6543 suppressed=14400 missed=12
+[2026-10-27 19:35:21.405 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:22.405 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:23.405 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:24.404 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:25.405 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:26.405 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:26.946 DBG][NeuroDragon] [eval] f=15000 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:35:27.059 IFO][NeuroDragon] [vv] taau replace declared=21543 callbacks=21543 forwarded=6543 suppressed=15000 missed=12
+[2026-10-27 19:35:27.405 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:28.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:29.381 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:35:30.731 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:30.731 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:35:31.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:32.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:33.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:34.336 DBG][NeuroDragon] [eval] f=15600 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:35:34.448 IFO][NeuroDragon] [vv] taau replace declared=22276 callbacks=22276 forwarded=6676 suppressed=15600 missed=12
+[2026-10-27 19:35:34.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:35.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:36.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:37.737 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:38.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:39.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:40.336 DBG][NeuroDragon] [eval] f=16200 tid=7708 cl=0x1d09a38cc40 h=0x1d0a60c6b30 1689x950 c=0x1d08553ca20 d=0x1d085540380 mv=0x1d0855416a0 o=0x1d08553f060 ret=0x1
+[2026-10-27 19:35:40.448 IFO][NeuroDragon] [vv] taau replace declared=22876 callbacks=22876 forwarded=6676 suppressed=16200 missed=12
+[2026-10-27 19:35:40.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:41.415 IFO][NeuroDragon] [vvsr] sr buffers 1689x857 -> 2560x1299
+[2026-10-27 19:35:41.486 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x857 -> 2560x1299
+[2026-10-27 19:35:41.517 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:35:41.552 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:35:41.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:42.731 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:43.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:44.083 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:35:44.145 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:35:44.156 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:35:44.193 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:35:44.736 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:45.737 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:46.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:46.882 DBG][NeuroDragon] [eval] f=16800 tid=7708 cl=0x1d09a38cc40 h=0x1d0c6e6d2f0 1689x950 c=0x1d0d705dc10 d=0x1d0d705bf60 mv=0x1d0d705c8f0 o=0x1d0d705e5a0 ret=0x1
+[2026-10-27 19:35:47.015 IFO][NeuroDragon] [vv] taau replace declared=23478 callbacks=23478 forwarded=6678 suppressed=16800 missed=14
+[2026-10-27 19:35:47.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:48.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:49.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:50.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:51.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:52.733 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:52.883 DBG][NeuroDragon] [eval] f=17400 tid=7708 cl=0x1d09a38cc40 h=0x1d0c6e6d2f0 1689x950 c=0x1d0d705dc10 d=0x1d0d705bf60 mv=0x1d0d705c8f0 o=0x1d0d705e5a0 ret=0x1
+[2026-10-27 19:35:53.015 IFO][NeuroDragon] [vv] taau replace declared=24078 callbacks=24078 forwarded=6678 suppressed=17400 missed=14
+[2026-10-27 19:35:53.733 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:54.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:55.086 IFO][NeuroDragon] [vvsr] sr buffers 1689x857 -> 2560x1299
+[2026-10-27 19:35:55.153 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x857 -> 2560x1299
+[2026-10-27 19:35:55.185 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:35:55.219 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:35:55.733 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:56.733 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:57.732 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:57.975 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:35:58.039 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:35:58.075 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:35:58.109 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:35:58.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:35:59.368 DBG][NeuroDragon] [eval] f=18000 tid=33684 cl=0x1d09a38cc40 h=0x1d40e1962b0 1689x950 c=0x1d0c2ab4010 d=0x1d0c2ab2360 mv=0x1d0c2ab49a0 o=0x1d0c2ab2cf0 ret=0x1
+[2026-10-27 19:35:59.520 IFO][NeuroDragon] [vv] taau replace declared=24680 callbacks=24680 forwarded=6680 suppressed=18000 missed=16
+[2026-10-27 19:35:59.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:00.739 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:01.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:02.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:03.739 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:04.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:05.373 DBG][NeuroDragon] [eval] f=18600 tid=7708 cl=0x1d09a38cc40 h=0x1d40e1962b0 1689x950 c=0x1d0c2ab4010 d=0x1d0c2ab2360 mv=0x1d0c2ab49a0 o=0x1d0c2ab2cf0 ret=0x1
+[2026-10-27 19:36:05.527 IFO][NeuroDragon] [vv] taau replace declared=25280 callbacks=25280 forwarded=6680 suppressed=18600 missed=16
+[2026-10-27 19:36:05.734 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:06.733 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:07.735 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:08.738 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:09.734 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:36:10.385 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:36:10.385 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:36:11.385 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:36:12.379 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:42:11.623 IFO][NeuroDragon] [vv] material texture hooked at 0x7ff614de64e0 (rva 0xdff64e0)
+[2026-10-27 19:42:13.511 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:13.511 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2377eeda740 entry=0x236a7ef9518 match=0
+[2026-10-27 19:42:13.512 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:14.503 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:14.504 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2377eed6de0 entry=0x236a7ef9460 match=0
+[2026-10-27 19:42:14.504 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:14.504 IFO][NeuroDragon] [vv] long frame 992.2 ms at present #2
+[2026-10-27 19:42:15.328 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:15.328 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2377eeda740 entry=0x236a7ef9518 match=0
+[2026-10-27 19:42:15.328 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:15.328 IFO][NeuroDragon] [vv] long frame 824.0 ms at present #3
+[2026-10-27 19:42:15.338 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:15.338 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2377eed6de0 entry=0x236a7ef9460 match=0
+[2026-10-27 19:42:15.339 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:15.351 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:15.351 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2377eeda740 entry=0x236a7ef9518 match=0
+[2026-10-27 19:42:15.351 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:15.514 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:15.515 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2377eed6de0 entry=0x236a7ef9460 match=0
+[2026-10-27 19:42:15.515 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:15.515 IFO][NeuroDragon] [vv] long frame 163.1 ms at present #6
+[2026-10-27 19:42:15.523 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:15.523 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2377eeda740 entry=0x236a7ef9518 match=0
+[2026-10-27 19:42:15.523 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:15.532 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x23762d57220 entry=0x236a7ef9fe0 match=0
+[2026-10-27 19:42:15.532 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2377eed6de0 entry=0x236a7ef9460 match=0
+[2026-10-27 19:42:15.532 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2378c2eeed0 entry=0x236a7efa378 match=0
+[2026-10-27 19:42:15.576 IFO][NeuroDragon] [vv] long frame 26.5 ms at present #10
+[2026-10-27 19:42:20.195 IFO][NeuroDragon] [vv] long frame 140.2 ms at present #819
+[2026-10-27 19:42:20.305 IFO][NeuroDragon] [vv] long frame 110.6 ms at present #820
+[2026-10-27 19:42:20.376 IFO][NeuroDragon] [vv] long frame 70.8 ms at present #821
+[2026-10-27 19:42:30.605 IFO][NeuroDragon] [vv] long frame 85.8 ms at present #2716
+[2026-10-27 19:42:30.891 IFO][NeuroDragon] [vv] long frame 123.4 ms at present #2736
+[2026-10-27 19:42:31.168 IFO][NeuroDragon] [vv] long frame 238.3 ms at present #2741
+[2026-10-27 19:42:52.234 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:42:52.248 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:42:52.248 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2378c300db0 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:42:52.248 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:42:53.523 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 19:42:53.599 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:42:53.721 DBG][NeuroDragon] [eval] f=1 tid=2872 cl=0x23782d501f0 h=0x237d322b110 1689x950 c=0x23782d543d0 d=0x23782d556f0 mv=0x23782d56a10 o=0x23782d573a0 ret=0x1
+[2026-10-27 19:42:53.721 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:42:53.725 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=160 hits=0 call=1/3 seq=4746 this=0xa3cf6fe200
+[2026-10-27 19:42:53.725 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=160 hits=0 call=1/3 seq=4746 this=0xa3cf6fe200
+[2026-10-27 19:42:53.725 IFO][NeuroDragon] [vv] taau replace declared=4746 callbacks=4746 forwarded=4745 suppressed=1 missed=0
+[2026-10-27 19:42:53.734 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:53.734 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2378c300db0 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:42:53.734 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:42:53.735 DBG][NeuroDragon] [eval] f=2 tid=2872 cl=0x23782d501f0 h=0x237d322b110 1689x950 c=0x23782d543d0 d=0x23782d556f0 mv=0x23782d56a10 o=0x23782d573a0 ret=0x1
+[2026-10-27 19:42:53.737 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=160 hits=0 call=2/3 seq=4747 this=0xa3cf7fe2d0
+[2026-10-27 19:42:53.738 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=160 hits=0 call=2/3 seq=4747 this=0xa3cf7fe2d0
+[2026-10-27 19:42:53.738 IFO][NeuroDragon] [vv] taau replace declared=4747 callbacks=4747 forwarded=4745 suppressed=2 missed=0
+[2026-10-27 19:42:53.744 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2378c300db0 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:42:53.744 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:42:53.744 DBG][NeuroDragon] [eval] f=3 tid=34856 cl=0x23782d501f0 h=0x237d322b110 1689x950 c=0x23782d543d0 d=0x23782d556f0 mv=0x23782d56a10 o=0x23782d573a0 ret=0x1
+[2026-10-27 19:42:53.746 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=160 hits=0 call=3/3 seq=4748 this=0xa3cf6fe200
+[2026-10-27 19:42:53.748 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=160 hits=0 call=3/3 seq=4748 this=0xa3cf6fe200
+[2026-10-27 19:42:53.748 IFO][NeuroDragon] [vv] taau replace declared=4748 callbacks=4748 forwarded=4745 suppressed=3 missed=0
+[2026-10-27 19:42:53.754 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2378c300db0 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:42:53.754 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:42:53.764 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2378c300db0 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:42:53.764 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:42:53.774 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2378c300db0 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:42:54.739 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:55.739 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:56.735 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:57.735 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:58.739 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:59.730 IFO][NeuroDragon] [vvsr] sr buffers 1689x857 -> 2560x1299
+[2026-10-27 19:42:59.781 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x857 -> 2560x1299
+[2026-10-27 19:42:59.795 WRN][NeuroDragon] [vv] taau replacement missed=1 suppressed=580 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:42:59.795 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:42:59.830 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:42:59.832 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:00.016 DBG][NeuroDragon] [eval] f=600 tid=2872 cl=0x23782d501f0 h=0x237d322d710 1689x857 c=0x2377ec59940 d=0x2377ec5c910 mv=0x2377ec5d2a0 o=0x2377ec5e5c0 ret=0x1
+[2026-10-27 19:43:00.027 IFO][NeuroDragon] [vv] taau replace declared=5346 callbacks=5346 forwarded=4746 suppressed=600 missed=1
+[2026-10-27 19:43:00.825 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:01.835 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:02.835 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:03.826 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:04.825 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:05.825 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:06.016 DBG][NeuroDragon] [eval] f=1200 tid=2872 cl=0x23782d501f0 h=0x237d322d710 1689x857 c=0x2377ec59940 d=0x2377ec5c910 mv=0x2377ec5d2a0 o=0x2377ec5e5c0 ret=0x1
+[2026-10-27 19:43:06.028 IFO][NeuroDragon] [vv] taau replace declared=5946 callbacks=5946 forwarded=4746 suppressed=1200 missed=1
+[2026-10-27 19:43:06.890 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:06.895 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:43:06.941 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:43:06.961 WRN][NeuroDragon] [vv] taau replacement missed=2 suppressed=1276 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:43:06.961 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:06.994 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:07.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:08.890 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:09.891 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:10.890 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:11.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:12.236 DBG][NeuroDragon] [eval] f=1800 tid=2872 cl=0x23782d501f0 h=0x237d3223ed0 1689x950 c=0x2377ec5b5f0 d=0x2377ec58fb0 mv=0x2377ec5c910 o=0x2377ec5dc30 ret=0x1
+[2026-10-27 19:43:12.258 IFO][NeuroDragon] [vv] taau replace declared=6547 callbacks=6547 forwarded=4747 suppressed=1800 missed=2
+[2026-10-27 19:43:12.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:13.895 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:14.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:15.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:16.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:17.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:18.288 DBG][NeuroDragon] [eval] f=2400 tid=2872 cl=0x23782d501f0 h=0x237d3223ed0 1689x950 c=0x2377ec5b5f0 d=0x2377ec58fb0 mv=0x2377ec5c910 o=0x2377ec5dc30 ret=0x1
+[2026-10-27 19:43:18.313 IFO][NeuroDragon] [vv] taau replace declared=7147 callbacks=7147 forwarded=4747 suppressed=2400 missed=2
+[2026-10-27 19:43:18.891 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:19.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:20.891 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:21.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:22.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:23.906 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:43:23.906 WRN][NeuroDragon] [vv] taau replacement missed=3 suppressed=2940 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:43:23.906 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:24.910 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:25.910 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:26.906 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:27.911 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:28.837 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:43:28.837 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.172 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.208 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.216 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.227 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.237 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.246 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.257 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.267 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.276 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.280 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.287 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.291 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.301 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.311 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.321 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.331 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.336 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.341 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.353 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.362 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.372 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.382 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.393 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:29.403 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:43:29.758 DBG][NeuroDragon] [eval] f=3000 tid=2872 cl=0x23782d501f0 h=0x237d3223ed0 1689x950 c=0x2377ec5b5f0 d=0x2377ec58fb0 mv=0x2377ec5c910 o=0x2377ec5dc30 ret=0x1
+[2026-10-27 19:43:29.832 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:29.911 IFO][NeuroDragon] [vv] taau replace declared=8211 callbacks=8211 forwarded=5211 suppressed=3000 missed=15
+[2026-10-27 19:43:30.834 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:31.827 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:32.833 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:33.833 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:34.833 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:35.822 DBG][NeuroDragon] [eval] f=3600 tid=2872 cl=0x23782d501f0 h=0x237d3223ed0 1689x950 c=0x2377ec5b5f0 d=0x2377ec58fb0 mv=0x2377ec5c910 o=0x2377ec5dc30 ret=0x1
+[2026-10-27 19:43:35.833 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:35.969 IFO][NeuroDragon] [vv] taau replace declared=8811 callbacks=8811 forwarded=5211 suppressed=3600 missed=15
+[2026-10-27 19:43:36.828 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:37.827 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:38.827 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:39.834 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:43:40.509 IFO][NeuroDragon] [vv] long frame 31.7 ms at present #9253
+[2026-10-27 19:43:40.512 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:43:40.512 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:43:41.503 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:42.497 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:43.497 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:44.502 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:45.497 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:46.497 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:47.497 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:43:48.503 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:46:34.422 IFO][NeuroDragon] [vv] material texture hooked at 0x7ff614de64e0 (rva 0xdff64e0)
+[2026-10-27 19:46:36.078 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:36.078 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1c173a05010 entry=0x1c0d9ad5518 match=0
+[2026-10-27 19:46:36.078 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:37.425 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:37.425 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1c173a07fe0 entry=0x1c0d9ad5460 match=0
+[2026-10-27 19:46:37.425 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:37.425 IFO][NeuroDragon] [vv] long frame 1346.3 ms at present #2
+[2026-10-27 19:46:38.634 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:38.634 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1c173a05010 entry=0x1c0d9ad5518 match=0
+[2026-10-27 19:46:38.634 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:38.635 IFO][NeuroDragon] [vv] long frame 1209.6 ms at present #3
+[2026-10-27 19:46:38.640 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:38.640 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1c173a07fe0 entry=0x1c0d9ad5460 match=0
+[2026-10-27 19:46:38.641 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:38.805 IFO][NeuroDragon] [vv] long frame 163.9 ms at present #5
+[2026-10-27 19:46:38.804 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:38.804 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1c173a05010 entry=0x1c0d9ad5518 match=0
+[2026-10-27 19:46:38.805 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:38.813 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:38.813 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1c173a07fe0 entry=0x1c0d9ad5460 match=0
+[2026-10-27 19:46:38.814 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:38.822 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:38.822 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x1c173a05010 entry=0x1c0d9ad5518 match=0
+[2026-10-27 19:46:38.823 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:38.838 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x1c173a0d5f0 entry=0x1c0d9ad5fe0 match=0
+[2026-10-27 19:46:38.838 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x1c173a07fe0 entry=0x1c0d9ad5460 match=0
+[2026-10-27 19:46:38.838 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x1c173a118e0 entry=0x1c0d9ad6378 match=0
+[2026-10-27 19:46:40.540 IFO][NeuroDragon] [vv] long frame 148.5 ms at present #230
+[2026-10-27 19:46:40.644 IFO][NeuroDragon] [vv] long frame 104.6 ms at present #231
+[2026-10-27 19:46:40.711 IFO][NeuroDragon] [vv] long frame 67.4 ms at present #232
+[2026-10-27 19:46:43.718 IFO][NeuroDragon] [vv] long frame 81.7 ms at present #643
+[2026-10-27 19:46:43.766 IFO][NeuroDragon] [vv] long frame 26.5 ms at present #647
+[2026-10-27 19:46:44.030 IFO][NeuroDragon] [vv] long frame 130.8 ms at present #671
+[2026-10-27 19:46:44.335 IFO][NeuroDragon] [vv] long frame 251.2 ms at present #677
+[2026-10-27 19:47:01.416 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:47:01.430 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:47:01.430 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1c1e2174710 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:47:01.430 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:47:02.696 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 19:47:02.771 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:47:02.885 DBG][NeuroDragon] [eval] f=1 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:02.885 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:02.889 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=1/3 seq=2277 this=0xb1f21fe1d0
+[2026-10-27 19:47:02.890 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=none dep16=0x200 node16=none scanned=72 candidates=155 hits=0 call=1/3 seq=2277 this=0xb1f21fe1d0
+[2026-10-27 19:47:02.890 IFO][NeuroDragon] [vv] taau replace declared=2277 callbacks=2277 forwarded=2276 suppressed=1 missed=0
+[2026-10-27 19:47:02.900 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:02.900 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1c1e2174710 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:47:02.900 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:47:02.901 DBG][NeuroDragon] [eval] f=2 tid=30168 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:02.904 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=2/3 seq=2278 this=0xb1f21fe1d0
+[2026-10-27 19:47:02.906 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=2/3 seq=2278 this=0xb1f21fe1d0
+[2026-10-27 19:47:02.906 IFO][NeuroDragon] [vv] taau replace declared=2278 callbacks=2278 forwarded=2276 suppressed=2 missed=0
+[2026-10-27 19:47:02.910 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1c1e2174710 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:47:02.910 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:47:02.911 DBG][NeuroDragon] [eval] f=3 tid=30168 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:02.912 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=3/3 seq=2279 this=0xb1f20fe550
+[2026-10-27 19:47:02.913 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=none dep16=0x200 node16=none scanned=72 candidates=155 hits=0 call=3/3 seq=2279 this=0xb1f20fe550
+[2026-10-27 19:47:02.913 IFO][NeuroDragon] [vv] taau replace declared=2279 callbacks=2279 forwarded=2276 suppressed=3 missed=0
+[2026-10-27 19:47:02.920 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1c1e2174710 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:47:02.920 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:47:02.930 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1c1e2174710 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:47:02.930 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:47:02.941 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1c1e2174710 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:47:03.890 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:04.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:05.890 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:06.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:07.891 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:08.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:08.956 DBG][NeuroDragon] [eval] f=600 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:08.958 IFO][NeuroDragon] [vv] taau replace declared=2876 callbacks=2876 forwarded=2276 suppressed=600 missed=0
+[2026-10-27 19:47:09.896 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:10.892 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:11.902 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:12.891 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:13.892 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:14.891 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:15.002 DBG][NeuroDragon] [eval] f=1200 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:15.005 IFO][NeuroDragon] [vv] taau replace declared=3476 callbacks=3476 forwarded=2276 suppressed=1200 missed=0
+[2026-10-27 19:47:15.892 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:16.106 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1310 start
+[2026-10-27 19:47:16.106 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1310 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.0000,-0.1667)
+[2026-10-27 19:47:16.123 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x1c1e2174710 ok=1
+[2026-10-27 19:47:16.178 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:47:16.186 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[0]=0x1c1e217ccf0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.191 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[1]=0x1c1e2179d20 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.197 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[2]=0x1c1e2174710 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.201 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[3]=0x1c1d5222990 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.206 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[4]=0x1c1d5222000 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.211 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[5]=0x1c173a148b0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.217 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[6]=0x1c173a15240 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.221 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[7]=0x1c173a09c90 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.226 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[8]=0x1c173a0a620 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.231 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[9]=0x1c173a118e0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:16.237 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[0]=0x1c1e2172a60 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:16.242 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[1]=0x1c1e21720d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:16.248 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[2]=0x1c1d521d380 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:16.253 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[3]=0x1c173a12270 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:16.257 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[4]=0x1c173a0cc60 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:16.262 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[5]=0x1c173a0c2d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:16.262 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1310 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x1c1e2174710 idx=2 pickedDepth=0x1c1e2172a60 idx=0
+[2026-10-27 19:47:16.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:17.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:18.892 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:19.897 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:20.887 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:21.187 DBG][NeuroDragon] [eval] f=1800 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:21.189 IFO][NeuroDragon] [vv] taau replace declared=4076 callbacks=4076 forwarded=2276 suppressed=1800 missed=0
+[2026-10-27 19:47:21.509 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:21.527 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:47:22.516 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:47:23.517 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:47:24.521 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:47:25.521 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:47:26.292 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:47:26.292 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.613 WRN][NeuroDragon] [vv] taau replacement missed=1 suppressed=1835 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:47:26.613 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.642 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.652 WRN][NeuroDragon] [vv] taau replacement missed=2 suppressed=1836 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:47:26.652 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.662 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.672 WRN][NeuroDragon] [vv] taau replacement missed=3 suppressed=1837 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:47:26.672 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.682 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.692 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.702 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.712 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.722 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.732 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.742 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.752 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.762 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.772 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.782 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.792 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.803 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.813 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.823 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.832 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.843 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:26.852 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:26.863 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:27.282 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:28.278 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:29.288 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:30.288 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:31.282 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:32.283 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:32.285 DBG][NeuroDragon] [eval] f=2400 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:32.417 IFO][NeuroDragon] [vv] taau replace declared=5137 callbacks=5137 forwarded=2737 suppressed=2400 missed=12
+[2026-10-27 19:47:33.284 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:34.283 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:35.284 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:36.283 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:37.284 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:38.284 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:38.456 DBG][NeuroDragon] [eval] f=3000 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:38.591 IFO][NeuroDragon] [vv] taau replace declared=5737 callbacks=5737 forwarded=2737 suppressed=3000 missed=12
+[2026-10-27 19:47:39.278 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:40.279 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:41.279 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:42.278 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:43.279 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:43.954 IFO][NeuroDragon] [vvsr] sr dump #2 frame=3548 start
+[2026-10-27 19:47:43.954 IFO][NeuroDragon] [vvsr] sr dump #2 frame=3548 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.4375,-0.2407)
+[2026-10-27 19:47:43.969 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x1c1e2174710 ok=1
+[2026-10-27 19:47:44.022 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:47:44.029 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[0]=0x1c1e217ccf0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.033 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[1]=0x1c1e2179d20 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.038 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[2]=0x1c1e2174710 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.043 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[3]=0x1c1d5222990 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.048 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[4]=0x1c1d5222000 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.052 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[5]=0x1c173a148b0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.056 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[6]=0x1c173a15240 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.062 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[7]=0x1c173a09c90 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.068 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[8]=0x1c173a0a620 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.073 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[9]=0x1c173a118e0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:44.079 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[0]=0x1c1e2172a60 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:44.085 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[1]=0x1c1e21720d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:44.089 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[2]=0x1c1d521d380 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:44.094 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[3]=0x1c173a12270 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:44.099 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[4]=0x1c173a0cc60 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:44.104 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[5]=0x1c173a0c2d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:44.104 IFO][NeuroDragon] [vvsr] sr dump #2 frame=3548 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x1c1e2174710 idx=2 pickedDepth=0x1c1e2172a60 idx=0
+[2026-10-27 19:47:44.279 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:44.625 DBG][NeuroDragon] [eval] f=3600 tid=30168 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:44.759 IFO][NeuroDragon] [vv] taau replace declared=6337 callbacks=6337 forwarded=2737 suppressed=3600 missed=12
+[2026-10-27 19:47:45.284 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:46.264 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:47:47.869 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:47.869 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:47:48.859 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:49.859 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:50.860 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:51.860 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:52.265 DBG][NeuroDragon] [eval] f=4200 tid=41476 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:52.404 IFO][NeuroDragon] [vv] taau replace declared=7095 callbacks=7095 forwarded=2895 suppressed=4200 missed=12
+[2026-10-27 19:47:52.860 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:53.860 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:54.865 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:55.865 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:56.865 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:57.299 IFO][NeuroDragon] [vvsr] sr dump #3 frame=4702 start
+[2026-10-27 19:47:57.299 IFO][NeuroDragon] [vvsr] sr dump #3 frame=4702 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.4375,-0.2407)
+[2026-10-27 19:47:57.318 IFO][NeuroDragon] [vvsr] sr dump #3 semantic colour=0x1c1e2174710 ok=1
+[2026-10-27 19:47:57.371 IFO][NeuroDragon] [vvsr] sr dump #3 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:47:57.380 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[0]=0x1c1e217ccf0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.385 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[1]=0x1c1e2179d20 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.390 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[2]=0x1c1e2174710 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.396 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[3]=0x1c1d5222990 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.401 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[4]=0x1c1d5222000 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.407 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[5]=0x1c173a148b0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.411 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[6]=0x1c173a15240 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.417 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[7]=0x1c173a09c90 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.422 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[8]=0x1c173a0a620 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.428 IFO][NeuroDragon] [vvsr] sr dump #3 cand colour[9]=0x1c173a118e0 1689x950 fmt=26 ok=1
+[2026-10-27 19:47:57.433 IFO][NeuroDragon] [vvsr] sr dump #3 cand depth[0]=0x1c1e2172a60 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:57.439 IFO][NeuroDragon] [vvsr] sr dump #3 cand depth[1]=0x1c1e21720d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:57.444 IFO][NeuroDragon] [vvsr] sr dump #3 cand depth[2]=0x1c1d521d380 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:57.450 IFO][NeuroDragon] [vvsr] sr dump #3 cand depth[3]=0x1c173a12270 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:57.456 IFO][NeuroDragon] [vvsr] sr dump #3 cand depth[4]=0x1c173a0cc60 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:57.461 IFO][NeuroDragon] [vvsr] sr dump #3 cand depth[5]=0x1c173a0c2d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:47:57.461 IFO][NeuroDragon] [vvsr] sr dump #3 frame=4702 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x1c1e2174710 idx=2 pickedDepth=0x1c1e2172a60 idx=0
+[2026-10-27 19:47:57.865 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:58.440 DBG][NeuroDragon] [eval] f=4800 tid=30168 cl=0x1c1960ddb10 h=0x1c19a465b90 1689x950 c=0x1c1960e7300 d=0x1c199e4c220 mv=0x1c199e4af00 o=0x1c199e4a570 ret=0x1
+[2026-10-27 19:47:58.572 IFO][NeuroDragon] [vv] taau replace declared=7695 callbacks=7695 forwarded=2895 suppressed=4800 missed=12
+[2026-10-27 19:47:58.861 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:47:59.865 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:48:00.377 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:48:00.377 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:48:00.836 IFO][NeuroDragon] [vv] long frame 92.6 ms at present #7880
+[2026-10-27 19:48:01.380 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:48:02.375 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:54:57.719 IFO][NeuroDragon] [vv] material texture hooked at 0x7ff614de64e0 (rva 0xdff64e0)
+[2026-10-27 19:54:59.394 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:54:59.395 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2679b588cf0 entry=0x267c407d460 match=0
+[2026-10-27 19:54:59.395 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:00.514 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:00.515 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2679b589680 entry=0x267c407d518 match=0
+[2026-10-27 19:55:00.515 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:00.515 IFO][NeuroDragon] [vv] long frame 1118.8 ms at present #2
+[2026-10-27 19:55:01.302 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:01.303 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2679b588cf0 entry=0x267c407d460 match=0
+[2026-10-27 19:55:01.303 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:01.303 IFO][NeuroDragon] [vv] long frame 788.8 ms at present #3
+[2026-10-27 19:55:01.308 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:01.309 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2679b589680 entry=0x267c407d518 match=0
+[2026-10-27 19:55:01.309 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:01.325 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:01.325 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2679b588cf0 entry=0x267c407d460 match=0
+[2026-10-27 19:55:01.325 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:01.334 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:01.334 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2679b589680 entry=0x267c407d518 match=0
+[2026-10-27 19:55:01.334 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:01.476 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:01.477 IFO][NeuroDragon] [vv] in.color material handle=0x001A action=1 native=0x2679b588cf0 entry=0x267c407d460 match=0
+[2026-10-27 19:55:01.477 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:01.477 IFO][NeuroDragon] [vv] long frame 143.4 ms at present #7
+[2026-10-27 19:55:01.490 IFO][NeuroDragon] [vv] in.color material handle=0x002A action=1 native=0x2679b58f620 entry=0x267c407dfe0 match=0
+[2026-10-27 19:55:01.490 IFO][NeuroDragon] [vv] in.color material handle=0x001B action=1 native=0x2679b589680 entry=0x267c407d518 match=0
+[2026-10-27 19:55:01.490 IFO][NeuroDragon] [vv] in.color material handle=0x002F action=1 native=0x2679b5942a0 entry=0x267c407e378 match=0
+[2026-10-27 19:55:01.566 IFO][NeuroDragon] [vv] long frame 28.0 ms at present #12
+[2026-10-27 19:55:04.246 IFO][NeuroDragon] [vv] long frame 131.9 ms at present #471
+[2026-10-27 19:55:04.353 IFO][NeuroDragon] [vv] long frame 107.0 ms at present #472
+[2026-10-27 19:55:04.420 IFO][NeuroDragon] [vv] long frame 67.0 ms at present #473
+[2026-10-27 19:55:06.955 IFO][NeuroDragon] [vv] long frame 71.3 ms at present #917
+[2026-10-27 19:55:07.248 IFO][NeuroDragon] [vv] long frame 115.0 ms at present #939
+[2026-10-27 19:55:07.516 IFO][NeuroDragon] [vv] long frame 229.3 ms at present #944
+[2026-10-27 19:55:20.534 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:55:20.548 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 19:55:20.548 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2689803bd40 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:55:20.548 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:55:21.827 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 19:55:21.910 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 19:55:22.036 DBG][NeuroDragon] [eval] f=1 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:22.036 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:22.040 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=155 hits=0 call=1/3 seq=2110 this=0x68de3fe510
+[2026-10-27 19:55:22.041 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=155 hits=0 call=1/3 seq=2110 this=0x68de3fe510
+[2026-10-27 19:55:22.041 IFO][NeuroDragon] [vv] taau replace declared=2110 callbacks=2110 forwarded=2109 suppressed=1 missed=0
+[2026-10-27 19:55:22.049 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:22.049 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2689803bd40 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:55:22.049 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:55:22.049 DBG][NeuroDragon] [eval] f=2 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:22.051 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=2/3 seq=2111 this=0x68de3fe510
+[2026-10-27 19:55:22.054 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=2/3 seq=2111 this=0x68de3fe510
+[2026-10-27 19:55:22.054 IFO][NeuroDragon] [vv] taau replace declared=2111 callbacks=2111 forwarded=2109 suppressed=2 missed=0
+[2026-10-27 19:55:22.059 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2689803bd40 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:55:22.059 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:55:22.059 DBG][NeuroDragon] [eval] f=3 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:22.060 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=155 hits=0 call=3/3 seq=2112 this=0x68de4fe7f0
+[2026-10-27 19:55:22.061 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=155 hits=0 call=3/3 seq=2112 this=0x68de4fe7f0
+[2026-10-27 19:55:22.061 IFO][NeuroDragon] [vv] taau replace declared=2112 callbacks=2112 forwarded=2109 suppressed=3 missed=0
+[2026-10-27 19:55:22.068 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2689803bd40 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:55:22.068 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:55:22.078 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2689803bd40 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:55:22.078 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=24 fmt26=10 depthTargets=6
+[2026-10-27 19:55:22.089 IFO][NeuroDragon] [vvsr] sr semantic colour=0x2689803bd40 1689x950 fmt=26 (arg9 InputFinalColor)
+[2026-10-27 19:55:23.048 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:24.049 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:25.044 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:26.044 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:27.045 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:28.050 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:28.059 DBG][NeuroDragon] [eval] f=600 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:28.061 IFO][NeuroDragon] [vv] taau replace declared=2709 callbacks=2709 forwarded=2109 suppressed=600 missed=0
+[2026-10-27 19:55:28.675 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:55:28.675 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:29.678 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:55:30.679 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:55:31.674 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:55:32.669 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:55:32.824 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:55:32.824 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.120 WRN][NeuroDragon] [vv] taau replacement missed=1 suppressed=663 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:55:33.120 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.151 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.159 WRN][NeuroDragon] [vv] taau replacement missed=2 suppressed=664 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:55:33.159 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.170 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.180 WRN][NeuroDragon] [vv] taau replacement missed=3 suppressed=665 (armed frame injected nothing; TAAU restored next frame)
+[2026-10-27 19:55:33.180 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.191 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.200 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.210 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.220 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.229 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.240 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.249 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.261 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.269 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.280 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.289 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.300 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:55:33.310 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:55:33.819 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:34.815 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:35.816 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:36.816 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:37.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:38.741 DBG][NeuroDragon] [eval] f=1200 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:38.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:38.833 IFO][NeuroDragon] [vv] taau replace declared=3690 callbacks=3690 forwarded=2490 suppressed=1200 missed=9
+[2026-10-27 19:55:39.810 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:40.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:41.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:42.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:43.816 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:44.807 DBG][NeuroDragon] [eval] f=1800 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:44.817 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:44.904 IFO][NeuroDragon] [vv] taau replace declared=4290 callbacks=4290 forwarded=2490 suppressed=1800 missed=9
+[2026-10-27 19:55:45.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:46.816 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:47.813 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:48.812 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:49.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:50.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:50.953 DBG][NeuroDragon] [eval] f=2400 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:51.054 IFO][NeuroDragon] [vv] taau replace declared=4890 callbacks=4890 forwarded=2490 suppressed=2400 missed=9
+[2026-10-27 19:55:51.816 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:52.812 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:53.817 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:54.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:55.617 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2854 start
+[2026-10-27 19:55:55.617 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2854 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.0625,-0.4630)
+[2026-10-27 19:55:55.632 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x2689803bd40 ok=1
+[2026-10-27 19:55:55.686 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:55:55.691 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[0]=0x26886ba5a20 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.697 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[1]=0x26887643090 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.702 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[2]=0x2689803bd40 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.706 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[3]=0x268e3c5f270 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.710 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[4]=0x268e3c5af80 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.715 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[5]=0x2679b597270 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.720 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[6]=0x2679b595f50 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.724 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[7]=0x2679b58b330 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.728 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[8]=0x2679b58c650 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.734 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[9]=0x2679b5942a0 1689x950 fmt=26 ok=1
+[2026-10-27 19:55:55.739 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[0]=0x268e3c618b0 1689x950 fmt=44 ok=1
+[2026-10-27 19:55:55.743 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[1]=0x268e3c60590 1689x950 fmt=44 ok=1
+[2026-10-27 19:55:55.752 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[2]=0x268e3c5d5c0 1689x950 fmt=44 ok=1
+[2026-10-27 19:55:55.763 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[3]=0x2679b590940 1689x950 fmt=44 ok=1
+[2026-10-27 19:55:55.768 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[4]=0x2679b58cfe0 1689x950 fmt=44 ok=1
+[2026-10-27 19:55:55.774 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[5]=0x2679b5879d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:55:55.774 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2854 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x2689803bd40 idx=2 pickedDepth=0x268e3c618b0 idx=0
+[2026-10-27 19:55:55.811 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:56.812 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:57.370 DBG][NeuroDragon] [eval] f=3000 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:55:57.463 IFO][NeuroDragon] [vv] taau replace declared=5490 callbacks=5490 forwarded=2490 suppressed=3000 missed=9
+[2026-10-27 19:55:57.817 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:55:58.558 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:56:01.217 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:01.217 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:56:02.223 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:03.217 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:04.218 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:05.222 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:06.114 DBG][NeuroDragon] [eval] f=3600 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:06.205 IFO][NeuroDragon] [vv] taau replace declared=6348 callbacks=6348 forwarded=2748 suppressed=3600 missed=9
+[2026-10-27 19:56:06.222 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:07.223 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:08.218 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:09.218 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:10.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:11.219 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:12.218 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:12.219 DBG][NeuroDragon] [eval] f=4200 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:12.311 IFO][NeuroDragon] [vv] taau replace declared=6948 callbacks=6948 forwarded=2748 suppressed=4200 missed=9
+[2026-10-27 19:56:13.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:14.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:15.219 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:16.219 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:17.218 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:18.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:18.325 DBG][NeuroDragon] [eval] f=4800 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:18.416 IFO][NeuroDragon] [vv] taau replace declared=7548 callbacks=7548 forwarded=2748 suppressed=4800 missed=9
+[2026-10-27 19:56:19.219 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:20.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:21.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:22.224 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:23.225 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:24.220 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:24.400 DBG][NeuroDragon] [eval] f=5400 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:24.491 IFO][NeuroDragon] [vv] taau replace declared=8148 callbacks=8148 forwarded=2748 suppressed=5400 missed=9
+[2026-10-27 19:56:25.220 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:26.050 IFO][NeuroDragon] [vvsr] sr dump #2 frame=5563 start
+[2026-10-27 19:56:26.050 IFO][NeuroDragon] [vvsr] sr dump #2 frame=5563 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.4688,+0.0926)
+[2026-10-27 19:56:26.066 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x2689803bd40 ok=1
+[2026-10-27 19:56:26.145 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 19:56:26.152 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[0]=0x26886ba5a20 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.158 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[1]=0x26887643090 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.165 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[2]=0x2689803bd40 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.171 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[3]=0x268e3c5f270 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.175 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[4]=0x268e3c5af80 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.180 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[5]=0x2679b597270 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.186 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[6]=0x2679b595f50 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.192 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[7]=0x2679b58b330 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.197 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[8]=0x2679b58c650 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.203 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[9]=0x2679b5942a0 1689x950 fmt=26 ok=1
+[2026-10-27 19:56:26.209 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[0]=0x268e3c618b0 1689x950 fmt=44 ok=1
+[2026-10-27 19:56:26.214 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[1]=0x268e3c60590 1689x950 fmt=44 ok=1
+[2026-10-27 19:56:26.219 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[2]=0x268e3c5d5c0 1689x950 fmt=44 ok=1
+[2026-10-27 19:56:26.224 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[3]=0x2679b590940 1689x950 fmt=44 ok=1
+[2026-10-27 19:56:26.230 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[4]=0x2679b58cfe0 1689x950 fmt=44 ok=1
+[2026-10-27 19:56:26.234 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[5]=0x2679b5879d0 1689x950 fmt=44 ok=1
+[2026-10-27 19:56:26.234 IFO][NeuroDragon] [vvsr] sr dump #2 frame=5563 cand summary colour ok=10/10 depth ok=6/6 pickedColour=0x2689803bd40 idx=2 pickedDepth=0x268e3c618b0 idx=0
+[2026-10-27 19:56:26.239 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:27.235 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:28.235 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:29.235 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:30.240 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:30.645 DBG][NeuroDragon] [eval] f=6000 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:30.737 IFO][NeuroDragon] [vv] taau replace declared=8748 callbacks=8748 forwarded=2748 suppressed=6000 missed=9
+[2026-10-27 19:56:31.240 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:32.241 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:33.240 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:34.234 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:35.240 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:36.236 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:36.741 DBG][NeuroDragon] [eval] f=6600 tid=15948 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:36.834 IFO][NeuroDragon] [vv] taau replace declared=9348 callbacks=9348 forwarded=2748 suppressed=6600 missed=9
+[2026-10-27 19:56:37.240 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:38.235 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:39.235 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:40.236 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:41.240 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:42.235 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:42.811 DBG][NeuroDragon] [eval] f=7200 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:42.903 IFO][NeuroDragon] [vv] taau replace declared=9948 callbacks=9948 forwarded=2748 suppressed=7200 missed=9
+[2026-10-27 19:56:43.233 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:44.236 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:45.236 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:46.237 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:47.236 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:48.232 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:48.842 DBG][NeuroDragon] [eval] f=7800 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:48.936 IFO][NeuroDragon] [vv] taau replace declared=10548 callbacks=10548 forwarded=2748 suppressed=7800 missed=9
+[2026-10-27 19:56:49.239 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:50.236 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:51.241 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:52.237 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:53.233 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:54.237 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:54.992 DBG][NeuroDragon] [eval] f=8400 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:56:55.085 IFO][NeuroDragon] [vv] taau replace declared=11148 callbacks=11148 forwarded=2748 suppressed=8400 missed=9
+[2026-10-27 19:56:55.237 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:56.232 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:57.238 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:58.233 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:56:59.237 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:00.238 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:01.022 DBG][NeuroDragon] [eval] f=9000 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:01.115 IFO][NeuroDragon] [vv] taau replace declared=11748 callbacks=11748 forwarded=2748 suppressed=9000 missed=9
+[2026-10-27 19:57:01.238 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:01.533 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:15.883 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:15.884 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:16.879 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:17.874 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:18.874 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:19.875 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:20.880 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:21.420 DBG][NeuroDragon] [eval] f=9600 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:21.511 IFO][NeuroDragon] [vv] taau replace declared=13770 callbacks=13770 forwarded=4170 suppressed=9600 missed=9
+[2026-10-27 19:57:21.879 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:22.874 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:23.879 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:24.884 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:25.290 IFO][NeuroDragon] [vv] long frame 53.5 ms at present #14142
+[2026-10-27 19:57:25.295 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:57:25.295 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:26.298 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:57:27.304 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:57:28.303 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:57:29.299 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:57:29.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 19:57:29.410 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.795 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.830 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.840 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.849 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.859 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.870 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.881 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.890 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.900 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.909 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.919 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.929 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.940 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.950 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.959 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.970 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:29.981 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:29.990 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:30.000 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:30.011 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:30.020 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:30.030 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 19:57:30.404 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:31.406 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:32.011 DBG][NeuroDragon] [eval] f=10200 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:32.217 IFO][NeuroDragon] [vv] taau replace declared=14743 callbacks=14743 forwarded=4543 suppressed=10200 missed=20
+[2026-10-27 19:57:32.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:33.406 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:34.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:35.410 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:36.415 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:37.406 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:38.116 DBG][NeuroDragon] [eval] f=10800 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:38.321 IFO][NeuroDragon] [vv] taau replace declared=15343 callbacks=15343 forwarded=4543 suppressed=10800 missed=20
+[2026-10-27 19:57:38.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:39.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:40.412 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:41.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:42.412 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:43.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:44.122 DBG][NeuroDragon] [eval] f=11400 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:44.324 IFO][NeuroDragon] [vv] taau replace declared=15943 callbacks=15943 forwarded=4543 suppressed=11400 missed=20
+[2026-10-27 19:57:44.411 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:45.417 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:46.417 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:47.407 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:48.407 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:49.416 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:50.406 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:50.786 DBG][NeuroDragon] [eval] f=12000 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:50.989 IFO][NeuroDragon] [vv] taau replace declared=16543 callbacks=16543 forwarded=4543 suppressed=12000 missed=20
+[2026-10-27 19:57:51.408 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:52.407 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:53.412 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:54.407 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:55.412 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:56.408 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:56.943 DBG][NeuroDragon] [eval] f=12600 tid=26296 cl=0x2688e93f170 h=0x268e4959c10 1689x950 c=0x2688e93e6d0 d=0x2688e93ca20 mv=0x2688e93dd40 o=0x268e35f3840 ret=0x1
+[2026-10-27 19:57:57.150 IFO][NeuroDragon] [vv] taau replace declared=17143 callbacks=17143 forwarded=4543 suppressed=12600 missed=20
+[2026-10-27 19:57:57.408 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-27 19:57:58.240 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 19:57:58.240 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 19:57:59.245 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-27 19:58:00.241 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0

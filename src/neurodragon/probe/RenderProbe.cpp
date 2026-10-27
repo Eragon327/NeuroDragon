@@ -224,7 +224,7 @@ void watchResource(char const* name, void* value) {
 // ---------------------------------------------------------------------------
 using NgxInitFn        = int (*)(unsigned long long, wchar_t const*, void*, int);
 using NgxInitExtFn     = int (*)(unsigned long long, wchar_t const*, void*, int, void const*);
-using NgxInitProjectFn = int (*)(char const*, int, char const*, wchar_t const*, void*, void const*, int);
+using NgxInitProjectFn = int (*)(char const*, int, char const*, wchar_t const*, void*, int, void const*);
 
 NgxInitFn        gInitOriginal        = nullptr;
 NgxInitExtFn     gInitExtOriginal     = nullptr;
@@ -260,8 +260,8 @@ int ngxInitProjectDetour(
     char const*    engineVersion,
     wchar_t const* dataPath,
     void*          device,
-    void const*    info,
-    int            apiVersion
+    int            apiVersion,
+    void const*    info
 ) {
 #ifdef TEST
     utils::logger().info(
@@ -274,7 +274,7 @@ int ngxInitProjectDetour(
 #endif
     nr::nrSetEngineInit(0x0876232Cu, dataPath);
     return gInitProjectOriginal
-             ? gInitProjectOriginal(projectId, engineType, engineVersion, dataPath, device, info, apiVersion)
+             ? gInitProjectOriginal(projectId, engineType, engineVersion, dataPath, device, apiVersion, info)
              : 0xBAD00007;
 }
 

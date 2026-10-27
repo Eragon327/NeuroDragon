@@ -1,0 +1,12 @@
+EXP-0051 postmortem.
+
+The online target is proven correct on the abnormal frames: meanLog equals the offline 64x64 result, texture dimensions match W/H, floorCount is zero, and dlssReady=1. The write counter persists and increments exactly once per record. The primary White texel nevertheless fails to carry the expected history across 196 frames, while a healthy control pair in the same session converges normally.
+
+Two reviews agree on those facts but differ on whether to remove smoothing immediately. One notes that direct target is a valid isolation because the sampled input is clean; the other correctly identifies that single-frame dumps do not prove target continuity, and removing smoothing could turn hidden target oscillation into visible flicker. We therefore do not change final rendering yet.
+
+Next diagnostic, with no rendering behavior change:
+- Mirror the entire previous->3%->White chain at texel (3,2), with its previous value at (3,3).
+- Use row 3 columns 0..3 as a four-frame target ring, indexed by the persistent write counter.
+- If mirror converges while primary does not, the primary state texel is being disturbed and smoothing can move to the healthy texel in a later experiment.
+- If both fail and the target ring alternates widely, fix target continuity before considering any smoother change.
+- If both fail with a stable ring, investigate the resource/readback path rather than the input image.

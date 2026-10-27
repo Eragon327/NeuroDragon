@@ -1,0 +1,13 @@
+EXP-0050 postmortem derived from adaptive-whitepoint-reset-EXP-0050.log and independent read-only reviews.
+
+The final experiment does not have a smoothing-only explanation. At run3, White=0.096003 while the same-batch target is 4.993964. About 298 record frames elapsed after the last resize; a 3% log-domain smoother would converge in about 151 frames to within 1% of target. run3->run4 White changed only 0.19%, also inconsistent with chasing 4.99.
+
+The final image and dump agree: inverse vvEncode on non-saturated pixels recovers White approximately 0.09606, matching the direct dump 0.096003. Thus final SRV binding and dump freshness are not the cause. Both possible colour sources have sub_geo about 0.335, so choosing colorHalf versus dlssOut also does not explain the 52x measurement gap.
+
+Required diagnostic split:
+- If shader target is about +2.318 log2 but White remains 0.096, investigate write/bind/resource behavior.
+- If shader target is about -3.38 log2, investigate its actual input and coordinates.
+- A write counter distinguishes no writes from writes converged to a wrong target.
+- W/H plus Color.GetDimensions and the count of taps at the 1e-4 floor distinguish size mismatch/zero reads from a complete but dark resource.
+
+No rendering behavior is to change for this diagnostic. MV, NGX flags, reference constant and tone encoding remain unchanged.

@@ -80,17 +80,17 @@ mov r8, [r8+8]
 
 Mac 1.26.32 读的是 `+0x10`。**两者布局差 8 字节，跨版本迁移时必须以本地反汇编为准。**
 
-### 2.3 四个依赖的语义（按源码顺序，与 Mac 一致）
+### 2.3 四个依赖的语义（Windows 26.51，与 Mac 不同）
 
 | 参数 | 依赖 | 材质 uniform | 语义 |
 |---|---|---|---|
-| arg9 | `[0]` | `InputTAAHistory` | 上一帧 TAAU 结果（渲染分辨率） |
-| arg10 | `[1]` | `InputFinalColor` | 本帧颜色（渲染分辨率） |
-| arg11 | `[2]` | （无名字） | **输出目标（显示分辨率）** |
-| arg12 | `[3]` | `InputBufferMotionVectors` | 运动矢量 |
+| arg9 | `[0]` | `InputFinalColor` | 本帧颜色（渲染分辨率） |
+| arg10 | `[1]` | `Upscaling` | **上采样目标（显示分辨率）** |
+| arg11 | `[2]` | `InputBufferMotionVectors` | 运动矢量 |
+| arg12 | `[3]` | `InputTAAHistory` | 上一帧 TAAU 结果 |
 
-⇒ 探针日志里的标签（`history/color/output/motion`）按此修正；早期版本把它们错标成
-`color/history/motion/output`。
+Windows declarator 在 `0xB7505C0…0xB75060B` 按资源名 hash 绑定上述四项。
+**不要沿用 Mac 的参数顺序**。§22–§27 曾把 arg10 当 InputFinalColor，已由 §28 更正。
 
 ## 3. 运行时事实（2026-10-24 21:00 / 21:14 两次运行）
 
@@ -1510,3 +1510,361 @@ F7（TEST 热键，present 线程轮询，边沿触发；一对还在跑时拒�
 - 本轮只回答**身份**，不回答**新鲜度**，也不解决 EXP-0025 以来的画面冻结；
   §20.3 的相对阈值、§19.4 的哈希表都不复用，§19.5 的边界继续有效。
 - 证据落点：`docs/agent/evidence/bgfx-handle-native-EXP-0029.log` 里的 `bgfxHIT` / `bgfxNONE` 原始行。
+
+## 23. EXP-0030：直接读取引擎纹理表（2026-10-27）
+
+### 23.1 EXP-0029 事后结论
+
+EXP-0029 在账本里先以“未跑”取消，随后用户按同一 runbook 完成了实跑；取消记录不改写，
+本轮证据以 `bgfx-handle-native-EXP-0029.log` 与 `…-postmortem.log` 为准。
+
+- 三个相位都没有 `bgfxHIT`；`sets=0 / nonNull=0 / contexts=0`，而 destroy 超过 2000 次。
+  离线反汇编确认这不是 hook 安装失败：`0xDF9D680` 只把调用方已有的 native 指针装进
+  `entry+0`，并设置“外部持有”位，是 adopt/wrap 路径，不是常规纹理创建。真正的创建函数是
+  `0xDFA4EA0`。因此旧影子表必然为空，不能据此否定 handle 布局。
+- 首次点击 `SR + DLSS` 的崩溃与句柄实验无关。`minidump_2026-10-27_10-06-01.dmp` 给出
+  `0xC0000005`，异常位于 `_nvngx.dll+0x67979`，异常参数含 `0x1968022DD8`；原始日志同一时刻
+  把 `FeatureCommonInfo*` 打印成了 `api=0x68022dd8`。`RenderProbe.cpp` 的
+  `Init_ProjectID` detour 参数顺序已改为与 `VvDlssSr.cpp` 一致的 `device, apiVersion, info`。
+
+### 23.2 直接读表的静态布局
+
+不再维护 install/destroy 影子映射，也不新增 hook。以下布局均来自 26.51 exe 的离线反汇编：
+
+| 项 | 值 |
+|---|---|
+| renderer 单例发布指令 | RVA `0xDFA4214`，指纹 `48 89 3D 45 1E 06 04` |
+| renderer 单例全局 | RVA `0x12006060`，运行时 `ctx = *(base + rva)` |
+| 内联 entries | `ctx+0xBDE170`，`0x1000` 个，每个 `0xB8` 字节 |
+| 分页目录 / 已用字节 | `ctx+0xC96170` / `ctx+0xC96178` |
+| 分页块 | 每块 `0xB8000` 字节 entries，下一块指针在 `+0xB8000` |
+| native | `entry+0`；handle `<0x1000` 走内联，否则走分页 |
+
+所有读取都经 `readable()/peek()` 守卫；不解引用未检查指针、不做虚调用、不写引擎内存。
+`0xDFC2830` 的 reserve 反汇编确认容量按完整 handle 的 `handle*0xB8` 口径比较。
+
+### 23.3 本轮判据
+
+唯一未知仍是 `U-bgfx-handle-native`：依赖里的 u16 是否能通过引擎原表命中当帧某个
+`fmt26` 颜色候选。选面、DLSS 求值和 suppress 策略均不改。
+
+- 通过：`bgfxHIT` 给出 `idx26/w/h/fmt`，且 native 等于当帧颜色 RTV。
+- 失败按原始日志分流：`noContext`（单例/指纹）、`outOfRange`（不是本表下标或容量口径不符）、
+  `noDirectory/noBlock`（分页链）、`notMapped`（entry 为空）、`notInRtv`（有 native 但不在颜色清单）、
+  `invalidHandle`（依赖提取链）。不再靠新增 hook 或手摇候选续试。
+- 主日志行另带 `ctx/cap/dir/block/entry`，失败可以定位到具体一跳；证据计划为
+  `docs/agent/evidence/bgfx-handle-direct-EXP-0030.log`。
+
+### 23.4 EXP-0030 结果
+
+2026-10-27 13:59 实跑：用户原话“好了，没有崩溃，DLSSSR有效果”。原始日志确认
+`Init_ProjectID` / `CreateFeature` 返回 1，连续 1800 帧 `eval=1`，`suppressed=1800 missed=0`；
+这验证了崩溃修复和本次运行稳定性，不作为画质或最终替换验收。
+
+句柄桥未通过：decl 的 `res0=0x00007ff6157294b0` 对应 exe RVA `0xE9394B0`，是 vtable；
+`0x94B0` 只是它的低 16 位。三次 decl 均为 `outOfRange`，没有 `bgfxHIT`。
+证据：`docs/agent/evidence/bgfx-handle-direct-EXP-0030.log`。
+
+## 24. EXP-0031：ResolvedTextureResource 的真实一跳（2026-10-27）
+
+### 24.1 Windows 对象布局
+
+两条独立离线分析（vtable 构造路径与 taau 消费路径）得到同一布局：
+
+```
+dep+0x08       -> wrapper（0x20 字节）
+wrapper+0x00   -> 主 vtable，RVA 0xE9394B0（colour/motion）
+wrapper+0x08   -> 第二基类 vtable，RVA 0xE775460
+wrapper+0x10   -> holder（shared_ptr raw payload，不是纹理资源本身）
+wrapper+0x18   -> shared_ptr 控制块
+holder+0x18    -> ResolvedTextureResource*（0x98 字节）
+resource+0x00  -> uint16 bgfx TextureHandle.idx（0xFFFF 无效）
+```
+
+- 包装对象 ctor `0x533F230` 在 `0x533F2A7` 写 holder、在 `0x533F2AB` 写控制块；
+  deleting dtor `0x533F3D0` 的对象大小为 0x20。
+- 资源创建路径 `0x5342C80` 清零 holder 的前两个 qword，并在 `0x5342DA2` 把真正的
+  `resource+0` 初始化为 `0xFFFF`，与 Mac 全符号的 `TextureHandle.idx` 布局一致。
+- draw/forwarded 中旧依赖已失效，甚至读到函数机器码；只在 armed declarator 采样。
+
+### 24.2 EXP-0031 结果
+
+三次 decl 都读到 holder 的零字段，误得到 `handle=0`；它解析到同一个非当帧 RTV 的
+native，全部为 `notInRtv`，没有 `bgfxHIT`。`holder = ctrl+0x10`、`holder+0x18` 为资源指针
+这一关系与 `0x5342C80` 的构造序列完全吻合。DLSS 连续 600 帧 `eval=1`，
+`suppressed=600 missed=0`。证据：`docs/agent/evidence/resolved-color-handle-EXP-0031.log`。
+
+## 25. EXP-0032：holder 后的资源与解析时机（2026-10-27）
+
+`0xB715060` 给出了读写两侧的闭环：`0xB715074` 取 `holder+0x18`，
+`0xB7150AA` 读取资源 `+0` 并只拒绝 `0xFFFF`，`0xB715173` 把新分配的 handle 写回资源 `+0`。
+同族写入点还有 `0xB71455C / 0xB71460E / 0xB714965 / 0xB714A15 / 0xB772737 / 0xB788B89`。
+因此 0 是合法 handle，`0xFFFF` 才是未解析哨兵。
+
+本轮链为 `dep+8 → wrapper+0x10(holder) → holder+0x18(resource) → resource+0(handle)`，
+并在原 declarator 前后各采样三次：
+
+- `decl-pre` / `decl-post` 任一出现 `bgfxHIT`，则身份桥成立；前后差异用于判定解析时机。
+- `invalidHolder / invalidResource / invalidHandle` 或原表 reason 指示失败一跳；
+  不再增加偏移候选，不改容量、选面、DLSS 或 suppress。
+- 证据计划：`docs/agent/evidence/resolved-color-handle-EXP-0032.log`。
+
+### 25.1 EXP-0032 结果与首次崩溃
+
+第二次完成 runbook 时，`decl-pre/post` 一致读到交替的 `0x017B/0x017C`，解析出的 native
+分别为 `0x29a13fb45e0 / 0x29c18efbd60`。两者都在完整 RTV 清单中，且都是
+**2560×1440 fmt26**，但不在 render-size 候选集合内，所以预注册的 `bgfxHIT` 窄判据未满足。
+身份链已经由原始日志连通；接下来必须先验证内容与有效区域，不能把显示尺寸资源直接喂给 DLSS。
+证据：`docs/agent/evidence/resolved-color-handle-EXP-0032.log`。
+
+15:02 第一次运行的 dump 是另一处旧诊断缺陷：`logDependencies → scanForKnownTargets →
+nr::describe → D3D12Core`，对失效裸指针取描述时 AV。与 NGX 无关。已删除这两个不再需要的
+递归依赖扫描函数及调用；不能再用 `readable()` 为 COM 虚调用背书。
+证据：`docs/agent/evidence/crash-EXP-0032-first.log`。
+
+## 26. EXP-0033：InputFinalColor 的内容与有效区域（2026-10-27）
+
+唯一未知 `U-input-final-color-content`：显示尺寸的语义 native 是当前世界图的哪一种存储，
+是 render-size 有效视口还是完整显示尺寸图像，与 picked colour / final 如何对齐。
+
+- `VvProbe` 保存最近 declarator 解析出的 `InputFinalColor` native；`VvSr::dumpInputs()` 同批
+  额外写 `sr_semantic_<run>_p<PTR>.bin`，不改变 DLSS 选面、求值或 suppress。
+- runbook 在 SR 开启后点一次 `Dump SR inputs`，与现有 `sr_colour_*`、`sr_final_*`、
+  全候选 dump 对齐。日志给出 `semantic colour=<ptr> ok=<0|1>`。
+- 通过要求 semantic 拷贝成功，离线内容对齐能确认它是当前世界图并明确有效区域/缩放关系；
+  全黑、拷贝失败或与当前世界不对应都不可绑定。
+- 本轮不验证 skip 后新鲜度，不宣称画质或最终替换通过。
+
+### 26.1 EXP-0033 结果
+
+用户多点了一次 dump，两批均有效：`frame=756 / 1038`，semantic、picked、final 全部 `ok=1`，
+无需重测。semantic 是完整世界图；resize 后与 picked 的 log-luma 相关系数 **0.997990**、
+logRMSE **0.006847**。两批 semantic 的 SHA-256 都是 `9076d54c…`，picked 都是 `d6fc8cd8…`，
+且 `prev_same=1`，所以只确认内容角色，不证明运动新鲜度。
+证据：`docs/agent/evidence/input-final-color-content-EXP-0033.log` 与同批游戏根 bin。
+
+## 27. EXP-0034：语义颜色的 skip 新鲜度（2026-10-27）
+
+这是 `U-taau-skip-colour-freshness` 第 3 次尝试。与 EXP-0026/27 不同，颜色不再靠
+“最新 render-size fmt26”挑选：每个 armed declarator 都通过 §25 的链更新 native，
+`VvSr::pickInputs()` 优先绑定它；prep 仍采样成 render-size `colorHalf`，深度、MV、边界和
+suppress 逻辑不变。旧 RTV 选面只作无语义资源时的回退。
+
+F7 双采的判据：两批 frame 不同且 VP 运动有效，semantic 字节变化率 **≥1%**，
+同时 `eval=1`、`missed=0`。semantic ≤0.01% 而 final/其他输入变化则为 stale 或绑定失败。
+证据为两批 `sr_semantic_* / sr_colour_* / sr_final_*` 与
+`docs/agent/evidence/input-final-color-freshness-EXP-0034.log`。
+
+### 27.1 EXP-0034 结果与参数序更正
+
+最后一次 F7 双采 `prev_same=0`、`frame=698/894`，semantic 与 colorHalf 跨批均 **0%**，
+final 变化 **27.0213%**，新鲜度失败；`eval=1`、`suppressed=1200 missed=0` 只说明求值和门在跑。
+放大是 prep 的 `Color.Load(id.xy)` 把 2560×1440 源直接裁成左上 1689×950。
+该 semantic 偏好已撤回。
+
+进一步静态复核 declarator 的四个材质绑定项，确认 Windows 的顺序是
+`arg9 InputFinalColor / arg10 Upscaling / arg11 MotionVectors / arg12 TAAHistory`，
+不是 Mac 的顺序。因此 §22–§27 的 arg10 实际为显示尺寸上采样目标，冻结与 `notInRtv`
+都与这个角色一致。EXP-0034 同批旧 `colour[0]` 变化 **10.774%**，是新鲜回退。
+
+## 28. EXP-0035：arg9 FinalColor 绑定与新鲜度（2026-10-27）
+
+唯一未知 `U-arg9-final-color-freshness`：arg9 是否为 render-size 上游颜色，并在 skip 后持续更新。
+
+- 已验证的 wrapper → holder → resource 链不变，起点改为 dep0；每帧读取 `resource+8/+0xC/+0x10`
+  的宽、高、格式。仅当 `w/h == 当前 render size && fmt==26` 才优先绑定，否则回退旧 pick。
+- 因尺寸门只接受 render-size，prep 的 `Color.Load` 不会再裁显示尺寸资源；不顺便改 shader。
+- F7 双采要求 VP 运动有效、semantic 变化率 ≥1%、`eval=1`、`missed=0`，并无放大/冻结异常。
+  尺寸不匹配或 semantic ≤0.01% 都失败，不回到 arg10。
+- 证据计划：`docs/agent/evidence/arg9-final-color-freshness-EXP-0035.log` 与同批 bin。
+
+### 28.1 EXP-0035 结果与 ExternalImage 结构
+
+放大消失，但三次 decl 都是 `holder=0 / invalidHolder`，semantic `ok=0`，实际仍走旧 pick。
+arg9 的 0x28 字节声明对象只是 `{u16 w, u16 h, u32 fmt, …}` 附件描述：构造点
+`0x5266BD0/D7/BDE` 写入 1689/950/26，内部没有资源指针，不能套 arg10 的 shared holder 链。
+旧 colour0 跨批仅变化 0.005726%，colorHalf 0.002793%，final 17.0097%，冻结依旧。
+证据：`docs/agent/evidence/arg9-final-color-freshness-EXP-0035.log`。
+
+后续复核确认 `0xB71D820` 是 **ClusterLights**，不是 TAAU。它的
+`record+0x10 → ExternalImage+0x18 → resource+0(handle)` 结构不能移植到 TAAU；
+其记录向量属于 `*(exec_context+8)+0x50`，不属于 TAAContext。
+
+## 29. EXP-0036：从 live TAA context 取 FinalColor（2026-10-27）
+
+本轮把上述 ClusterLights 记录格式错误地用于 `third+0x50/+0x58`，三次均
+`contextNONE=noRecords`，semantic 为 0，仍走旧 pick。TAAContext 实际只有参数块与一个
+可能为空的纹理槽；四个材质覆盖写在 declarator 的 override 向量，不在 third。
+证据：`docs/agent/evidence/taau-context-final-color-EXP-0036.log`。
+
+## 30. EXP-0037：直接观察 bgfx setTexture（2026-10-27）
+
+唯一未知 `U-taau-settexture-final-color`：TAAU 最终纹理绑定中是否存在 render-size、
+skip 后仍新鲜的 FinalColor。
+
+- 在 `0xB732500` 用 `LL_STATIC_HOOK` 观察并原样转发。反汇编确认参数为
+  `(encoder, dx=handle, r8d=stage, r9=flags)`；只在原 TAAU draw 的线程窗口内检查。
+- 对每个 handle 查引擎 `m_textures`，native 再与当前 render-size RTV 清单求交集；
+  命中 fmt26 才作为 semantic 输入，日志记录 handle/stage/native/match。
+- F7 判据不变：VP 运动有效、semantic ≥1%、`eval=1`、`missed=0`，无冻结/放大。
+- 证据计划：`docs/agent/evidence/taau-settexture-final-color-EXP-0037.log` 与同批 bin。
+
+### 30.1 EXP-0037 结果与真实材质路径
+
+`0xB732500` 实际编码命令 0x13（update 类），TAAU 原 draw 中一次都未调用，semantic 为 0。
+TAAU 每帧只调用一次材质编码器 `0xDFF5480`；其 tag-3 消费函数 `0xDFF64E0` 在
+`0xDFF6510` 直接读取第四参 `resource+0` 的 handle。六参 ABI 已确认，返回 bool。
+证据：`docs/agent/evidence/taau-settexture-final-color-EXP-0037.log`。
+
+## 31. EXP-0038：材质 tag-3 的 FinalColor（2026-10-27）
+
+唯一未知 `U-taau-material-final-color`：这个真实消费点给出的 render-size native 是否在
+skip 后仍新鲜。观察点改为 `0xDFF64E0`，六个参数全部原样转发，只在原 TAAU draw 窗口内
+读取 `resource+0`，再按 §30 的 RTV 交集和尺寸门绑定。F7 判据不变。
+证据计划：`docs/agent/evidence/taau-material-final-color-EXP-0038.log` 与同批 bin。
+
+### 31.1 EXP-0038 结果
+
+材质语义绑定成功：arg9 `1689×950 fmt26`，F7 两批 `prev_same=0`，semantic 变化
+**95.5703%**、colorHalf 69.5155%、final 74.3464%；冻结消失且无放大。停止时有一次
+`missed=1`，所以严格预注册判据记 fail，但输入 stale 已被排除。
+证据：`docs/agent/evidence/taau-material-final-color-EXP-0038.log`。
+
+## 32. EXP-0039/0040：左上竖缝与天空重投影（2026-10-27）
+
+EXP-0039 的纯空间 A/B（零 MV/jitter、每帧 Reset）使左上波动消失，证明异常在时间重投影，
+不在 FinalColor、DLSS 输出资源或 Present 边界。原始 bin 的竖缝位于 **x=1689**，恰为输入宽度。
+证据：`docs/agent/evidence/top-left-spatial-EXP-0039.log`。
+
+随后发现明确的 shader 错误：reversed-Z 天空 `d=1`，旧公式 `CurNear/(1-d)` 把天空当成
+**近平面**而非无穷远，产生错误的大幅 MV。EXP-0040 仅对 `d>=0.999999` 的天空用
+`1e6` 远场深度并忽略 `CamDelta`，恢复时间累积，其他输入和绑定不变。
+判据：左上竖缝/波动消失且 semantic 仍新鲜；否则继续分解近地 MV 矩阵/符号。
+证据计划：`docs/agent/evidence/sky-reprojection-EXP-0040.log` 与同批 bin。
+
+### 32.1 EXP-0040 结果与 EXP-0041
+
+天空远场修复后波动仍在，因此它不是充分根因。复核发现 `evaluateSr` 实际写入
+`DepthInverted=0`，与 reversed-Z 输入直接矛盾。EXP-0041 仅改为 **1**。
+证据：`docs/agent/evidence/sky-reprojection-EXP-0040.log`。
+
+深度方向主要影响遮挡和历史接受，不必然造成全屏异常；x=1689 的精确位置还可能涉及
+MV 索引或 DLSS 内部分块，所以本实验是隔离验证，不预先宣称它解释全部症状。
+若波动仍在，继续查 MV 坐标映射，不回改 FinalColor。
+证据计划：`docs/agent/evidence/depth-inverted-EXP-0041.log` 与同批 bin。
+
+### 32.2 EXP-0041 结果与 EXP-0042
+
+`DepthInverted=1` 后波动仍在，深度方向不是充分根因。随后定位到更直接的分辨率契约：
+MV 是 1689×950，输出是 2560×1440，但 feature flags 未设 `MVLowRes`，DLSS 因而可能按
+显示分辨率读取 MV，并在 **x=1689** 产生边界。EXP-0042 将
+`DLSS.Feature.Create.Flags` 从 IsHDR(1) 改为 **IsHDR|MVLowRes(3)**，其余不变。
+证据计划：`docs/agent/evidence/mv-lowres-EXP-0042.log` 与同批 bin。
+
+### 32.3 EXP-0042 结果与阶段 5
+
+用户观察竖缝消失；最新 Sobel 在 x=1689 无异常竖线，DLSS 输出该列梯度仅 0.003288。
+`MVLowRes` 修复成立，时间累积可保留。S5 已由 `flow.py claim --stage 5` 接受：
+TAAU callback 被持续 suppress，semantic DLSS 实际输出且不再冻结。
+证据：`docs/agent/evidence/mv-lowres-EXP-0042.log`。
+
+## 33. EXP-0043：替换回归（2026-10-27）
+
+唯一未知 `U-replacement-regression`：当前构建在暂停菜单、背包、F11 重建、切场景和
+反复开关下是否稳定。代码不变，检查 `eval/suppress/missed/long frame`、崩溃和 UI 保留。
+证据计划：`docs/agent/evidence/replacement-regression-EXP-0043.log`。
+
+### 33.1 EXP-0043 结果与 EXP-0044
+
+回归发现切存档、Stop→Start、F11 后逐渐变暗/变亮；背包、暂停菜单和更衣室无异常。
+代码只在 `worldLoaded` 改变时 Reset，未在 view 进入 DLSS 或 `renderGeneration` 改变时 Reset，
+与症状一一对应。EXP-0044 在这两类事件上 `resetFrames=2`，清除不可信历史。
+证据：`docs/agent/evidence/replacement-regression-EXP-0043.log`。
+验证计划：`docs/agent/evidence/history-reset-EXP-0044.log`。
+
+### 33.2 EXP-0044 结果与 EXP-0045
+
+view/renderGeneration 重置后亮暗往返仍未改变，历史 Reset 不是充分根因。
+EXP-0045 不再改渲染行为：暗态与 F11 亮态各采一批 `sr_semantic / sr_mid / sr_dlssout / sr_final`，
+用平均 log 亮度和增益确定变化发生在输入、NGX 还是最终编码级。
+证据计划：`docs/agent/evidence/exposure-stage-EXP-0045.log` 与两批 bin。
+
+### 33.3 EXP-0045 结果与 EXP-0046
+
+三批数据证明曝光变化在输入本身：semantic/mid 均值为正常 0.131628、极暗 0.002354、
+极亮 20.734270；DLSS 输出等比变化，final 仅编码。历史 Reset 和输出级均不是根因。
+EXP-0046 启用 **IsHDR|MVLowRes|AutoExposure = 11**，验证 HDR 曝光归一化，不调色调曲线。
+证据计划：`docs/agent/evidence/auto-exposure-EXP-0046.log` 与亮暗两批 bin。
+
+### 33.4 EXP-0046 结果与 EXP-0047
+
+AutoExposure 未归一化：输入暗 0.001832、亮 17.489810，DLSS 输出等比；原版 VV 的 F2
+均值 0.629083。EXP-0047 不改渲染，暗态与 F11 亮态分别用 F10 采集 TAAContext 与
+UpscalingCameraData 的 0x300 float 窗口，定位引擎实际曝光/tonemap 字段；找不到再取 shader。
+证据计划：`docs/agent/evidence/exposure-context-EXP-0047.log`。
+
+### 33.5 EXP-0047 结果与 EXP-0048
+
+TAAContext 的 0x50 候选随亮暗变化，但取值（暗 -5.834 / 亮 0）是采样/透明度而不是曝光；
+cam 侧同偏移恒为 0，稳定期 SR 本身也偏暗，说明颜色目标里没有可用的曝光参数。
+EXP-0048 不再找字段：在 final encode 前自算 1×1 白点（64×64 点采样的 log2 亮度几何平均 ÷ 参考值），
+DLSS 视图统一除以它，**其它视图保持 Mode 4 Bypass**（不读白点纹理）。
+参考值取正常 SR 批次同一纹理的 64×64 采样几何平均 **0.0671**
+（`_local/scratch/semantic_exp38/exposure_stats.py` 复核：正常 0.131583 / sub_geo 0.067111，
+极暗 0.002353 / 0.001212，极亮 20.727217 / 9.271280，括号内为 RGB 均值 / 采样几何平均）。
+
+判据：`sr_exposure_*.bin` 的 [0,0] 在暗态应 < 1、亮态应 > 1；`sr_final` 均值回到正常区间
+（≈0.43–0.49，8-bit 0–1）。若正常帧整体偏亮/偏暗，用同一批 `sr_exposure` 与 `sr_final`
+的比例校准参考值，而不是再改 NGX 标志或猜曝光字段。
+证据计划：`docs/agent/evidence/adaptive-whitepoint-EXP-0048.log` 与暗/亮两批 bin。
+
+### 33.6 EXP-0048 结果与 EXP-0050
+
+重进暗态的白点（0.025118 / 0.012431）与输入几何均值吻合，final 均值为 0.386 / 0.397；
+但亮态 DLSS 输出 sub_geo=1.830909 时 White 仍为 0.345814（目标 27.286274），final=0.997894，
+画面饱和。EXP-0050 只让白点复用 DLSS 的 Reset 事件，在重置帧直接采用当前 target，稳态仍作
+3% 对数平滑；dump 增加 view，以区分曝光 pass 未执行与 target 错误。参考常数暂保持 0.0671，
+保证 A/B 只改重置行为。
+
+用户同时报告仅上下方向拖影反向。静态公式确认 MV 的 Y 少了 NDC 向上到屏幕向下的符号换算，
+但该修复属于另一未知，不混入 EXP-0050。
+
+离线复核发现 NDRW `RawHeader` 实为 32 字节，旧脚本按 28 字节读取；因此旧参考批的 sub_geo
+应由 0.067111 修正为 0.074404。重新定标是独立未知，本轮不改常数。
+证据：`docs/agent/evidence/adaptive-whitepoint-EXP-0048.log`；postmortem：
+`docs/agent/evidence/adaptive-whitepoint-EXP-0048-postmortem.log`。
+验证计划：`docs/agent/evidence/adaptive-whitepoint-reset-EXP-0050.log` 与重进/F11 后 F7 批。
+
+### 33.7 EXP-0050 结果与 EXP-0051
+
+多次 F11 后仍崩坏。世界内 run3 的 DLSS 输出 sub_geo=0.335135，对应 White 目标 4.993964，
+实际仅 0.096003，final=0.989284；final 反解 White 与直接 dump 一致，两个候选颜色源的
+几何均值也一致，因此排除单纯平滑不足、final 绑错和 dump 陈旧。EXP-0051 不改渲染行为，
+只在 4×4 exposure 纹理空余 texel 写入 target/previous/Mode/写入计数/W/H/实际纹理尺寸/
+1e-4 地板样本数，并在 dump 行记录 dlssReady，以分离采样错配和写入/绑定故障。
+证据：`docs/agent/evidence/adaptive-whitepoint-reset-EXP-0050.log`；postmortem：
+`docs/agent/evidence/adaptive-whitepoint-reset-EXP-0050-postmortem.log`。
+验证计划：`docs/agent/evidence/exposure-target-EXP-0051.log` 与 F11 后 F7 批。
+
+### 33.8 EXP-0051 结果与 EXP-0053
+
+异常 run3/4 的 shader meanLog 与同批 DLSS 输出离线结果一致，W/H 与实际纹理尺寸一致、
+floor=0、dlssReady=1，写入计数与 frame 均增加 196，排除采样错配和 pass 未执行。target
+线性值为 4.545352 / 4.560649，但 White 仅 0.121069 / 0.121139；主 previous 在 196 帧内
+几乎不收敛，而 run1/2 是健康平滑对照。EXP-0053 不改渲染，在 texel(3,2) 镜像同一平滑链，
+并用第 4 行记录 4 帧 target 环，以区分主状态 texel 的历史保持失败和逐帧目标跳变。
+证据：`docs/agent/evidence/exposure-target-EXP-0051.log`；postmortem：
+`docs/agent/evidence/exposure-target-EXP-0051-postmortem.log`。
+验证计划：`docs/agent/evidence/exposure-history-EXP-0053.log` 与 F11 后 F7 批。
+
+### 33.9 EXP-0053 结果与 EXP-0054
+
+正常批 target 环稳定，异常批则在 +2.72 与约 -8.0 间逐帧交替，主/镜像 White 始终一致；
+异常批 floor 超过 3000、mid 全黑。根因转向输入身份：resize 清空 semantic，而 semantic 只能在
+原 TAAU draw 的材质绑定中重捕，替换模式持续 suppress 该 draw，最终回退到黑/交替 RTV。
+EXP-0054 在 resize 后设置最多 4 帧的有界转发预算，材质匹配增加当前 render-size 尺寸门，
+捕获成功立即恢复 suppress，预算耗尽则报警。保留旧 native、declarator 直接解析和盲换冻结候选
+均不采用。验证 semantic 非零且尺寸正确、target 环连续、final 不饱和。
+证据：`docs/agent/evidence/exposure-history-EXP-0053.log`；postmortem：
+`docs/agent/evidence/exposure-history-EXP-0053-postmortem.log`。
+验证计划：`docs/agent/evidence/f11-semantic-recapture-EXP-0054.log` 与 F11 后 F7 批。

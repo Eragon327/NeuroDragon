@@ -1,0 +1,11 @@
+EXP-0048 postmortem, derived from docs/agent/evidence/adaptive-whitepoint-EXP-0048.log and its cited NDRW batches.
+
+Run #3 target White = 1.830909 / 0.0671 = 27.286274; captured White = 0.345814 (1.27% of target). With dlssout luma_mean=2.600690, the captured White gives 7.52 before vvEncode and explains final rgb_mean=0.997894. A White of 27.286274 instead gives 0.09531 before encoding.
+
+Run #1 target = 0.001641 / 0.0671 = 0.024456; captured White = 0.025118 (+2.7%). Run #2 target = 0.000800 / 0.0671 = 0.011922; captured White = 0.012431 (+4.3%). The reference-ratio calculation is therefore useful for the next A/B, which keeps 0.0671 unchanged.
+
+The captured trajectory is not sufficient to prove that a healthy 3%/frame smoother is the only cause: White also stops advancing for long stretches while frameNo increases. The next dump must record Stats.view so “exposure pass did not run” can be distinguished from “target was wrong”. The next experiment tests whether the same DLSS reset events produce an immediate target match; it does not claim to fix lighting changes that have no world/view/renderGeneration event.
+
+Independent review also found that changing the offline NDRW parser from a mistaken 28-byte header to RawHeader's actual 32-byte header changes the old normal reference batch sub_geo from 0.067111 to 0.074404. Recalibrating that constant is a separate unknown and is deliberately not changed in the reset experiment.
+
+Y-coordinate derivation for the later, separate MV experiment: pixelPrevY-pixelCurrentY = ((1-ndcPrevY)-(1-ndcY))*H/2 = (ndcY-ndcPrevY)*H/2. The shader currently uses the opposite Y expression while X is correct.

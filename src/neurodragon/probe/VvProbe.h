@@ -82,6 +82,9 @@ void requestDumpNow();
 // are the render resolution (viewport x factor) and the display viewport.
 [[nodiscard]] void*    engineDevice();
 [[nodiscard]] void*    gameQueue();
+// Latest native resource resolved from InputFinalColor's bgfx handle. Borrowed pointer
+// for the explicit SR dump; null until the replacement path has sampled a declarator.
+[[nodiscard]] void*    inputFinalColorResource();
 [[nodiscard]] unsigned renderWidth();
 [[nodiscard]] unsigned renderHeight();
 [[nodiscard]] unsigned displayWidth();
@@ -107,6 +110,7 @@ struct RenderTargetInfo {
     unsigned height;
     unsigned format;
 };
+[[nodiscard]] RenderTargetInfo inputFinalColorTarget();
 [[nodiscard]] unsigned renderTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance = 2);
 
 // The same shape for depth-stencil targets (they are created through

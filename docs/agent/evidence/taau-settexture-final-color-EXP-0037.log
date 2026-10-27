@@ -1,0 +1,88 @@
+[2026-10-27 17:29:22.540 IFO][NeuroDragon] [vv] setTexture hooked at 0x7ff612522500 (rva 0xb732500)
+[2026-10-27 17:29:46.889 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 17:29:46.889 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=36 fmt26=15 depthTargets=9
+[2026-10-27 17:29:48.236 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 17:29:48.322 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 17:29:48.455 DBG][NeuroDragon] [eval] f=1 tid=34160 cl=0x2393fd414f0 h=0x239304353f0 1689x950 c=0x2393fd40a50 d=0x23946a84ec0 mv=0x23946a86b70 o=0x23946a861e0 ret=0x1
+[2026-10-27 17:29:48.458 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=164 hits=0 call=1/3 seq=2264 this=0xf013cfe610
+[2026-10-27 17:29:48.459 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=164 hits=0 call=1/3 seq=2264 this=0xf013cfe610
+[2026-10-27 17:29:48.459 IFO][NeuroDragon] [vv] taau replace declared=2264 callbacks=2264 forwarded=2263 suppressed=1 missed=0
+[2026-10-27 17:29:48.466 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=36 fmt26=15 depthTargets=9
+[2026-10-27 17:29:48.467 DBG][NeuroDragon] [eval] f=2 tid=34160 cl=0x2393fd414f0 h=0x239304353f0 1689x950 c=0x2393fd40a50 d=0x23946a84ec0 mv=0x23946a86b70 o=0x23946a861e0 ret=0x1
+[2026-10-27 17:29:48.469 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=164 hits=0 call=2/3 seq=2265 this=0xf013cfe610
+[2026-10-27 17:29:48.471 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=164 hits=0 call=2/3 seq=2265 this=0xf013cfe610
+[2026-10-27 17:29:48.471 IFO][NeuroDragon] [vv] taau replace declared=2265 callbacks=2265 forwarded=2263 suppressed=2 missed=0
+[2026-10-27 17:29:48.476 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=36 fmt26=15 depthTargets=9
+[2026-10-27 17:29:48.476 DBG][NeuroDragon] [eval] f=3 tid=34160 cl=0x2393fd414f0 h=0x239304353f0 1689x950 c=0x2393fd40a50 d=0x23946a84ec0 mv=0x23946a86b70 o=0x23946a861e0 ret=0x1
+[2026-10-27 17:29:48.477 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=164 hits=0 call=3/3 seq=2266 this=0xf013cfe610
+[2026-10-27 17:29:48.478 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=none scanned=72 candidates=164 hits=0 call=3/3 seq=2266 this=0xf013cfe610
+[2026-10-27 17:29:48.478 IFO][NeuroDragon] [vv] taau replace declared=2266 callbacks=2266 forwarded=2263 suppressed=3 missed=0
+[2026-10-27 17:29:48.487 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=36 fmt26=15 depthTargets=9
+[2026-10-27 17:29:48.496 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=36 fmt26=15 depthTargets=9
+[2026-10-27 17:29:54.477 DBG][NeuroDragon] [eval] f=600 tid=34160 cl=0x2393fd414f0 h=0x239304353f0 1689x950 c=0x2393fd40a50 d=0x23946a84ec0 mv=0x23946a86b70 o=0x23946a861e0 ret=0x1
+[2026-10-27 17:29:54.479 IFO][NeuroDragon] [vv] taau replace declared=2863 callbacks=2863 forwarded=2263 suppressed=600 missed=0
+[2026-10-27 17:29:57.170 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-27 17:29:59.161 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1065 start
+[2026-10-27 17:29:59.161 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1065 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.1250,-0.2778)
+[2026-10-27 17:29:59.173 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x0 ok=0
+[2026-10-27 17:29:59.245 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 17:29:59.251 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[0]=0x2395d117860 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.257 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[1]=0x2395d11a830 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.263 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[2]=0x2395d1181f0 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.269 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[3]=0x2393453e920 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.273 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[4]=0x2393453df90 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.279 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[5]=0x23706bf14e0 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.284 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[6]=0x23706bf44b0 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.289 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[7]=0x237205f28c0 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.298 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[8]=0x237205f3250 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.302 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[9]=0x23925d3dd20 1689x903 fmt=26 ok=1
+[2026-10-27 17:29:59.306 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[10]=0x23925d40360 1689x903 fmt=26 ok=1
+[2026-10-27 17:29:59.311 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[11]=0x23925d3c070 1689x903 fmt=26 ok=1
+[2026-10-27 17:29:59.316 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[12]=0x2391a185870 1689x903 fmt=26 ok=1
+[2026-10-27 17:29:59.321 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[13]=0x2391a17b5e0 1689x903 fmt=26 ok=1
+[2026-10-27 17:29:59.326 IFO][NeuroDragon] [vvsr] sr dump #1 cand colour[14]=0x237205f6bb0 1689x950 fmt=26 ok=1
+[2026-10-27 17:29:59.331 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[0]=0x2395d113570 1689x950 fmt=44 ok=1
+[2026-10-27 17:29:59.336 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[1]=0x2395d115220 1689x950 fmt=44 ok=1
+[2026-10-27 17:29:59.346 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[2]=0x2393453b950 1689x950 fmt=44 ok=1
+[2026-10-27 17:29:59.350 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[3]=0x23925d3b6e0 1689x903 fmt=44 ok=1
+[2026-10-27 17:29:59.355 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[4]=0x23925d390a0 1689x903 fmt=44 ok=1
+[2026-10-27 17:29:59.360 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[5]=0x239258992b0 1689x903 fmt=44 ok=1
+[2026-10-27 17:29:59.364 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[6]=0x237205f7ed0 1689x950 fmt=44 ok=1
+[2026-10-27 17:29:59.369 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[7]=0x237205f4570 1689x950 fmt=44 ok=1
+[2026-10-27 17:29:59.373 IFO][NeuroDragon] [vvsr] sr dump #1 cand depth[8]=0x237205ec920 1689x950 fmt=44 ok=1
+[2026-10-27 17:29:59.373 IFO][NeuroDragon] [vvsr] sr dump #1 frame=1065 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x2395d117860 idx=0 pickedDepth=0x2395d113570 idx=0
+[2026-10-27 17:29:59.373 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=1 ok=1
+[2026-10-27 17:30:00.722 DBG][NeuroDragon] [eval] f=1200 tid=34160 cl=0x2393fd414f0 h=0x239304353f0 1689x950 c=0x2393fd40a50 d=0x23946a84ec0 mv=0x23946a86b70 o=0x23946a861e0 ret=0x1
+[2026-10-27 17:30:00.724 IFO][NeuroDragon] [vv] taau replace declared=3463 callbacks=3463 forwarded=2263 suppressed=1200 missed=0
+[2026-10-27 17:30:01.363 IFO][NeuroDragon] [vvsr] sr dump #2 frame=1263 start
+[2026-10-27 17:30:01.363 IFO][NeuroDragon] [vvsr] sr dump #2 frame=1263 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.3125,-0.3519)
+[2026-10-27 17:30:01.374 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x0 ok=0
+[2026-10-27 17:30:01.430 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1
+[2026-10-27 17:30:01.439 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[0]=0x2395d117860 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.444 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[1]=0x2395d11a830 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.450 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[2]=0x2395d1181f0 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.454 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[3]=0x2393453e920 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.463 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[4]=0x2393453df90 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.469 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[5]=0x23706bf14e0 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.474 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[6]=0x23706bf44b0 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.478 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[7]=0x237205f28c0 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.482 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[8]=0x237205f3250 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.487 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[9]=0x23925d3dd20 1689x903 fmt=26 ok=1
+[2026-10-27 17:30:01.491 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[10]=0x23925d40360 1689x903 fmt=26 ok=1
+[2026-10-27 17:30:01.494 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[11]=0x23925d3c070 1689x903 fmt=26 ok=1
+[2026-10-27 17:30:01.498 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[12]=0x2391a185870 1689x903 fmt=26 ok=1
+[2026-10-27 17:30:01.502 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[13]=0x2391a17b5e0 1689x903 fmt=26 ok=1
+[2026-10-27 17:30:01.506 IFO][NeuroDragon] [vvsr] sr dump #2 cand colour[14]=0x237205f6bb0 1689x950 fmt=26 ok=1
+[2026-10-27 17:30:01.512 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[0]=0x2395d113570 1689x950 fmt=44 ok=1
+[2026-10-27 17:30:01.518 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[1]=0x2395d115220 1689x950 fmt=44 ok=1
+[2026-10-27 17:30:01.525 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[2]=0x2393453b950 1689x950 fmt=44 ok=1
+[2026-10-27 17:30:01.529 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[3]=0x23925d3b6e0 1689x903 fmt=44 ok=1
+[2026-10-27 17:30:01.533 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[4]=0x23925d390a0 1689x903 fmt=44 ok=1
+[2026-10-27 17:30:01.543 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[5]=0x239258992b0 1689x903 fmt=44 ok=1
+[2026-10-27 17:30:01.547 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[6]=0x237205f7ed0 1689x950 fmt=44 ok=1
+[2026-10-27 17:30:01.553 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[7]=0x237205f4570 1689x950 fmt=44 ok=1
+[2026-10-27 17:30:01.557 IFO][NeuroDragon] [vvsr] sr dump #2 cand depth[8]=0x237205ec920 1689x950 fmt=44 ok=1
+[2026-10-27 17:30:01.557 IFO][NeuroDragon] [vvsr] sr dump #2 frame=1263 cand summary colour ok=15/15 depth ok=9/9 pickedColour=0x2395d117860 idx=0 pickedDepth=0x2395d113570 idx=0
+[2026-10-27 17:30:01.557 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=2 ok=1 (pair done runs=1,2)
+[2026-10-27 17:30:07.018 DBG][NeuroDragon] [eval] f=1800 tid=34160 cl=0x2393fd414f0 h=0x239304353f0 1689x950 c=0x2393fd40a50 d=0x23946a84ec0 mv=0x23946a86b70 o=0x23946a861e0 ret=0x1
+[2026-10-27 17:30:07.020 IFO][NeuroDragon] [vv] taau replace declared=4063 callbacks=4063 forwarded=2263 suppressed=1800 missed=0

@@ -1372,74 +1372,14 @@ void scanForTextures(char const* tag, std::uint64_t index, char const* slot, voi
     }
 }
 
-// The dependency's +0x8 is NOT a resource and NOT a bgfx handle: it is a framegraph
-// node (it has its own vtable and carries pass names like "DoDeferredShadingPhase"
-// in its first 0x100 bytes). Looking for a resource *at* that level can never hit -
-// which is what docs/specs/vv.md §4.1 measured ("no ID3D12Resource in the dependency
-// object"). What the graph actually holds is a handful of pointers inside the node,
-// so the productive question is: does any qword in this small object graph equal a
-// render target we already know?
-//
-// That comparison needs no guess about vtables or layouts, and it cannot fault: only
-// pointers into committed memory are followed, and the walk has a node budget.
-constexpr unsigned kNodeBytes  = 0x100;
-constexpr unsigned kNodeBudget = 96;
-
-void scanForKnownTargets(
-    char const* tag,
-    std::uint64_t index,
-    char const*   slot,
-    void const*   node,
-    unsigned      depth,
-    unsigned&     budget
-) {
-    if (!node || depth == 0 || budget == 0 || !readable(node, 8)) {
-        return;
-    }
-    --budget;
-    for (std::size_t offset = 0; offset + 8 <= kNodeBytes; offset += 8) {
-        std::uint64_t value = 0;
-        if (!peek(node, offset, value)) {
-            return;
-        }
-        auto* const candidate = reinterpret_cast<void*>(value);
-        if (!candidate) {
-            continue;
-        }
-        for (unsigned i = 0; i < gSeenCount; ++i) {
-            if (gSeen[i] != candidate) {
-                continue;
-            }
-            auto const info = nr::describe(candidate);
-            utils::logger().info(
-                "[vv] taau #{} {}.{} node+{:#x} -> render target {:#x} {}x{} fmt={} flags={:#x}",
-                index,
-                tag,
-                slot,
-                offset,
-                reinterpret_cast<std::uintptr_t>(candidate),
-                static_cast<unsigned>(info.width),
-                static_cast<unsigned>(info.height),
-                info.format,
-                info.flags
-            );
-            break;
-        }
-        auto const address = reinterpret_cast<std::uintptr_t>(candidate);
-        if (depth > 1 && address > 0x10000 && address < 0x7fff00000000ULL) {
-            scanForKnownTargets(tag, index, slot, candidate, depth - 1, budget);
-        }
-    }
-}
-
 // --- EXP-0028: is there a native resource *inside* InputFinalColor? ----------------
 //
-// The declarator's 10th argument is InputFinalColor (same table that logDependencies
-// names). pickInputs() never binds it - it takes the newest fmt26 RTV at the current
-// render size - so "is the colour we upscale the engine's own colour" reduces to: does
-// this dependency carry a native resource pointer the inventory already knows?
+// The Windows declarator's 9th argument is InputFinalColor (arg10 is Upscaling).
+// The original pick took the newest fmt26 RTV at the current render size, so the question was
+// upscale the engine's own colour" reduces to: does this dependency carry a native
+// resource pointer the inventory already knows?
 //
-// Deliberately flat, unlike scanForKnownTargets: four fixed regions (dep 0x40, dep+8
+// Deliberately flat, unlike the removed recursive dependency scanner: four fixed regions (dep 0x40, dep+8
 // node 0x200, dep+16 object 0x200, node+16 object 0x200), each read only when
 // readable() says the whole block is committed. No recursion, no DFS, no budget. Every
 // qword is compared *by value* against this frame's renderTargets()/depthTargets()
@@ -1579,318 +1519,282 @@ void scanInputColorNative(char const* phase, void* dep, std::uint64_t sequence, 
     );
 }
 
-// --- EXP-0029: bgfx handle -> native resource map ---------------------------------
+// --- EXP-0030: bgfx handle -> native resource, read from the engine's own table ----
 //
-// bgfx gives the engine a uint16 handle; the resource behind it is a native D3D12
-// object. taau's install/destroy are the only two points where that mapping changes,
-// so the table is filled there and nowhere else. The addresses are the shipped exe's
-// and are verified against the prologues below before anything is patched: a build
-// that moved logs the mismatch and stays unhooked.
+// EXP-0029 shadowed this mapping in the probe and hooked taau's "install"; the run
+// (docs/agent/evidence/bgfx-handle-native-EXP-0029.log) recorded sets=0 / nonNull=0 /
+// contexts=0 while destroy counted 2021. The static pass explains the asymmetry: RVA
+// 0xDF9D680 creates nothing - it stores a caller-supplied native pointer into entry+0
+// and sets the "not ours to free" bit at entry+0x9B, i.e. it only adopts a texture
+// some other owner already created. The entries that matter are filled by 0xDFA4EA0
+// (the real create, 9 call sites) and by the two adopt paths.
 //
-// Hooking uses LeviLamina's macro (LL_STATIC_HOOK = the manual-registration variant),
-// not a hand-written MinHook registration (AGENTS §7): hook()/unhook() are the macro's
-// own entry points and they are called only after the fingerprint check passed.
-constexpr std::uintptr_t kBgfxInstallRva = 0xDF9D680;
-constexpr std::uintptr_t kBgfxDestroyRva = 0xDF9EE00;
+// So the probe stops shadowing and reads the engine's table instead. The layout comes
+// from the renderer's own accessors (decoded in 0xDF9D680 / 0xDF9D9F0 / 0xDF9EE00):
+//
+//   ctx            = *(void**)(base + 0x12006060)  // renderer singleton
+//   entries        = ctx + 0xBDE170, 0x1000 inline slots of 0xB8 bytes
+//   used bytes     = *(u64*)(ctx + 0xC96178)       // capacity in bytes, multiple of 0xB8
+//   page directory = *(void**)(ctx + 0xC96170)     // { first block, last block, bytes }
+//   block n        = 0xB8000 bytes of entries; next block in the qword at +0xB8000
+//   entry+0        = ID3D12Resource*
+//
+// Every read goes through peek(), so a wrong ctx or a torn page turns into a reason
+// string instead of a fault on the render thread. Nothing here writes engine memory,
+// calls a virtual or patches code.
+constexpr std::uintptr_t kTextureContextStoreRva  = 0xDFA4214; // `mov [rip+disp], rdi`
+constexpr std::uintptr_t kTextureContextGlobalRva = 0x12006060;
+constexpr std::uintptr_t kTextureArrayOffset      = 0xBDE170;
+constexpr std::uintptr_t kTexturePageDirOffset    = 0xC96170;
+constexpr std::uintptr_t kTextureUsedBytesOffset  = 0xC96178;
+constexpr std::uint16_t  kHandleInvalid           = 0xFFFF;
+constexpr unsigned       kTextureInlineSlots      = 0x1000;
+constexpr unsigned       kTextureEntryStride      = 0xB8;
+constexpr unsigned       kTextureBlockBytes       = 0xB8000;
 
-// 41 bytes: the >=37-byte prefix the analysis settled on, written out whole (it ends on
-// the instruction boundary of `movzx r14d,dx`). Frame set-up, the stack-cookie xor,
-// then the two moves that carry the context and the handle.
-constexpr unsigned char kBgfxInstallPrologue[] = {
-    0x41, 0x56, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x68, 0x4C, 0x89, 0xCE, 0x48, 0x89,
-    0xCB, 0x48, 0x8B, 0x05, 0xEA, 0xC9, 0x83, 0x03, 0x48, 0x31, 0xE0, 0x48, 0x89, 0x44,
-    0x24, 0x60, 0x48, 0x8D, 0xB9, 0x70, 0xE1, 0xBD, 0x00, 0x44, 0x0F, 0xB7, 0xF2,
-};
-constexpr unsigned char kBgfxDestroyPrologue[] = {
-    0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x89, 0xCF,
-    0x48, 0x8D, 0xB1, 0x70, 0xE1, 0xBD, 0x00, 0x0F, 0xB7, 0xDA,
-};
+// 7 bytes at RVA 0xDFA4214: the only store that publishes the renderer singleton. Its
+// displacement is also what pins the global to RVA 0x12006060 (0xDFA421B + 7 +
+// 0x04061E45), so matching the bytes validates the address this file reads ctx from.
+constexpr unsigned char kTextureContextStore[] = {0x48, 0x89, 0x3D, 0x45, 0x1E, 0x06, 0x04};
 
-// The whole uint16 space except bgfx's invalid handle. A direct index needs no hash and
-// no collision handling; one atomic per slot is enough because install and destroy can
-// be called from different engine threads, and destroy only ever writes nullptr.
-constexpr std::uint16_t kHandleInvalid = 0xFFFF;
-constexpr unsigned      kHandleSlots   = kHandleInvalid; // indices 0 .. 0xFFFE
-std::atomic<void*>      gHandleNative[kHandleSlots]{};
+// Filled once at install; ctx is resolved on the first sample because LeviLamina loads
+// mods before the renderer exists, which leaves the global null at install time.
+std::atomic<std::uintptr_t> gTextureModuleBase{0};
+std::atomic<std::uintptr_t> gTextureContext{0};
+std::atomic<bool>           gTextureLayoutOk{false};
+std::atomic<std::uint64_t>  gTextureReads{0};
+std::atomic<std::uint64_t>  gTextureHits{0};
+std::atomic<void*>          gInputFinalColorNative{nullptr};
+std::atomic<unsigned>       gInputFinalColorWidth{0};
+std::atomic<unsigned>       gInputFinalColorHeight{0};
+std::atomic<unsigned>       gInputFinalColorFormat{0};
+std::atomic<unsigned>       gInputFinalColorRecaptureDraws{0};
 
-// Targets are runtime values (exe base + RVA), so they are passed to the hook macro as
-// the identifier *variable*: the macro resolves it when hook() is called, which is
-// after the prologue check.
-std::uintptr_t     gBgfxInstallTarget{};
-std::uintptr_t     gBgfxDestroyTarget{};
-std::atomic<bool>  gBgfxHooked{false};
-std::atomic<std::uint64_t> gBgfxInstallCalls{0};
-std::atomic<std::uint64_t> gBgfxDestroyCalls{0};
-std::atomic<std::uint64_t> gBgfxNonNullSets{0};
-// Distinct install() contexts, so a `notMapped` can be attributed instead of guessed:
-// one context is a single bgfx instance (what this experiment expects), more than one
-// means handles can come from a table the check never sees.
-constexpr unsigned    kBgfxContextSlots = 4;
-std::atomic<void*>    gBgfxContexts[kBgfxContextSlots]{};
-std::atomic<unsigned> gBgfxContextCount{0};
-// EXP-0029: the declarator sequence of the sample being checked, so a draw-phase line
-// can name the declarator line it belongs to.
-std::atomic<std::uint64_t> gInputColorDeclSeq{0};
-// Refilled (3) when the replacement goes armed -> disarmed: the forwarded draw path
-// then produces the "after Stop" samples this experiment needs.
-std::atomic<unsigned> gForwardedHandleBudget{0};
-
-void noteBgfxContext(void* context) {
-    if (!context) {
-        return;
-    }
-    unsigned count = gBgfxContextCount.load(std::memory_order_acquire);
-    for (unsigned i = 0; i < count && i < kBgfxContextSlots; ++i) {
-        if (gBgfxContexts[i].load(std::memory_order_relaxed) == context) {
-            return;
-        }
-    }
-    if (count >= kBgfxContextSlots) {
-        return; // the set is full; the count is the evidence, not the list
-    }
-    if (gBgfxContextCount.compare_exchange_strong(count, count + 1, std::memory_order_acq_rel)) {
-        gBgfxContexts[count].store(context, std::memory_order_relaxed);
-    }
-}
-
-LL_STATIC_HOOK(
-    BgfxInstallHook,
-    ll::memory::HookPriority::Normal,
-    gBgfxInstallTarget,
-    void,
-    void*         context,
-    std::uint16_t handle,
-    std::uintptr_t unknown,
-    void*         native,
-    void*         texRef
-) {
-    // Record first, forward unchanged. `texRef` (the 5th argument) is passed through
-    // untouched - the engine's own bookkeeping depends on it.
-    if (handle != kHandleInvalid) {
-        gHandleNative[handle].store(native, std::memory_order_release);
-        if (native) {
-            gBgfxNonNullSets.fetch_add(1, std::memory_order_relaxed);
-        }
-    }
-    noteBgfxContext(context);
-    auto const n = gBgfxInstallCalls.fetch_add(1, std::memory_order_relaxed) + 1;
-    if (n <= 3 || n % 600 == 0) {
-        utils::logger().info(
-            "[vv] bgfx map set handle=0x{:04X} native={:#x} ctx={:#x} calls={}",
-            handle,
-            reinterpret_cast<std::uintptr_t>(native),
-            reinterpret_cast<std::uintptr_t>(context),
-            n
-        );
-    }
-    origin(context, handle, unknown, native, texRef);
-}
-
-LL_STATIC_HOOK(
-    BgfxDestroyHook,
-    ll::memory::HookPriority::Normal,
-    gBgfxDestroyTarget,
-    void,
-    void*         context,
-    std::uint16_t handle
-) {
-    if (handle != kHandleInvalid) {
-        gHandleNative[handle].store(nullptr, std::memory_order_release);
-    }
-    gBgfxDestroyCalls.fetch_add(1, std::memory_order_relaxed);
-    origin(context, handle);
-}
-
-bool prologueMatches(void* target, unsigned char const* bytes, unsigned size) {
+bool matchesBytes(void* target, unsigned char const* bytes, unsigned size) {
     return target && readable(target, size) && std::memcmp(target, bytes, size) == 0;
 }
 
-// Called from install() once the main module is known. Failure is logged and leaves the
-// table empty; the rest of the probe keeps working.
-void installBgfxMap(std::uintptr_t base) {
-    if (gBgfxHooked.load(std::memory_order_acquire)) {
-        return;
+void* textureContext() {
+    if (auto* const cached = reinterpret_cast<void*>(gTextureContext.load(std::memory_order_acquire))) {
+        return cached;
     }
-    auto* const installTarget = reinterpret_cast<void*>(base + kBgfxInstallRva);
-    auto* const destroyTarget = reinterpret_cast<void*>(base + kBgfxDestroyRva);
-    if (!prologueMatches(installTarget, kBgfxInstallPrologue, sizeof(kBgfxInstallPrologue))) {
-        utils::logger().error(
-            "[vv] bgfx map: install prologue mismatch at {:#x} (rva {:#x}); native map not hooked",
-            reinterpret_cast<std::uintptr_t>(installTarget),
-            kBgfxInstallRva
-        );
-        return;
+    if (!gTextureLayoutOk.load(std::memory_order_acquire)) {
+        return nullptr;
     }
-    if (!prologueMatches(destroyTarget, kBgfxDestroyPrologue, sizeof(kBgfxDestroyPrologue))) {
-        utils::logger().error(
-            "[vv] bgfx map: destroy prologue mismatch at {:#x} (rva {:#x}); native map not hooked",
-            reinterpret_cast<std::uintptr_t>(destroyTarget),
-            kBgfxDestroyRva
-        );
-        return;
+    std::uintptr_t const base = gTextureModuleBase.load(std::memory_order_acquire);
+    if (!base) {
+        return nullptr;
     }
-    gBgfxInstallTarget = reinterpret_cast<std::uintptr_t>(installTarget);
-    gBgfxDestroyTarget = reinterpret_cast<std::uintptr_t>(destroyTarget);
-    int const installStatus = BgfxInstallHook::hook();
-    int const destroyStatus = BgfxDestroyHook::hook();
-    if (installStatus != 0 || destroyStatus != 0) {
-        utils::logger().error(
-            "[vv] bgfx map: hook failed install={} destroy={}; native map disabled",
-            installStatus,
-            destroyStatus
-        );
-        if (installStatus == 0) {
-            BgfxInstallHook::unhook();
-        }
-        if (destroyStatus == 0) {
-            BgfxDestroyHook::unhook();
-        }
-        return;
+    // The global sits in the zero-filled tail of .data and is published by 0xDFA4214
+    // once the renderer singleton has been allocated.
+    void* resolved = nullptr;
+    if (!peek(reinterpret_cast<void*>(base + kTextureContextGlobalRva), 0, resolved) || !resolved) {
+        return nullptr;
     }
-    gBgfxHooked.store(true, std::memory_order_release);
-    utils::logger().info(
-        "[vv] bgfx map hooked install={:#x} (rva {:#x}) destroy={:#x} (rva {:#x})",
-        gBgfxInstallTarget,
-        kBgfxInstallRva,
-        gBgfxDestroyTarget,
-        kBgfxDestroyRva
-    );
-}
-
-// Table first, hooks second: a late install must not write into freed storage.
-void uninstallBgfxMap() {
-    if (!gBgfxHooked.exchange(false, std::memory_order_acq_rel)) {
-        return;
-    }
-    BgfxDestroyHook::unhook();
-    BgfxInstallHook::unhook();
-    for (auto& slot : gHandleNative) {
-        slot.store(nullptr, std::memory_order_relaxed);
-    }
-    utils::logger().info(
-        "[vv] bgfx map unhooked, table cleared (sets={} destroys={})",
-        gBgfxInstallCalls.load(std::memory_order_relaxed),
-        gBgfxDestroyCalls.load(std::memory_order_relaxed)
-    );
-}
-
-// EXP-0029 check: the dependency's +8 is the resolved texture; its first qword is the
-// bgfx handle (uint16). Every level is guarded, the lookup is refreshed on each call,
-// and a handle the engine already destroyed simply reads as "not mapped".
-//
-// `valid`/`mapped` are diagnostics, NOT proof: a handle that reads and maps can still
-// point at a resource that is not the colour the SR pass reads. The only evidence is a
-// `bgfxHIT` line, i.e. the mapped native pointer *is* one of this frame's render
-// targets. The raw qwords of the resolved texture are printed for exactly that reason.
-//
-// Phases: "decl" (armed declarator), "draw" (armed draw callback) and the forwarded
-// draws after the replacement was disarmed (armed=0 forwarded=1). Each phase has its
-// own budget; `decl=` names the declarator sample this line belongs to.
-void checkInputColorHandle(
-    char const*       phase,
-    bool              armed,
-    bool              forwarded,
-    std::uint64_t     sequence,
-    unsigned          call,
-    std::uint64_t     declSequence
-) {
-    void* const dep = gInputColorDependency.load(std::memory_order_relaxed);
-    void*       resource = nullptr;
-    std::uint16_t handle = kHandleInvalid;
-    bool        valid    = false;
-    if (dep && readable(dep, 0x10)) {
-        peek(dep, 8, resource);
-        std::uint16_t raw = kHandleInvalid;
-        if (resource && peek(resource, 0, raw) && raw != kHandleInvalid) {
-            handle = raw;
-            valid  = true;
-        }
-    }
-    std::uint64_t res0 = 0;
-    std::uint64_t res8 = 0;
-    if (resource && readable(resource, 0x10)) {
-        peek(resource, 0, res0);
-        peek(resource, 8, res8);
-    }
-    // No virtual call and no describe(): the table holds the pointer the engine passed
-    // in, and that is all this compares.
-    void* const native = valid ? gHandleNative[handle].load(std::memory_order_acquire) : nullptr;
-    RenderTargetInfo colours[48]{};
-    unsigned const   colourCount = renderTargets(colours, 48, 64);
-    int              index       = -1;
-    int              index26     = -1;
-    for (unsigned i = 0; native && i < colourCount; ++i) {
-        if (colours[i].resource == native) {
-            index = static_cast<int>(i);
-            break;
-        }
-    }
-    if (index >= 0 && colours[index].format == 26) {
-        // Same order the sr_cand dumps use: the position among fmt26 entries only.
-        index26 = 0;
-        for (int i = 0; i < index; ++i) {
-            index26 += colours[i].format == 26 ? 1 : 0;
-        }
-    }
-    unsigned const contexts = gBgfxContextCount.load(std::memory_order_acquire);
-    utils::logger().info(
-        "[vv] in.color handle=0x{:04X} valid={} mapped={} phase={} armed={} forwarded={} decl={}"
-        " res0={:#018x} res8={:#018x} native={:#x} dep={:#x} res={:#x}"
-        " candidates={} call={}/{} seq={} sets={} destroys={} nonNull={} contexts={} hooked={}",
-        handle,
-        valid ? 1 : 0,
-        native ? 1 : 0,
-        phase,
-        armed ? 1 : 0,
-        forwarded ? 1 : 0,
-        declSequence,
-        res0,
-        res8,
-        reinterpret_cast<std::uintptr_t>(native),
-        reinterpret_cast<std::uintptr_t>(dep),
-        reinterpret_cast<std::uintptr_t>(resource),
-        colourCount,
-        call,
-        kInputColorNativeCalls,
-        sequence,
-        gBgfxInstallCalls.load(std::memory_order_relaxed),
-        gBgfxDestroyCalls.load(std::memory_order_relaxed),
-        gBgfxNonNullSets.load(std::memory_order_relaxed),
-        contexts,
-        gBgfxHooked.load(std::memory_order_acquire) ? 1 : 0
-    );
-    if (index >= 0) {
-        bool const ambiguous = contexts > 1;
+    std::uintptr_t const value    = reinterpret_cast<std::uintptr_t>(resolved);
+    std::uintptr_t       expected = 0;
+    if (gTextureContext.compare_exchange_strong(expected, value, std::memory_order_acq_rel)) {
         utils::logger().info(
-            "[vv] in.color bgfxHIT cand=colour idx={} idxRtv={} idx26={} ptr={:#x} w={} h={} fmt={}"
-            " at=handle handle=0x{:04X} phase={} ambiguous={}",
-            index,
-            index,
-            index26,
-            reinterpret_cast<std::uintptr_t>(native),
-            colours[index].width,
-            colours[index].height,
-            colours[index].format,
-            handle,
-            phase,
-            ambiguous ? 1 : 0
+            "[vv] texture table ctx={:#x} (global rva {:#x}); handle->native is a plain read",
+            value,
+            kTextureContextGlobalRva
+        );
+    }
+    return resolved;
+}
+
+// One handle -> native lookup. `reason` is the experiment's diagnosis and the only thing
+// the caller branches on; the other fields are logged so a miss says *where* the walk
+// stopped instead of only that it did.
+struct TextureLookup {
+    void*         ctx{nullptr};
+    std::uint64_t usedBytes{0};
+    void*         directory{nullptr};
+    void*         block{nullptr};
+    void*         entry{nullptr};
+    void*         native{nullptr};
+    char const*   reason{"noContext"};
+};
+
+TextureLookup lookupTextureNative(std::uint16_t handle) {
+    TextureLookup out{};
+    void* const   ctx = textureContext();
+    if (!ctx) {
+        return out; // reason stays noContext
+    }
+    out.ctx = ctx;
+    gTextureReads.fetch_add(1, std::memory_order_relaxed);
+    auto* const array = static_cast<unsigned char*>(ctx) + kTextureArrayOffset;
+    // Read in both branches so every log line can show the table's size; only the paged
+    // branch *enforces* it, because the inline block is always present.
+    if (!peek(ctx, kTextureUsedBytesOffset, out.usedBytes)) {
+        out.usedBytes = 0;
+    }
+    if (static_cast<unsigned>(handle) < kTextureInlineSlots) {
+        out.entry = array + static_cast<std::size_t>(handle) * kTextureEntryStride;
+    } else {
+        // Paged handle: bound it against the array's used bytes before walking, which is
+        // the same check the engine's own reserve() makes, so the walk stays inside the
+        // table. Zero, misaligned or too small means the layout is not what we assume.
+        if (out.usedBytes == 0 || out.usedBytes % kTextureEntryStride != 0
+            || static_cast<std::uint64_t>(handle) * kTextureEntryStride >= out.usedBytes) {
+            out.reason = "outOfRange";
+            return out;
+        }
+        if (!peek(ctx, kTexturePageDirOffset, out.directory) || !out.directory) {
+            out.reason = "noDirectory";
+            return out;
+        }
+        if (!peek(out.directory, 0, out.block) || !out.block) {
+            out.reason = "noBlock";
+            return out;
+        }
+        // Block 0 covers handles 0x1000..0x1FFF; the next block's address is the qword
+        // the engine itself follows at 0xDF9D747.
+        for (unsigned n = (handle >> 12) - 1; n > 0; --n) {
+            void* next = nullptr;
+            if (!peek(out.block, kTextureBlockBytes, next) || !next) {
+                out.block  = nullptr;
+                out.reason = "noBlock";
+                return out;
+            }
+            out.block = next;
+        }
+        out.entry =
+            static_cast<unsigned char*>(out.block) + static_cast<std::size_t>(handle & 0xFFF) * kTextureEntryStride;
+    }
+    if (!peek(out.entry, 0, out.native) || !out.native) {
+        out.native = nullptr;
+        out.reason = "notMapped";
+        return out;
+    }
+    out.reason = "notInRtv"; // the caller upgrades this to a hit if it is on screen
+    return out;
+}
+
+// Called from install() once the main module is known. Only the base and the layout
+// fingerprint are recorded here; a build whose layout moved logs the mismatch, leaves
+// the table unavailable and keeps the rest of the probe working.
+void installTextureTable(std::uintptr_t base) {
+    if (gTextureModuleBase.load(std::memory_order_acquire)) {
+        return;
+    }
+    auto* const store = reinterpret_cast<void*>(base + kTextureContextStoreRva);
+    if (!matchesBytes(store, kTextureContextStore, sizeof(kTextureContextStore))) {
+        utils::logger().error(
+            "[vv] texture table: ctx store fingerprint mismatch at {:#x} (rva {:#x});"
+            " handle->native unavailable",
+            reinterpret_cast<std::uintptr_t>(store),
+            kTextureContextStoreRva
         );
         return;
     }
-    char const* reason = !valid ? "invalidHandle" : (!native ? "notMapped" : "notInRtv");
+    gTextureModuleBase.store(base, std::memory_order_release);
+    gTextureLayoutOk.store(true, std::memory_order_release);
     utils::logger().info(
-        "[vv] in.color bgfxNONE reason={} handle=0x{:04X} res={:#x} native={:#x} at=handle"
-        " phase={} contexts={} sets={} destroys={} nonNull={}",
-        reason,
-        handle,
-        reinterpret_cast<std::uintptr_t>(resource),
-        reinterpret_cast<std::uintptr_t>(native),
-        phase,
-        contexts,
-        gBgfxInstallCalls.load(std::memory_order_relaxed),
-        gBgfxDestroyCalls.load(std::memory_order_relaxed),
-        gBgfxNonNullSets.load(std::memory_order_relaxed)
+        "[vv] texture table: layout ok (rva {:#x} -> global {:#x}); ctx resolved on first sample",
+        kTextureContextStoreRva,
+        kTextureContextGlobalRva
     );
+}
+
+// Read-only state only: there is no shadow table to clear and no hook to remove, but the
+// cached ctx must not outlive the renderer it points into.
+void uninstallTextureTable() {
+    gTextureLayoutOk.store(false, std::memory_order_release);
+    gTextureContext.store(0, std::memory_order_release);
+    gTextureModuleBase.store(0, std::memory_order_release);
+    utils::logger().info(
+        "[vv] texture table released (reads={} hits={})",
+        gTextureReads.load(std::memory_order_relaxed),
+        gTextureHits.load(std::memory_order_relaxed)
+    );
+}
+
+// EXP-0038: 0xDFF64E0 is the material tag-3 consumer reached by TAAU's
+// 0xDFF5480 call. Its fourth argument is ResolvedTextureResource and 0xDFF6510
+// reads the handle from resource+0. Forward all six ABI arguments unchanged.
+constexpr std::uintptr_t kSetTextureRva = 0xDFF64E0;
+constexpr unsigned char kSetTexturePrologue[] = {
+    0x41, 0x56, 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x48, 0x89, 0xC8, 0x44, 0x0F, 0xB6, 0x94, 0x24,
+};
+std::uintptr_t    gSetTextureTarget{};
+std::atomic<bool> gSetTextureHooked{false};
+std::atomic<unsigned> gSetTextureLogs{0};
+thread_local bool gInTaauDraw = false;
+
+LL_STATIC_HOOK(
+    SetTextureHook,
+    ll::memory::HookPriority::Normal,
+    gSetTextureTarget,
+    bool,
+    std::uint32_t  action,
+    void*          encoder,
+    void*          record,
+    void*          resource,
+    std::uintptr_t flags,
+    std::uintptr_t view
+) {
+    if (gInTaauDraw && resource) {
+        std::uint16_t handle = kHandleInvalid;
+        if (peek(resource, 0, handle) && handle != kHandleInvalid) {
+            TextureLookup const lookup = lookupTextureNative(handle);
+            RenderTargetInfo  targets[48]{};
+            unsigned const    count = renderTargets(targets, 48, 64);
+            bool              matched = false;
+            for (unsigned i = 0; lookup.native && i < count; ++i) {
+                if (targets[i].resource != lookup.native || targets[i].format != 26
+                    || targets[i].width != renderWidth() || targets[i].height != renderHeight()) {
+                    continue;
+                }
+                gInputFinalColorWidth.store(targets[i].width, std::memory_order_release);
+                gInputFinalColorHeight.store(targets[i].height, std::memory_order_release);
+                gInputFinalColorFormat.store(targets[i].format, std::memory_order_release);
+                gInputFinalColorNative.store(lookup.native, std::memory_order_release);
+                gTextureHits.fetch_add(1, std::memory_order_relaxed);
+                matched = true;
+                break;
+            }
+            unsigned const n = gSetTextureLogs.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (n <= 24) {
+                utils::logger().info(
+                    "[vv] in.color material handle=0x{:04X} action={} native={:#x} entry={:#x} match={}",
+                    handle,
+                    action,
+                    reinterpret_cast<std::uintptr_t>(lookup.native),
+                    reinterpret_cast<std::uintptr_t>(lookup.entry),
+                    matched ? 1 : 0
+                );
+            }
+        }
+    }
+    return origin(action, encoder, record, resource, flags, view);
+}
+
+void installSetTextureHook(std::uintptr_t base) {
+    if (gSetTextureHooked.load(std::memory_order_acquire)) {
+        return;
+    }
+    auto* const target = reinterpret_cast<void*>(base + kSetTextureRva);
+    if (!matchesBytes(target, kSetTexturePrologue, sizeof(kSetTexturePrologue))) {
+        utils::logger().error("[vv] material texture prologue mismatch at {:#x}; FinalColor capture disabled", reinterpret_cast<std::uintptr_t>(target));
+        return;
+    }
+    gSetTextureTarget = reinterpret_cast<std::uintptr_t>(target);
+    int const status = SetTextureHook::hook();
+    if (status != 0) {
+        utils::logger().error("[vv] material texture hook failed status={}", status);
+        return;
+    }
+    gSetTextureHooked.store(true, std::memory_order_release);
+    utils::logger().info("[vv] material texture hooked at {:#x} (rva {:#x})", gSetTextureTarget, kSetTextureRva);
+}
+
+void uninstallSetTextureHook() {
+    if (!gSetTextureHooked.exchange(false, std::memory_order_acq_rel)) {
+        return;
+    }
+    SetTextureHook::unhook();
 }
 
 // BindFramebufferColor<RenderContext> is opaque (the SDK header is an empty
@@ -1898,65 +1802,11 @@ void checkInputColorHandle(
 // at **+0x8** per dependency, handed to the material as the texture override value
 // (docs/A §7.1 has the macOS build reading +0x10 instead - the two layouts differ,
 // which is why this offset comes from the Windows disassembly and not from the Mac
-// IDB). Argument order is the source order shared by both builds, and the macOS
-// decompile names the consumers: argument 9 = InputTAAHistory, 10 = InputFinalColor,
-// 11 = output, 12 = InputBufferMotionVectors - i.e. *not* the naive order.
+// IDB). Windows 26.51 binds the dependencies differently from macOS: arg9 =
+// InputFinalColor, arg10 = Upscaling, arg11 = InputBufferMotionVectors, arg12 = InputTAAHistory.
 //
-// The +0x8 value is a pointer to whatever the framegraph resolved for this frame, so
-// the dump also walks it: if the texture identity lives one hop further, the bytes
-// are here to prove it.
-void logDependencies(char const* tag, std::uint64_t index, void* d0, void* d1, void* d2, void* d3) {
-    void*       const deps[4]  = {d0, d1, d2, d3};
-    char const* const names[4] = {"history", "color", "output", "motion"};
-    for (int i = 0; i < 4; ++i) {
-        std::uint64_t head[3]{};
-        for (std::size_t k = 0; k < 3; ++k) {
-            peek(deps[i], k * 8, head[k]);
-        }
-        auto const resolved = reinterpret_cast<void*>(head[1]);
-        std::uint64_t prefix[4]{};
-        for (std::size_t k = 0; k < 4; ++k) {
-            peek(resolved, k * 8, prefix[k]);
-        }
-        auto const tail = printableRuns(resolved, 0x100);
-        // The +0x10 word is a pointer for some dependencies and a small id for
-        // others, so follow it only when it is readable - the same object graph is
-        // one hop deep at most.
-        auto const      second      = reinterpret_cast<void*>(head[2]);
-        std::string     secondText;
-        if (second && second != resolved) {
-            secondText = printableRuns(second, 0x100);
-        }
-        // The dependency object itself, the node it points at, and the +0x10 hop:
-        // whichever of the three holds a texture, the scan names it with its size.
-        scanForTextures(tag, index, names[i], deps[i], 0x40);
-        scanForTextures(tag, index, names[i], resolved, 0x200);
-        scanForTextures(tag, index, names[i], reinterpret_cast<void const*>(head[2]), 0x100);
-        // And the question that actually matters for M6: is any render target we
-        // already know reachable from this node by one to three pointer hops?
-        unsigned budget = kNodeBudget;
-        scanForKnownTargets(tag, index, names[i], deps[i], 3, budget);
-        utils::logger().info(
-            "[vv] taau #{} {}.{} this={:#x} id={:#x} res={:#x} +10={:#x} head={:#x},{:#x},{:#x},{:#x}"
-            " resText=[{}] mod0={} secondText=[{}]",
-            index,
-            tag,
-            names[i],
-            reinterpret_cast<std::uintptr_t>(deps[i]),
-            head[0],
-            head[1],
-            head[2],
-            prefix[0],
-            prefix[1],
-            prefix[2],
-            prefix[3],
-            tail,
-            moduleOf(head[0]),
-            secondText
-        );
-    }
-}
-
+// The +0x8 value is a 0x20-byte dependency wrapper: +0x10/+0x18 are a shared holder
+// and its control block; the holder's +0x18 points to the resolved resource (EXP-0032).
 void taauDetour(
     void* declarator,
     void* allocator,
@@ -2025,30 +1875,17 @@ void taauDetour(
             gSubmittedLists.load(std::memory_order_relaxed)
         );
     }
-    // The four dependencies are the only route to the textures, so dump them
-    // before and after the original runs: if the output handle is only filled
-    // while the pass is declared, the two lines differ and that is the answer.
-    // Sampling: the first two frames plus every 2000th hit, so a run that starts in
-    // the (already upscaled) main menu still produces samples from inside a world.
-    bool const dumpDeps = index <= 2 || index % 2000 == 0;
-    if (dumpDeps) {
-        logDependencies("in", index, dep0, dep1, dep2, dep3);
-    }
     // EXP-0028: only while the replacement is actually armed (that is the state the
     // experiment asks about), and only the first few armed frames - after that the
     // object graph is the same one and per-frame scanning would be pure cost. The
     // dependency is kept for the draw callback, which is the phase the engine resolves
     // it in; the two phases count separately.
     if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
-        gInputColorDependency.store(dep1, std::memory_order_relaxed);
+        gInputColorDependency.store(dep0, std::memory_order_relaxed);
         static std::atomic<unsigned> declScans{0};
         unsigned const               call = declScans.fetch_add(1, std::memory_order_relaxed);
         if (call < kInputColorNativeCalls) {
-            scanInputColorNative("decl", dep1, index, call + 1);
-            // Same handle check the draw callback runs, on the declared state; its own
-            // budget, and the sequence is published so the draw lines can pair with it.
-            gInputColorDeclSeq.store(index, std::memory_order_relaxed);
-            checkInputColorHandle("decl", true, false, index, call + 1, index);
+            scanInputColorNative("decl", dep0, index, call + 1);
         }
     }
 
@@ -2066,10 +1903,6 @@ void taauDetour(
         dep2,
         dep3
     );
-
-    if (dumpDeps) {
-        logDependencies("out", index, dep0, dep1, dep2, dep3);
-    }
 }
 
 // The macOS decompile of taau's declarator is explicit about where the four textures
@@ -2414,23 +2247,6 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
             scanInputColorNative("draw", dep, index, call + 1);
         }
     }
-    // EXP-0029: the same dependency's resolved texture carries the bgfx handle in its
-    // first qword. Refreshed on every one of these calls - destroy clears the table, so
-    // a handle is never assumed to still be alive. Own three-call budget again.
-    if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
-        static std::atomic<unsigned> bgfxChecks{0};
-        unsigned const               call = bgfxChecks.fetch_add(1, std::memory_order_relaxed);
-        if (call < kInputColorNativeCalls) {
-            checkInputColorHandle(
-                "draw",
-                true,
-                false,
-                index,
-                call + 1,
-                gInputColorDeclSeq.load(std::memory_order_relaxed)
-            );
-        }
-    }
     // Content boundary: the engine reuses the same command-list objects across
     // frames, so a capture from the previous frame is assumed to still be this
     // frame's TAAU list. If it is not (frame shape changed), scan again.
@@ -2481,7 +2297,9 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
         samplePinnedMatrices(third, batch, sample);
     }
 #endif
-    if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
+    bool const replace   = gReplaceTaauDraw.load(std::memory_order_acquire);
+    bool const recapture = replace && gInputFinalColorRecaptureDraws.load(std::memory_order_relaxed) > 0;
+    if (replace && !recapture) {
         auto const suppressed = gDrawSuppressed.fetch_add(1, std::memory_order_relaxed) + 1;
         if (suppressed <= 3 || suppressed % 600 == 0) {
             utils::logger().info(
@@ -2495,35 +2313,26 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
         }
         return;
     }
+    unsigned recaptureLeft = 0;
+    if (recapture) {
+        recaptureLeft = gInputFinalColorRecaptureDraws.fetch_sub(1, std::memory_order_relaxed) - 1;
+        utils::logger().info("[vv] taau recapture: forwarding original draw, left={}", recaptureLeft);
+    }
     gDrawForwarded.fetch_add(1, std::memory_order_relaxed);
-    // EXP-0029 forwarded phase: the budget is refilled only when the replacement goes
-    // armed -> disarmed, so these are the "after Stop" samples that prove the handle
-    // still resolves on the normal path. Sampling here (before the original draw) reads
-    // the same declared/resolved state the armed samples read.
-    {
-        unsigned budget = gForwardedHandleBudget.load(std::memory_order_acquire);
-        while (budget > 0
-               && !gForwardedHandleBudget.compare_exchange_weak(
-                   budget,
-                   budget - 1,
-                   std::memory_order_acq_rel,
-                   std::memory_order_acquire
-               )) {
-        }
-        if (budget > 0) {
-            static std::atomic<unsigned> forwardChecks{0};
-            unsigned const call = forwardChecks.fetch_add(1, std::memory_order_relaxed) + 1;
-            checkInputColorHandle(
-                "draw",
-                false,
-                true,
-                index,
-                call,
-                gInputColorDeclSeq.load(std::memory_order_relaxed)
-            );
+    gInTaauDraw = true;
+    gOriginalDraw(self, context, third, fourth);
+    gInTaauDraw = false;
+    if (recapture) {
+        bool const captured = gInputFinalColorNative.load(std::memory_order_acquire)
+            && gInputFinalColorWidth.load(std::memory_order_relaxed) == renderWidth()
+            && gInputFinalColorHeight.load(std::memory_order_relaxed) == renderHeight();
+        if (captured) {
+            gInputFinalColorRecaptureDraws.store(0, std::memory_order_release);
+            utils::logger().info("[vv] taau recapture: captured render-size InputFinalColor");
+        } else if (recaptureLeft == 0) {
+            utils::logger().warn("[vv] taau recapture: budget exhausted without a render-size match");
         }
     }
-    gOriginalDraw(self, context, third, fourth);
 }
 
 // One-shot diagnostic: write every render target we have seen to a BMP, so the frame
@@ -3023,9 +2832,11 @@ bool install() {
         utils::logger().warn("[vv] taau draw prologue mismatch at {:#x} ({})", reinterpret_cast<std::uintptr_t>(drawTarget), kTaauDrawRva);
     }
 
-    // EXP-0029: bgfx handle -> native resource map. Independent of the taau hooks: if
-    // this build's prologues moved, only the map stays empty and the log says so.
-    installBgfxMap(base);
+    // EXP-0030: bgfx handle -> native resource, read from the engine's table. Independent
+    // of the taau hooks: if this build's layout moved, only the fingerprint fails and the
+    // log says so.
+    installTextureTable(base);
+    installSetTextureHook(base);
 
     // v4: take the engine's D3D12 device early. LeviLamina loads mods before the
     // renderer is built, so the export hook is normally in place before the first
@@ -3060,8 +2871,9 @@ bool install() {
 
 void uninstall() {
     setTaauDrawReplacement(false);
-    // EXP-0029: the map's hooks go down first, then the table is cleared inside.
-    uninstallBgfxMap();
+    uninstallSetTextureHook();
+    // EXP-0030: drop the cached renderer context so a reload cannot read through it.
+    uninstallTextureTable();
     // The boundary experiment created objects on the engine's device, so it has to
     // let go of them before the probe's own hooks come down.
     inject::release();
@@ -3572,6 +3384,12 @@ void onPresent() {
 
 void onSwapChainResize() {
     resetTextureInventory();
+    gInputFinalColorNative.store(nullptr, std::memory_order_release);
+    gInputFinalColorWidth.store(0, std::memory_order_release);
+    gInputFinalColorHeight.store(0, std::memory_order_release);
+    gInputFinalColorFormat.store(0, std::memory_order_release);
+    gInputFinalColorRecaptureDraws.store(4, std::memory_order_release);
+    gSetTextureLogs.store(0, std::memory_order_relaxed);
     gRenderGeneration.fetch_add(1, std::memory_order_relaxed);
     // A derived render size is stale after a rebuild; the next record re-derives it
     // from the new inventory (a TAAU-set size is left alone: the declarator refreshes
@@ -3627,7 +3445,16 @@ void noteSwapChain(void* swapChain) {
 void setGameQueue(void* queue) { gGameQueue.store(queue, std::memory_order_relaxed); }
 
 void* engineDevice() { return gEngineDevice.load(std::memory_order_relaxed); }
-bool  worldLoaded() { return gWorldLoaded.load(std::memory_order_relaxed); }
+void* inputFinalColorResource() { return gInputFinalColorNative.load(std::memory_order_acquire); }
+RenderTargetInfo inputFinalColorTarget() {
+    return {
+        gInputFinalColorNative.load(std::memory_order_acquire),
+        gInputFinalColorWidth.load(std::memory_order_acquire),
+        gInputFinalColorHeight.load(std::memory_order_acquire),
+        gInputFinalColorFormat.load(std::memory_order_acquire),
+    };
+}
+bool worldLoaded() { return gWorldLoaded.load(std::memory_order_relaxed); }
 
 bool taaMatrices(float* current, float* previous, float* camera, float* jitter) {
     // The snapshot taken in drawDetour, not the live context: the engine's own draw
@@ -3788,14 +3615,6 @@ void setTaauDrawReplacement(bool armed) {
     bool const previous = gReplaceTaauDraw.exchange(armed, std::memory_order_acq_rel);
     if (previous == armed) {
         return;
-    }
-    if (!armed) {
-        // EXP-0029: the replacement just stopped, so the next few draws go through the
-        // original callback again. Give that path its own three samples - without them
-        // the run cannot say whether the handle still resolved before Stop or the
-        // suppression changed what the dependency carries.
-        gForwardedHandleBudget.store(kInputColorNativeCalls, std::memory_order_release);
-        utils::logger().info("[vv] bgfx handle: forwarded sample budget={}", kInputColorNativeCalls);
     }
     utils::logger().info("[vv] taau replacement armed={}", armed ? 1 : 0);
 }

@@ -1,0 +1,62 @@
+[2026-10-27 20:48:19.954 IFO][NeuroDragon] [vv] ctxs: hotkey F10 pressed
+[2026-10-27 20:48:23.316 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 20:48:23.316 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 20:48:27.350 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 20:48:27.350 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 20:48:28.191 DBG][NeuroDragon] [eval] f=4800 tid=32692 cl=0x1989794cbd0 h=0x198de803630 1689x950 c=0x198dec4a540 d=0x198dec4aed0 mv=0x198dec4c1f0 o=0x198dec4d510 ret=0x1
+[2026-10-27 20:48:48.231 IFO][NeuroDragon] [vv] ctxs: hotkey F10 pressed
+[2026-10-27 20:48:55.794 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-27 20:48:57.781 IFO][NeuroDragon] [vvsr] sr dump #1 frame=7689 start
+[2026-10-27 20:48:57.781 IFO][NeuroDragon] [vvsr] sr dump #1 frame=7689 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.3125,-0.3519)
+[2026-10-27 20:48:57.803 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x19887ec8c90 ok=1
+[2026-10-27 20:48:57.859 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 20:48:58.011 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=1 ok=1
+[2026-10-27 20:49:00.003 IFO][NeuroDragon] [vvsr] sr dump #2 frame=7887 start
+[2026-10-27 20:49:00.003 IFO][NeuroDragon] [vvsr] sr dump #2 frame=7887 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.2500,+0.1667)
+[2026-10-27 20:49:00.022 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x19887ec8c90 ok=1
+[2026-10-27 20:49:00.078 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 20:49:00.233 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=2 ok=1 (pair done runs=1,2)
+[2026-10-27 20:49:21.711 IFO][NeuroDragon] [vv] ctxs: hotkey F10 pressed
+[2026-10-27 20:49:25.710 DBG][NeuroDragon] [eval] f=10200 tid=32692 cl=0x1989794cbd0 h=0x198de803630 1689x950 c=0x198dec4a540 d=0x198dec4aed0 mv=0x198dec4c1f0 o=0x198dec4d510 ret=0x1
+[2026-10-27 20:49:25.933 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-27 20:49:26.011 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 20:49:26.048 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 20:49:26.315 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 20:49:26.392 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 20:49:26.427 IFO][NeuroDragon] [vv] taau replacement armed=1
+[2026-10-27 20:49:28.350 IFO][NeuroDragon] [vv] ctxs: hotkey F10 pressed
+[2026-10-27 20:49:29.099 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-27 20:49:31.111 IFO][NeuroDragon] [vvsr] sr dump #3 frame=10679 start
+[2026-10-27 20:49:31.111 IFO][NeuroDragon] [vvsr] sr dump #3 frame=10679 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.2500,+0.1667)
+[2026-10-27 20:49:31.125 IFO][NeuroDragon] [vvsr] sr dump #3 semantic colour=0x0 ok=0
+[2026-10-27 20:49:31.185 IFO][NeuroDragon] [vvsr] sr dump #3 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 20:49:31.337 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=3 ok=1
+[2026-10-27 20:49:32.305 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 20:49:32.305 IFO][NeuroDragon] [vv] taau replacement armed=0
+[2026-10-27 20:49:33.326 IFO][NeuroDragon] [vvsr] sr dump #4 frame=10763 start
+[2026-10-27 20:49:33.326 IFO][NeuroDragon] [vvsr] sr dump #4 frame=10763 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.3125,-0.3519)
+[2026-10-27 20:49:33.337 IFO][NeuroDragon] [vvsr] sr dump #4 semantic colour=0x0 ok=0
+[2026-10-27 20:49:33.393 IFO][NeuroDragon] [vvsr] sr dump #4 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=1
+[2026-10-27 20:49:33.574 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=4 ok=1 (pair done runs=3,4)
+
+Offline NDRW statistics after correcting the script's header size to RawHeader's actual 32 bytes:
+sr_semantic_1_p19887EC8C90.bin: rgb_mean=0.002489 sub_geo=0.001682
+sr_semantic_2_p19887EC8C90.bin: rgb_mean=0.001306 sub_geo=0.000827
+sr_mid_colourhalf_1.bin: rgb_mean=0.002489 sub_geo=0.001682
+sr_mid_colourhalf_2.bin: rgb_mean=0.001306 sub_geo=0.000827
+sr_mid_colourhalf_3.bin: rgb_mean=2.716564 sub_geo=1.832233
+sr_dlssout_2560x1440_1.bin: rgb_mean=0.002413 sub_geo=0.001641
+sr_dlssout_2560x1440_2.bin: rgb_mean=0.001251 sub_geo=0.000800
+sr_dlssout_2560x1440_3.bin: rgb_mean=2.712818 sub_geo=1.830909
+sr_final_rgba8_1.bin: rgb_mean=0.386174
+sr_final_rgba8_2.bin: rgb_mean=0.396570
+sr_final_rgba8_3.bin: rgb_mean=0.997894
+sr_final_rgba8_4.bin: rgb_mean=0.998140 (captured after world exit; not an in-world brightness judgement)
+sr_exposure_1.bin: White[0,0]=0.02511800080537796
+sr_exposure_2.bin: White[0,0]=0.012430635280907154
+sr_exposure_3.bin: White[0,0]=0.3458138704299927
+sr_exposure_4.bin: White[0,0]=0.3461616039276123 (captured after world exit)
+sr_mv_rg32_1689x950_1.bin: mean=(+1.2962929,-10.376199), median=(+0.96972656,-10.1875)
+sr_mv_rg32_1689x950_2.bin: mean=(-0.000054992,+3.4657733), median=(-0.000034094,+3.3271484)
+sr_mv_rg32_1689x950_3.bin: mean=(-0.000002471,+0.000009061)
+sr_mv_rg32_1689x950_4.bin: invalid after world exit; excluded

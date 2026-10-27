@@ -1,0 +1,34 @@
+[2026-10-27 10:05:37.865 IFO][NeuroDragon] [vv] bgfx map hooked install=0x7ff63d71d680 (rva 0xdf9d680) destroy=0x7ff63d71ee00 (rva 0xdf9ee00)
+[2026-10-27 10:06:01.820 IFO][NeuroDragon] [init] Init_ProjectID project=f1b2e5d8-9c4a-4e7b-8a36-5d2e90c47a11 engineType=0 engineVersion=0.1.0-neural-rendering-source api=0x68022dd8
+[2026-10-27 10:06:48.359 IFO][NeuroDragon] [vv] bgfx map hooked install=0x7ff63d71d680 (rva 0xdf9d680) destroy=0x7ff63d71ee00 (rva 0xdf9ee00)
+[2026-10-27 10:07:18.872 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 10:07:18.984 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=154 hits=0 call=1/3 seq=1687 this=0x6bca6fe700
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] in.color handle=0x94B0 valid=1 mapped=0 phase=decl armed=1 forwarded=0 decl=1687 res0=0x00007ff63e0b94b0 res8=0x00007ff63def5460 native=0x0 dep=0x6bca6fe700 res=0x1a71f885fa0 candidates=36 call=1/3 seq=1687 sets=0 destroys=2021 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0x94B0 res=0x1a71f885fa0 native=0x0 at=handle phase=decl contexts=0 sets=0 destroys=2021 nonNull=0
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=none dep16=none node16=none scanned=8 candidates=154 hits=0 call=1/3 seq=1687 this=0x6bca6fe700
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] in.color handle=0xFFFF valid=0 mapped=0 phase=draw armed=1 forwarded=0 decl=1687 res0=0x0000000000000000 res8=0x0000000000000000 native=0x0 dep=0x6bca6fe700 res=0x0 candidates=36 call=1/3 seq=1687 sets=0 destroys=2021 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=invalidHandle handle=0xFFFF res=0x0 native=0x0 at=handle phase=draw contexts=0 sets=0 destroys=2021 nonNull=0
+[2026-10-27 10:07:19.130 IFO][NeuroDragon] [vv] taau replace declared=1687 callbacks=1687 forwarded=1686 suppressed=1 missed=0
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=none node16=0x200 scanned=136 candidates=154 hits=0 call=2/3 seq=1688 this=0x6bca6fe700
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] in.color handle=0x94B0 valid=1 mapped=0 phase=decl armed=1 forwarded=0 decl=1688 res0=0x00007ff63e0b94b0 res8=0x00007ff63def5460 native=0x0 dep=0x6bca6fe700 res=0x1a92e2bf460 candidates=36 call=2/3 seq=1688 sets=0 destroys=2021 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0x94B0 res=0x1a92e2bf460 native=0x0 at=handle phase=decl contexts=0 sets=0 destroys=2021 nonNull=0
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=none dep16=none node16=none scanned=8 candidates=154 hits=0 call=2/3 seq=1688 this=0x6bca6fe700
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] in.color handle=0xFFFF valid=0 mapped=0 phase=draw armed=1 forwarded=0 decl=1688 res0=0x0000000000000000 res8=0x0000000000000000 native=0x0 dep=0x6bca6fe700 res=0x0 candidates=36 call=2/3 seq=1688 sets=0 destroys=2021 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=invalidHandle handle=0xFFFF res=0x0 native=0x0 at=handle phase=draw contexts=0 sets=0 destroys=2021 nonNull=0
+[2026-10-27 10:07:19.140 IFO][NeuroDragon] [vv] taau replace declared=1688 callbacks=1688 forwarded=1686 suppressed=2 missed=0
+[2026-10-27 10:07:19.150 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=154 hits=0 call=3/3 seq=1689 this=0x6bca7fe4e0
+[2026-10-27 10:07:19.150 IFO][NeuroDragon] [vv] in.color handle=0x94B0 valid=1 mapped=0 phase=decl armed=1 forwarded=0 decl=1689 res0=0x00007ff63e0b94b0 res8=0x00007ff63def5460 native=0x0 dep=0x6bca7fe4e0 res=0x1a94612fac0 candidates=36 call=3/3 seq=1689 sets=0 destroys=2021 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:19.150 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0x94B0 res=0x1a94612fac0 native=0x0 at=handle phase=decl contexts=0 sets=0 destroys=2021 nonNull=0
+[2026-10-27 10:07:19.152 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=154 hits=0 call=3/3 seq=1689 this=0x6bca7fe4e0
+[2026-10-27 10:07:19.152 IFO][NeuroDragon] [vv] in.color handle=0x6210 valid=1 mapped=0 phase=draw armed=1 forwarded=0 decl=1689 res0=0x000001a9670b6210 res8=0x0000000000000000 native=0x0 dep=0x6bca7fe4e0 res=0x1a960ac8760 candidates=36 call=3/3 seq=1689 sets=0 destroys=2021 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:19.152 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0x6210 res=0x1a960ac8760 native=0x0 at=handle phase=draw contexts=0 sets=0 destroys=2021 nonNull=0
+[2026-10-27 10:07:19.152 IFO][NeuroDragon] [vv] taau replace declared=1689 callbacks=1689 forwarded=1686 suppressed=3 missed=0
+[2026-10-27 10:07:25.825 IFO][NeuroDragon] [vv] taau replace declared=2286 callbacks=2286 forwarded=1686 suppressed=600 missed=0
+[2026-10-27 10:07:27.830 IFO][NeuroDragon] [vv] in.color handle=0x5460 valid=1 mapped=0 phase=draw armed=0 forwarded=1 decl=1689 res0=0x00007ff63def5460 res8=0x000001a90512a270 native=0x0 dep=0x6bca6fe700 res=0x1a71f39e828 candidates=36 call=1/3 seq=2486 sets=0 destroys=2043 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:27.830 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0x5460 res=0x1a71f39e828 native=0x0 at=handle phase=draw contexts=0 sets=0 destroys=2043 nonNull=0
+[2026-10-27 10:07:27.841 IFO][NeuroDragon] [vv] in.color handle=0xDDF1 valid=1 mapped=0 phase=draw armed=0 forwarded=1 decl=1689 res0=0x1340358716f9ddf1 res8=0x00007ff63def5460 native=0x0 dep=0x6bca6fe700 res=0x1a939f20630 candidates=36 call=2/3 seq=2487 sets=0 destroys=2043 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:27.841 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0xDDF1 res=0x1a939f20630 native=0x0 at=handle phase=draw contexts=0 sets=0 destroys=2043 nonNull=0
+[2026-10-27 10:07:27.854 IFO][NeuroDragon] [vv] in.color handle=0x8B48 valid=1 mapped=0 phase=draw armed=0 forwarded=1 decl=1689 res0=0x74c0854808468b48 res8=0x3102eb18408b4806 native=0x0 dep=0x6bca6fe700 res=0x7ff63ae9f918 candidates=36 call=3/3 seq=2488 sets=0 destroys=2043 nonNull=0 contexts=0 hooked=1
+[2026-10-27 10:07:27.854 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notMapped handle=0x8B48 res=0x7ff63ae9f918 native=0x0 at=handle phase=draw contexts=0 sets=0 destroys=2043 nonNull=0
+[2026-10-27 10:07:34.358 IFO][NeuroDragon] [vv] bgfx map unhooked, table cleared (sets=0 destroys=2561)

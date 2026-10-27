@@ -300,7 +300,7 @@ void runPending() {
     setI32(params, "PerfQualityValue", 3);
     setU32(params, "CreationNodeMask", 1);
     setU32(params, "VisibilityNodeMask", 1);
-    setI32(params, "DLSS.Feature.Create.Flags", 1); // IsHDR; no MVLowRes
+    setI32(params, "DLSS.Feature.Create.Flags", 11); // IsHDR | MVLowRes | AutoExposure
 
     // --- one temporary command list, execute it, wait ----------------------
     ID3D12CommandAllocator*    allocator = nullptr;
@@ -526,7 +526,7 @@ bool ensureSrFeature(void* deviceVoid, void* commandList, unsigned renderWidth, 
     paramI32(params, "PerfQualityValue", 3);
     paramU32(params, "CreationNodeMask", 1);
     paramU32(params, "VisibilityNodeMask", 1);
-    paramI32(params, "DLSS.Feature.Create.Flags", 1); // IsHDR: our colour is linear
+    paramI32(params, "DLSS.Feature.Create.Flags", 11); // IsHDR | MVLowRes | AutoExposure
     void*     feature = nullptr;
     int const ret     = gCreate(commandList, 1, params, &feature);
     gSrState.createRet     = ret;
@@ -573,9 +573,9 @@ bool evaluateSr(void* commandList, void* color, void* depth, void* motionVectors
     int const depthRet = paramPtr(params, "Depth", depth);
     int const mvRet    = paramPtr(params, "MotionVectors", motionVectors);
     int const outRet   = paramPtr(params, "Output", output);
-    // The TAA-context projection has ndc.z = 1 - near/viewDepth (near = 0.025, far at
-    // infinity, vv.md §16), so depth 0 is the near plane: NOT reversed-Z.
-    paramI32(params, "DepthInverted", 0);
+    // The TAA-context projection has ndc.z = 1 - near/viewDepth: far/sky is 1,
+    // near is 0, so DLSS must treat the input as inverted depth.
+    paramI32(params, "DepthInverted", 1);
     paramI32(params, "Reset", reset ? 1 : 0);
     paramF32(params, "Jitter.Offset.X", jitterX);
     paramF32(params, "Jitter.Offset.Y", jitterY);

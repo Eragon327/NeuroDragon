@@ -72,14 +72,93 @@ void main(uint3 id : SV_DispatchThreadID)
     // frame's space (the camera moved by CamDelta) projected with the previous matrix.
     float2 ndc    = float2(float(id.x + 0.5) / float(W) * 2.0 - 1.0,
                            1.0 - float(id.y + 0.5) / float(H) * 2.0);
-    float  depth  = CurNear / max(1.0 - d, 1.0e-6);
+    bool   sky    = d >= 0.999999;
+    float  depth  = sky ? 1000000.0 : CurNear / max(1.0 - d, 1.0e-6);
     float3 p      = (ndc.x * depth / CurSx) * CurRight + (ndc.y * depth / CurSy) * CurUp + depth * CurFwd;
-    float3 pp     = p + CamDelta;
+    float3 pp     = p + (sky ? float3(0.0, 0.0, 0.0) : CamDelta);
     float  wp     = dot(PrevFwd, pp);
     float2 ndcPrev = float2(dot(PrevRight, pp) * PrevSx / max(wp, 1.0e-6),
                             dot(PrevUp,    pp) * PrevSy / max(wp, 1.0e-6));
     // DLSS wants the offset from the current pixel to where it was in the last frame.
     OutMv[id.xy] = (ndcPrev - ndc) * 0.5 * float2(float(W), float(H));
+}
+)hlsl";
+
+char const* kExposureShader = R"hlsl(
+cbuffer P : register(b0)
+{
+    uint W;
+    uint H;
+    uint Mode;
+    uint Pad;
+};
+Texture2D<float4>   Color : register(t0);
+RWTexture2D<float>  White : register(u0);
+groupshared float   ExposureSum[64];
+groupshared uint    FloorCount[64];
+
+[numthreads(8, 8, 1)]
+void main(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.y * 8 + id.x;
+    uint textureWidth;
+    uint textureHeight;
+    Color.GetDimensions(textureWidth, textureHeight);
+    float sum = 0.0;
+    uint floorCount = 0;
+    for (uint y = 0; y < 8; ++y)
+    {
+        for (uint x = 0; x < 8; ++x)
+        {
+            uint2 p = uint2((id.x * 8 + x) * W / 64, (id.y * 8 + y) * H / 64);
+            float3 c = max(Color.Load(int3((int)p.x, (int)p.y, 0)).rgb, 0.0);
+            float rawLuma = dot(c, float3(0.2126, 0.7152, 0.0722));
+            floorCount += rawLuma <= 0.0001 ? 1 : 0;
+            sum += log2(max(rawLuma, 0.0001));
+        }
+    }
+    ExposureSum[index] = sum;
+    FloorCount[index] = floorCount;
+    GroupMemoryBarrierWithGroupSync();
+    [unroll] for (uint s = 32; s > 0; s >>= 1)
+    {
+        if (index < s)
+        {
+            ExposureSum[index] += ExposureSum[index + s];
+            FloorCount[index] += FloorCount[index + s];
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+    if (index == 0)
+    {
+        // EXP-0048's reference is kept unchanged for the reset A/B. Its original 28-byte
+        // NDRW parse was later found to be four bytes short; recalibration is separate.
+        // Dividing by (this frame's mean / reference) pulls the 380x dark / 260x bright
+        // frames of EXP-0045/0046 back onto the same display brightness.
+        float meanLog   = ExposureSum[0] / 4096.0;
+        float target    = meanLog - log2(0.0671);
+        float previous  = White[uint2(0, 0)];
+        float current   = Mode != 0 || previous <= 0.0 || !isfinite(previous) ? target : lerp(log2(previous), target, 0.03);
+        float writes    = White[uint2(0, 1)];
+        White[uint2(0, 0)] = exp2(clamp(current, -9.0, 9.0));
+        White[uint2(1, 0)] = target;
+        White[uint2(2, 0)] = previous;
+        White[uint2(3, 0)] = float(Mode);
+        White[uint2(0, 1)] = Mode != 0 || writes <= 0.0 || !isfinite(writes) ? 1.0 : writes + 1.0;
+        White[uint2(1, 1)] = float(W);
+        White[uint2(2, 1)] = float(H);
+        White[uint2(3, 1)] = float(FloorCount[0]);
+        White[uint2(0, 2)] = float(textureWidth);
+        White[uint2(1, 2)] = float(textureHeight);
+        White[uint2(2, 2)] = meanLog;
+        float mirrorPrevious = White[uint2(3, 2)];
+        float mirrorCurrent  = Mode != 0 || mirrorPrevious <= 0.0 || !isfinite(mirrorPrevious)
+            ? target
+            : lerp(log2(mirrorPrevious), target, 0.03);
+        White[uint2(3, 2)] = exp2(clamp(mirrorCurrent, -9.0, 9.0));
+        uint ringIndex = writes > 0.0 && isfinite(writes) ? uint(writes) % 4 : 0;
+        White[uint2(ringIndex, 3)] = target;
+    }
 }
 )hlsl";
 
@@ -94,6 +173,7 @@ cbuffer P : register(b0)
 Texture2D<float4>   Color : register(t2);
 Texture2D<float4>   Depth : register(t3);
 Texture2D<float4>   Mv    : register(t4);
+Texture2D<float>    White : register(t6);
 SamplerState        Samp  : register(s0);
 RWTexture2D<float4> Dst   : register(u3);
 )hlsl";
@@ -117,21 +197,28 @@ void main(uint3 id : SV_DispatchThreadID)
         float2 mv = Mv.SampleLevel(Samp, uv, 0).rg;
         c = float3(mv.x * 40.0 + 0.5, mv.y * 40.0 + 0.5, 0.5); // exaggerated
     }
+    else if (Mode == 4)
+    {
+        c = vvEncode(Color.SampleLevel(Samp, uv, 0).rgb); // Bypass: no exposure normalisation
+    }
     else if (Mode >= 3)
     {
-        // Raw colour: separates "the texture read is wrong" from "the encode table is
-        // wrong" - the dump already showed the resource itself holds a normal world.
         c = Color.SampleLevel(Samp, uv, 0).rgb;
     }
     else
     {
-        c = vvEncode(Color.SampleLevel(Samp, uv, 0).rgb); // Bypass / Dlss
+        // White is the ratio between this frame's geometric-mean luma and the
+        // reference (EXP-0048); it is only read in the DLSS mode, which always runs
+        // the exposure pass first. The floor keeps a missing texture from turning
+        // into a divide-by-zero rather than limiting the gain.
+        float white = max(White.Load(int3(0, 0, 0)), 0.002);
+        c = vvEncode(Color.SampleLevel(Samp, uv, 0).rgb / white);
     }
     Dst[id.xy] = float4(saturate(c), 1.0);
 }
 )hlsl";
 
-// Shader-visible descriptor slots. One SRV table (6) and one UAV table (4) keep the
+// Shader-visible descriptor slots. One SRV table (7) and one UAV table (5) keep the
 // root signature to four parameters - a per-pass split layout was rejected by the
 // runtime ("overlaps with another shader register range", 2026-10-25).
 enum : unsigned {
@@ -141,17 +228,20 @@ enum : unsigned {
     kSlotDepthSrv    = 3,
     kSlotMvSrv       = 4,
     kSlotDlssSrv     = 5,
-    kSlotColorUav    = 6,
-    kSlotDepthUav    = 7,
-    kSlotMvUav       = 8,
-    kSlotFinalUav    = 9,
-    kSlotCount       = 10,
+    kSlotExposureSrv = 6,
+    kSlotColorUav    = 7,
+    kSlotDepthUav    = 8,
+    kSlotMvUav       = 9,
+    kSlotFinalUav    = 10,
+    kSlotExposureUav = 11,
+    kSlotCount       = 12,
 };
 
 struct Pipeline {
     ID3D12Device*               device{};
     ID3D12RootSignature*        root{};
     ID3D12PipelineState*        prep{};
+    ID3D12PipelineState*        exposure{};
     ID3D12PipelineState*        final{};
     ID3D12DescriptorHeap*       heap{};
     D3D12_CPU_DESCRIPTOR_HANDLE cpu{};
@@ -162,6 +252,7 @@ struct Pipeline {
     ID3D12Resource*             mvRg32{}; ///< R16G16_FLOAT: DLSS accepts this, not RG32F
     ID3D12Resource*             finalRgba8{};
     ID3D12Resource*             dlssOut{};
+    ID3D12Resource*             exposureR32{};
     ID3D12Resource*             toneCb{};
     ID3D12Resource*             mvCb{};  ///< per-frame camera-relative matrix rows for the MV pass
     void*                       mvMapped{};
@@ -170,6 +261,7 @@ struct Pipeline {
     D3D12_RESOURCE_STATES       mvState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       finalState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       dlssState{D3D12_RESOURCE_STATE_COMMON};
+    D3D12_RESOURCE_STATES       exposureState{D3D12_RESOURCE_STATE_COMMON};
     unsigned                    renderWidth{};
     unsigned                    renderHeight{};
     unsigned                    displayWidth{};
@@ -243,18 +335,24 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
         && gPipeline.displayWidth == displayWidth && gPipeline.displayHeight == displayHeight) {
         return true;
     }
-    for (ID3D12Resource** resource : {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.finalRgba8, &gPipeline.dlssOut}) {
+    for (ID3D12Resource** resource :
+         {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.finalRgba8, &gPipeline.dlssOut, &gPipeline.exposureR32}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
         }
     }
-    gPipeline.colorHalf  = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    gPipeline.depthR32   = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R32_FLOAT);
-    gPipeline.mvRg32     = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16_FLOAT);
-    gPipeline.finalRgba8 = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
-    gPipeline.dlssOut    = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.finalRgba8 || !gPipeline.dlssOut) {
+    gPipeline.colorHalf   = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    gPipeline.depthR32    = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R32_FLOAT);
+    gPipeline.mvRg32      = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16_FLOAT);
+    gPipeline.finalRgba8  = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+    gPipeline.dlssOut     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    // 4x4, not 1x1: dumpTextureRawAs refuses anything smaller (desc.Width < 4), and
+    // the F10 dump is the only way to check the white point after a run. Only [0,0]
+    // is written and read.
+    gPipeline.exposureR32 = createTexture(device, 4, 4, DXGI_FORMAT_R32_FLOAT);
+    if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.finalRgba8 || !gPipeline.dlssOut
+        || !gPipeline.exposureR32) {
         setError(E_OUTOFMEMORY, "CreateCommittedResource");
         return false;
     }
@@ -263,6 +361,7 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
     gPipeline.mvState       = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.finalState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.dlssState     = D3D12_RESOURCE_STATE_COMMON;
+    gPipeline.exposureState = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.renderWidth   = renderWidth;
     gPipeline.renderHeight  = renderHeight;
     gPipeline.displayWidth  = displayWidth;
@@ -272,7 +371,8 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
 }
 
 bool ensurePipeline(ID3D12Device* device) {
-    if (gPipeline.prep && gPipeline.final && gPipeline.root && gPipeline.heap && gPipeline.toneCb && gPipeline.mvCb) {
+    if (gPipeline.prep && gPipeline.exposure && gPipeline.final && gPipeline.root && gPipeline.heap && gPipeline.toneCb
+        && gPipeline.mvCb) {
         return true;
     }
     if (gPipeline.device && gPipeline.device != device) {
@@ -296,11 +396,11 @@ bool ensurePipeline(ID3D12Device* device) {
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
     srvRange.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    srvRange.NumDescriptors     = 6;
+    srvRange.NumDescriptors     = 7;
     srvRange.BaseShaderRegister = 0;
     D3D12_DESCRIPTOR_RANGE uavRange{};
     uavRange.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-    uavRange.NumDescriptors     = 4;
+    uavRange.NumDescriptors     = 5;
     uavRange.BaseShaderRegister = 0;
 
     D3D12_ROOT_PARAMETER params[5]{};
@@ -383,6 +483,9 @@ bool ensurePipeline(ID3D12Device* device) {
     };
 
     if (!compileShader(kPrepShader, &gPipeline.prep)) {
+        return false;
+    }
+    if (!compileShader(kExposureShader, &gPipeline.exposure)) {
         return false;
     }
     std::string const finalSource = std::string(kFinalHead) + tone::kHlsl + kFinalBody;
@@ -474,9 +577,9 @@ D3D12_GPU_DESCRIPTOR_HANDLE gpuAt(unsigned slot) {
     return handle;
 }
 
-// The engine's render-resolution colour and depth. The colour comes from the RTV
-// inventory; the depth is a *depth-stencil view* resource and only the DSV inventory
-// has it (2026-10-25: the RTV list had 1689x903 fmt=26 but no depth at all, which is
+// A render-size arg9 InputFinalColor is preferred; the RTV pick is the fallback.
+// EXP-0034 used arg10, which is actually the display-size Upscaling output. The DSV inventory
+// has depth (2026-10-25: the RTV list had 1689x903 fmt=26 but no depth at all, which is
 // why the first SR run failed with "no colour/depth").
 bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigned* depthFormat) {
     probe::vv::RenderTargetInfo targets[48]{};
@@ -511,6 +614,23 @@ bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigne
                     colors[i].format
                 );
             }
+        }
+    }
+
+    auto const semantic = probe::vv::inputFinalColorTarget();
+    if (semantic.resource && semantic.format == 26 && semantic.width == probe::vv::renderWidth()
+        && semantic.height == probe::vv::renderHeight()) {
+        *colorOut    = semantic.resource;
+        *colorFormat = semantic.format;
+        static std::atomic<unsigned> loggedSemantic{0};
+        if (loggedSemantic.fetch_add(1) < 6) {
+            utils::logger().info(
+                "[vvsr] sr semantic colour={:#x} {}x{} fmt={} (arg9 InputFinalColor)",
+                reinterpret_cast<std::uintptr_t>(semantic.resource),
+                semantic.width,
+                semantic.height,
+                semantic.format
+            );
         }
     }
 
@@ -602,7 +722,9 @@ bool dumpInputs() {
         return false;
     }
     unsigned const run = gDumpNo.fetch_add(1, std::memory_order_relaxed) + 1;
-    utils::logger().info("[vvsr] sr dump #{} frame={} start", run, snapshot.frame);
+    utils::logger().info(
+        "[vvsr] sr dump #{} frame={} view={} dlssReady={} start", run, snapshot.frame, snapshot.view, snapshot.dlssReady ? 1 : 0
+    );
     // Per-batch motion state. A pair of dumps is only evidence if the two frames can be
     // told apart, and the camera delta is the part the user cannot fake by reporting
     // "I kept turning". No throttle: every batch gets its own line.
@@ -646,11 +768,30 @@ bool dumpInputs() {
         snapshot.depthFormat
     );
     bool const depthOk = probe::vv::dumpTextureRaw(device, queue, snapshot.depthSource, (directory + L"\\" + name).c_str());
+    void* const semanticColor = probe::vv::inputFinalColorResource();
+    bool        semanticOk    = false;
+    if (semanticColor) {
+        std::swprintf(
+            name,
+            std::size(name),
+            L"sr_semantic_%u_p%llX.bin",
+            run,
+            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(semanticColor))
+        );
+        semanticOk = probe::vv::dumpTextureRaw(device, queue, semanticColor, (directory + L"\\" + name).c_str());
+    }
+    utils::logger().info(
+        "[vvsr] sr dump #{} semantic colour={:#x} ok={}",
+        run,
+        reinterpret_cast<std::uintptr_t>(semanticColor),
+        semanticOk ? 1 : 0
+    );
     bool midOk      = false;
     bool finalOk    = false;
     bool mvOk       = false;
     bool depthR32Ok = false;
     bool dlssOk     = false;
+    bool exposureOk = false;
     // Our own textures are left in NON_PIXEL_SHADER_RESOURCE by the record path; the
     // 2026-10-26 dump read the MV as all zeros and the depth as all 1.0 with the
     // Common hint, which is the stale-byte failure the DumpState comment describes.
@@ -684,8 +825,15 @@ bool dumpInputs() {
         );
         dlssOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.dlssOut, (directory + L"\\" + name).c_str(), state);
     }
+    // The white point the final encode divides by (EXP-0048). 4x4 R32F, only [0,0] is
+    // written by the exposure pass; reading it back is the only way to tell "the pass
+    // never ran" from "the pass ran and the target is wrong".
+    if (gPipeline.exposureR32 && gPipeline.exposureState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        std::swprintf(name, std::size(name), L"sr_exposure_%u.bin", run);
+        exposureOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.exposureR32, (directory + L"\\" + name).c_str(), state);
+    }
     utils::logger().info(
-        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} final={} mv={} depth32={} dlss={}",
+        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} final={} mv={} depth32={} dlss={} exposure={}",
         run,
         colorOk ? 1 : 0,
         depthOk ? 1 : 0,
@@ -693,7 +841,8 @@ bool dumpInputs() {
         finalOk ? 1 : 0,
         mvOk ? 1 : 0,
         depthR32Ok ? 1 : 0,
-        dlssOk ? 1 : 0
+        dlssOk ? 1 : 0,
+        exposureOk ? 1 : 0
     );
     // Every candidate the pick path can see, not just the picked one (EXP-0026). The
     // only open question is whether the picked colour stops changing once the engine's
@@ -1069,6 +1218,8 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     // table is complete before that exists.
     texSrv.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     device->CreateShaderResourceView(gPipeline.colorHalf, &texSrv, cpuAt(kSlotDlssSrv));
+    texSrv.Format = DXGI_FORMAT_R32_FLOAT;
+    device->CreateShaderResourceView(gPipeline.exposureR32, &texSrv, cpuAt(kSlotExposureSrv));
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC uav{};
     uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
@@ -1080,6 +1231,8 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     device->CreateUnorderedAccessView(gPipeline.mvRg32, nullptr, &uav, cpuAt(kSlotMvUav));
     uav.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     device->CreateUnorderedAccessView(gPipeline.finalRgba8, nullptr, &uav, cpuAt(kSlotFinalUav));
+    uav.Format = DXGI_FORMAT_R32_FLOAT;
+    device->CreateUnorderedAccessView(gPipeline.exposureR32, nullptr, &uav, cpuAt(kSlotExposureUav));
 
     // --- prep: engine colour + depth -> RGBA16F / R32F / RG32F -------------
     transition(list, gPipeline.colorHalf, gPipeline.colorState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -1134,10 +1287,14 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     gPipeline.finalState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
     int const view = gView.load(std::memory_order_relaxed);
-    unsigned  finalMode  = 0;
-    bool      dlssEvaluated = false;
-    int       dlssCreateRet = 0;
-    int       dlssEvalRet   = 0;
+    // 4 = Bypass (encode only). Mode 0 reads the white-point texture, and only the
+    // DLSS branch runs the exposure pass that fills it; leaving the default at 0
+    // would divide every other view by a never-written texture (EXP-0048).
+    unsigned  finalMode      = 4;
+    bool      dlssEvaluated  = false;
+    bool      exposureReset  = false;
+    int       dlssCreateRet  = 0;
+    int       dlssEvalRet    = 0;
     if (view == static_cast<int>(View::Depth)) {
         finalMode = 1;
     } else if (view == static_cast<int>(View::Motion)) {
@@ -1156,17 +1313,25 @@ bool record(void* commandListVoid, void* backBufferVoid) {
             // session, after a world change and after a resolution change.
             static std::atomic<unsigned> resetFrames{2};
             static std::atomic<bool>     lastWorld{false};
-            bool const                   world = probe::vv::worldLoaded();
-            if (frameNo <= 2 || world != lastWorld.load(std::memory_order_relaxed)) {
+            static std::atomic<unsigned> lastGeneration{0};
+            static std::atomic<int>      lastView{-1};
+            bool const                   world      = probe::vv::worldLoaded();
+            unsigned const               generation = probe::vv::renderGeneration();
+            if (frameNo <= 2 || world != lastWorld.load(std::memory_order_relaxed)
+                || generation != lastGeneration.load(std::memory_order_relaxed)
+                || view != lastView.load(std::memory_order_relaxed)) {
                 resetFrames.store(2, std::memory_order_relaxed);
                 lastWorld.store(world, std::memory_order_relaxed);
+                lastGeneration.store(generation, std::memory_order_relaxed);
+                lastView.store(view, std::memory_order_relaxed);
             }
             unsigned const pending = resetFrames.load(std::memory_order_relaxed);
             if (pending > 0) {
                 resetFrames.store(pending - 1, std::memory_order_relaxed);
             }
             bool const reset = spatial || pending > 0 || !mv.valid;
-            dlssEvaluated = dlss::evaluateSr(
+            exposureReset  = reset;
+            dlssEvaluated  = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,
                 gPipeline.depthR32,
@@ -1189,6 +1354,30 @@ bool record(void* commandListVoid, void* backBufferVoid) {
                 dlssSrv.Format                  = DXGI_FORMAT_R16G16B16A16_FLOAT;
                 device->CreateShaderResourceView(gPipeline.dlssOut, &dlssSrv, cpuAt(kSlotColorSrv));
             }
+        }
+        // EXP-0048: the engine's HDR input drifts 380x darker / 260x brighter between
+        // sessions and the DLSS output follows it one-for-one, so the encode divides by
+        // a white point measured from the same signal the final pass reads: descriptor
+        // 2 is colorHalf until evaluate succeeds and the DLSS output afterwards, so
+        // pointing the exposure table at it keeps both passes on one source.
+        finalMode = 0;
+        if (gPipeline.exposure) {
+            unsigned const sampleWidth  = dlssEvaluated ? displayWidth : renderWidth;
+            unsigned const sampleHeight = dlssEvaluated ? displayHeight : renderHeight;
+            transition(list, gPipeline.exposureR32, gPipeline.exposureState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+            gPipeline.exposureState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+            list->SetPipelineState(gPipeline.exposure);
+            list->SetComputeRootDescriptorTable(1, gpuAt(kSlotColorSrv));
+            list->SetComputeRootDescriptorTable(2, gpuAt(kSlotExposureUav));
+            unsigned const exposureParams[4] = {sampleWidth, sampleHeight, exposureReset ? 1U : 0U, 0};
+            list->SetComputeRoot32BitConstants(0, 4, exposureParams, 0);
+            list->Dispatch(1, 1, 1);
+            transition(list, gPipeline.exposureR32, gPipeline.exposureState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            gPipeline.exposureState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+            // Both tables go back to the layout the final pass was written against:
+            // t2/t3/t4/t6 with the SRV base at 0 and u3 with the UAV base at 7.
+            list->SetComputeRootDescriptorTable(1, gpuAt(kSlotEngineColor));
+            list->SetComputeRootDescriptorTable(2, gpuAt(kSlotColorUav));
         }
     }
     list->SetPipelineState(gPipeline.final);
@@ -1271,7 +1460,15 @@ Stats stats() {
 
 void release() {
     std::lock_guard lock(gMutex);
-    for (ID3D12Resource** resource : {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.finalRgba8, &gPipeline.toneCb, &gPipeline.mvCb}) {
+    for (ID3D12Resource** resource :
+         {&gPipeline.colorHalf,
+          &gPipeline.depthR32,
+          &gPipeline.mvRg32,
+          &gPipeline.finalRgba8,
+          &gPipeline.dlssOut,
+          &gPipeline.exposureR32,
+          &gPipeline.toneCb,
+          &gPipeline.mvCb}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
@@ -1279,6 +1476,7 @@ void release() {
     }
     if (gPipeline.heap) gPipeline.heap->Release();
     if (gPipeline.prep) gPipeline.prep->Release();
+    if (gPipeline.exposure) gPipeline.exposure->Release();
     if (gPipeline.final) gPipeline.final->Release();
     if (gPipeline.root) gPipeline.root->Release();
     gPipeline = Pipeline{};

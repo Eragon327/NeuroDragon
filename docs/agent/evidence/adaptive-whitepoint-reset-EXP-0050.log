@@ -1,0 +1,31 @@
+[2026-10-27 21:24:53.389 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-27 21:25:02.047 DBG][NeuroDragon] [eval] f=1800 tid=35800 cl=0x2d1e9d7d3f0 h=0x2d1e3e472d0 1689x950 c=0x2d1e9d815d0 d=0x2d1e9d7e600 mv=0x2d1e9d81f60 o=0x2d1e9d83c10 ret=0x1
+[2026-10-27 21:25:02.227 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-27 21:25:04.221 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2004 view=3 start
+[2026-10-27 21:25:04.221 IFO][NeuroDragon] [vvsr] sr dump #1 frame=2004 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.1875,-0.1296)
+[2026-10-27 21:25:04.452 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=1 ok=1
+[2026-10-27 21:25:06.441 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2199 view=3 start
+[2026-10-27 21:25:06.441 IFO][NeuroDragon] [vvsr] sr dump #2 frame=2199 mv valid=1 prev_same=0 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.1875,-0.0185)
+[2026-10-27 21:25:06.648 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=2 ok=1 (pair done runs=1,2)
+[2026-10-27 21:25:08.662 DBG][NeuroDragon] [eval] f=2400 tid=18336 cl=0x2d1e9d7d3f0 h=0x2d1e9d815d0 1689x950 c=0x2d1e9d815d0 d=0x2d1e9d7e600 mv=0x2d1e9d81f60 o=0x2d1e9d83c10 ret=0x1
+[2026-10-27 21:25:17.340 DBG][NeuroDragon] [eval] f=3000 tid=18336 cl=0x2d1e9d7d3f0 h=0x2d1e86196b0 1689x950 c=0x2d1faa699f0 d=0x2d1faa6a380 mv=0x2d1faa6ad10 o=0x2d1faa6dce0 ret=0x1
+[2026-10-27 21:25:23.728 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-27 21:25:24.278 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-27 21:25:26.496 IFO][NeuroDragon] [vvsr] sr dump scheduled: F7 pair, first in 2 s, second 2 s later
+[2026-10-27 21:25:27.306 DBG][NeuroDragon] [eval] f=3600 tid=18336 cl=0x2d1e9d7d3f0 h=0x2d1eac40f50 1689x950 c=0x2d1e3be6500 d=0x2d1e3be5b70 mv=0x2d1e3be94d0 o=0x2d1e3be6e90 ret=0x1
+[2026-10-27 21:25:28.491 IFO][NeuroDragon] [vvsr] sr dump #3 frame=3716 view=3 start
+[2026-10-27 21:25:28.491 IFO][NeuroDragon] [vvsr] sr dump #3 frame=3716 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(-0.1875,-0.1296)
+[2026-10-27 21:25:28.753 IFO][NeuroDragon] [vvsr] sr dump pair 1/2 run=3 ok=1
+[2026-10-27 21:25:30.021 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-27 21:25:30.759 IFO][NeuroDragon] [vvsr] sr dump #4 frame=3824 view=3 start
+[2026-10-27 21:25:30.759 IFO][NeuroDragon] [vvsr] sr dump #4 frame=3824 mv valid=1 prev_same=1 delta=(+0.0000,+0.0000,+0.0000) jitter=(+0.4375,-0.2407)
+[2026-10-27 21:25:31.039 IFO][NeuroDragon] [vvsr] sr dump pair 2/2 run=4 ok=1 (pair done runs=3,4)
+
+Offline NDRW statistics (32-byte RawHeader):
+run1 semantic sub_geo=0.001663, dlssout sub_geo=0.001963, White=0.0234601963, final rgb_mean=0.418850
+run2 semantic sub_geo=0.001909, dlssout sub_geo=0.001682, White=0.0222831406, final rgb_mean=0.406014
+run3 mid sub_geo=0.335457, dlssout sub_geo=0.335135, White=0.0960030481, final rgb_mean=0.989284
+run4 mid sub_geo=0.342715, dlssout sub_geo=0.342091, White=0.0961840823, final rgb_mean=0.989609 (after world exit; excluded from in-world judgement)
+run3 offline target White = 0.335135/0.0671 = 4.993964, captured White/target = 1.923%.
+run3 input and final were captured in-world with view=3. The target mismatch is about 52x in geometric-mean input, not the 11% legacy-reference calibration issue.
+User result: 已完成；连按多次f11仍然崩坏。

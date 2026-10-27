@@ -1,0 +1,25 @@
+[2026-10-27 14:34:27.808 IFO][NeuroDragon] [vv] texture table: layout ok (rva 0xdfa4214 -> global 0x12006060); ctx resolved on first sample
+[2026-10-27 14:35:46.111 IFO][NeuroDragon] [vvsr] sr Init_ProjectID ret=0x00000001
+[2026-10-27 14:35:46.195 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-27 14:35:46.324 DBG][NeuroDragon] [eval] f=1 tid=22336 cl=0x1d2848e33c0 h=0x1d2fb3a4730 1689x950 c=0x1d2848e1600 d=0x1d2848e4f60 mv=0x1d2848e1f90 o=0x1d2848e75a0 ret=0x1
+[2026-10-27 14:35:46.327 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=204 hits=0 call=1/3 seq=9128 this=0x95697fe900
+[2026-10-27 14:35:46.327 IFO][NeuroDragon] [vv] texture table ctx=0x1d1971e7040 (global rva 0x12006060); handle->native is a plain read
+[2026-10-27 14:35:46.328 IFO][NeuroDragon] [vv] in.color handle=0x0000 valid=1 mapped=1 phase=decl decl=9128 dep=0x95697fe900 wrapper=0x1d2fcd4b060 resource=0x1d284906000 ctrl=0x1d284905ff0 native=0x1d1e8065970 res0=0x0000000000000000 res1=0x0000000000000000 res2=0x5b635b1000010000 res3=0x000001d271d35c90 table=1 ctx=0x1d1971e7040 cap=753664 dir=0x0 block=0x0 entry=0x1d197dc51b0 candidates=24 call=1/3 seq=9128 reads=1 hits=0
+[2026-10-27 14:35:46.328 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notInRtv handle=0x0000 resource=0x1d284906000 wrapper=0x1d2fcd4b060 ctrl=0x1d284905ff0 native=0x1d1e8065970 at=handle phase=decl table=1 ctx=0x1d1971e7040 cap=753664 dir=0x0 block=0x0 entry=0x1d197dc51b0 reads=1 hits=0
+[2026-10-27 14:35:46.329 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=0x200 node16=none scanned=136 candidates=204 hits=0 call=1/3 seq=9128 this=0x95697fe900
+[2026-10-27 14:35:46.329 IFO][NeuroDragon] [vv] taau replace declared=9128 callbacks=9128 forwarded=9127 suppressed=1 missed=0
+[2026-10-27 14:35:46.338 DBG][NeuroDragon] [eval] f=2 tid=22336 cl=0x1d2848e33c0 h=0x1d2fb3a4730 1689x950 c=0x1d2848e1600 d=0x1d2848e4f60 mv=0x1d2848e1f90 o=0x1d2848e75a0 ret=0x1
+[2026-10-27 14:35:46.340 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=204 hits=0 call=2/3 seq=9129 this=0x95697fe900
+[2026-10-27 14:35:46.341 IFO][NeuroDragon] [vv] in.color handle=0x0000 valid=1 mapped=1 phase=decl decl=9129 dep=0x95697fe900 wrapper=0x1d2a8585a80 resource=0x1d284905bc0 ctrl=0x1d284905bb0 native=0x1d1e8065970 res0=0x0000000000000000 res1=0x0000000000000000 res2=0x0000000000010000 res3=0x000001d271d35290 table=1 ctx=0x1d1971e7040 cap=753664 dir=0x0 block=0x0 entry=0x1d197dc51b0 candidates=24 call=2/3 seq=9129 reads=2 hits=0
+[2026-10-27 14:35:46.341 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notInRtv handle=0x0000 resource=0x1d284905bc0 wrapper=0x1d2a8585a80 ctrl=0x1d284905bb0 native=0x1d1e8065970 at=handle phase=decl table=1 ctx=0x1d1971e7040 cap=753664 dir=0x0 block=0x0 entry=0x1d197dc51b0 reads=2 hits=0
+[2026-10-27 14:35:46.343 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=0x200 dep16=none node16=0x200 scanned=136 candidates=204 hits=0 call=2/3 seq=9129 this=0x95697fe900
+[2026-10-27 14:35:46.343 IFO][NeuroDragon] [vv] taau replace declared=9129 callbacks=9129 forwarded=9127 suppressed=2 missed=0
+[2026-10-27 14:35:46.351 DBG][NeuroDragon] [eval] f=3 tid=22336 cl=0x1d2848e33c0 h=0x1d2fb3a4730 1689x950 c=0x1d2848e1600 d=0x1d2848e4f60 mv=0x1d2848e1f90 o=0x1d2848e75a0 ret=0x1
+[2026-10-27 14:35:46.353 IFO][NeuroDragon] [vv] in.color nativeNONE phase=decl dep=0x40 node=0x200 dep16=0x200 node16=0x200 scanned=200 candidates=204 hits=0 call=3/3 seq=9130 this=0x95697fe900
+[2026-10-27 14:35:46.354 IFO][NeuroDragon] [vv] in.color handle=0x0000 valid=1 mapped=1 phase=decl decl=9130 dep=0x95697fe900 wrapper=0x1d288a29d00 resource=0x1d284906000 ctrl=0x1d284905ff0 native=0x1d1e8065970 res0=0x0000000000000000 res1=0x0000000000000000 res2=0x5b635b1000010000 res3=0x000001d271d35c90 table=1 ctx=0x1d1971e7040 cap=753664 dir=0x0 block=0x0 entry=0x1d197dc51b0 candidates=24 call=3/3 seq=9130 reads=3 hits=0
+[2026-10-27 14:35:46.354 IFO][NeuroDragon] [vv] in.color bgfxNONE reason=notInRtv handle=0x0000 resource=0x1d284906000 wrapper=0x1d288a29d00 ctrl=0x1d284905ff0 native=0x1d1e8065970 at=handle phase=decl table=1 ctx=0x1d1971e7040 cap=753664 dir=0x0 block=0x0 entry=0x1d197dc51b0 reads=3 hits=0
+[2026-10-27 14:35:46.355 IFO][NeuroDragon] [vv] in.color nativeNONE phase=draw dep=0x40 node=none dep16=0x200 node16=none scanned=72 candidates=204 hits=0 call=3/3 seq=9130 this=0x95697fe900
+[2026-10-27 14:35:46.355 IFO][NeuroDragon] [vv] taau replace declared=9130 callbacks=9130 forwarded=9127 suppressed=3 missed=0
+[2026-10-27 14:35:52.398 DBG][NeuroDragon] [eval] f=600 tid=22336 cl=0x1d2848e33c0 h=0x1d2fb3a4730 1689x950 c=0x1d2848e1600 d=0x1d2848e4f60 mv=0x1d2848e1f90 o=0x1d2848e75a0 ret=0x1
+[2026-10-27 14:35:52.400 IFO][NeuroDragon] [vv] taau replace declared=9727 callbacks=9727 forwarded=9127 suppressed=600 missed=0
+[2026-10-27 14:36:04.950 IFO][NeuroDragon] [vv] texture table released (reads=3 hits=0)
