@@ -33,6 +33,33 @@
 - 工作区状态：`docs/agent/contract.json`（契约）、`docs/agent/ledger.jsonl`（只追加账本）、
   `docs/agent/evidence/`（原始产物）。
 
+## RE 知识库（`re_kb.py` / `re_serve.py`）
+
+两半：`re_kb.py` 是离线 CLI（**不碰 idb**）；`re_serve.py` 是 IDAPython，只在**锚点会话**里跑
+（File > Script file… / Alt+F7）。协议与字段表在 [docs/agent/re/README.md](../../docs/agent/re/README.md)，
+纪律在 AGENTS.md §13。这里只记维护要点：
+
+- **不开 idb 也能做的**：签名唯一性校验、`rva → 文件偏移 → 取字节 → 最短唯一签名`（`re_kb.py sig --rva`）、
+  PE 头取 imagebase/SizeOfImage、地址分空间（mac / win / other-module / 运行期堆指针）。都只读 exe。
+- **IDA 的搜索 API 是最不稳的一环**：9.3 删了 `idc.find_binary`，还把 `ida_bytes.find_bytes` 的参数
+  顺序改成「pattern 先」。所以 `find_sig` 默认**扫磁盘上的模块**（复用 `re_kb.scan_matches`）再把文件
+  偏移翻成 EA，并**回读校验**「这个 EA 在数据库里确实是同一串字节」——文件在 idb 之后被换过会当场报出来
+  而不是悄悄指到别的函数。IDA 搜索 API 只作兜底（9.x / 8.x 两种调用序都试）。
+- **一个请求崩了不许带走整批**：每个请求在 `main()` 里包一层 try/except，异常连同 traceback 写进
+  `served.jsonl` 并继续下一条。
+- 新增任何 IDA 调用前先跑
+  `tests/test_re_kb.py::test_every_ida_api_used_by_re_serve_exists_in_the_stub`——
+  它拿本机 IDA 的 Python 存根核名字（没有 IDA 时自动 skip）。
+- **`re_serve.py` 是读操作**：不 save、不 rename、不 retype、不 patch；一批 40 条，
+  状态在 `served.jsonl`，断了按一次 Alt+F7 就续上。
+- **append-only + last-wins**：`requests/*.jsonl`、`served.jsonl`、`canon/*.jsonl` 从不改已有行。
+  事实改正是追加同 key 一行（`--amend`）；key 改名是追加墓碑行（`canon rename` 顺带把队列里
+  未服务的请求重指到新 key）。这样多个 agent 并发写也不会互相撕行。
+- **测试**：`tests/test_re_kb.py` 用合成 PE（5 KB）驱动真实 CLI，覆盖模糊签名、重复 key、
+  堆指针、无证据、签名漂移——不需要 296 MiB 的客户端，也不需要 IDA。
+  `python -m unittest discover -s scripts/agentflow/tests -v`
+- **别在 `scripts/agentflow/` 放与标准库同名的文件**：它是 `sys.path[0]`（曾用 `re.py` 打挂了 `flow.py`）。
+
 ## 检查怎么加
 
 `checks.py` 里每个 check 返回 findings（`check/id/level/message/where`）。

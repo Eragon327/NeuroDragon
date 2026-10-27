@@ -8,6 +8,9 @@ python scripts/agentflow/flow.py status        # 目标 / 阶段 / 验收项 / �
 python scripts/agentflow/flow.py doctor        # 有没有人绕过流程（脏部署、失效豁免、陈旧实验）
 ```
 
+- 这轮只要碰**地址 / 签名 / hook / 反编译**，就再多跑一条：
+  `python scripts/agentflow/re_kb.py status`，并用 `re_kb.py find <关键词>` 查已有的结论（§13）。
+  别为了"看一眼"去开 idb。
 - 长任务**必须先有契约**：`docs/agent/contract.json`（goal / criteria / stage / out_of_scope）。
   没有就补，别在对话里口头约定。
 - **阶段只能通过 `claim` 前进**，且必须有证据 + 一次更晚的 `review`。
@@ -110,6 +113,9 @@ python scripts/agentflow/flow.py claim --final     # 只认 kind=final 的验收
   没有这个文件时 `deploy` 直接拒绝；**不要**把实例写回 tracked 的 `config.json`，也不要用 `--instance` 指向别人的实例。
 - 引擎的渲染目标在模组加载前就建好了：RTV/DSV 清单要等一次 F11 重建才有渲染分辨率资源。
 - 改了 DLL 必须重开游戏或 reload，旧进程里跑的还是旧镜像。
+- **`scripts/agentflow/` 是 `sys.path[0]`**：放在那里的脚本文件不能和标准库同名。
+  加过一个 `re.py`，`flow.py` 立刻起不来（`argparse` → `import re` 命中了它，`re.compile` 不存在）。
+  新文件先过一眼标准库名字（`re` / `json` / `types` / `code` / `copy` / `io` / `abc` …）。
 
 ## 8. 人机契约（谁负责什么）
 
@@ -179,10 +185,52 @@ python scripts/agentflow/flow.py claim --final     # 只认 kind=final 的验收
   的 L2 必须降成 L1；反过来为了不写断言把 L1 抬成 L2 = 违规。
 - L2 触发没发生时（没进世界/没按步骤），`smoke` 记 ABORTED 并**保持实验打开**，不记失败。
 
-## 12. 协作与 IDA MCP（用户 2026-10-26 指定）
+## 12. 协作与 IDA（MCP / 锚点会话）
 
+- **Subagent 默认使用 Deepseek Flash**。
 - **委派必须按“块”而不是按“步骤”**：主 agent 亲自完成路线判断、实验设计、文件/地址定位、代码串联与最终证据复核；subagent 只承担边界清晰、上下文少、可一次产出整块结论的任务（如离线反编译、批量日志/二进制分析、独立代码审查）。
 - **不派发薄任务**：纯跑命令、读一段已知日志、改一处局部代码、提出单个 follow-up 这类工作由主 agent 完成。只有预计需要独立上下文达到数百行以上，或能并行覆盖多个不相交问题，才委派。
 - **subagent 一次必须拿到完整背景**：目标、已知路径/地址/文件名、判据、禁止事项和预期输出一次写清；后续不要靠连续追问补上下文。默认承接原任务的 agent 继续修正，而不是新起一个。
-- **IDA MCP 默认不能并发**：同一时刻只跑一个 IDA 打开/分析任务；不要并发 `idb_open`、不要让多个 subagent 同时操作 IDA。确需并行时先证明是隔离的进程与数据库，否则仍串行。
+- **IDA 默认不能并发**：同一时刻只跑一个 IDA 打开/分析任务；不要并发 `idb_open`、不要让多个 subagent 同时操作 IDA。确需并行时先证明是隔离的进程与数据库，否则仍串行。
+- **MCP 连的库不一定是你要的库**：本机同时开着两个 GUI ——
+  `minecraft-edu.i64`（Mac 1.26.32 全符号，`127.0.0.1:13337`，imagebase `0x100000000`）与
+  `Minecraft.Windows.exe.i64`（26.51，`127.0.0.1:13338`，imagebase `0x140000000`）；
+  **MCP 默认连 13337**。判据永远是 `ida_nalt.get_input_file_path()`，不是端口、不是窗口标题。
+  `re_serve.py` 会用 `config.local.json` 的实例比对并打 WARNING。
+- **subagent 不跑 Alt+F7、不开 idb**：它的产出写进 `docs/agent/re/requests/`（§13），由人服务队列。
 - 打开/关闭 IDB 也属于有副作用的操作：记录意外保存或解包产物；只读分析不得主动改名、改类型、patch 或保存。
+
+## 13. RE 知识库（idb 之外的真相）
+
+**判据**：`docs/agent/re/` 里的文本是真相，`.i64` 是派生产物。26.51 的 idb 是 3.67 GiB，
+开着时 `.id0/.id1` 再加约 3.8 GiB；IDA 打开即写模式，**第二个打开者 = 抢锁或整份拷贝**。
+协议全文在 `docs/agent/re/README.md`，这里只列必须照做的。
+
+```bash
+python scripts/agentflow/re_kb.py status              # build / 队列 / canon / idb 是否有人在用
+python scripts/agentflow/re_kb.py find taau           # ★ 动手前必跑：canon/死路/队列/快照/docs
+python scripts/agentflow/re_kb.py sig --rva 0xb74f860 # rva -> 最短唯一签名（离线，不开 idb）
+python scripts/agentflow/re_kb.py req add --key k --sig "48 89 ..." --why "它回答什么问题"
+python scripts/agentflow/re_kb.py canon add --key k --addr 0x14... --sig ... --evidence docs/x.md:12
+python scripts/agentflow/re_kb.py canon verify        # 新 build 来了先跑：哪些签名失效
+```
+
+| 谁 | requests/ | builds/（快照） | canon/ | idb |
+|---|---|---|---|---|
+| 主 agent | 追加 | 只读 | 追加 | **不开** |
+| subagent | 追加 | 只读 | 只读 | **不开** |
+| 锚点会话（人按 Alt+F7 跑 `re_serve.py`） | 只读 | 写 | 不碰 | 读，不保存 |
+
+- **一个锚点会话**：全导入 / 自动分析全世界只做一次，产物落成文本（`builds/<sha12>/decomp/`）。
+  要新函数就 `req add`，**不要为新函数再开一个 db**。
+- **签名必须唯一**：`req add` / `canon add` 下单时就离线扫模块，0 次或多次都拒绝。
+  实测教训：序言 `55 41 57 41 56 41 55 41 54 56 57 53 48 81 EC` 在 26.51 exe 里出现 **48182 次**，
+  只能当挂钩前的健全性校验，不能当定位器；`taau` 的入口签名要到 **48 字节**才唯一。
+- **地址必须分模块**：mac 1.26.32（`0x10…`，base `0x100000000`）/ win 26.51（`0x14…`，`0x140000000`）/
+  其它 DLL（`0x18…`）/ 运行期堆指针（`0x1f…`，每次启动都变，直接丢弃）。
+  把 26.51 的地址记成 mac 的，下一个 agent 就会去错库里找。
+- **没有证据不许进 canon**（`--evidence` 必填）；改正是**追加同 key 一行**（`--amend`，last wins）；
+  key 改名用 `canon rename`（留墓碑行，旧名照样查得到去向）。
+- 结论进 `canon/funcs.jsonl`，证伪的假设进 `canon/refuted.jsonl`。
+  **不要在 research 文档里再抄一遍地址**——复制出来的第二份必然漂移。
+- 静态分析的产物不是实验证据：`exp` 记实机，`canon`/`decomp` 记静态，两者不能互相冒充。
