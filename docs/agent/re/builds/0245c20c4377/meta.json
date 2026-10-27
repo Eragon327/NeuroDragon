@@ -1,0 +1,8 @@
+{
+  "build": "0245c20c4377",
+  "sha256": "0245c20c4377d74a25f3644bf441b460d6b3b45a88617387edccaacd27418377",
+  "exe": "E:\\LeviLauncher\\versions\\1.26.51.01\\Minecraft.Windows.exe",
+  "version": "1.26.51.01",
+  "created": "2026-10-27T13:07:05.152+08:00",
+  "note": "decomp/ is text produced by re_serve.py from the .i64; the .i64 itself is a derived artifact and is never committed"
+}

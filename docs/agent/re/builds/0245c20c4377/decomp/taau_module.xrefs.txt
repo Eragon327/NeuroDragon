@@ -1,0 +1,16 @@
+# key          : taau_module
+# build        : 0245c20c4377 (1.26.51.01)
+# sha256       : 0245c20c4377d74a25f3644bf441b460d6b3b45a88617387edccaacd27418377
+# exe          : E:\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe
+# idb          : D:\Documents\DecompileData\version\minecraft-windows-26.51.01\Minecraft.Windows.exe.i64
+# resolve      : sig: 55 41 57 41 56 41 55 41 54 56 57 53 48 81 EC 58 0D 00 00 48 8D AC 24 80 00 00 00 0F 29 B5 C0 0C 00 00 48 C7 85 B8 0C 00 00 FE FF FF FF 4C 89 CB
+# rva          : 0xb74f860
+# file_off     : 0xb74ec60
+# ea           : 0x14b74f860
+# func         : sub_14B74F860  [0xb74f860 - 0xb751693, 7731 bytes]
+# proto        : void sub_14B74F860()
+# why          : TAAU 入口的完整伪代码：确认 12 个参数怎么取、BindFramebufferColor[4] 的顺序、以及 colorTargets 的判据
+# requested_by : agent
+# served       : 2026-10-27T13:16:15.338+08:00 by re_serve.py v2 on IDA 9.3
+
+(no xrefs) _

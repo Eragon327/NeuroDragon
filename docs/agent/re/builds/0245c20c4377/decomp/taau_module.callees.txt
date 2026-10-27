@@ -1,0 +1,81 @@
+# key          : taau_module
+# build        : 0245c20c4377 (1.26.51.01)
+# sha256       : 0245c20c4377d74a25f3644bf441b460d6b3b45a88617387edccaacd27418377
+# exe          : E:\LeviLauncher\versions\1.26.51.01\Minecraft.Windows.exe
+# idb          : D:\Documents\DecompileData\version\minecraft-windows-26.51.01\Minecraft.Windows.exe.i64
+# resolve      : sig: 55 41 57 41 56 41 55 41 54 56 57 53 48 81 EC 58 0D 00 00 48 8D AC 24 80 00 00 00 0F 29 B5 C0 0C 00 00 48 C7 85 B8 0C 00 00 FE FF FF FF 4C 89 CB
+# rva          : 0xb74f860
+# file_off     : 0xb74ec60
+# ea           : 0x14b74f860
+# func         : sub_14B74F860  [0xb74f860 - 0xb751693, 7731 bytes]
+# proto        : void sub_14B74F860()
+# why          : TAAU 入口的完整伪代码：确认 12 个参数怎么取、BindFramebufferColor[4] 的顺序、以及 colorTargets 的判据
+# requested_by : agent
+# served       : 2026-10-27T13:16:15.338+08:00 by re_serve.py v2 on IDA 9.3
+
+       0x140073350  rva 0x73350    sub_140073350
+       0x140075a30  rva 0x75a30    sub_140075A30
+       0x140075a50  rva 0x75a50    sub_140075A50
+       0x140079200  rva 0x79200    sub_140079200
+       0x14009b4a0  rva 0x9b4a0    sub_14009B4A0
+       0x14009daf0  rva 0x9daf0    sub_14009DAF0
+       0x14013c6d0  rva 0x13c6d0   sub_14013C6D0
+       0x1406acb20  rva 0x6acb20   sub_1406ACB20
+       0x1409049b0  rva 0x9049b0   sub_1409049B0
+       0x140905490  rva 0x905490   sub_140905490
+       0x140905570  rva 0x905570   sub_140905570
+       0x1452e10e0  rva 0x52e10e0  sub_1452E10E0
+       0x1452f8aa0  rva 0x52f8aa0  sub_1452F8AA0
+       0x14530a6b0  rva 0x530a6b0  sub_14530A6B0
+       0x14530bdd0  rva 0x530bdd0  sub_14530BDD0
+       0x145313430  rva 0x5313430  sub_145313430
+       0x14533c5f0  rva 0x533c5f0  sub_14533C5F0
+       0x14535cf30  rva 0x535cf30  sub_14535CF30
+       0x14b74f8c2  rva 0xb74f8c2  sub_14B74F860
+       0x14b74f8e7  rva 0xb74f8e7  sub_14B74F860
+       0x14b74f90c  rva 0xb74f90c  sub_14B74F860
+       0x14b74f9ba  rva 0xb74f9ba  sub_14B74F860
+       0x14b74fa93  rva 0xb74fa93  sub_14B74F860
+       0x14b74fb3d  rva 0xb74fb3d  sub_14B74F860
+       0x14b74fc63  rva 0xb74fc63  sub_14B74F860
+       0x14b74fc68  rva 0xb74fc68  sub_14B74F860
+       0x14b74fc77  rva 0xb74fc77  sub_14B74F860
+       0x14b74fca6  rva 0xb74fca6  sub_14B74F860
+       0x14b74fcc0  rva 0xb74fcc0  sub_14B74F860
+       0x14b74fcc7  rva 0xb74fcc7  sub_14B74F860
+       0x14b74fd0b  rva 0xb74fd0b  sub_14B74F860
+       0x14b750302  rva 0xb750302  sub_14B74F860
+       0x14b7506f3  rva 0xb7506f3  sub_14B74F860
+       0x14b7507e3  rva 0xb7507e3  sub_14B74F860
+       0x14b75089f  rva 0xb75089f  sub_14B74F860
+       0x14b750979  rva 0xb750979  sub_14B74F860
+       0x14b7509a3  rva 0xb7509a3  sub_14B74F860
+       0x14b7509d2  rva 0xb7509d2  sub_14B74F860
+       0x14b750ab3  rva 0xb750ab3  sub_14B74F860
+       0x14b750aeb  rva 0xb750aeb  sub_14B74F860
+       0x14b750beb  rva 0xb750beb  sub_14B74F860
+       0x14b750c04  rva 0xb750c04  sub_14B74F860
+       0x14b750c91  rva 0xb750c91  sub_14B74F860
+       0x14b750ccc  rva 0xb750ccc  sub_14B74F860
+       0x14b750f70  rva 0xb750f70  sub_14B74F860
+       0x14b750fa1  rva 0xb750fa1  sub_14B74F860
+       0x14b75142f  rva 0xb75142f  sub_14B74F860
+       0x14b75145e  rva 0xb75145e  sub_14B74F860
+       0x14b7514d9  rva 0xb7514d9  sub_14B74F860
+       0x14b751508  rva 0xb751508  sub_14B74F860
+       0x14b751583  rva 0xb751583  sub_14B74F860
+       0x14b7515b2  rva 0xb7515b2  sub_14B74F860
+       0x14b75164d  rva 0xb75164d  sub_14B74F860
+       0x14b751669  rva 0xb751669  sub_14B74F860
+       0x14b751f60  rva 0xb751f60  sub_14B751F60
+       0x14b7520d0  rva 0xb7520d0  sub_14B7520D0
+       0x14dff1be0  rva 0xdff1be0  unk_14DFF1BE0
+       0x14dff3040  rva 0xdff3040  sub_14DFF3040
+       0x14e021350  rva 0xe021350  unk_14E021350
+       0x14e024890  rva 0xe024890  sub_14E024890
+       0x14e024950  rva 0xe024950  sub_14E024950
+       0x14e585660  rva 0xe585660  _guard_dispatch_icall_nop
+       0x14e5a4d60  rva 0xe5a4d60  unk_14E5A4D60
+       0x14e5a62c0  rva 0xe5a62c0  unk_14E5A62C0
+       0x14e5a6390  rva 0xe5a6390  unk_14E5A6390
+       0x14f1042e8  rva 0xf1042e8  _invoke_watson

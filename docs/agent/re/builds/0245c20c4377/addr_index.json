@@ -1,0 +1,27 @@
+{
+  "ngx_set_slice_ptr": {
+    "build": "0245c20c4377",
+    "rva": "0xe413740",
+    "func": "sub_14E413740",
+    "proto": "?",
+    "files": [
+      "ngx_set_slice_ptr.c",
+      "ngx_set_slice_ptr.xrefs.txt",
+      "ngx_set_slice_ptr.callees.txt"
+    ],
+    "served_at": "2026-10-27T13:16:14.961+08:00"
+  },
+  "taau_module": {
+    "build": "0245c20c4377",
+    "rva": "0xb74f860",
+    "func": "sub_14B74F860",
+    "proto": "void sub_14B74F860()",
+    "files": [
+      "taau_module.c",
+      "taau_module.xrefs.txt",
+      "taau_module.callees.txt",
+      "taau_module.strings.txt"
+    ],
+    "served_at": "2026-10-27T13:16:15.338+08:00"
+  }
+}
