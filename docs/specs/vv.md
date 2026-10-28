@@ -2131,6 +2131,86 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
 深度先沿用当前可用路径，避免这一轮再次扩大范围；**深度语义**（代码 `near/(1-d)` 与
 `DepthInverted=1` 的矛盾）单列未知，不在这四个阶段里顺手改。
 
+**第一轮（EXP-0062，两跑，引擎 MV 未进入）**：
+
+- 两次实机（19:26 dll `3110a443`、19:39 dll `b56aa5cb`）`arg11` 全部
+  `handle=0xFFFF reason=invalidChain`；`sr arg10 #N: ... mv=vp`，dump `mvsrc=vp`
+  ⇒ 这一轮画面仍是 depth + VP 重建，**不能作为阶段 C 的结果**。
+- `phase=decl` 读到 `wrapper` 是堆指针，但 `*(wrapper+0x10)` 固定是 `0x3be70000`；
+  `phase=draw` 时它是 `0xa02f6ee841000000` 一类非指针 ⇒ **ExternalImage（颜色/MV）的
+  wrapper 类没有 arg10（transient）那条 `+0x10 holder → +0x18 resource` 链**。
+  这与 §34 的结构复盘一致：颜色/MV 只出现在材质绑定里。
+- 同一次 TAAU draw 的三次材质绑定已能按角色分开（19:39:43 原始日志）：
+  `0x0413 → 0x1a098fcd860`（fmt26 + render-size + RTV，与 `sr semantic colour` 同一指针）
+  = `FinalColor`；`0x04F1 → 0x1a098fcc540`（render-size RTV、fmt≠26）= `MV`；
+  `0x05F4 / 0x0243`（不在 render-size 清单、逐帧交替）= `History`。
+- ⇒ 下一步是把 MV 捕获挪到**材质 hook**（`gInTaauDraw` 内、render-size RTV 且不是
+  FinalColor 的那次绑定），不再走 declarator 依赖链；这一步不需要反编译。
+  反编译只在「suppress 后材质绑定也消失、需要与 suppress 正交的角色通道」时才必要（阶段 D）。
+- 证据：`docs/agent/evidence/engine-mv-EXP-0062.log`（两轮原始行）与游戏目录
+  `sr_mv_rg32_*.bin`（run 1–6，均为 vp 路径）。
+
+**第二轮（材质 hook 捕获有效；早期“不是 MV”判读已更正，2026-10-28 复核）**：
+
+- 材质 hook 捕获确实接上了（`arg11 mv material ... fmt=10`、`sr arg10 #N ... mv=engine`）。
+  早期报告把 `zw` 写成“精确为 0”，并据 `xy` 的法线图判死整张 fmt10；这个判读是错的。
+- 对 `sr_mvraw_1689x950_{1,2}.bin` 与 `sr_mvengine_{1,2}.bin` 逐通道复核：`xy` 在 ±1、是法线；
+  `z/w` 非零覆盖率约 52–55%，量级约 0.005–0.01，是渲染分辨率归一化 MV。
+  这张图是 **`xy=法线、zw=MV` 的复合 G-buffer**，TAAU 只读 `.zw`，所以法线外观并不排斥 MV。
+- 运动方向也成立：四份 dump 的 `DLSS(-z,+w) * RenderResolution` 都是 100% 指向画面中心的
+  径向场；`TAAU(z,-w)` 则全部反向，正好符合各自 `current→previous` / 历史重投影约定。
+- `record+0x2d` 提供的槽位是 0（该绑定的 slot），对应材质 slot 0；同一次 draw 的另外两次
+  绑定是 slot 1（fmt26 颜色）与 slot 2（显示尺寸、逐帧交替的历史）。
+- 对 0xDFF64E0 的离线反汇编：`record` 只被读 `[r8]`、`+0x18`、`+0x1c`、`+0x1d`、`+0x2c`、
+  `+0x2d`（纹理描述指针与用法/槽位字节），**没有 uniform 名字 hash**；但这不妨碍由材质 slot 0
+  与 `.zw` 数值共同确认角色。
+- ⇒ 阶段 C 应继续使用材质捕获的引擎 MV，公式 `dlssMv = float2(-z, +w) * RenderResolution`；
+  不应回退到自算 MV，也不再需要仅为角色解析去改材质服务/override。
+- 复核证据：`docs/agent/evidence/engine-mv-EXP-0062-review.log`；早期 `taau_material_bind_is_mv`
+  否定条目由 canon 的新更正条目取代。
+
+**仍未解 / 需要收口（2026-10-28 20:3x，第二次复核）**：
+
+- 「903 帧形没有 MV」的假设**已被否掉**：同一 session 第一次录制（窗口 1689×903）的
+  `sr_mv_rg32_1689x903_1/2` 是 p99 **15.4 / 14.0 px**、**100% 指向中心**；`mvraw` 的 `zw`
+  非零率 54%。所以 903 的复合 G-buffer 与 950 一样带 MV。
+- 真正为零的是**第二次 F11（切真全屏）之后的两批**：`sr_mv_rg32_1689x903_3/4` p99 0.01 px、
+  `mvraw` 全零，而同帧引擎原图 `sr_mvengine_3/4`（1689×950）仍是 100% 向内的正常场。
+  ⇒ 尺寸切换后引擎 MV 是 950、我们的 render 尺寸还是 903，`prepMode` 落 0；
+  新 `mvRaw` 还没被写过，于是喂了零场。这是** resize 窗口期的状态问题**，不是 MV 源的问题。
+- 用户在这次会话的**第一次录制**（MV 正确的那段）报告了画面抖动 ⇒ **抖动与 MV 源无关**，
+  在自算 MV（EXP-0060/0061）和引擎 MV 下都能复现，按独立未知项继续查（present/历史/reset 方向），
+  不阻塞阶段 C 的输入切换。
+- 收口要求：resize 后到引擎 MV 尺寸与 render 尺寸一致之前，**不注入**（跳过该帧并记日志），
+  不允许用自算 MV 或零场静默顶上；然后再做「F11 两种形态 × 静止/走动」的回归。
+
+**回归第一轮（2026-10-28 20:39–20:40，dll `0dbb95d7`）**：
+
+- 窗口态（1689×903）四批 dump 里前两批 `sr_mv_rg32` 为 p99 **9.25 / 9.11 px**、**100% 指向中心**，
+  与 950 的 11.8 px 同量级 ⇒ **引擎 MV 输入本身已通过**（两种帧形都成立）。
+- 但 **20:40:08 起注入停了**（`inject skipped: no pre-HUD boundary`，连续 1800+ 次），
+  早于 20:40:15 的 F11；之后 `arg10 probe ... hits=[]`，即没有任何 list 的 OMRT 绑定当帧 arg10
+  native ⇒ **writer 锚点在帧形变化后失效**。后两批 dump 是停注入后的陈旧缓冲，不代表画面。
+- 用户报告第一次录制期间仍有**抖动**，而那时 MV 是正确的（9.25 px/100% 向内）⇒ 抖动与 MV 源
+  无关，继续单列；它同时也是「注入是否连续」的观察点：停注入期间画面回 TAAU，不应把那段算进抖动判据。
+- ⇒ 下一步不是动 MV，而是**把 writer 锚点做成帧形无关**（否则 C 的屏幕回归与 D 的 F11 回归都过不了）。
+
+**收口（2026-10-28 20:5x）**：
+
+- **EXP-0062 通过**：20:48 的构建里注入跨「开关背包/菜单（帧形 71→108/109）」和 F11 切全屏继续，
+  `sr arg10` 到 #3600+，全程仅 2 次单帧 skip；走路 dump 为 **9.0 / 10.0 / 5.5 px、100% 向内**。
+  证据：`docs/agent/evidence/engine-mv-EXP-0062-pass.log`。
+- writer 锚点修了三处：RTV 句柄表改成**环回绕**（旧实现超过 4096 次就不再记录，这是 20:40:08
+  之后永久停注入的根因）、每 list 句柄容量 8→16、`OMSetRenderTargets` 时**就地打标**
+  （`arg10Bound` + 声明序号，提交阶段直接认标，不再事后重算）。
+- **自算 MV 已删**（EXP-0063 已通过，证据 `docs/agent/evidence/mv-cleanup-EXP-0063.log`）：
+  prep shader 去掉 MV 常量缓冲与重建分支，只读 arg11；`mvCb`、VP/相机原点/近平面解码一并移除，
+  `decodeMvFrame` 只留 jitter 与相机 delta；两条渲染路径在 arg11 缺失时都跳过而不是回退。
+  删除后回归：`sr arg10` 连续、`mv=engine`，走路 dump **11.92 / 8.12 px、100% 向内**，无 D3D12 错误。
+  附带影响：`sr_mvraw` 与「非 fmt26 候选靶」两类诊断 dump 随这次删除一起没了（`dumpInputs` 恢复为
+  删除前的版本）；若还要查引擎 MV 本身，需要重新加回。
+- **抖动仍未解**：在 MV 正确的段里复现，确认与 MV 源无关，单列。
+
 ### 35.4 阶段 D：回归后再 suppress
 
 先在**不 suppress**下过 F11、切世界、Stop/Start，确认没有亮暗漂移和错代输出。之后才做第二阶段：
@@ -2141,6 +2221,77 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
 - 不把 EXP-0054 的「定期转发」当最终机制。
 
 成功后再删 `VvTone`、`VvBypass`、白点与自算 MV 等旧实现，避免两套路径长期并行（AGENTS §4）。
+
+**回归第一轮（EXP-0064 fail → EXP-0065 pass，2026-10-28）**：
+
+- EXP-0064（dll `6cbf7cae`）：F11 双向与帧形 49/71→52/74 期间注入连续（injected 1→1560），
+  但切出世界触发渲染图重建时，`recordInternal` 因 arg11 暂缺返回 false，`inject::record()` 在
+  记录中途返回**没有 Close 命令列表**；allocator 从下一帧起 `Reset` 永久失败，只剩
+  `recording the injected work failed`，重进世界与 Stop→Start 均不恢复（21:07:46 之后没有任何
+  `[vvsr]` 行，失败发生在进入 `recordInternal` 之前；无设备错误）。证据
+  `docs/agent/evidence/r3-d-regression-EXP-0064.log`。
+- 修复：`VvInject::record()` 在 Reset 前先 Close 上一帧可能遗留的列表；所有子 record 的失败/成功
+  返回统一走 `finish()`（必 Close，Close 失败带 hr 记日志）。
+- EXP-0065（dll `fee85e7e`）：两次切出/重进世界（渲染图重建）与 1689x903↔1689x950 两种尺寸切换
+  期间 injected 1→7920，仅 3 次单帧 no-boundary、零次 RecordFailed；`sr arg10` 持续推进、
+  `eval=1`、`mv=engine`，无 D3D12 错误。**未覆盖**：Stop→Start 本次没有执行（无 `armed=0` 行），
+  反向 F11 只随第二次进世界发生；用户 21:17 之后的最小化动作在判据窗口外。证据
+  `docs/agent/evidence/r3-d-regression-EXP-0065.log`。
+- ⇒ 不 suppress 的回归只差 Stop→Start 一项，并入下一次实机的回归清单；之后才进入 suppress。
+
+**Suppress 诊断（EXP-0066，2026-10-28）**：
+
+- 整回调 suppress（8 帧）：没有任何 list 再把 `arg10` 绑成 RTV（每帧 `writer=0`），现有 writer
+  切点会消失；MV 也不再更新。⇒ **不能**整回调 suppress。
+- declarator 四依赖一次 walk：`arg9 colour`/`arg11 mv` 都是 `noHolder`（dep2 的 `+0x10` 是
+  `0x7df0000`，不是指针），`arg10`/`arg12 history` 能解析。⇒ MV 没有 declarator 侧通道。
+- TAAU 的 draw 本身可精确识别：它是 arg10 writer list 的**第一条** `DrawIndexedInstanced(6,1)`，
+  draw 时刻 `exact=1`（该 list 已绑定当帧 arg10），每帧一条。⇒ 只跳过这一条 draw。
+  证据 `docs/agent/evidence/r3-suppress-probe-EXP-0066.log`。
+
+**Draw 级 suppress（EXP-0067，dll `b5d3072a`）**：
+
+- 实现：`VvProbe` 的 draw 级开关（默认关）+ 上一帧注入成功门；命中条件 = 该 list 已绑定当帧
+  `arg10`（bind-time exact）+ 该 list 第一条 draw + 6 索引/1 实例 + arg11 非空。命中时只跳过
+  这一条 draw，回调、材质绑定（MV 通道）与 arg10 的 RTV 绑定全部保留。
+- 结果：约 30 s 内 `skipped TAAU draw` #1→#2400+（每帧一条），`inject fixed` 从 840 继续到 3480、
+  `skipped` 保持 1，`sr arg10` #600→#3600 全程 `eval=1 mv=engine`，UI 帧形 87/109 也连续；
+  Restore 后跳停；Stop→Start 重新 arm 后从 #1 恢复（补上 EXP-0065 的缺口）。无 D3D12 错误/崩溃。
+- **未覆盖**：Restore 后二次 arm；输入无效时恢复 TAAU 的路径（需在 draw suppress 开着时
+  Stop arg10 / 遇面板帧触发）。证据 `docs/agent/evidence/draw-suppress-EXP-0067.log`。
+
+**出世界继续 DLSS（2026-10-28 用户拍板，EXP-0070/0073/0074）**：
+
+- 早期 VV 路线出世界不停注入，后来因为「一次 record 失败会把 SR 路径弄死」加了 `inWorld()`
+  空转门；EXP-0065 的 Close 修复消除了那个隐患，门已撤掉：`recordInternal` 在菜单里照常
+  prep + DLSS + 写 `arg10`，菜单背景由同一条 R3 管线处理（EXP-0070：菜单里 injected 840→6960、
+  `sr arg10` eval=1 mv=engine，用户确认背景在动）。
+- **标题界面仍不能注入**：未进过世界时 render graph 里没有 render-size 的 colour/depth
+  （`colourTargets=0 depthTargets=0`），`pickInputs` 失败。这不是 world 事件门，是新进程的
+  标题界面没有可喂的输入；进过一次世界后菜单即可用。
+- **菜单抖动已定位并收口**：抖动源是把世界 TAAU 的 `SubPixelJitter` 喂给了**未按该 jitter 渲染**
+  的菜单全景——DLSS 每帧按错误的亚像素偏移重建，表现就是上下抖。EXP-0073 起 `!worldLoaded()`
+  时 jitter=0；EXP-0074 再取消「菜单每帧 Reset」，允许累积历史，旋转背景无抖动、无拖影
+  （用户确认）。A/B 时注意：`Restore TAAU draw` 只停跳 draw，stage B 仍会覆盖 `arg10`，要真
+  回 TAAU 必须 `Stop arg10`。
+- 证据：`docs/agent/evidence/r3-menu-dlss-EXP-0070.log`、`r3-menu-judder-EXP-0073.log`、
+  `r3-menu-accum-EXP-0074.log`。
+
+**F1–F3 与 F11 硬化（EXP-0076，dll `37625c36`，2026-10-28）**：
+
+- **F1**：`d-suppress: skipped TAAU draw` #1→#1200+（每帧一条），与 `inject fixed` / `sr arg10`
+  同步；draw 级跳过在 `DrawIndexedInstanced(6,1)` 处直接不转发。证据
+  `docs/agent/evidence/f1-tauu-draw-absent.log`。
+- **F2**：同帧对比（注入前把该帧 TAAU 的 `arg10` 复制到 `taauRef`，与 `dlssOut` 同批 dump）：
+  run 3 通道均值比 1.0036/0.9977/1.0003、luma +0.5%、tile 相关 1.000；run 1 最大通道差 1.5%、
+  luma 差 0.02%。**无整体偏色**，差异只在细节。证据 `f2-same-frame-compare.log` + 游戏目录
+  `sr_taauref_*.bin` / `sr_dlssout_*.bin`（sha256 见该文件）。
+- **F3**：多轮实机 HUD / 手 / 准星 / UI 面板保留；Stop/Start、Restore/Suppress、背包、暂停、
+  F11、切世界均不崩（EXP-0067/0068/0070/0076）。证据 `f3-ui-checklist-EXP-0076.log`。
+- **F11 硬化**：曾连按 F11 出现冻结/截断/强曝光（124 次注入跳过、arg10 停在旧内容）；已加
+  generation 门——每次渲染图重建后必须先在新 generation 成功注入一帧才跳 TAAU。复测连按 5 次：
+  120 次注入失败期间画面保持 TAAU，恢复后 skip #3600，无冻结/截断/强曝光、无崩溃。证据
+  `r3-f11-hardening-EXP-0076.log`、`s6-regression-EXP-0076.log`。
 
 ### 35.5 现在这一刀（immediate next）
 
