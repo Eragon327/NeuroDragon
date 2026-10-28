@@ -45,8 +45,8 @@ Injector g;
 
 std::atomic<int>      gMode{static_cast<int>(Mode::Off)};
 std::atomic<int>      gAction{static_cast<int>(Action::Clear)};
-std::atomic<bool>     gUseTaauList{false};
 std::atomic<bool>     gUseBackBuffer{false};
+std::atomic<bool>     gUseArg10{false};
 std::atomic<unsigned> gContentLogs{0};
 std::atomic<unsigned> gK{1};
 std::atomic<unsigned> gHold{20};
@@ -224,6 +224,25 @@ bool record(ID3D12Resource* buffer) {
         }
         return SUCCEEDED(g.list->Close());
     }
+    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::SolidArg10)) {
+        // R3 stage A: write the engine's TAAU output (arg10) instead of the back
+        // buffer. The resource is left in RENDER_TARGET; the next consumer's barrier
+        // is the engine's own (decisions/0005, V3). No transition is issued here on
+        // purpose - A3 is exactly "does that state hold?".
+        auto* const target = static_cast<ID3D12Resource*>(probe::vv::arg10Target());
+        if (!target) {
+            return false;
+        }
+        D3D12_RENDER_TARGET_VIEW_DESC targetDesc{};
+        bool                          targetUseDesc = false;
+        makeRtvDesc(target->GetDesc().Format, targetDesc, targetUseDesc);
+        gRecordingView.store(true, std::memory_order_relaxed);
+        g.device->CreateRenderTargetView(target, targetUseDesc ? &targetDesc : nullptr, g.rtv);
+        gRecordingView.store(false, std::memory_order_relaxed);
+        float const magenta[4] = {1.0f, 0.0f, 1.0f, 1.0f};
+        g.list->ClearRenderTargetView(g.rtv, magenta, 0, nullptr);
+        return SUCCEEDED(g.list->Close());
+    }
     D3D12_RENDER_TARGET_VIEW_DESC  desc{};
     bool                           useDesc = false;
     makeRtvDesc(buffer->GetDesc().Format, desc, useDesc);
@@ -281,11 +300,12 @@ Mode mode() { return static_cast<Mode>(gMode.load(std::memory_order_relaxed)); }
 
 void setAction(Action action) { gAction.store(static_cast<int>(action), std::memory_order_relaxed); }
 Action action() { return static_cast<Action>(gAction.load(std::memory_order_relaxed)); }
-void setUseTaauList(bool use) { gUseTaauList.store(use, std::memory_order_relaxed); }
-bool useTaauList() { return gUseTaauList.load(std::memory_order_relaxed); }
 
 void setUseBackBuffer(bool use) { gUseBackBuffer.store(use, std::memory_order_relaxed); }
 bool useBackBuffer() { return gUseBackBuffer.load(std::memory_order_relaxed); }
+
+void setUseArg10(bool use) { gUseArg10.store(use, std::memory_order_relaxed); }
+bool useArg10() { return gUseArg10.load(std::memory_order_relaxed); }
 
 void setK(unsigned k) { gK.store(k < 1 ? 1 : k, std::memory_order_relaxed); }
 
@@ -412,26 +432,41 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
             }
         }
     }
-    if (!content && gUseTaauList.load(std::memory_order_relaxed) && lists) {
-        if (void* const taau = probe::vv::taauListForFrame()) {
-            for (unsigned i = 0; i < listCount; ++i) {
-                if (lists[i] == taau) {
-                    // Content boundary: everything up to and including the list that
-                    // was recording when the TAAU draw ran. No tail/head count.
-                    k       = i + 1;
-                    content = true;
-                    unsigned const n = gContentLogs.fetch_add(1, std::memory_order_relaxed);
-                    if (n < 4 || n % 600 == 0) {
-                        utils::logger().info(
-                            "[vv] inject: taau-list boundary head={}/{} (captured list={:#x})",
-                            k,
-                            listCount,
-                            reinterpret_cast<std::uintptr_t>(taau)
-                        );
-                    }
-                    break;
-                }
+    if (!content && gUseArg10.load(std::memory_order_relaxed) && lists) {
+        // R3 stage A: cut immediately after the list whose first OMSetRenderTargets
+        // bound this frame's arg10. No fallback - a miss must stay visible.
+        unsigned const split = probe::vv::arg10WriterSplit();
+        if (split > 0 && split <= listCount) {
+            k       = split;
+            content = true;
+            unsigned const n = gContentLogs.fetch_add(1, std::memory_order_relaxed);
+            if (n < 4 || n % 600 == 0) {
+                utils::logger().info(
+                    "[vv] inject: arg10 boundary split={}/{} list={:#x} target={:#x}",
+                    k,
+                    listCount,
+                    reinterpret_cast<std::uintptr_t>(probe::vv::arg10WriterList()),
+                    reinterpret_cast<std::uintptr_t>(probe::vv::arg10Target())
+                );
             }
+        } else {
+            static std::atomic<unsigned> misses{0};
+            unsigned const               n = misses.fetch_add(1, std::memory_order_relaxed);
+            if (n < 4 || n % 120 == 0) {
+                utils::logger().warn(
+                    "[vv] inject: arg10 writer not found (native={:#x}, split={}/{})",
+                    reinterpret_cast<std::uintptr_t>(probe::vv::arg10Target()),
+                    split,
+                    listCount
+                );
+            }
+            // No fallback: an arbitrary k would write arg10 before TAAU and turn a
+            // missed anchor into a misleading frame.
+            g.pending->Release();
+            g.pending = nullptr;
+            gSplit.store(0, std::memory_order_relaxed);
+            setReason(SkipReason::NoBoundary);
+            return 0;
         }
     }
     if (!content) {

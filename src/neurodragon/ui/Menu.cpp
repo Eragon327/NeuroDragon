@@ -1102,7 +1102,6 @@ void drawB0Probe() {
         // whatever the frame's list count is.
         vv::capture::start();
         probe::vv::inject::setAction(probe::vv::inject::Action::Capture);
-        probe::vv::inject::setUseTaauList(false);
         probe::vv::inject::setUseBackBuffer(true);
         // If the probe has not seen a writer yet, fall back to the last measured
         // boundary instead of capturing the top of the frame (k=1 is useless there).
@@ -1115,7 +1114,6 @@ void drawB0Probe() {
     if (ImGui::Button("Capture sweep: tail k=1..8 (one pass)")) {
         vv::capture::start();
         probe::vv::inject::setAction(probe::vv::inject::Action::Capture);
-        probe::vv::inject::setUseTaauList(false);
         probe::vv::inject::setUseBackBuffer(false);
         probe::vv::inject::setFromTail(true);
         // One frame per boundary: the capture is the only action, so a "hold" of one
@@ -1169,7 +1167,6 @@ void drawB0Probe() {
         probe::vv::inject::setFromTail(true);
         probe::vv::inject::setK(4);
         probe::vv::inject::setAction(probe::vv::inject::Action::Sr);
-        probe::vv::inject::setUseTaauList(false);
         probe::vv::inject::setUseBackBuffer(true);
         vv::sr::setView(view);
     };
@@ -1264,31 +1261,55 @@ void drawB0Probe() {
         widgets::statRow("B2 last error", buffer);
     }
 
+    // R3 stage A (docs/specs/vv.md §35.1): write magenta into the engine's TAAU
+    // output (arg10) after the list that wrote it. TAAU still runs; only the output
+    // is replaced, and a missing writer stays a skip.
+    widgets::sectionHeader("VV R3 stage A (TEST)");
+    if (ImGui::Button(probe::vv::arg10SolidArmed() ? "Disarm arg10 solid" : "Write solid arg10")) {
+        bool const arm = !probe::vv::arg10SolidArmed();
+        probe::vv::setArg10Solid(arm);
+        probe::vv::inject::setUseArg10(arm);
+        probe::vv::inject::setUseBackBuffer(false);
+        probe::vv::inject::setFromTail(false);
+        probe::vv::inject::setAction(probe::vv::inject::Action::SolidArg10);
+        probe::vv::inject::setMode(arm ? probe::vv::inject::Mode::Fixed : probe::vv::inject::Mode::Off);
+    }
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "armed=%d writer=%u list=%p target=%p",
+        probe::vv::arg10SolidArmed() ? 1 : 0,
+        probe::vv::arg10WriterSplit(),
+        probe::vv::arg10WriterList(),
+        probe::vv::arg10Target()
+    );
+    widgets::statRow("R3 A arg10", buffer);
+
     // B1b-1: our colour bypass. The boundary is the content anchor now (the first
     // list that bound a back buffer and drew = the world composite), so this follows
     // the frame instead of counting from its end; tail 4 stays as the fallback when
     // the probe did not see a writer.
     widgets::sectionHeader("VV DLSS B1b (TEST)");
     if (ImGui::Button("Colour bypass at content boundary (fallback tail 4)")) {
+        probe::vv::setArg10Solid(false);
+        probe::vv::inject::setUseArg10(false);
         probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
         probe::vv::inject::setFromTail(true);
         probe::vv::inject::setK(4);
         probe::vv::inject::setAction(probe::vv::inject::Action::Bypass);
-        probe::vv::inject::setUseTaauList(false);
         probe::vv::inject::setUseBackBuffer(true);
     }
     ImGui::SameLine();
     if (ImGui::Button("Stop injection")) {
+        probe::vv::setArg10Solid(false);
+        probe::vv::inject::setUseArg10(false);
         probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
         probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
-        probe::vv::inject::setUseTaauList(false);
         probe::vv::inject::setUseBackBuffer(false);
     }
     widgets::statRow(
         "B1b boundary",
-        probe::vv::inject::useBackBuffer() ? "content: back-buffer writer"
-            : probe::vv::inject::useTaauList() ? "taau list (dead)"
-            : "head/tail k (count)",
+        probe::vv::inject::useBackBuffer() ? "content: back-buffer writer" : "head/tail k (count)",
         probe::vv::inject::useBackBuffer() ? ImGui::GetColorU32(ImGuiCol_Text) : 0
     );
     std::snprintf(

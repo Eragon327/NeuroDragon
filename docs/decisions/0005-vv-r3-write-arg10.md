@@ -1,7 +1,8 @@
 # 0005. VV 的 SR 插入点上移一层：写 `arg10`，复用引擎的显示变换
 
 - **状态**：已采纳（2026-10-28，用户拍板「直接着手 R3」）；同日**进入实施**——阶段 A（纯色写 `arg10`）
-  未跑，实施的阶段划分与判据见 [specs/vv.md](../specs/vv.md) §35
+  已于 **EXP-0058 通过**（2026-10-28），下一步阶段 B；实施的阶段划分与判据见
+  [specs/vv.md](../specs/vv.md) §35
 - **相关**：[specs/vv.md](../specs/vv.md) §34、
   [research/2026-10-28-vv-structural-review.md](../research/2026-10-28-vv-structural-review.md)、
   [decisions/0001-taau-insertion-point.md](0001-taau-insertion-point.md)
@@ -46,12 +47,12 @@ suppress 断掉角色来源、**在后缓冲上覆盖，等于把引擎的显示
 |---|---|---|---|
 | V1 | `arg10` 被下游消费 | ✅ **已证**：写入者 = 前置无 DSV list（EXP-0055，48-list 帧为 25）；消费者 = `LuminanceHistogram` / `Bloom`×2 / `LocalExposure`，走共享帧图节点引用、无 GPU 复制（EXP-0056）。剩下 `WaitOnUpscalingOutput` 登记语义与 RQ-0004..0007 的静态复核 | 若下游完全不使用，回查后处理链 |
 | V2 | ✅ 静态已确认（2026-10-28 反编译）：`arg10` = `H + w*(C−H)`，与 `InputFinalColor` 同域、不做归一化 | — | 无需再测（运行时只需确认写的就是下游读的那张，并入 V5） |
-| V3 | 我们能安全写 `arg10` | PS+RTV 写入；状态由 `Color0` 写入 list 留下（RT），写 RT、留 RT，让下一个消费者自己做 barrier | 状态不可控 ⇒ 退 `CopyResource`（仍是 RT 目标） |
+| V3 | 我们能安全写 `arg10` | ✅ **EXP-0058 通过**：Clear+RTV 连续写 960 帧，无 D3D12/设备错误；写 RT、留 RT | 状态不可控 ⇒ 退 `CopyResource`（仍是 RT 目标） |
 | V4 | ✅ 静态已确认：TAAU 是纯 temporal resolve，无曝光/tonemap/encode、无深度、无 VP 使用 | — | 无需再测 |
-| V5 | 双缓冲语义正确 | `decl-pre/post` 两次采样（EXP-0032 已证 decl 阶段可读） | 写错缓冲 ⇒ 画面滞后一帧（可见） |
+| V5 | 双缓冲语义正确 | ✅ **EXP-0058 通过**：双缓冲交替 960 帧无闪烁/滞后/冻结；writer = 任一次 `OMSetRenderTargets` 绑定 arg10 的 list | 写错缓冲 ⇒ 画面滞后一帧（可见） |
 
-V1 已由 EXP-0055 / EXP-0056 关闭，V2/V4 由反编译静态确认；**只剩 V3/V5 要靠阶段 A 的一次实写**
-（[specs/vv.md](../specs/vv.md) §35.1 的 A1–A3）。
+V1 由 EXP-0055 / EXP-0056 关闭，V2/V4 由反编译静态确认，**V3/V5 由 EXP-0058 关闭**（阶段 A 的
+A1–A3，见 [specs/vv.md](../specs/vv.md) §35.1）。
 
 ## 被否的替代
 

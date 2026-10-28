@@ -36,7 +36,7 @@
 | 阶段 | 内容 | 状态（2026-10-28） | 里程碑 | 当前 spec |
 |---|---|---|---|---|
 | 1 | NR 神经渲染 + SR 超分（RT 路线，复用引擎 DLSS） | 🟡 一半 | NR 批 1–4；SR 的 S1–S3 | [nr](specs/nr.md) / [sr](specs/sr.md) / [trp](specs/trp.md) |
-| 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 R3 实施：论证收口，阶段 A（纯色写 `arg10`）待跑 | M4 → M5 → M6 停在覆盖后缓冲；2026-10-28 改走 **R3**（A 纯色 → B DLSS → C 引擎 MV → D 再 suppress） | [vv](specs/vv.md) §34–§35 |
+| 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 R3 阶段 A 通过（EXP-0058：写 `arg10` 960 帧、无闪烁/状态错），下一步 B | M4 → M5 → M6 停在覆盖后缓冲；2026-10-28 改走 **R3**（A 纯色 ✅ → B DLSS → C 引擎 MV → D 再 suppress） | [vv](specs/vv.md) §34–§35 |
 | 3 | FG 帧生成 | ⬜ 未开始（**排期变更**，见 §6） | 尚无里程碑，须先答 §4 的未知 | [renderdragon](specs/renderdragon.md) / [ui](specs/ui.md) |
 | 4 | RR 光线重建（尝试） | ⬜ 未开始，**可能不可做** | 先答 §5 的决定性问题 | [nr](specs/nr.md) §12 |
 

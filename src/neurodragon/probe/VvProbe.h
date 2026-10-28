@@ -124,12 +124,6 @@ struct RenderTargetInfo {
 // to drop the cache instead of holding a stale generation across a rebuild.
 [[nodiscard]] unsigned renderGeneration();
 
-// Content boundary (B1b, 2026-10-25): the engine command list that was recording
-// when the TAAU draw callback ran, if the draw-side scanner could prove it from
-// an engine-list vtable match. Valid only for the current frame; null when the
-// scan found nothing. This is what replaces "tail k=4" once it works.
-[[nodiscard]] void* taauListForFrame();
-
 // Whether a level is loaded, maintained by LeviLamina's client join/exit events
 // (the same pair the RT path uses). `ll::service::getLevel()` was measured useless
 // here: non-empty in the first world, still empty after leaving and re-entering
@@ -174,11 +168,6 @@ void noteTaauReplacementMiss();
 // the current/previous pair and the camera origins).
 void dumpTaaContextWindows();
 
-// Asks for a deeper scan of the draw callback's object graph on the next frame
-// (up to three pointer hops, bounded). Only runs on request: the first shallow
-// scan (2026-10-25) found nothing in the execution context's first level.
-void requestTaauListScan();
-
 // Content boundary (B1d): the index of the list in the current frame after which
 // the world composite has just finished, i.e. the first list that bound a back
 // buffer and drew (1-based; 0 when no such list was seen). This is the anchor that
@@ -187,5 +176,16 @@ void requestTaauListScan();
 // ExecuteCommandLists hook that computes it (inject::prepare does).
 [[nodiscard]] unsigned backBufferWriterSplit();
 [[nodiscard]] void*    backBufferWriterList();
+
+// Stage A (docs/specs/vv.md §35.1): the current frame's arg10 native, and the
+// submission index after which that resource is written (1-based; 0 when the writer
+// list was not identified). onExecuteCommandLists refreshes both, so inject::prepare
+// reads them from the submission it is about to split. `setArg10Solid` arms the
+// resolution; it is off by default and does not change any engine state.
+[[nodiscard]] void*    arg10Target();
+[[nodiscard]] unsigned arg10WriterSplit();
+[[nodiscard]] void*    arg10WriterList();
+void                   setArg10Solid(bool armed);
+[[nodiscard]] bool     arg10SolidArmed();
 
 } // namespace neurodragon::probe::vv

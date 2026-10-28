@@ -25,6 +25,7 @@
 #include <cstring>
 #include <cwchar>
 #include <filesystem>
+#include <intrin.h>
 #include <string>
 
 namespace neurodragon::probe::vv {
@@ -101,19 +102,18 @@ std::string moduleOf(std::uint64_t value);
 //
 //   * D3D12CreateDevice (d3d12.dll export) -> the engine's device, taken early
 //     enough that the render-target views created afterwards are all seen;
-//   * ID3D12GraphicsCommandList::Close (vtable 9) -> list boundaries, in recording
-//     order, so a list pointer can be turned into an index in the submitted array;
-//   * ID3D12GraphicsCommandList::OMSetRenderTargets (vtable 25) -> the render target
+//   * ID3D12GraphicsCommandList::OMSetRenderTargets (vtable 46) -> the render target
 //     each list writes. The method's `this` IS the list object, so every write is
-//     self-labelled.
+//     self-labelled;
+//   * DrawInstanced / DrawIndexedInstanced (vtable 12 / 13) -> whether that list
+//     actually drew, which is what separates the world composite from earlier lists;
 //   * ID3D12Device::CreateRenderTargetView (vtable 20) -> CPU descriptor handle to
 //     ID3D12Resource, which is what turns a render-target write into a texture.
 //
-// All four are observation only: each detour forwards immediately. No method is
-// marshalled, no resource state is touched.
+// Every detour is observation only: it forwards immediately. No method is marshalled,
+// no resource state is touched.
 using CreateDeviceFn = long(WINAPI*)(void* adapter, int minFeatureLevel, void const* riid, void** device);
 using CreateRtvFn    = void (*)(void* device, void* resource, void const* desc, std::uintptr_t handle);
-using CloseFn        = void (*)(void* list);
 using OmSetRtvFn = void (*)(void* list, unsigned count, std::uintptr_t const* rtvs, int single, std::uintptr_t const* dsv);
 // Same reason for the draw call: a fullscreen triangle is DrawInstanced(3,1,0,0),
 // which is how the TAAU pass itself is issued, and a clean triple proves the two
@@ -163,14 +163,26 @@ std::atomic<unsigned> gBoundaryLogs{0};
 // The world composite and the UI set a display-sized viewport; the world passes
 // render at the render resolution. One line per frame for the first frames only.
 struct ListSig {
-    void*    list;
-    unsigned width;
-    unsigned height;
-    unsigned dsv;          ///< bound a depth-stencil view in this list
-    unsigned draws;        ///< DrawInstanced + DrawIndexedInstanced in this list
-    unsigned firstVerts;   ///< first DrawInstanced vertex count (0 = none)
-    unsigned firstInst;    ///< first DrawInstanced instance count
-    unsigned firstIndices; ///< first DrawIndexedInstanced index count (0 = none)
+    void*           list;
+    unsigned        width;
+    unsigned        height;
+    unsigned        dsv;          ///< bound a depth-stencil view in this list
+    unsigned        draws;        ///< DrawInstanced + DrawIndexedInstanced in this list
+    unsigned        firstVerts;   ///< first DrawInstanced vertex count (0 = none)
+    unsigned        firstInst;    ///< first DrawInstanced instance count
+    unsigned        firstIndices; ///< first DrawIndexedInstanced index count (0 = none)
+    std::uintptr_t  rtvHandle;
+    void*           rtvResource;
+    unsigned        rtvCalls;
+    unsigned        rtvGen;       ///< arm generation the capture belongs to
+    unsigned        arg10CopyMask;
+    void*           arg10CopyPeer;
+    // Every RTV handle this list bound during the current arming, not just its
+    // first call: a list may bind a small target first and arg10 later, and the
+    // writer is "any binding", not "the first one" (EXP-0057 postmortem).
+    std::uintptr_t  rtvSeen[8];
+    unsigned        rtvSeenCount;
+    unsigned        rtvSeenGen;
 };
 constexpr unsigned kSigSlots = 128;
 ListSig               gSigs[kSigSlots]{};
@@ -189,7 +201,7 @@ ListSig* sigFor(void* list) {
     }
     unsigned const slot = gSigCount.fetch_add(1, std::memory_order_relaxed);
     if (slot < kSigSlots) {
-        gSigs[slot] = ListSig{list, 0, 0, 0, 0, 0, 0, 0};
+        gSigs[slot] = ListSig{list, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0, 0, 0, nullptr, {}, 0, ~0u};
         return &gSigs[slot];
     }
     return nullptr;
@@ -213,7 +225,6 @@ unsigned           gHookCount = 0;
 CreateDeviceFn gOriginalCreateDevice{};
 CreateRtvFn    gOriginalCreateRtv{};
 CreateRtvFn    gOriginalCreateDsv{};
-CloseFn        gOriginalClose{};
 OmSetRtvFn     gOriginalOmSetRtv{};
 CmdDrawFn      gOriginalDrawInstanced{};
 std::atomic<unsigned> gDrawInstancedCalls{0};
@@ -221,18 +232,23 @@ SetViewportsFn gOriginalSetViewports{};
 using CmdDrawIndexedFn = void (*)(void* list, unsigned indexCount, unsigned instanceCount, unsigned startIndex, int baseVertex, unsigned startInstance);
 CmdDrawIndexedFn      gOriginalDrawIndexed{};
 std::atomic<unsigned> gDrawIndexedCalls{0};
+using CopyTextureRegionFn = void (*)(
+    void* list,
+    void const* dst,
+    unsigned dstX,
+    unsigned dstY,
+    unsigned dstZ,
+    void const* src,
+    void const* srcBox
+);
+using CopyResourceFn = void (*)(void* list, void* dst, void* src);
+CopyTextureRegionFn gOriginalCopyTextureRegion{};
+CopyResourceFn      gOriginalCopyResource{};
+void copyTextureRegionDetour(void*, void const*, unsigned, unsigned, unsigned, void const*, void const*);
+void copyResourceDetour(void*, void*, void*);
 
 std::atomic<bool> gDeviceHooked{false};
 std::atomic<bool> gListHooked{false};
-// Content boundary: the engine command list's vtable (captured by hookCommandList)
-// and the list that was recording when the TAAU draw callback ran. The draw
-// callback's execution context is scanned for a qword whose vtable matches; no
-// method is hooked, so this cannot corrupt a call.
-std::atomic<void*>    gEngineListVtable{nullptr};
-std::atomic<void*>    gTaauList{nullptr};
-std::atomic<unsigned> gTaauListFrame{0};
-std::atomic<unsigned> gTaauListLogs{0};
-std::atomic<bool>     gTaauScanRequested{false};
 // The 120-frame sampler that used to arm here (`gDumpFrame` / `gCloseInFrame` /
 // `gBigFrames`) was removed on 2026-10-25 22:46: it cost a render-thread burst every
 // ~1.2 s and its only reader was its own log line.
@@ -411,6 +427,23 @@ void* lookupRtv(std::uintptr_t handle) {
         }
     }
     return nullptr;
+}
+
+// Does this list bind `resource` in any of its OMSetRenderTargets calls? Resolving
+// here, at submission time, keeps the render-thread detour to storing handles.
+bool sigBindsResource(ListSig const* sig, void* resource) {
+    if (!sig || !resource) {
+        return false;
+    }
+    if (sig->rtvResource == resource) {
+        return true;
+    }
+    for (unsigned i = 0; i < sig->rtvSeenCount; ++i) {
+        if (lookupRtv(sig->rtvSeen[i]) == resource) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // --- content boundary helpers ----------------------------------------------
@@ -666,18 +699,9 @@ void createDsvDetour(void* device, void* resource, void const* desc, std::uintpt
     gOriginalCreateDsv(device, resource, desc, handle);
 }
 
-void closeDetour(void* list) {
-    gOriginalClose(list);
-    // Recording the injection list calls Close too; it is not part of the engine's
-    // frame, so it must not be counted as a boundary (docs/specs/vv.md §3 measures
-    // the engine's ~48 lists per frame).
-    if (inject::isOwnList(list)) {
-        return;
-    }
-    // The per-frame "close #N" sampler that used to live here is gone (2026-10-25
-    // 22:46): it logged 49 lines on the render thread every 120th frame and told us
-    // nothing the content-boundary line does not already say.
-}
+extern std::atomic<unsigned> gArg10ProbeFrames;
+extern std::atomic<bool>     gArg10SolidArmed;
+extern std::atomic<unsigned> gArg10ArmGeneration;
 
 void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int single, std::uintptr_t const* dsv) {
     // Pure forward: nothing here changes an argument or a state. What it adds is the
@@ -704,6 +728,38 @@ void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int 
         }
         if (auto* const sig = sigFor(list)) {
             sig->dsv |= dsv ? 1u : 0u;
+            bool const     probe = gArg10ProbeFrames.load(std::memory_order_relaxed) > 0;
+            bool const     solid = gArg10SolidArmed.load(std::memory_order_relaxed);
+            unsigned const gen   = gArg10ArmGeneration.load(std::memory_order_relaxed);
+            if (probe || solid) {
+                if (sig->rtvSeenGen != gen) {
+                    sig->rtvSeenCount = 0;
+                    sig->rtvSeenGen   = gen;
+                }
+                unsigned const limit = count > 8 ? 8 : count;
+                for (unsigned i = 0; i < limit; ++i) {
+                    std::uintptr_t const handle = (single && increment)
+                        ? rtvs[0] + static_cast<std::uintptr_t>(i) * increment
+                        : rtvs[i];
+                    bool known = false;
+                    for (unsigned s = 0; s < sig->rtvSeenCount; ++s) {
+                        if (sig->rtvSeen[s] == handle) {
+                            known = true;
+                        }
+                    }
+                    if (!known && sig->rtvSeenCount < std::size(sig->rtvSeen)) {
+                        sig->rtvSeen[sig->rtvSeenCount++] = handle;
+                    }
+                }
+                // The probe summary still reports the first binding (that is what
+                // EXP-0055 logged); the writer matcher scans every handle above.
+                if (sig->rtvCalls == 0 || (solid && sig->rtvGen != gen)) {
+                    sig->rtvHandle   = rtvs[0];
+                    sig->rtvResource = lookupRtv(rtvs[0]);
+                    sig->rtvGen      = gen;
+                }
+            }
+            ++sig->rtvCalls;
         }
         unsigned const n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n <= 2) {
@@ -1076,9 +1132,7 @@ void hookCommandList(void* list) {
         return;
     }
     // Identity, not behaviour: which vtable the engine's lists actually use, and what
-    // its slots point at. Pure reads - this is what tells us whether a table measured
-    // on a command list of our own can be applied to the engine's lists at all.
-    gEngineListVtable.store(const_cast<void*>(reinterpret_cast<void const*>(vtbl)), std::memory_order_relaxed);
+    // its slots point at. Pure reads, only logged.
     utils::logger().info(
         "[vv] engine list vtable={:#x} slot9={} slot12={} slot13={} slot25={} slot28={}",
         reinterpret_cast<std::uintptr_t>(vtbl),
@@ -1113,15 +1167,12 @@ void hookCommandList(void* list) {
         utils::logger().info("[vv] command list slot {} ({}) hooked={}", index, what, ok);
         return ok;
     };
-    // Close = 9 is proven (one call per list, no arguments). The other three are the
-    // content boundary (B1d): OMSetRenderTargets = 46 and DrawInstanced /
-    // DrawIndexedInstanced = 12 / 13, all straight out of the SDK header's
-    // declaration order, which the working slots above already matched. Each detour
-    // forwards every argument unchanged, so a wrong guess would mis-observe, not
-    // corrupt - and the first call logs its shape, which is the check.
-    hookAt(9, reinterpret_cast<void*>(&closeDetour), reinterpret_cast<void**>(&gOriginalClose), "Close");
+    // Every detour forwards every argument unchanged. Slot numbers come from the SDK
+    // declaration order, which the working slots above already matched.
     hookAt(12, reinterpret_cast<void*>(&drawInstancedDetour), reinterpret_cast<void**>(&gOriginalDrawInstanced), "DrawInstanced");
     hookAt(13, reinterpret_cast<void*>(&drawIndexedInstancedDetour), reinterpret_cast<void**>(&gOriginalDrawIndexed), "DrawIndexedInstanced");
+    hookAt(16, reinterpret_cast<void*>(&copyTextureRegionDetour), reinterpret_cast<void**>(&gOriginalCopyTextureRegion), "CopyTextureRegion");
+    hookAt(17, reinterpret_cast<void*>(&copyResourceDetour), reinterpret_cast<void**>(&gOriginalCopyResource), "CopyResource");
     hookAt(46, reinterpret_cast<void*>(&omSetRtvDetour), reinterpret_cast<void**>(&gOriginalOmSetRtv), "OMSetRenderTargets");
     hookAt(21, reinterpret_cast<void*>(&rssSetViewportsDetour), reinterpret_cast<void**>(&gOriginalSetViewports), "RSSetViewports");
 }
@@ -1252,124 +1303,6 @@ std::string moduleOf(std::uint64_t value) {
     char       text[192];
     std::snprintf(text, sizeof(text), "%s+%#llx", narrow, static_cast<unsigned long long>(offset));
     return text;
-}
-
-// Every printable run of at least four bytes in a block: frame-graph objects carry
-// the producing pass' name as an inline string, and a name is worth more than any
-// pointer for identifying which resource a dependency resolved to.
-std::string printableRuns(void const* base, std::size_t bytes) {
-    if (!readable(base, bytes)) {
-        return {};
-    }
-    auto const* p = static_cast<unsigned char const*>(base);
-    std::string out;
-    std::size_t i = 0;
-    while (i < bytes) {
-        if (p[i] < 0x20 || p[i] >= 0x7F) {
-            ++i;
-            continue;
-        }
-        std::size_t j = i;
-        while (j < bytes && p[j] >= 0x20 && p[j] < 0x7F) {
-            ++j;
-        }
-        if (j - i >= 4) {
-            if (!out.empty()) {
-                out += '|';
-            }
-            out.append(reinterpret_cast<char const*>(p + i), j - i);
-        }
-        i = j;
-    }
-    return out;
-}
-
-// A qword is worth asking about only when it is a COM object whose vtable lives in
-// the D3D12 runtime: that rejects heap blocks, hashes and code pointers before
-// describe() ever issues a virtual call on the wrong object.
-bool looksLikeD3D12Object(void const* p) {
-    if (!readable(p, sizeof(void*))) {
-        return false;
-    }
-    void* const vtable = *reinterpret_cast<void* const*>(p);
-    if (!vtable || !readable(vtable, sizeof(void*))) {
-        return false;
-    }
-    // Exact match against the vtable of a known ID3D12Resource. Until the first
-    // render-target view has been seen there is no such reference, so nothing is
-    // accepted at all - a false positive here is a fault inside the D3D12 runtime.
-    if (vtable != gResourceVtable.load(std::memory_order_relaxed)) {
-        return false;
-    }
-    HMODULE module{};
-    if (!GetModuleHandleExW(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            reinterpret_cast<LPCWSTR>(vtable),
-            &module
-        )
-        || !module) {
-        return false;
-    }
-    wchar_t path[MAX_PATH]{};
-    if (!GetModuleFileNameW(module, path, MAX_PATH)) {
-        return false;
-    }
-    for (wchar_t const* c = path; *c; ++c) {
-        if ((*c == L'd' || *c == L'D') && c[1] == L'3' && (c[2] == L'd' || c[2] == L'D') && c[3] == L'1'
-            && c[4] == L'2') {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Walk a block and report every qword that already IS a texture. The four dependency
-// objects are frame-graph nodes, so the real resource sits one or two hops inside;
-// this finds it without knowing the layout, and `nr::describe` proves each hit with
-// the resource's own description instead of trusting the pointer.
-void scanForTextures(char const* tag, std::uint64_t index, char const* slot, void const* base, std::size_t bytes) {
-    if (!base || !readable(base, bytes)) {
-        return;
-    }
-    void const* seen[8]{};
-    unsigned    seenCount = 0;
-    for (std::size_t offset = 0; offset + 8 <= bytes; offset += 8) {
-        std::uint64_t value = 0;
-        peek(base, offset, value);
-        auto* const candidate = reinterpret_cast<void const*>(value);
-        if (!candidate || !looksLikeD3D12Object(candidate)) {
-            continue;
-        }
-        bool duplicate = false;
-        for (unsigned i = 0; i < seenCount; ++i) {
-            if (seen[i] == candidate) {
-                duplicate = true;
-            }
-        }
-        if (duplicate) {
-            continue;
-        }
-        auto const info = nr::describe(const_cast<void*>(candidate));
-        if (info.width < 32 || info.height < 32) {
-            continue;
-        }
-        if (seenCount < 8) {
-            seen[seenCount++] = candidate;
-        }
-        utils::logger().info(
-            "[vv] taau #{} {}.{} +{:#x} -> texture {:#x} {}x{} fmt={} dim={} flags={:#x}",
-            index,
-            tag,
-            slot,
-            offset,
-            reinterpret_cast<std::uintptr_t>(candidate),
-            static_cast<unsigned>(info.width),
-            static_cast<unsigned>(info.height),
-            info.format,
-            info.dimension,
-            info.flags
-        );
-    }
 }
 
 // --- EXP-0028: is there a native resource *inside* InputFinalColor? ----------------
@@ -1569,6 +1502,18 @@ std::atomic<unsigned>       gInputFinalColorWidth{0};
 std::atomic<unsigned>       gInputFinalColorHeight{0};
 std::atomic<unsigned>       gInputFinalColorFormat{0};
 std::atomic<unsigned>       gInputFinalColorRecaptureDraws{0};
+std::atomic<void*>          gArg10Native{nullptr};
+std::atomic<void*>          gArg10PreviousNative{nullptr};
+std::atomic<unsigned>       gArg10Handle{kHandleInvalid};
+std::atomic<char const*>    gArg10Reason{"notSampled"};
+std::atomic<unsigned>       gArg10ProbeFrames{0};
+// Stage A: when armed, every frame resolves the current arg10 native and the list
+// whose first OMSetRenderTargets binds it. The injection then cuts after that list
+// and writes a solid colour into arg10.
+std::atomic<bool>           gArg10SolidArmed{false};
+std::atomic<unsigned>       gArg10ArmGeneration{0};
+std::atomic<void*>          gArg10WriterList{nullptr};
+std::atomic<unsigned>       gArg10WriterSplit{0};
 
 bool matchesBytes(void* target, unsigned char const* bytes, unsigned size) {
     return target && readable(target, size) && std::memcmp(target, bytes, size) == 0;
@@ -1672,6 +1617,59 @@ TextureLookup lookupTextureNative(std::uint16_t handle) {
     return out;
 }
 
+bool isArg10Resource(void* resource) {
+    return resource
+        && (resource == gArg10Native.load(std::memory_order_acquire)
+            || resource == gArg10PreviousNative.load(std::memory_order_acquire));
+}
+
+void noteArg10Copy(void* list, unsigned mask, void* peer) {
+    if (gArg10ProbeFrames.load(std::memory_order_relaxed) == 0 || inject::isOwnList(list)) {
+        return;
+    }
+    if (auto* const sig = sigFor(list)) {
+        sig->arg10CopyMask |= mask;
+        sig->arg10CopyPeer = peer;
+    }
+}
+
+struct ProbeTextureCopyLocation {
+    void*    resource;
+    unsigned type;
+};
+
+void copyTextureRegionDetour(
+    void*        list,
+    void const*  dst,
+    unsigned     dstX,
+    unsigned     dstY,
+    unsigned     dstZ,
+    void const*  src,
+    void const*  srcBox
+) {
+    auto const* const dstLocation = static_cast<ProbeTextureCopyLocation const*>(dst);
+    auto const* const srcLocation = static_cast<ProbeTextureCopyLocation const*>(src);
+    void* const       dstResource = dstLocation ? dstLocation->resource : nullptr;
+    void* const       srcResource = srcLocation ? srcLocation->resource : nullptr;
+    if (isArg10Resource(srcResource)) {
+        noteArg10Copy(list, 1, dstResource);
+    }
+    if (isArg10Resource(dstResource)) {
+        noteArg10Copy(list, 2, srcResource);
+    }
+    gOriginalCopyTextureRegion(list, dst, dstX, dstY, dstZ, src, srcBox);
+}
+
+void copyResourceDetour(void* list, void* dst, void* src) {
+    if (isArg10Resource(src)) {
+        noteArg10Copy(list, 4, dst);
+    }
+    if (isArg10Resource(dst)) {
+        noteArg10Copy(list, 8, src);
+    }
+    gOriginalCopyResource(list, dst, src);
+}
+
 // Called from install() once the main module is known. Only the base and the layout
 // fingerprint are recorded here; a build whose layout moved logs the mismatch, leaves
 // the table unavailable and keeps the rest of the probe working.
@@ -1735,35 +1733,49 @@ LL_STATIC_HOOK(
     std::uintptr_t flags,
     std::uintptr_t view
 ) {
-    if (gInTaauDraw && resource) {
+    bool const probing = gArg10ProbeFrames.load(std::memory_order_relaxed) > 0;
+    if (resource && (gInTaauDraw || probing)) {
         std::uint16_t handle = kHandleInvalid;
         if (peek(resource, 0, handle) && handle != kHandleInvalid) {
             TextureLookup const lookup = lookupTextureNative(handle);
-            RenderTargetInfo  targets[48]{};
-            unsigned const    count = renderTargets(targets, 48, 64);
-            bool              matched = false;
-            for (unsigned i = 0; lookup.native && i < count; ++i) {
-                if (targets[i].resource != lookup.native || targets[i].format != 26
-                    || targets[i].width != renderWidth() || targets[i].height != renderHeight()) {
-                    continue;
+            if (gInTaauDraw) {
+                RenderTargetInfo targets[48]{};
+                unsigned const   count = renderTargets(targets, 48, 64);
+                bool             matched = false;
+                for (unsigned i = 0; lookup.native && i < count; ++i) {
+                    if (targets[i].resource != lookup.native || targets[i].format != 26
+                        || targets[i].width != renderWidth() || targets[i].height != renderHeight()) {
+                        continue;
+                    }
+                    gInputFinalColorWidth.store(targets[i].width, std::memory_order_release);
+                    gInputFinalColorHeight.store(targets[i].height, std::memory_order_release);
+                    gInputFinalColorFormat.store(targets[i].format, std::memory_order_release);
+                    gInputFinalColorNative.store(lookup.native, std::memory_order_release);
+                    gTextureHits.fetch_add(1, std::memory_order_relaxed);
+                    matched = true;
+                    break;
                 }
-                gInputFinalColorWidth.store(targets[i].width, std::memory_order_release);
-                gInputFinalColorHeight.store(targets[i].height, std::memory_order_release);
-                gInputFinalColorFormat.store(targets[i].format, std::memory_order_release);
-                gInputFinalColorNative.store(lookup.native, std::memory_order_release);
-                gTextureHits.fetch_add(1, std::memory_order_relaxed);
-                matched = true;
-                break;
+                unsigned const n = gSetTextureLogs.fetch_add(1, std::memory_order_relaxed) + 1;
+                if (n <= 24) {
+                    utils::logger().info(
+                        "[vv] in.color material handle=0x{:04X} action={} native={:#x} entry={:#x} match={}",
+                        handle,
+                        action,
+                        reinterpret_cast<std::uintptr_t>(lookup.native),
+                        reinterpret_cast<std::uintptr_t>(lookup.entry),
+                        matched ? 1 : 0
+                    );
+                }
             }
-            unsigned const n = gSetTextureLogs.fetch_add(1, std::memory_order_relaxed) + 1;
-            if (n <= 24) {
+            if (probing && isArg10Resource(lookup.native)) {
                 utils::logger().info(
-                    "[vv] in.color material handle=0x{:04X} action={} native={:#x} entry={:#x} match={}",
+                    "[vv] arg10 material caller={:#x} handle=0x{:04X} action={} native={:#x} view={:#x} taau={}",
+                    reinterpret_cast<std::uintptr_t>(_ReturnAddress()),
                     handle,
                     action,
                     reinterpret_cast<std::uintptr_t>(lookup.native),
-                    reinterpret_cast<std::uintptr_t>(lookup.entry),
-                    matched ? 1 : 0
+                    view,
+                    gInTaauDraw ? 1 : 0
                 );
             }
         }
@@ -1842,7 +1854,7 @@ void taauDetour(
         gDisplayWidth.store(width, std::memory_order_relaxed);
         gDisplayHeight.store(height, std::memory_order_relaxed);
         // The engine truncates (1131 x 0.33 -> 373x239, not 373x240), so this must
-        // truncate too; findTarget still allows a two-pixel tolerance.
+        // truncate too.
         gRenderWidth.store(static_cast<unsigned>(static_cast<float>(width) * up.factor), std::memory_order_relaxed);
         gRenderHeight.store(static_cast<unsigned>(static_cast<float>(height) * up.factor), std::memory_order_relaxed);
     }
@@ -1903,6 +1915,28 @@ void taauDetour(
         dep2,
         dep3
     );
+    if (gArg10ProbeFrames.load(std::memory_order_relaxed) > 0
+        || gArg10SolidArmed.load(std::memory_order_relaxed)) {
+        void*         wrapper = nullptr;
+        void*         holder = nullptr;
+        void*         resource = nullptr;
+        std::uint16_t handle = kHandleInvalid;
+        TextureLookup lookup{};
+        char const*   reason = "invalidChain";
+        if (peek(dep1, 0x8, wrapper) && peek(wrapper, 0x10, holder) && peek(holder, 0x18, resource)
+            && peek(resource, 0, handle)) {
+            if (handle != kHandleInvalid) {
+                lookup = lookupTextureNative(handle);
+                reason = lookup.native ? "ok" : lookup.reason;
+            } else {
+                reason = "invalidHandle";
+            }
+        }
+        gArg10PreviousNative.store(gArg10Native.load(std::memory_order_acquire), std::memory_order_release);
+        gArg10Native.store(lookup.native, std::memory_order_release);
+        gArg10Handle.store(handle, std::memory_order_release);
+        gArg10Reason.store(reason, std::memory_order_release);
+    }
 }
 
 // The macOS decompile of taau's declarator is explicit about where the four textures
@@ -2124,99 +2158,6 @@ void samplePinnedMatrices(void const* object, unsigned batch, unsigned sample) {
 }
 #endif // TEST
 
-// Content boundary (B1b): find the engine command list that was recording when
-// the TAAU draw callback ran. The callback's execution context (and the objects
-// around it) are scanned for a qword whose vtable is the engine list's vtable -
-// or whose slot 9 is the known Close target. Read-only: a wrong qword only fails
-// `readable`, it is never called.
-//
-// 2026-10-25 04:4x: the one-level scan found nothing ("not captured"), so the
-// deep scan walks up to three pointer hops with a node/visited budget. It only
-// runs on request (or when no capture exists), never every frame.
-struct ListScan {
-    void*    visited[512]{};
-    unsigned visitedCount{};
-    unsigned nodes{};
-    unsigned frame{};
-    bool     found{};
-};
-
-bool scanVisited(ListScan& scan, void* pointer) {
-    for (unsigned i = 0; i < scan.visitedCount; ++i) {
-        if (scan.visited[i] == pointer) {
-            return true;
-        }
-    }
-    if (scan.visitedCount < std::size(scan.visited)) {
-        scan.visited[scan.visitedCount++] = pointer;
-    }
-    return false;
-}
-
-void scanNodeForList(void const* object, char const* label, unsigned depth, ListScan& scan) {
-    if (scan.found || !object || scan.nodes >= 512 || !readable(object, 0x100) || scanVisited(scan, const_cast<void*>(object))) {
-        return;
-    }
-    ++scan.nodes;
-    void* const listVtable = gEngineListVtable.load(std::memory_order_relaxed);
-    auto* const bytes      = static_cast<unsigned char const*>(object);
-    for (std::size_t off = 0; off < 0x100; off += 8) {
-        std::uint64_t value = 0;
-        std::memcpy(&value, bytes + off, sizeof(value));
-        if (!value) {
-            continue;
-        }
-        auto* const candidate = reinterpret_cast<void*>(value);
-        if (!readable(candidate, sizeof(void*))) {
-            continue;
-        }
-        void* const candidateVtable = *static_cast<void* const*>(candidate);
-        bool        isList          = listVtable && candidateVtable == listVtable;
-        if (!isList && gOriginalClose && candidateVtable && readable(candidateVtable, 10 * sizeof(void*))) {
-            auto* const methods = static_cast<void* const*>(candidateVtable);
-            isList              = methods[9] == reinterpret_cast<void*>(gOriginalClose);
-        }
-        if (isList) {
-            gTaauList.store(candidate, std::memory_order_relaxed);
-            gTaauListFrame.store(scan.frame, std::memory_order_relaxed);
-            scan.found = true;
-            unsigned const n = gTaauListLogs.fetch_add(1, std::memory_order_relaxed);
-            if (n < 4) {
-                utils::logger().info(
-                    "[vv] taau list={:#x} from {} +{:#x} (frame {}, depth {})",
-                    reinterpret_cast<std::uintptr_t>(candidate),
-                    label,
-                    off,
-                    scan.frame,
-                    3 - depth
-                );
-            }
-            return;
-        }
-        if (depth && readable(candidate, 0x100)) {
-            scanNodeForList(candidate, label, depth - 1, scan);
-            if (scan.found) {
-                return;
-            }
-        }
-    }
-}
-
-void scanTaauList(void* self, void* context, void* third, void* fourth, unsigned frame) {
-    ListScan scan{};
-    scan.frame = frame;
-    scanNodeForList(context, "exec", 3, scan);
-    scanNodeForList(third, "ctx", 2, scan);
-    scanNodeForList(self, "self", 2, scan);
-    scanNodeForList(fourth, "fourth", 2, scan);
-    if (!scan.found) {
-        unsigned const n = gTaauListLogs.fetch_add(1, std::memory_order_relaxed);
-        if (n < 4) {
-            utils::logger().info("[vv] taau list: deep scan found nothing ({} nodes, frame {})", scan.nodes, frame);
-        }
-    }
-}
-
 void drawDetour(void* self, void* context, void* third, void* fourth) {
     auto const index = gDrawHits.fetch_add(1, std::memory_order_relaxed) + 1;
     gTaaContext.store(third, std::memory_order_relaxed);
@@ -2245,24 +2186,6 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
         unsigned const               call = drawScans.fetch_add(1, std::memory_order_relaxed);
         if (call < kInputColorNativeCalls) {
             scanInputColorNative("draw", dep, index, call + 1);
-        }
-    }
-    // Content boundary: the engine reuses the same command-list objects across
-    // frames, so a capture from the previous frame is assumed to still be this
-    // frame's TAAU list. If it is not (frame shape changed), scan again.
-    void* const previous = gTaauList.load(std::memory_order_relaxed);
-    bool const  requested = gTaauScanRequested.exchange(false, std::memory_order_relaxed);
-    if (previous && gTaauListFrame.load(std::memory_order_relaxed) == index - 1) {
-        gTaauListFrame.store(index, std::memory_order_relaxed);
-    } else {
-        gTaauList.store(nullptr, std::memory_order_relaxed);
-        // Not on a timer any more (2026-10-25 22:46): the deep scan walks the
-        // frame-graph object graph on the render thread, and its 120-draw retry never
-        // found the list in practice (269/225/279/276 nodes, four failures in one
-        // session) while costing a regular hitch. It now runs only when the probe
-        // asks for it (F11 / panel) or during the first frames after load.
-        if (requested || index < 4) {
-            scanTaauList(self, context, third, fourth, static_cast<unsigned>(index));
         }
     }
     if (index <= 12 || index % 600 == 0) {
@@ -2333,85 +2256,6 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
             utils::logger().warn("[vv] taau recapture: budget exhausted without a render-size match");
         }
     }
-}
-
-// One-shot diagnostic: write every render target we have seen to a BMP, so the frame
-// graph can be identified by what the pixels look like instead of by guessing which
-// vtable slot sets which target. Back buffers are skipped - they live in PRESENT and
-// must not be transitioned by us.
-void dumpCandidates() {
-    auto* const device = gEngineDevice.load(std::memory_order_relaxed);
-    auto* const queue  = gGameQueue.load(std::memory_order_relaxed);
-    if (!device || !queue) {
-        utils::logger().warn("[vv] dump: no device/queue yet");
-        return;
-    }
-    auto const directory = utils::applicationDirectory();
-    unsigned   written   = 0;
-    for (unsigned i = 0; i < gSeenCount && written < 16; ++i) {
-        void* const resource = gSeen[i];
-        if (!resource) {
-            continue;
-        }
-        bool excluded = false;
-        for (unsigned k = 0; k < gExcludedCount; ++k) {
-            if (gExcluded[k] == resource) {
-                excluded = true;
-            }
-        }
-        if (excluded) {
-            continue;
-        }
-        auto const info = nr::describe(resource);
-        if (info.width < 16 || info.height < 16) {
-            continue;
-        }
-        wchar_t name[96]{};
-        std::swprintf(
-            name,
-            std::size(name),
-            L"vv_%ux%u_fmt%u.bmp",
-            static_cast<unsigned>(info.width),
-            static_cast<unsigned>(info.height),
-            info.format
-        );
-        auto const path = directory + L"\\" + name;
-        if (dumpTextureBmp(device, queue, resource, path.c_str())) {
-            utils::logger().info(
-                "[vv] dump {}x{} fmt={} written",
-                static_cast<unsigned>(info.width),
-                static_cast<unsigned>(info.height),
-                info.format
-            );
-            ++written;
-        }
-    }
-    utils::logger().info("[vv] dump done, {} file(s) in {}", written, "the game directory");
-}
-
-// The render target whose description matches (width, height, format). A resource is
-// logged once, when its first view is created, so this is a stable lookup: the engine
-// reuses these textures instead of recreating them per frame.
-// Newest first: a resize rebuilds the whole render graph, so the same size/format can
-// appear several times in the inventory and only the last generation is live. Reading
-// the first one returns a released resource whose bytes are whatever the allocator left
-// behind (observed as all zeros on 2026-10-25 01:27).
-void* findTarget(unsigned width, unsigned height, unsigned format) {
-    for (unsigned i = gSeenCount; i > 0; --i) {
-        auto const info = nr::describe(gSeen[i - 1]);
-        auto const w = static_cast<unsigned>(info.width);
-        auto const h = static_cast<unsigned>(info.height);
-        // The render size is computed from viewport x factor, and the engine rounds it
-        // its own way; a two-pixel tolerance keeps that from hiding every input.
-        // (Not named `near`: <Windows.h> still defines that as a macro.)
-        auto const withinTwo = [](unsigned a, unsigned b) {
-            return (a > b ? a - b : b - a) <= 2;
-        };
-        if (withinTwo(w, width) && withinTwo(h, height) && info.format == format) {
-            return gSeen[i - 1];
-        }
-    }
-    return nullptr;
 }
 
 // One-shot: write the raw bytes of the render-resolution group to <game dir>. The
@@ -2958,15 +2802,35 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
             unsigned const displayH = gDisplayHeight.load(std::memory_order_relaxed);
             // Not named `near`: <Windows.h> still defines that as a macro.
             auto const aboutSame = [](unsigned a, unsigned b) { return a > b ? a - b <= 2 : b - a <= 2; };
-            if (displayW && displayH && sigs) {
-                auto const sigAt = [&](unsigned i) -> ListSig const* {
-                    for (unsigned s = 0; s < sigs && s < kSigSlots; ++s) {
-                        if (gSigs[s].list == lists[i]) {
-                            return &gSigs[s];
-                        }
+            auto const sigAt = [&](unsigned i) -> ListSig const* {
+                for (unsigned s = 0; s < sigs && s < kSigSlots; ++s) {
+                    if (gSigs[s].list == lists[i]) {
+                        return &gSigs[s];
                     }
-                    return nullptr;
-                };
+                }
+                return nullptr;
+            };
+            // Stage A: the writer is the list that binds the frame's arg10 native in
+            // any OMSetRenderTargets call. It has no DSV (EXP-0055), which is also what
+            // keeps the later composite list from matching. EXP-0057 showed that the
+            // first binding alone is not enough: a list can bind a small target first.
+            if (gArg10SolidArmed.load(std::memory_order_acquire)) {
+                void* const native = gArg10Native.load(std::memory_order_acquire);
+                unsigned    writer = 0;
+                for (unsigned i = 0; native && i < listCount; ++i) {
+                    auto const* sig = sigAt(i);
+                    if (sig && !sig->dsv && sigBindsResource(sig, native)) {
+                        writer = i + 1;
+                        break;
+                    }
+                }
+                gArg10WriterSplit.store(writer, std::memory_order_release);
+                gArg10WriterList.store(writer ? lists[writer - 1] : nullptr, std::memory_order_release);
+            } else {
+                gArg10WriterSplit.store(0, std::memory_order_release);
+                gArg10WriterList.store(nullptr, std::memory_order_release);
+            }
+            if (displayW && displayH && sigs) {
                 if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
                     // The suppressed composite no longer satisfies draws==1. Cut
                     // immediately before the display-sized, many-draw HUD list instead;
@@ -3015,6 +2879,68 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                         found = lists[firstMatch - 1];
                         via   = "signature";
                     }
+                }
+                if (gArg10ProbeFrames.load(std::memory_order_relaxed) > 0) {
+                    void* const  native = gArg10Native.load(std::memory_order_acquire);
+                    unsigned     resolved = 0;
+                    unsigned     unresolved = 0;
+                    std::string  hits;
+                    std::string  candidates;
+                    std::string  copies;
+                    for (unsigned i = 0; i < listCount; ++i) {
+                        auto const* sig = sigAt(i);
+                        if (!sig) {
+                            continue;
+                        }
+                        if (sig->rtvHandle) {
+                            if (sig->rtvResource) {
+                                ++resolved;
+                            } else {
+                                ++unresolved;
+                            }
+                        }
+                        if (native && sigBindsResource(sig, native)) {
+                            hits += " " + std::to_string(i);
+                        }
+                        if (sig->draws == 1 && aboutSame(sig->width, displayW) && aboutSame(sig->height, displayH)) {
+                            char item[128]{};
+                            std::snprintf(
+                                item,
+                                sizeof(item),
+                                " %u:r=%p,z=%u,rt=%u",
+                                i,
+                                sig->rtvResource,
+                                sig->dsv,
+                                sig->rtvCalls
+                            );
+                            candidates += item;
+                        }
+                        if (sig->arg10CopyMask) {
+                            char item[128]{};
+                            std::snprintf(
+                                item,
+                                sizeof(item),
+                                " %u:mask=%x,peer=%p",
+                                i,
+                                sig->arg10CopyMask,
+                                sig->arg10CopyPeer
+                            );
+                            copies += item;
+                        }
+                    }
+                    utils::logger().info(
+                        "[vv] arg10 probe #{} native={:#x} handle={:#x} reason={} hits=[{}] candidates=[{}] copies=[{}] resolved={} unresolved={}",
+                        gSigFrames.load(std::memory_order_relaxed) + 1,
+                        reinterpret_cast<std::uintptr_t>(native),
+                        gArg10Handle.load(std::memory_order_relaxed),
+                        gArg10Reason.load(std::memory_order_relaxed),
+                        hits,
+                        candidates,
+                        copies,
+                        resolved,
+                        unresolved
+                    );
+                    gArg10ProbeFrames.fetch_sub(1, std::memory_order_relaxed);
                 }
             }
             if (!split && !gReplaceTaauDraw.load(std::memory_order_acquire)) {
@@ -3198,7 +3124,7 @@ void onPresent() {
     // dumpTextureBmp copying a render target while the engine was replacing it for a
     // fullscreen toggle - nvwgf2umx AV at test byte [r10+0x3C]. A texture copy has to
     // happen when nothing can resize, so the dump is only ever started explicitly
-    // (see dumpCandidates) once a trigger that cannot race a resize exists.
+    // (the B0 manual path) once a trigger that cannot race a resize exists.
     // One shot, as soon as the inventory actually contains the render-resolution
     // colour (fmt=10) and nothing has been created for three seconds. The engine only
     // creates those views when it rebuilds the render graph, so this waits for a real
@@ -3251,6 +3177,12 @@ void onPresent() {
             std::filesystem::remove(marker, error);
             utils::logger().info("[vv] sr dump requested by file marker");
             ::neurodragon::vv::sr::dumpInputs();
+        }
+        auto const arg10Marker = std::filesystem::path(utils::applicationDirectory()) / "vv_arg10_now.txt";
+        if (std::filesystem::exists(arg10Marker, error)) {
+            std::filesystem::remove(arg10Marker, error);
+            gArg10ProbeFrames.store(8, std::memory_order_release);
+            utils::logger().info("[vv] arg10 probe armed for 8 frames");
         }
     }
     // A2 camera probe: once a world is loaded, up to six samples ~10 s apart. The
@@ -3389,6 +3321,7 @@ void onSwapChainResize() {
     gInputFinalColorHeight.store(0, std::memory_order_release);
     gInputFinalColorFormat.store(0, std::memory_order_release);
     gInputFinalColorRecaptureDraws.store(4, std::memory_order_release);
+    gArg10ProbeFrames.store(8, std::memory_order_release);
     gSetTextureLogs.store(0, std::memory_order_relaxed);
     gRenderGeneration.fetch_add(1, std::memory_order_relaxed);
     // A derived render size is stale after a rebuild; the next record re-derives it
@@ -3597,19 +3530,27 @@ unsigned depthTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance) {
 
 unsigned renderGeneration() { return gRenderGeneration.load(std::memory_order_relaxed); }
 
-void* taauListForFrame() {
-    void* const list = gTaauList.load(std::memory_order_relaxed);
-    if (!list) {
-        return nullptr;
-    }
-    unsigned const frame = gTaauListFrame.load(std::memory_order_relaxed);
-    return frame == gDrawHits.load(std::memory_order_relaxed) ? list : nullptr;
-}
-
-void requestTaauListScan() { gTaauScanRequested.store(true, std::memory_order_relaxed); }
-
 unsigned backBufferWriterSplit() { return gBoundarySplit.load(std::memory_order_relaxed); }
 void*    backBufferWriterList() { return gBoundaryList.load(std::memory_order_relaxed); }
+
+void* arg10Target() { return gArg10Native.load(std::memory_order_acquire); }
+unsigned arg10WriterSplit() { return gArg10WriterSplit.load(std::memory_order_acquire); }
+void*    arg10WriterList() { return gArg10WriterList.load(std::memory_order_acquire); }
+
+void setArg10Solid(bool armed) {
+    bool const previous = gArg10SolidArmed.exchange(armed, std::memory_order_acq_rel);
+    if (previous == armed) {
+        return;
+    }
+    // Force one fresh RTV capture per list: the lists that existed before this arming
+    // would otherwise keep a null/stale target forever.
+    gArg10ArmGeneration.fetch_add(1, std::memory_order_relaxed);
+    gArg10WriterSplit.store(0, std::memory_order_relaxed);
+    gArg10WriterList.store(nullptr, std::memory_order_relaxed);
+    utils::logger().info("[vv] arg10 solid armed={}", armed ? 1 : 0);
+}
+
+bool arg10SolidArmed() { return gArg10SolidArmed.load(std::memory_order_acquire); }
 
 void setTaauDrawReplacement(bool armed) {
     bool const previous = gReplaceTaauDraw.exchange(armed, std::memory_order_acq_rel);

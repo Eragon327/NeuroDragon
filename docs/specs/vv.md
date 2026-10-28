@@ -744,6 +744,9 @@ RTV 在 resize 钩子之前创建，已由 `gHeld` 修复。
 ⇒ 执行上下文/回调对象图里没有引擎 list 指针，内容边界这条路在当前可读对象里走不通；
 B1b 仍回退尾部 k=4。**DrawInstanced 标定成为下一步**，不是继续加深扫描。
 
+> **2026-10-28**：该扫描子树与 `VvInject::setUseTaauList` 已在阶段 A 前的死代码清理中删除
+> （§34.5 第一刀）；结论保留为死路，见 `re_kb` 的 `command_list_taau_scan`。
+
 **2026-10-25 04:5x 色调诊断**：回退 tail 4 时主菜单没有消失，但存档内颜色“很奇怪”。这不是
 边界问题，而是**颜色候选或色调曲线**不对：渲染分辨率下有多个 fmt26（最终色/历史/中间面），
 以及我们的 ACES 曲线是在 33% 那一帧拟合的，66%/另一个存档的曝光可能不同。
@@ -1952,8 +1955,10 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 
 - 输出目标 `Color0` 没有 UAV 位（`flags=0x1`）⇒ 必须 **PS+RTV**，不能 compute + copy；
 - 切点 = **`Color0` 写入 list 之后**（EXP-0055：48-list 帧是 list 25；44 写的是另一张 RTV，
-  不是 `Color0` 的读写者）；判据是「该 list 首次 `OMSetRenderTargets` 的 RTV 反查 == arg10 native」，
-  不再是帧形签名；
+  不是 `Color0` 的读写者）；判据是「该 list **任一次** `OMSetRenderTargets` 的 RTV 反查 == arg10
+  native」，不再是帧形签名。**2026-10-28 EXP-0057 证伪了「首次绑定」版本**：writer 的第一次绑定
+  是 128x128 或未解析，从不是 arg10（`hits=[]`、`split=0/69`），见
+  `canon/refuted.jsonl` 的 `taau_arg10_writer_first_binding`；
 - 第一阶段**不 suppress**：材质绑定每帧都在，输入身份不掉线；代价是 TAAU 的 GPU 时间仍在，
   F1 不成立；
 - 阶段一同时**删掉 prep 里的 depth+VP 重建**，MV 改绑引擎 arg11（契约见 §6 的 2026-10-28 更正）。
@@ -1964,9 +1969,9 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 |---|---|---|---|
 | V1 | `arg10`/`Color0` 被下游消费 | ✅ **已证（2026-10-28）**：写入者 = 显示分辨率、无 DSV、单 draw 的前置 list（EXP-0055；48-list 帧为 25，72/70/107-list 帧为 49/47/84）；消费者 = `LuminanceHistogram`、`Bloom`×2、`LocalExposure`，以**共享帧图节点引用**消费，采样帧内无 GPU 复制（EXP-0056：运行期材质引用 + frameImpl 静态数据流）。剩下 `WaitOnUpscalingOutput` 的登记语义与 RQ-0004..0007 的静态复核，属尾巴、不阻塞阶段 A | 若下游完全不用，回查后处理链 |
 | V2 | ✅ **静态已确认**（2026-10-28 反编译）：TAAU 输出 = `H + w*(C−H)`，与 `InputFinalColor` 同域、不做归一化 | 无需再测；运行时只需确认我们写的 `Color0` 就是下游读的那张（并入 V5） | — |
-| V3 | 能安全写 `Color0` | PS+RTV；写 RT、留 RT，让下一个消费者自己做 barrier | 状态不可控 ⇒ `CopyResource` 兜底 |
+| V3 | 能安全写 `Color0` | ✅ **阶段 A 通过（EXP-0058）**：Clear+RTV 连续写 960 帧，无 D3D12/设备错误；写 RT、留 RT | 状态不可控 ⇒ `CopyResource` 兜底 |
 | V4 | ✅ **静态已确认**：TAAU 是纯 temporal resolve，无曝光/tonemap/encode、无深度、无 VP 使用 | — | 无需再测 |
-| V5 | 写的是本帧下游要读的那张 | `decl-pre/post` 两次采样（EXP-0032 已证 decl 阶段可读）；EXP-0055 已证 arg10 双缓冲交替 | 写错缓冲 ⇒ 滞后一帧（可见） |
+| V5 | 写的是本帧下游要读的那张 | ✅ **阶段 A 通过（EXP-0058）**：双缓冲交替 960 帧无闪烁/滞后/冻结；writer 判据 = 该 list **任一次** `OMSetRenderTargets` 绑定 arg10 | 写错缓冲 ⇒ 滞后一帧（可见） |
 
 ### 34.4 阶段二（suppress）
 
@@ -1982,6 +1987,9 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 
 - **第一刀（R3 前，零行为变化）**：零引用死代码——`scanForTextures`、`printableRuns`、
   `dumpCandidates`、`findTarget`，以及面板已标 `(dead)` 的 taau-list 扫描子树；
+  **2026-10-28 已执行**：连带删掉辅助链 `looksLikeD3D12Object`、只服务该扫描的 `Close` 钩子
+  （槽 9，`void(this)`）与 `VvInject::setUseTaauList` 死分支/面板开关。扫描这条死路连同它的
+  槽 9 锚点记入 `re_kb canon refute`（key `command_list_taau_scan`），代码里不再保留；
 - **第二刀（F2 之后）**：`VvBypass` + `Action::Bypass`、`VvTone` + 曝光 compute + final 的
   exposure 分支 + 白点状态、`Action::Clear`。
 
@@ -1996,7 +2004,8 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 
 ## 35. R3 实施阶段 A–D（2026-10-28 拍板「停止论证，进入实施」）
 
-> **状态**：规划已定，**阶段 A 未开工**。分支 `r3`，实例 `E:\LeviLauncher\versions\1.26.51.01-r3`。
+> **状态**：**阶段 A 通过（EXP-0058，2026-10-28）**；下一步阶段 B，B–D 未开工。
+> 分支 `r3`，实例 `E:\LeviLauncher\versions\1.26.51.01-r3`。
 > 上位分析与判据表见 §34 与 [ADR 0005](../decisions/0005-vv-r3-write-arg10.md)；
 > 本文只回答「按什么顺序做、每一步怎么算过、哪一步失败就停」。
 > **不再继续反编译论证 R3**：V2/V4 已静态确认（TAAU 是纯 temporal resolve，无 tonemap/encode，
@@ -2014,9 +2023,10 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 - TAAU 照跑，**不 suppress**；不接 DLSS；不改输入、MV、曝光或其它管线；
 - 每帧 declarator 后解析当前 `arg10`（EXP-0055 的探针已在做：holder → resource → bgfx handle
   → native，逐帧在两个 native 之间交替）；
-- 按 EXP-0055 的 RTV 指针找到它的**写入 list**：判据是「该 list 首次 `OMSetRenderTargets` 的
-  RTV 反查 == 当帧 `arg10` native」，**不是**下标、也**不是**帧形签名（下标随帧形在 25 / 49 / 47 / 84
-  之间漂移）；
+- 按 EXP-0055 的 RTV 指针找到它的**写入 list**：判据是「该 list **任一次** `OMSetRenderTargets`
+  的 RTV 反查 == 当帧 `arg10` native」，**不是**下标、也**不是**帧形签名（下标随帧形在 25 / 49 / 47 / 84
+  之间漂移）。EXP-0057 证伪了「首次绑定」版本（`hits=[]`、`split=0/69`），见
+  `canon/refuted.jsonl` 的 `taau_arg10_writer_first_binding`；
 - 在该 list **之后**插入我们自己的 list（`probe/VvInject` 已有「前缀 + 自己的 list + 后缀」的
   同队列提交机制，阶段 A 只加一个切点和一个 action）；
 - 用 **PS + RTV** 向当前 `arg10` 写纯色，**保持 RT 状态**（写 RT、留 RT，让下一个消费者自己做
@@ -2030,8 +2040,34 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 | A2 | 双缓冲切换时颜色**不闪、不滞后一帧** | 写错缓冲（native 逐帧交替，EXP-0055）⇒ 目标与切点必须**当帧现取**，禁止缓存 |
 | A3 | 无 D3D12 状态错误（调试层） | 状态不可控 ⇒ 退 `CopyResource` 兜底（ADR 0005 的 V3 分支） |
 
-HUD / 手 / 准星在后缓冲上，只动 `arg10` 理应不受影响；若 A1 里 HUD 一起变色，说明写到了后缓冲，
-按 A1 失败处理。**A1 不成立即停**——这是实现前最后一个低成本止损点。
+HUD 与准星在后缓冲上，只动 `arg10` 理应不受影响；若 HUD 一起变色，说明写到了后缓冲，按 A1
+失败处理。**手不在这个外推里**：EXP-0058 里手随 `arg10` 一起变品红而 HUD 未变，说明手参与了
+`arg10` 的消费链。**A1 不成立即停**——这是实现前最后一个低成本止损点。
+
+**实现（2026-10-28）**：
+
+- `VvProbe` 每帧在 declarator 后取 `arg10` native；`onExecuteCommandLists` 用「该 list **任一次**
+  `OMSetRenderTargets` 的 RTV 反查 == 当帧 native」找 writer（要求无 DSV），写入
+  `arg10WriterSplit`（1-based）。`setArg10Solid(true)` 会让每个 list 重新记录本次 arm 的全部
+  RTV handle（EXP-0057 证伪了只看首次绑定）。
+- `VvInject` 新增 `Action::SolidArg10`：切在 writer 之后，用 RTV 把 `arg10` 清成品红；
+  **不发 barrier**（写 RT、留 RT，A3 就是测这一点），不 suppress TAAU；找不到 writer 就整帧跳过。
+- 面板 `VV R3 stage A (TEST)` → `Write solid arg10` / `Disarm arg10 solid`；
+  日志 `[vv] inject: arg10 boundary split=.../...`，未命中为 `arg10 writer not found`。
+- 与上文的差别：阶段 A 用 `ClearRenderTargetView`（仍走 RTV），不建 PS 管线；PS 留给阶段 B。
+
+**结果（EXP-0058，2026-10-28）**：A1/A2/A3 全过。
+
+- 用户原话：「画面和手变为品红，hud不影响，然后逐渐变白（秒级），变成全白后，恢复成原来 VV 的样子，
+  画面无闪烁，恢复后无冻结。」
+- `inject: arg10 boundary split=47/69` 连续 960 帧（injected 1→960，skipped=0）；无 D3D12/设备错误。
+- **手在 `arg10` 链上**：纯色把画面和手一起染色，HUD 不受影响（所以不是写了后缓冲）。阶段 B 用
+  真实 DLSS 输出时要单独复验手部；目标语义里的「手不变」不能靠「HUD 没变」外推。
+- **曝光会追着纯色走**：品红在秒级内被 `LuminanceHistogram` / `LocalExposure` 推到全白；停止注入后
+  恢复原样。这是 V1 的可见证据，也说明阶段 B 的 DLSS 输出必须与 TAAU 同域（否则曝光会漂）。
+- **Writer 定位的边界**：面板打开后帧形变 74/107，`writer not found`，注入停止；回世界 69 帧后没有
+  自恢复（疑似 `kSigSlots=128` 签名表满，新 list 没有槽位）。阶段 B 必须让 writer 在 UI 帧后自恢复，
+  或 disarm 再 arm。证据：`docs/agent/evidence/arg10-solid-EXP-0058.log`。
 
 ### 35.2 阶段 B：DLSS 写 `arg10`（只改输出）
 

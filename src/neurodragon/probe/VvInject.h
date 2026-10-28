@@ -40,13 +40,15 @@ enum class Mode : int {
 /// What our inserted command list does. Clear is the M5 boundary experiment;
 /// Bypass is B1b-1 (read the render-resolution colour, ACES it over the back
 /// buffer); Capture is B1c (copy the back buffer into a readback and save a BMP,
-/// changing no pixel). All write only our own resources and are off unless a Mode
-/// is active.
+/// changing no pixel); SolidArg10 is R3 stage A (clear the engine's TAAU output,
+/// arg10, to magenta). The first four write only our own resources; SolidArg10
+/// deliberately writes one engine resource and leaves it in RENDER_TARGET.
 enum class Action : int {
-    Clear   = 0,
-    Bypass  = 1,
-    Capture = 2,
-    Sr      = 3,
+    Clear      = 0,
+    Bypass     = 1,
+    Capture    = 2,
+    Sr         = 3,
+    SolidArg10 = 4,
 };
 
 /// Why an injection attempt did nothing. The panel turns these into text (the probe
@@ -82,18 +84,18 @@ void setMode(Mode mode);
 void setAction(Action action);
 [[nodiscard]] Action action();
 
-/// When set, `prepare()` first tries to cut immediately after the engine list that
-/// was recording during the TAAU draw (probe::vv::taauListForFrame()). This is the
-/// content boundary; if the list was not captured it falls back to k.
-void setUseTaauList(bool use);
-[[nodiscard]] bool useTaauList();
-
 /// Uses the content boundary computed by VvProbe. Normal DLSS overlay mode cuts after
 /// the world composite. Once the original TAAU draw is suppressed, the probe instead
 /// cuts before the display-sized HUD list; a missing pre-HUD boundary disarms replacement
 /// rather than falling back to a UI-unsafe writer or counted boundary.
 void setUseBackBuffer(bool use);
 [[nodiscard]] bool useBackBuffer();
+
+/// R3 stage A: cut after the list that wrote the current arg10 (probe::vv's writer
+/// resolution). No fallback - the point of the experiment is "when the writer is not
+/// found, nothing is written", so a miss stays a skip and shows up in the log.
+void setUseArg10(bool use);
+[[nodiscard]] bool useArg10();
 
 /// Which end `k` is measured from. From the head (default) k is "after the k-th list";
 /// from the tail k = 1 means "after the whole frame", k = 2 "before the last list", and
