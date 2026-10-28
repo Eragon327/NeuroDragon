@@ -18,12 +18,15 @@ docs/
 │   ├── 0001-taau-insertion-point.md
 │   ├── 0002-no-kernel-patching.md
 │   ├── 0003-docs-layout.md
-│   └── 0004-code-conventions.md
+│   ├── 0004-code-conventions.md
+│   └── 0005-vv-r3-write-arg10.md
 ├── research/          # 技术调研与实测笔记，文件名必须带日期
 │   ├── 2026-10-22-renderdragon-passmap.md
 │   ├── 2026-10-22-windows-probe.md
 │   ├── 2026-10-23-levilamina-api-notes.md
-│   └── 2026-10-24-vv-path.md
+│   ├── 2026-10-24-vv-path.md
+│   ├── 2026-10-28-vv-structural-review.md
+│   └── 2026-10-28-taau-decompiled.md
 └── archive/
     └── 2026-10/       # 2026-10 改版前的旧字母文档（D–N；A–C 已迁入 research/），原文不动
 ```
@@ -34,7 +37,7 @@ docs/
 |---|---|---|
 | [roadmap.md](roadmap.md) | 路线 | 四阶段顺序（NR/SR → VV 接管 TAAU → FG → RR）、每阶段状态与开工前必答的未知 |
 | [specs/renderdragon.md](specs/renderdragon.md) | 宿主引擎 | 帧结构、VV 通道清单、`taau` 契约、接入点 P1–P6、资源与呈现、W1 结论 |
-| [specs/vv.md](specs/vv.md) | VV 路径（阶段 2） | 触发条件、插入点、命令流、已答/未答的未知、M4–M7 与 stop/go |
+| [specs/vv.md](specs/vv.md) | VV 路径（阶段 2） | 触发条件、插入点、命令流、已答/未答的未知、M4–M7 与 stop/go；§34–§35 为 R3（插入点上移、写 `arg10`、实施阶段 A–D） |
 | [specs/nr.md](specs/nr.md) | NR | NGX feature `0x12` 的契约、参数表、编码/合成、位置轴、尺寸与生命周期、剩余工作与探针结论 |
 | [specs/sr.md](specs/sr.md) | SR | 引擎 DLSS 的三层分辨率、内部分辨率、模型预设与重建、RCAS 锐化、截图、读数与待办 |
 | [specs/ui.md](specs/ui.md) | UI / 设置 | Present 钩子 + D3D11On12 面板、输入吞噬、draft 配置语义、监控与拆分计划 |
@@ -43,10 +46,13 @@ docs/
 | [decisions/0002-no-kernel-patching.md](decisions/0002-no-kernel-patching.md) | ADR | 不做 `.trpk` / INT8 / MFG 这类对驱动内核的逆向 patch |
 | [decisions/0003-docs-layout.md](decisions/0003-docs-layout.md) | ADR | 文档改版：specs / decisions / research / archive 与六条规则 |
 | [decisions/0004-code-conventions.md](decisions/0004-code-conventions.md) | ADR | 翻译一律 `_tr`、D3D12 与引擎头的 include 顺序、`log::text` 的边界 |
+| [decisions/0005-vv-r3-write-arg10.md](decisions/0005-vv-r3-write-arg10.md) | ADR | VV 的 SR 插入点上移一层：写 `arg10`、复用引擎显示变换；含 V1–V5 判据与止损 |
 | [research/2026-10-22-renderdragon-passmap.md](research/2026-10-22-renderdragon-passmap.md) | 取证 | Mac 符号化 IDB 读出的帧结构、`taau` 契约证据、W1 全文 |
 | [research/2026-10-22-windows-probe.md](research/2026-10-22-windows-probe.md) | 取证 | 无 PDB 的定位链（字符串 → xref → `.pdata`）、探针演进、NGX 参数读取的九次运行 |
 | [research/2026-10-23-levilamina-api-notes.md](research/2026-10-23-levilamina-api-notes.md) | 参考 | 本项目用到的 LeviLamina API、签名、线程/日志/配置约定与坑 |
 | [research/2026-10-24-vv-path.md](research/2026-10-24-vv-path.md) | 取证 | VV 路径侦察：RVA、参数基址、依赖语义、提交结构、渲染目标清单 |
+| [research/2026-10-28-vv-structural-review.md](research/2026-10-28-vv-structural-review.md) | 复盘 | EXP-0025→0054 的结构性归因（身份/自指/层错位）、同指针 8800×、帧形 25/44/45 证据 |
+| [research/2026-10-28-taau-decompiled.md](research/2026-10-28-taau-decompiled.md) | 取证 | TAAU 全拆解：纯 temporal resolve、MV 契约（`.zw`/Y 翻转/渲染归一化）、无深度/无 tonemap、96 字节常量缓冲；§9–§10 为 `arg10` 写入者与下游消费（EXP-0055 / EXP-0056） |
 
 ## 文档规则
 

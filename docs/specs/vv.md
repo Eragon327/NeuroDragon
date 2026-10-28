@@ -3,12 +3,33 @@
 > **状态**（2026-10-25 16:0x 更新）：阶段 2 **进行中**。M4 侦察与 M5（注入可行）已收口；
 > M6 的 B0（只读取证）与 B1a（自建 NGX 会话）已实机通过；B1b（颜色旁路）**切点成立、颜色未定**。
 > 下一步以 **§14** 为准；§5.2、§12 A 两处结论已被 §14.3 更正。
+> **2026-10-28 更新**：阶段 2 不再走 §14 的 B1b/B1c 路线，转入 **R3**（§34 分析、§35 实施阶段 A–D）。
 > 本文由旧 `O`（VV 路径侦察）、旧 `M §3`（阶段 2 的未知）与旧 `I §5`（M4–M7）合并而来；
 > 原文归档在 [archive/2026-10](../archive/2026-10/) 与 [research/2026-10-24-vv-path.md](../research/2026-10-24-vv-path.md)。
 >
-> **验证环境**：`E:\LeviLauncher\versions\1.26.51.01-agent2`（本工作区，2560×1440 全屏）。
+> **验证环境**：`r3` 起用 `E:\LeviLauncher\versions\1.26.51.01-r3`（2560×1440 全屏）；
+> §19–§33 的历史实机日志是在 `E:\LeviLauncher\versions\1.26.51.01-agent2` 上取的。
 > **注意**：主目录 `E:\LeviLauncher\versions\1.26.51.01` 是另一个 agent 的并发工作区，
 > 部署/实验不要碰它。
+>
+> **2026-10-28：停止论证 R3，进入实施**（用户拍板）。阶段划分与判据以 **§35** 为准：
+> A 纯色写 `arg10` → B DLSS 写 `arg10` → C 换引擎 MV、删自算 MV → D 回归后再 suppress。
+> §34 是它的上位分析（为什么把插入点上移一层），§34.2/§34.4 的「阶段一 / 阶段二」细化进 §35。
+>
+> **2026-10-28 TAAU 复核（静态已确认）**：完整拆解见
+> [research/2026-10-28-taau-decompiled.md](../research/2026-10-28-taau-decompiled.md)。本文早期
+> 「没有 MV 纹理、靠深度 + VP 重建」的表述已被 shader 资源表与指令证伪（下文 §6 的 2026-10-28
+> 更正是逐条更正）。
+>
+> **EXP-0055（同帧直接指针）**：`arg10` 的依赖名是 `Color0`，native 是前置离屏输出；
+> 写入它是**显示分辨率、无 DSV、单 draw** 的前置 list（48-list 帧为 25，72/70/107-list 帧为
+> 49/47/84），不是带 DSV 的 `list44`。⇒「`arg10` 直接写后缓冲」「`list44` 是 TAAU 输出 draw」
+> 均已证伪。
+>
+> **EXP-0056（下游消费）**：`arg10` 出 TAAU 后以**共享帧图节点引用**进入 `LuminanceHistogram`、
+> `Bloom`（两次）、`LocalExposure`；采样帧内两条 copy 路径均无命中（无 GPU 纹理复制）。
+> 证据：`docs/agent/evidence/arg10-list-binding-EXP-0055.log`、
+> `docs/agent/evidence/arg10-downstream-EXP-0056.log`。
 
 ## 0. 一句话
 
@@ -244,6 +265,27 @@ hook `CreateCommittedResource` / `CreatePlacedResource` 之后，渲染分辨率
 | MV | **自己重建**（depth + `TAAContext+0x200/+0x240`） | 像素单位 |
 | jitter | `UpscalingData.jitterIndex` → 引擎 jitter 表 | 需确认是否已进投影矩阵 |
 | 输出 | 后缓冲（倒 4 之后写入） | 已是本 spec 的插入点 |
+
+> **2026-10-28 更正（静态已确认，取代上面「没有 MV 纹理」整段与 M6 表的 MV 行）**：
+> taau **有 MV 纹理**，且**不用深度、不用 VP 做重投影**。
+> `data/renderer/materials/Upscaling.material.bin` 的 shader（SM5.0 DXBC 与 SM6.3 DXIL 逐段对照一致）
+> 绑定 `t0=InputBufferMotionVectors`（读 `.zw`）、`t1=InputFinalColor`（`.rgb`）、`t2=InputTAAHistory`；
+> declarator 的四个依赖里 arg11 就是 MV。契约：
+>
+> ```
+> mv          = { z, -w }                     // Y 翻转，渲染分辨率归一化
+> mvRenderPix = mv * RenderResolution
+> historyPos  = displayCenter - mvRenderPix / ratio
+> ```
+>
+> ⇒ 替换实现的 MV 应**直接绑定引擎 arg11**，按上述契约转成 DLSS 需要的像素单位；
+> **不要**再用 depth + `TAAContext+0x200/+0x240` 重建——我们此前的实现正是后者，
+> EXP-0039–0042 的公式类问题都源于这个错误前提。VP 由 CPU 上传，但不在 shader 的
+> 96 字节常量缓冲里（只有 jitter / params / ratio / display / render 分辨率 6 个 float4）。
+> 证据：[research/2026-10-28-taau-decompiled.md](../research/2026-10-28-taau-decompiled.md) §3–§4、§7。
+>
+> **顺带暴露的未决项（本轮不猜）**：代码里 depth→view 的换算是 `near/(1-d)`（标准 Z：近 0 远 1），
+> 与 DLSS 的 `DepthInverted=1` 互相矛盾；需要一次判定（dump 一个已知距离的像素在两端的值）。
 
 **已证伪的路子**（省得再走）：依赖对象 `+0x8` / `+0x10` 是**帧图节点**（带 vtable、带 pass 名字符串），
 不是资源也不是 bgfx handle；递归扫节点对象图 3 跳、与已知资源指针比对，命中的全是后缓冲，
@@ -1868,3 +1910,177 @@ EXP-0054 在 resize 后设置最多 4 帧的有界转发预算，材质匹配增
 证据：`docs/agent/evidence/exposure-history-EXP-0053.log`；postmortem：
 `docs/agent/evidence/exposure-history-EXP-0053-postmortem.log`。
 验证计划：`docs/agent/evidence/f11-semantic-recapture-EXP-0054.log` 与 F11 后 F7 批。
+
+## 34. R3：把插入点上移一层（2026-10-28 拍板）
+
+> **状态**：已拍板，**未实现**；判据（§34.3）未过之前不改渲染行为。
+> 实现分支：`r3`（worktree `r3/`，测试实例 `E:\LeviLauncher\versions\1.26.51.01-r3`，
+> 2026-10-28 从 `agent2` 尖端切出）。
+> **2026-10-28 细化**：阶段划分改为 **§35 的 A–D**（下一步 = 阶段 A：纯色写 `arg10`）；
+> 下面 §34.2 / §34.4 的「阶段一 / 阶段二」仍然成立，但顺序与判据以 §35 为准。
+> 决策记录：[decisions/0005](../decisions/0005-vv-r3-write-arg10.md)。
+> 结构性复盘：[research/2026-10-28-vv-structural-review.md](../research/2026-10-28-vv-structural-review.md)。
+
+### 34.1 为什么
+
+§19–§33 的 30 个实验可以归到三笔债：身份靠形状猜、suppress 断掉角色来源、**在后缓冲上覆盖
+等于把引擎的显示变换一起替换**。第三笔的证据：
+
+- 引擎有显示分辨率的 HDR 中间面（`2560×1440 fmt26`，仅 RT，双缓冲）；declarator 的 `arg10`
+  链解析出的两个 native 与日志里的两张逐位相同，且逐帧交替（EXP-0032、EXP-0035）；
+- 48-list 世界帧里 `25:v2560x1440 d1`（无 DSV）不写后缓冲，`44:v2560x1440 z d1` 才是写者：
+  B1c 在 tail-8…5 的切点图是「上一帧内容（含我们自己的面板）」，说明 25 之后后缓冲未被写过；
+- EXP-0045 三批 dump 是**同一指针**跨 8800×（0.1316 / 0.00235 / 20.73），而引擎自己的 F2 输出
+  在同一状态下仍正常（EXP-0046，0.629083）⇒ 下游存在一级归一化。
+- 2026-10-28 反编译（`Upscaling.material.bin` + declarator / draw callback）：TAAU 是**纯
+  temporal resolve**，输出 `H + w*(C−H)`，无曝光 / tonemap / encode；MV 是上游输入（`.zw`）。
+  ⇒ `arg10` 与 `InputFinalColor` 同域，V2/V4 **静态已确认**。
+
+⇒ 现状（suppress TAAU + 在 44 之后覆盖后缓冲）用一次拟合的幂函数 + 自算白点去复刻这一级；
+被复刻的对象是自适应的，固定近似不可能收敛。EXP-0048–0053 的白点线是这笔债的利息。
+
+### 34.2 阶段一的管线（TAAU 照跑）
+
+```
+TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
+我们的 list（切在 Color0 写入 list 之后立刻）
+    prep: 读 arg9 颜色 + depth → RGBA16F / R32F；MV 直接读引擎 arg11（.zw，Y 翻转、渲染归一化）
+    NGX DLSS-SR: Color/Depth/MV(渲染像素) → dlssOut (display, FP16)
+    PS + RTV: dlssOut → Color0（不做 tonemap/encode）
+下游后处理（bloom / LocalExposure / 编码等）→ 合成 list 44（写后缓冲）→ HUD list 45
+```
+
+- 输出目标 `Color0` 没有 UAV 位（`flags=0x1`）⇒ 必须 **PS+RTV**，不能 compute + copy；
+- 切点 = **`Color0` 写入 list 之后**（EXP-0055：48-list 帧是 list 25；44 写的是另一张 RTV，
+  不是 `Color0` 的读写者）；判据是「该 list 首次 `OMSetRenderTargets` 的 RTV 反查 == arg10 native」，
+  不再是帧形签名；
+- 第一阶段**不 suppress**：材质绑定每帧都在，输入身份不掉线；代价是 TAAU 的 GPU 时间仍在，
+  F1 不成立；
+- 阶段一同时**删掉 prep 里的 depth+VP 重建**，MV 改绑引擎 arg11（契约见 §6 的 2026-10-28 更正）。
+
+### 34.3 判据（一次诊断构建 + 一次会话）
+
+| # | 前提 | 判据 | 不成立 |
+|---|---|---|---|
+| V1 | `arg10`/`Color0` 被下游消费 | **写入者已证**（EXP-0055：显示分辨率、无 DSV、单 draw 的前置 list；48-list 帧为 25）；消费者是谁未证。切在写者之后即可保证顺序，运行时用同帧 capture 确认被下游采用 | 若下游完全不用，回查后处理链 |
+| V2 | ✅ **静态已确认**（2026-10-28 反编译）：TAAU 输出 = `H + w*(C−H)`，与 `InputFinalColor` 同域、不做归一化 | 无需再测；运行时只需确认我们写的 `Color0` 就是下游读的那张（并入 V5） | — |
+| V3 | 能安全写 `Color0` | PS+RTV；写 RT、留 RT，让下一个消费者自己做 barrier | 状态不可控 ⇒ `CopyResource` 兜底 |
+| V4 | ✅ **静态已确认**：TAAU 是纯 temporal resolve，无曝光/tonemap/encode、无深度、无 VP 使用 | — | 无需再测 |
+| V5 | 写的是本帧下游要读的那张 | `decl-pre/post` 两次采样（EXP-0032 已证 decl 阶段可读）；EXP-0055 已证 arg10 双缓冲交替 | 写错缓冲 ⇒ 滞后一帧（可见） |
+
+### 34.4 阶段二（suppress）
+
+只有在找到**与 suppress 正交的角色通道**（材质 hook 在 declarator 阶段是否也触发；或状态机 +
+有界转发并强制 Reset 两个时间滤波器）之后，才 suppress TAAU。否则保留阶段一（F1 不成立，
+但 F2/F3 可达）。
+
+阶段二多一个未知：**suppress 后那条 list 是否仍把 `Color0` 绑成 RTV**（EXP-0055 的锚点是
+在未 suppress 状态下测的）。若绑定也消失，锚点失效，需要退回「按上一帧的 writer 下标 + 帧形」
+或另找与 draw 无关的角色通道。
+
+### 34.5 删除清单（两刀，AGENTS §4）
+
+- **第一刀（R3 前，零行为变化）**：零引用死代码——`scanForTextures`、`printableRuns`、
+  `dumpCandidates`、`findTarget`，以及面板已标 `(dead)` 的 taau-list 扫描子树；
+- **第二刀（F2 之后）**：`VvBypass` + `Action::Bypass`、`VvTone` + 曝光 compute + final 的
+  exposure 分支 + 白点状态、`Action::Clear`。
+
+### 34.6 不宣称与止损
+
+- 不宣称 R3 已成立：V1/V3/V5 仍待运行时验证（V2/V4 已由 2026-10-28 反编译静态确认）；
+- 不宣称「曝光是幻影」：已被同指针 8800× 证伪；R3 的作用是**复用**那一级，不是否定它；
+- 不宣称深度方向已定：`near/(1-d)`（标准 Z）与 `DepthInverted=1` 互相矛盾，需一次判定；
+- 止损（命中即回「读 shader」路线，不再加补丁）：把 `Color0` 写成纯色后**下游画面完全无变化**
+  （说明它没有被任何下游消费）／`Color0` 状态连续两次调试层报错。
+
+## 35. R3 实施阶段 A–D（2026-10-28 拍板「停止论证，进入实施」）
+
+> **状态**：规划已定，**阶段 A 未开工**。分支 `r3`，实例 `E:\LeviLauncher\versions\1.26.51.01-r3`。
+> 上位分析与判据表见 §34 与 [ADR 0005](../decisions/0005-vv-r3-write-arg10.md)；
+> 本文只回答「按什么顺序做、每一步怎么算过、哪一步失败就停」。
+> **不再继续反编译论证 R3**：V2/V4 已静态确认（TAAU 是纯 temporal resolve，无 tonemap/encode，
+> MV 是上游 `.zw` 输入）；剩下的 V1/V3/V5 只能靠**运行时不加修饰地写一次 `arg10`** 来判。
+
+### 35.1 阶段 A：纯色写入验证（只回答 V3/V5）
+
+目标：证明运行时**真的控制了下游所读的那张 `arg10`**，并且写它不出状态错。
+
+做法（最小实验，别的都不动）：
+
+- TAAU 照跑，**不 suppress**；不接 DLSS；不改输入、MV、曝光或其它管线；
+- 每帧 declarator 后解析当前 `arg10`（EXP-0055 的探针已在做：holder → resource → bgfx handle
+  → native，逐帧在两个 native 之间交替）；
+- 按 EXP-0055 的 RTV 指针找到它的**写入 list**：判据是「该 list 首次 `OMSetRenderTargets` 的
+  RTV 反查 == 当帧 `arg10` native」，**不是**下标、也**不是**帧形签名（下标随帧形在 25 / 49 / 47 / 84
+  之间漂移）；
+- 在该 list **之后**插入我们自己的 list（`probe/VvInject` 已有「前缀 + 自己的 list + 后缀」的
+  同队列提交机制，阶段 A 只加一个切点和一个 action）；
+- 用 **PS + RTV** 向当前 `arg10` 写纯色，**保持 RT 状态**（写 RT、留 RT，让下一个消费者自己做
+  barrier；`Color0` 没有 UAV 位，写不了 compute）。
+
+判据（三条都要）：
+
+| # | 判据 | 不成立意味着 |
+|---|---|---|
+| A1 | 最终画面**明确受纯色影响**，HUD 保留 | 运行时尚未真正控制下游所读的 `arg10` ⇒ **停止实施**，不再追加补丁 |
+| A2 | 双缓冲切换时颜色**不闪、不滞后一帧** | 写错缓冲（native 逐帧交替，EXP-0055）⇒ 目标与切点必须**当帧现取**，禁止缓存 |
+| A3 | 无 D3D12 状态错误（调试层） | 状态不可控 ⇒ 退 `CopyResource` 兜底（ADR 0005 的 V3 分支） |
+
+HUD / 手 / 准星在后缓冲上，只动 `arg10` 理应不受影响；若 A1 里 HUD 一起变色，说明写到了后缓冲，
+按 A1 失败处理。**A1 不成立即停**——这是实现前最后一个低成本止损点。
+
+### 35.2 阶段 B：DLSS 写 `arg10`（只改输出）
+
+纯色通过后，把纯色换成真实 DLSS 输出：
+
+```
+现有已工作的颜色 / 深度 / MV
+              ↓
+            DLSS
+              ↓
+       PS + RTV 写 arg10
+              ↓
+  引擎曝光 / Bloom / 显示变换
+```
+
+- 这一轮仍**不 suppress**，并尽量保留当前已工作的输入路径，避免同时引入新变量；
+- 应当移除出新路径的：白点 compute、`vvEncode`、`finalRgba8`、后缓冲
+  `PRESENT → COPY_DEST → PRESENT` 往返。
+
+验收重点**不是** `eval=1`，而是：
+
+- DLSS 与 TAAU 经过**同一条显示链**后无整体偏色、极亮或极暗（同帧参考比较只剩细节差异）；
+- F11 后输出尺寸与双缓冲仍正确；
+- HUD、手、准星保留。
+
+### 35.3 阶段 C：切换引擎 MV，删除自算 MV
+
+输出路径稳定后，**单独**改输入，不与阶段 B 混合：
+
+```hlsl
+dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
+```
+
+- 按**材质角色**区分 `t0` MV / `t1` FinalColor / `t2` History，不能再用「最后一个 fmt26 匹配」；
+- 保留 `MVLowRes`；
+- 验证运动方向、静止零 MV、转头无异常拖影；
+- 然后删掉 VP / 相机原点重建、近平面处理与自算 MV 的 Y 符号补丁。
+
+深度先沿用当前可用路径，避免这一轮再次扩大范围；**深度语义**（代码 `near/(1-d)` 与
+`DepthInverted=1` 的矛盾）单列未知，不在这四个阶段里顺手改。
+
+### 35.4 阶段 D：回归后再 suppress
+
+先在**不 suppress**下过 F11、切世界、Stop/Start，确认没有亮暗漂移和错代输出。之后才做第二阶段：
+
+- 输入角色通道**不得依赖被 suppress 的 TAAU draw**；
+- 输入无效时**恢复 TAAU**（不注入 DLSS）；
+- **禁止**回退到启发式 RTV；
+- 不把 EXP-0054 的「定期转发」当最终机制。
+
+成功后再删 `VvTone`、`VvBypass`、白点与自算 MV 等旧实现，避免两套路径长期并行（AGENTS §4）。
+
+### 35.5 现在这一刀（immediate next）
+
+**只做阶段 A 的纯色 `arg10` 实写**：A1–A3 任一不成立就停。通过后就以 §35.2 为下一步，
+不再回到反编译论证 R3。

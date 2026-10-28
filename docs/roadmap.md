@@ -33,10 +33,10 @@
 
 ## 1. 四阶段总表
 
-| 阶段 | 内容 | 状态（2026-10-24） | 里程碑 | 当前 spec |
+| 阶段 | 内容 | 状态（2026-10-28） | 里程碑 | 当前 spec |
 |---|---|---|---|---|
 | 1 | NR 神经渲染 + SR 超分（RT 路线，复用引擎 DLSS） | 🟡 一半 | NR 批 1–4；SR 的 S1–S3 | [nr](specs/nr.md) / [sr](specs/sr.md) / [trp](specs/trp.md) |
-| 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 M6：B0 / B1a / B1c ✅，B2 开工 | M4 侦察 → M5 写透传 → M6 DLSS 替换 → M7 收尾（M8 可选） | [vv](specs/vv.md) |
+| 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 R3 实施：论证收口，阶段 A（纯色写 `arg10`）待跑 | M4 → M5 → M6 停在覆盖后缓冲；2026-10-28 改走 **R3**（A 纯色 → B DLSS → C 引擎 MV → D 再 suppress） | [vv](specs/vv.md) §34–§35 |
 | 3 | FG 帧生成 | ⬜ 未开始（**排期变更**，见 §6） | 尚无里程碑，须先答 §4 的未知 | [renderdragon](specs/renderdragon.md) / [ui](specs/ui.md) |
 | 4 | RR 光线重建（尝试） | ⬜ 未开始，**可能不可做** | 先答 §5 的决定性问题 | [nr](specs/nr.md) §12 |
 
@@ -65,9 +65,9 @@
 | # | 未知 | 状态 | 结论 / 下一步 |
 |---|---|---|---|
 | 1 | VV 下 `taau` 是否命中、NGX 是否已被引擎 Init | ✅ 已答 | 命中，**每帧 1 次声明 + 1 次 draw**；VV 下没有引擎 NGX 调用 ⇒ DLSS 必须我们自建 feature |
-| 2 | bgfx 句柄 → `ID3D12Resource` 的桥 | ⬜ 未完成 | 已证否「帧图依赖对象里直接有 D3D12 资源」，桥必须从 bgfx 侧搭（[renderdragon §5](specs/renderdragon.md)） |
+| 2 | bgfx 句柄 → `ID3D12Resource` 的桥 | ✅ 已答（2026-10-27，EXP-0029） | bgfx 侧 `handle → native` 的定长表（[vv §22](specs/vv.md)）；「帧图依赖对象里直接有 D3D12 资源」已证否（[renderdragon §5](specs/renderdragon.md)） |
 | 3 | 深度从哪来 | 🟡 有候选 | 渲染分辨率下两个深度面（DXGI 格式 41/54），taau 的 4 个输入里确实没有深度；下一步读准格式并与延迟着色对上 |
-| 4 | 写 taau 输出目标是否被后续 pass 依赖 | ⬜ 未做 | 渲染目标清单里没有显示分辨率的 HDR 面 ⇒ 怀疑 TAAU 直接写后缓冲，若成立「写输出」比预想简单 |
+| 4 | 写 taau 输出目标是否被后续 pass 依赖 | ✅ 已答（2026-10-28，EXP-0055 / EXP-0056 + 反编译） | `arg10` 是显示分辨率的离屏 `Color0`（双缓冲），写入者是前置无 DSV list；下游以共享帧图节点引用进入 `LuminanceHistogram` / `Bloom` / `LocalExposure`，采样帧内无 GPU 复制。「TAAU 直接写后缓冲」已证伪（[vv](specs/vv.md) §35 头部） |
 | 5 | VV 的尺寸语义与 RT 不同 | ✅ 已答 | VV 是 `factor=0.33` × 显示尺寸；`target_resolution` 是**绝对目标**，DRS 换算成 factor |
 
 **stop/go**：[specs/vv.md](specs/vv.md) §8 沿用旧 [I](archive/2026-10/I-sr-final-plan.md) 的设点——M4 侦察一周后仍答不出桥与深度，VV 就只做
@@ -98,6 +98,11 @@ B1b（颜色旁路）连续注入 1920 帧不崩、切点成立，但**颜色未
 两个必须记住的崩溃前提：交换链后缓冲引用要当场 `Release`（否则 `ResizeBuffers` 失败 → 引擎 `abort`），
 以及任何碰引擎纹理的拷贝都不能和「引擎重建资源」并发（否则驱动 AV）。两次现场见
 [research §8](research/2026-10-24-vv-path.md)。
+
+**2026-10-28 改道**：阶段 2 剩下的部分不再沿 B1b/B1c 的「suppress + 覆盖后缓冲」走，改走 **R3**——
+把插入点上移一层，写 TAAU 的输出目标 `arg10`，复用引擎自己的显示变换。决策与判据见
+[decisions/0005](decisions/0005-vv-r3-write-arg10.md)，实施阶段 A–D 见 [specs/vv.md](specs/vv.md) §35；
+M7/M8 的收尾项挂起，等阶段 D 之后再回来。
 
 ## 4. 阶段 3：FG（帧生成）
 

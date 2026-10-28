@@ -1,0 +1,75 @@
+[2026-10-28 16:50:03.519 IFO][NeuroDragon] [vv] command list slot 16 (CopyTextureRegion) hooked=true
+[2026-10-28 16:50:03.576 IFO][NeuroDragon] [vv] command list slot 17 (CopyResource) hooked=true
+[2026-10-28 16:50:16.889 IFO][NeuroDragon] [vv] arg10 probe #958 native=0x0 handle=0xffff reason=notSampled hits=[] candidates=[] copies=[] resolved=53 unresolved=0
+[2026-10-28 16:50:16.889 IFO][NeuroDragon] [vv] frame #958 lists=68: 0:v0x0z d0 1:v2560x1299z d0 2:v1689x857 d0 3:v1x1z d0 4:v1x1z d0 5:v1689x857 d0 6:v1689x857 d0 7:v1689x857 d0 8:v1689x857z d0 9:v1689x857z d254 x600 10:v1689x857z d50 x744 11:v1689x857 d0 12:v1689x857 d269 x1536 14:v1689x857 d1 x6 15:v1689x857z d1 x6 16:v27x14z d0 17:v27x14z d269 x1536 18:v27x14z d0 19:v27x14z d269 x1536 20:v2048x2048 d0 21:v2048x2048 d468 x4560 22:v2048x2048 d150 x7632 23:v2048x2048 d0 24:v64x64 d7 x36 25:v2048x2048 d0 26:v2048x2048 d1 x12990 27:v1x1z d0 28:v1x1z d0 29:v1x1z d0 30:v1689x857 d1 x6 31:v1689x857 d1 x6 32:v1689x857z d1 x6 33:v1689x857z d269 x1536 34:v1689x857 d269 x1536 35:v1689x857z d1 x6 36:v1689x857z d1 x6 37:v1689x857z d1 x6 38:v1689x857 d1 x6 39:v1689x857 d0 40:v1689x857z d1 x6 41:v1689x857z d2 x12990 42:v1689x857z d1 x12990 43:v1689x857 d1 x72 44:v1689x857z d1 x72 45:v2560x1299 d1 x6 46:v1x1z d0 47:v844x428 d1 x6 48:v422x214 d1 x6 49:v211x107 d1 x6 50:v105x53 d1 x6 51:v52x26 d1 x6 52:v26x13 d1 x6 53:v52x26 d1 x6 54:v1x1z d0 55:v1x1z d0 56:v105x53 d1 x6 57:v105x53 d1 x6 58:v211x107 d1 x6 59:v422x214 d1 x6 60:v844x428 d1 x6 61:v1x1z d0 62:v1689x857 d1 x6 63:v1689x857 d1 x6 64:v2560x1299z d1 x6 65:v2560x1299z d52 x6 66:v1024x1024 d170 x6
+[2026-10-28 16:50:16.902 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:16.903 IFO][NeuroDragon] [vv] in.color material handle=0x03FC action=1 native=0x2afb0ff9db0 entry=0x2aec61cbed0 match=0
+[2026-10-28 16:50:16.903 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:16.903 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x2ae00000000 taau=0
+[2026-10-28 16:50:16.903 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=0 native=0x2afb0ff6de0 view=0x2ae00000000 taau=0
+[2026-10-28 16:50:16.909 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x2af00000000 taau=0
+[2026-10-28 16:50:17.289 IFO][NeuroDragon] [vv] back-buffer view handles=2 (chain buffers=2, rtv views=1190)
+[2026-10-28 16:50:17.309 IFO][NeuroDragon] [vv] tex res=0x2af95f77d40 1024x2048 fmt=28 src=committed
+[2026-10-28 16:50:17.321 IFO][NeuroDragon] [vv] tex res=0x2af95f7c030 128x128 fmt=28 src=committed
+[2026-10-28 16:50:17.321 IFO][NeuroDragon] [vv] tex res=0x2af95f7c9c0 128x128 fmt=10 src=committed
+[2026-10-28 16:50:17.322 IFO][NeuroDragon] [vv] tex res=0x2af95f799f0 128x128 fmt=12 src=committed
+[2026-10-28 16:50:17.322 IFO][NeuroDragon] [vv] tex res=0x2af95f7d350 128x128 fmt=39 src=committed
+[2026-10-28 16:50:17.323 IFO][NeuroDragon] [vv] rtv res=0x2af95f799f0 128x128 fmt=12 flags=0x1
+[2026-10-28 16:50:17.323 IFO][NeuroDragon] [vv] rtv res=0x2af95f7c030 128x128 fmt=28 flags=0x1
+[2026-10-28 16:50:17.323 IFO][NeuroDragon] [vv] rtv res=0x2af95f7c9c0 128x128 fmt=10 flags=0x1
+[2026-10-28 16:50:17.323 IFO][NeuroDragon] [vv] rtv res=0x2afe632de20 128x128 fmt=10 flags=0x1
+[2026-10-28 16:50:17.323 IFO][NeuroDragon] [vv] rtv res=0x2afb0ff6de0 2560x1299 fmt=26 flags=0x1
+[2026-10-28 16:50:17.326 IFO][NeuroDragon] [vv] arg10 probe #959 native=0x2afb0ff6de0 handle=0x3fa reason=ok hits=[ 49] candidates=[ 49:r=000002AFB0FF6DE0,z=0,rt=1 68:r=000002AF9A515D50,z=1,rt=1] copies=[] resolved=56 unresolved=0
+[2026-10-28 16:50:17.326 IFO][NeuroDragon] [vv] frame #959 lists=72: 1:v0x0z d0 2:v2560x1299z d0 3:v1689x857 d0 4:v1x1z d0 5:v1x1z d0 6:v128x128z d0 7:v128x128 d0 8:v128x128 d1 x6 9:v128x128z d1 x6 10:v128x128z d1 x12990 11:v1689x857 d0 12:v1689x857 d0 13:v1689x857 d0 14:v1689x857z d0 15:v1689x857 d0 16:v1689x857 d217 x1578 18:v1689x857 d1 x6 19:v1689x857z d1 x6 20:v27x14z d0 21:v27x14z d217 x1578 22:v27x14z d0 23:v27x14z d217 x1578 24:v2048x2048 d0 25:v2048x2048 d464 x4872 26:v2048x2048 d150 x1992 27:v2048x2048 d0 28:v64x64 d7 x144 29:v2048x2048 d0 30:v2048x2048 d1 x12990 31:v1x1z d0 32:v1x1z d0 33:v1x1z d0 34:v1689x857 d1 x6 35:v1689x857 d1 x6 36:v1689x857z d1 x6 37:v1689x857z d217 x1578 38:v1689x857 d217 x1578 39:v1689x857z d1 x6 40:v1689x857z d1 x6 41:v1689x857z d1 x6 42:v1689x857 d1 x6 43:v1689x857 d0 44:v1689x857z d1 x6 45:v1689x857z d2 x12990 46:v1689x857z d1 x12990 47:v1689x857 d1 x72 48:v1689x857z d1 x72 49:v2560x1299 d1 x6 50:v1x1z d0 51:v844x428 d1 x6 52:v422x214 d1 x6 53:v211x107 d1 x6 54:v105x53 d1 x6 55:v52x26 d1 x6 56:v26x13 d1 x6 57:v52x26 d1 x6 58:v1x1z d0 59:v1x1z d0 60:v105x53 d1 x6 61:v105x53 d1 x6 62:v211x107 d1 x6 63:v422x214 d1 x6 64:v844x428 d1 x6 65:v1x1z d0 66:v1689x857 d1 x6 67:v1689x857 d1 x6 68:v2560x1299z d1 x6 69:v2560x1299z d52 x6 70:v1024x1024 d170 x6
+[2026-10-28 16:50:17.339 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:17.339 IFO][NeuroDragon] [vv] in.color material handle=0x03FA action=1 native=0x2afb0ff6de0 entry=0x2aec61cbd60 match=0
+[2026-10-28 16:50:17.339 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x7ff709fcce00 taau=1
+[2026-10-28 16:50:17.340 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:17.340 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x7ffc00000000 taau=0
+[2026-10-28 16:50:17.341 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=0 native=0x2afb0ff9db0 view=0x0 taau=0
+[2026-10-28 16:50:17.346 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x2ae00000000 taau=0
+[2026-10-28 16:50:17.717 IFO][NeuroDragon] [vv] arg10 probe #960 native=0x2afb0ff9db0 handle=0x3fc reason=ok hits=[ 49] candidates=[ 49:r=000002AFB0FF9DB0,z=0,rt=1 68:r=000002AF9A5166E0,z=1,rt=1] copies=[] resolved=56 unresolved=0
+[2026-10-28 16:50:17.728 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:17.729 IFO][NeuroDragon] [vv] in.color material handle=0x03FC action=1 native=0x2afb0ff9db0 entry=0x2aec61cbed0 match=0
+[2026-10-28 16:50:17.729 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x7ff709fcce00 taau=1
+[2026-10-28 16:50:17.730 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:17.730 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=0 native=0x2afb0ff6de0 view=0x7ffc00000000 taau=0
+[2026-10-28 16:50:17.735 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x2af00000000 taau=0
+[2026-10-28 16:50:17.730 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x0 taau=0
+[2026-10-28 16:50:18.112 IFO][NeuroDragon] [vv] arg10 probe #961 native=0x2afb0ff6de0 handle=0x3fa reason=ok hits=[ 49] candidates=[ 49:r=000002AFB0FF6DE0,z=0,rt=1 68:r=000002AF9A5153C0,z=1,rt=1] copies=[] resolved=56 unresolved=0
+[2026-10-28 16:50:18.124 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:18.125 IFO][NeuroDragon] [vv] in.color material handle=0x03FA action=1 native=0x2afb0ff6de0 entry=0x2aec61cbd60 match=0
+[2026-10-28 16:50:18.125 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x7ff709fcce00 taau=1
+[2026-10-28 16:50:18.126 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:18.125 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x7ffc00000000 taau=0
+[2026-10-28 16:50:18.125 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=0 native=0x2afb0ff9db0 view=0x7ff700000000 taau=0
+[2026-10-28 16:50:18.131 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x2af00000000 taau=0
+[2026-10-28 16:50:18.528 IFO][NeuroDragon] [vv] arg10 probe #962 native=0x2afb0ff9db0 handle=0x3fc reason=ok hits=[ 49] candidates=[ 49:r=000002AFB0FF9DB0,z=0,rt=1 68:r=000002AF9A515D50,z=1,rt=1] copies=[] resolved=56 unresolved=0
+[2026-10-28 16:50:18.541 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:18.541 IFO][NeuroDragon] [vv] in.color material handle=0x03FC action=1 native=0x2afb0ff9db0 entry=0x2aec61cbed0 match=0
+[2026-10-28 16:50:18.541 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x7ff709fcce00 taau=1
+[2026-10-28 16:50:18.542 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:18.543 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0xce00000000 taau=0
+[2026-10-28 16:50:18.545 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=0 native=0x2afb0ff6de0 view=0x7ffc00000000 taau=0
+[2026-10-28 16:50:18.547 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x2af00000000 taau=0
+[2026-10-28 16:50:18.921 IFO][NeuroDragon] [vv] arg10 probe #963 native=0x2afb0ff6de0 handle=0x3fa reason=ok hits=[ 51] candidates=[ 51:r=000002AFB0FF6DE0,z=0,rt=1 70:r=000002AF9A5166E0,z=1,rt=1] copies=[] resolved=58 unresolved=0
+[2026-10-28 16:50:18.921 IFO][NeuroDragon] [vv] frame #963 lists=74: 1:v0x0z d0 2:v2560x1299z d0 3:v1689x857 d0 4:v1x1z d0 5:v1x1z d0 6:v128x128z d0 7:v128x128 d0 8:v128x128 d1 x6 9:v128x128z d1 x6 10:v128x128z d1 x12990 11:v1689x857 d0 12:v1689x857 d0 13:v1689x857 d0 14:v1689x857z d0 15:v1689x857z d1 x1938 16:v1689x857z d2 x1152 17:v1689x857 d0 18:v1689x857 d219 x1578 20:v1689x857 d1 x6 21:v1689x857z d1 x6 22:v27x14z d0 23:v27x14z d219 x1578 24:v27x14z d0 25:v27x14z d219 x1578 26:v2048x2048 d0 27:v2048x2048 d473 x4854 28:v2048x2048 d190 x5880 29:v2048x2048 d0 30:v64x64 d7 x36 31:v2048x2048 d0 32:v2048x2048 d1 x12990 33:v1x1z d0 34:v1x1z d0 35:v1x1z d0 36:v1689x857 d1 x6 37:v1689x857 d1 x6 38:v1689x857z d1 x6 39:v1689x857z d219 x1578 40:v1689x857 d219 x1578 41:v1689x857z d1 x6 42:v1689x857z d1 x6 43:v1689x857z d1 x6 44:v1689x857 d1 x6 45:v1689x857 d0 46:v1689x857z d1 x6 47:v1689x857z d2 x12990 48:v1689x857z d1 x12990 49:v1689x857 d1 x72 50:v1689x857z d1 x72 51:v2560x1299 d1 x6 52:v1x1z d0 53:v844x428 d1 x6 54:v422x214 d1 x6 55:v211x107 d1 x6 56:v105x53 d1 x6 57:v52x26 d1 x6 58:v26x13 d1 x6 59:v52x26 d1 x6 60:v1x1z d0 61:v1x1z d0 62:v105x53 d1 x6 63:v105x53 d1 x6 64:v211x107 d1 x6 65:v422x214 d1 x6 66:v844x428 d1 x6 67:v1x1z d0 68:v1689x857 d1 x6 69:v1689x857 d1 x6 70:v2560x1299z d1 x6 71:v2560x1299z d52 x6 72:v1024x1024 d170 x6
+[2026-10-28 16:50:18.933 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:18.934 IFO][NeuroDragon] [vv] in.color material handle=0x03FA action=1 native=0x2afb0ff6de0 entry=0x2aec61cbd60 match=0
+[2026-10-28 16:50:18.934 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x7ff709fcce00 taau=1
+[2026-10-28 16:50:18.935 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:18.936 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x7ffc00000000 taau=0
+[2026-10-28 16:50:18.935 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=0 native=0x2afb0ff9db0 view=0x7ffc00000000 taau=0
+[2026-10-28 16:50:18.940 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x2af00000000 taau=0
+[2026-10-28 16:50:19.108 IFO][NeuroDragon] [vv] arg10 probe #964 native=0x2afb0ff9db0 handle=0x3fc reason=ok hits=[ 51] candidates=[ 51:r=000002AFB0FF9DB0,z=0,rt=1 70:r=000002AF9A5153C0,z=1,rt=1] copies=[] resolved=58 unresolved=0
+[2026-10-28 16:50:19.121 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x2ae00000000 taau=0
+[2026-10-28 16:50:19.121 IFO][NeuroDragon] [vv] in.color material handle=0x040F action=1 native=0x2afb0fffd50 entry=0x2aec61ccc78 match=0
+[2026-10-28 16:50:19.122 IFO][NeuroDragon] [vv] in.color material handle=0x03FC action=1 native=0x2afb0ff9db0 entry=0x2aec61cbed0 match=0
+[2026-10-28 16:50:19.122 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FC action=1 native=0x2afb0ff9db0 view=0x7ff709fcce00 taau=1
+[2026-10-28 16:50:19.123 IFO][NeuroDragon] [vv] in.color material handle=0x0586 action=1 native=0x2afb1006680 entry=0x2aec61dda00 match=1
+[2026-10-28 16:50:19.122 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=0 native=0x2afb0ff6de0 view=0x2ae00000000 taau=0
+[2026-10-28 16:50:19.128 IFO][NeuroDragon] [vv] arg10 material caller=0x7ff712c65a24 handle=0x03FA action=1 native=0x2afb0ff6de0 view=0x2af00000000 taau=0
+[2026-10-28 16:50:19.386 IFO][NeuroDragon] [vv] tex res=0x2af882036f0 64x64 fmt=10 src=committed
+[2026-10-28 16:50:19.386 IFO][NeuroDragon] [vv] rtv res=0x2af874f6070 32x32 fmt=10 flags=0x1
+[2026-10-28 16:50:19.386 IFO][NeuroDragon] [vv] rtv res=0x2af882036f0 64x64 fmt=10 flags=0x1
+[2026-10-28 16:50:19.394 IFO][NeuroDragon] [vv] arg10 probe #965 native=0x2afb0ff6de0 handle=0x3fa reason=ok hits=[ 84] candidates=[ 84:r=000002AFB0FF6DE0,z=0,rt=1 103:r=000002AF9A515D50,z=1,rt=1] copies=[] resolved=91 unresolved=0

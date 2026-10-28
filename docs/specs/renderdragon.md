@@ -7,6 +7,10 @@
 > **不回答**：NR/SR 的具体接法（[nr](nr.md) / [sr](sr.md)）、VV 迁移路线（[vv](vv.md)）。
 > 原始证据与逐条推理在 [research/2026-10-22-renderdragon-passmap.md](../research/2026-10-22-renderdragon-passmap.md)，
 > 归档的旧 `A` 同文。
+>
+> **2026-10-28 TAAU 算法复核**：完整 CPU 与 shader 拆解见
+> [TAAU decompiled](../research/2026-10-28-taau-decompiled.md)。早期把“上传 VP uniform”推断为“shader 靠深度 + VP
+> 重建 MV”的说法已证伪；TAAU 实际读取独立 MV 纹理的 `.zw`，不绑深度。
 
 ## 0. 一句话
 
