@@ -1,0 +1,108 @@
+[2026-10-28 23:48:00.580 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:00.581 IFO][NeuroDragon] [vv] chain: now buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:01.271 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:01.339 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:01.349 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:01.360 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:01.551 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:11.403 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:17.723 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 23:48:17.738 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c045493e0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 23:48:19.714 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:19.728 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c045493e0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 23:48:19.729 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:19.738 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c045493e0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 23:48:19.738 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:22.973 IFO][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x27c045493e0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:26.668 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c045493e0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 23:48:26.669 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:29.298 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 23:48:31.869 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:48:31.869 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:48:31.869 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:48:31.870 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:48:32.018 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 2560x1369 fmt=28 flags=0x42 | chain buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:32.018 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0xcbe3ffd250
+[2026-10-28 23:48:32.018 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:48:32.018 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:48:32.018 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:48:32.022 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:48:32.098 IFO][NeuroDragon] [vv] chain: now buffers=3 2560x1369 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:34.262 IFO][NeuroDragon] [vv] arg11 mv material handle=0x02C8 native=0x27c4541def0 1689x903 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:34.418 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c4541def0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 23:48:34.418 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:35.755 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:48:35.755 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:48:35.755 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:48:35.755 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:48:35.852 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 1164x686 fmt=28 flags=0x42 | chain buffers=3 2560x1369 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:35.852 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0xcbe3efd160
+[2026-10-28 23:48:35.852 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:48:35.852 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:48:35.852 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:48:35.857 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:48:35.966 IFO][NeuroDragon] [vv] chain: now buffers=3 1164x686 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:39.567 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:48:39.567 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:48:39.567 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:48:39.567 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:48:39.644 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 771x508 fmt=28 flags=0x42 | chain buffers=3 1164x686 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:39.644 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0xcbe3efd160
+[2026-10-28 23:48:39.644 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:48:39.644 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:48:39.644 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:48:39.647 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:48:39.742 IFO][NeuroDragon] [vv] chain: now buffers=3 771x508 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:44.164 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 23:48:44.313 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c0474b0a0 fmt=10 layout=zw (508x335, pixels current->previous)
+[2026-10-28 23:48:44.314 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 771x508 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:48.099 IFO][NeuroDragon] [vv] arg11 mv material handle=0x02AD native=0x27c0474b0a0 508x335 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:51.559 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c0474b0a0 fmt=10 layout=zw (508x335, pixels current->previous)
+[2026-10-28 23:48:51.561 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 771x508 fmt=26 eval=1 mv=engine
+[2026-10-28 23:48:53.380 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:48:53.380 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:48:53.380 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:48:53.381 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:48:53.476 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 2560x1440 fmt=28 flags=0x42 | chain buffers=3 771x508 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:53.476 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0xcbe3efd160
+[2026-10-28 23:48:53.476 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:48:53.476 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:48:53.476 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:48:53.479 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:48:53.559 IFO][NeuroDragon] [vv] chain: now buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:55.658 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:48:55.658 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:48:55.658 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:48:55.659 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:48:55.736 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 771x508 fmt=28 flags=0x42 | chain buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:55.736 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0xcbe3efd160
+[2026-10-28 23:48:55.736 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:48:55.736 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:48:55.736 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:48:55.739 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:48:55.819 IFO][NeuroDragon] [vv] chain: now buffers=3 771x508 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:48:59.708 IFO][NeuroDragon] [vv] arg11 mv material handle=0x02B2 native=0x27c060009a0 508x335 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:48:59.884 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c060009a0 fmt=10 layout=zw (508x335, pixels current->previous)
+[2026-10-28 23:48:59.901 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 771x508 fmt=26 eval=1 mv=engine
+[2026-10-28 23:49:07.039 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c060009a0 fmt=10 layout=zw (508x335, pixels current->previous)
+[2026-10-28 23:49:07.040 IFO][NeuroDragon] [vvsr] sr arg10 #3600: 771x508 fmt=26 eval=1 mv=engine
+[2026-10-28 23:49:11.060 IFO][NeuroDragon] [vv] arg11 mv material handle=0x02B2 native=0x27c060009a0 508x335 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:49:14.680 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c060009a0 fmt=10 layout=zw (508x335, pixels current->previous)
+[2026-10-28 23:49:14.680 IFO][NeuroDragon] [vvsr] sr arg10 #4200: 771x508 fmt=26 eval=1 mv=engine
+[2026-10-28 23:49:33.477 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:49:33.477 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:49:33.477 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:49:33.483 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:49:33.702 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 2560x1440 fmt=28 flags=0x42 | chain buffers=3 771x508 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:49:33.702 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0xcbe3efd160
+[2026-10-28 23:49:33.702 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:49:33.702 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:49:33.702 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:49:33.707 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:49:33.806 IFO][NeuroDragon] [vv] chain: now buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:49:43.443 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0C68 native=0x27c67f5bdb0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:49:43.665 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c67f5bdb0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 23:49:43.666 IFO][NeuroDragon] [vvsr] sr arg10 #4800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 23:49:49.513 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 23:49:51.299 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27c67f5bdb0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 23:49:51.300 IFO][NeuroDragon] [vvsr] sr arg10 #5400: 2560x1440 fmt=26 eval=1 mv=engine

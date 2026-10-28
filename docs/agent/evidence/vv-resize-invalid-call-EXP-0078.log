@@ -1,0 +1,207 @@
+[2026-10-28 23:34:19.868 IFO][NeuroDragon] [vv] long frame 781.6 ms at present #271
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b901d0 1689x920 fmt=28 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] dsv res=0x13098b8d200 1689x920 fmt=44
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b92810 1689x920 fmt=11 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b914f0 1689x920 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b91e80 1689x920 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b931a0 1689x920 fmt=54 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b944c0 1689x920 fmt=12 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b93b30 1689x920 fmt=28 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b90b60 1689x920 fmt=10 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] dsv res=0x13098b96530 1689x920 fmt=44
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b96ec0 1689x920 fmt=41 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b981e0 1689x920 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b8eeb0 2560x1394 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b95210 844x460 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b98b70 422x230 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b95ba0 211x115 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b99e90 105x57 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b9a820 105x57 fmt=54 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b9b1b0 1689x920 fmt=26 flags=0x1
+[2026-10-28 23:34:19.882 IFO][NeuroDragon] [vv] rtv res=0x13098b9c4d0 1689x920 fmt=26 flags=0x1
+[2026-10-28 23:34:19.886 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:34:19.961 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 2560x1394 fmt=28 flags=0x42 | chain buffers=3 2560x1369 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:34:19.961 IFO][NeuroDragon] [vv] resize: back buffer 0 other refs=0
+[2026-10-28 23:34:19.961 IFO][NeuroDragon] [vv] resize: back buffer 1 other refs=0
+[2026-10-28 23:34:19.961 IFO][NeuroDragon] [vv] resize: back buffer 2 other refs=0
+[2026-10-28 23:34:19.961 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x8febfd0b0
+[2026-10-28 23:34:19.965 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:34:19.965 IFO][NeuroDragon] [vv] rtv res=0x130958f3130 2560x1394 fmt=28 flags=0x1
+[2026-10-28 23:34:19.965 IFO][NeuroDragon] [vv] rtv res=0x130958f3ac0 2560x1394 fmt=28 flags=0x1
+[2026-10-28 23:34:19.965 IFO][NeuroDragon] [vv] rtv res=0x130958f4450 2560x1394 fmt=28 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] tex res=0x130958f5770 2560x1394 fmt=45 src=committed
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] dsv res=0x130958f5770 2560x1394 fmt=45
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef5850 1689x903 fmt=28 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] dsv res=0x12f85ef6b70 1689x903 fmt=44
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef4530 1689x903 fmt=11 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef4ec0 1689x903 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef7500 1689x903 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef91b0 1689x903 fmt=54 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85efa4d0 1689x903 fmt=12 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef7e90 1689x903 fmt=28 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef9b40 1689x903 fmt=10 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] dsv res=0x12f85efae60 1689x903 fmt=44
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85ef8820 1689x903 fmt=41 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85efde30 1689x903 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85efc180 844x451 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85efd4a0 422x225 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85efe7c0 211x112 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85effae0 105x56 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85eff150 52x28 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85efcb10 26x14 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85f00470 105x56 fmt=54 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85f02ab0 1689x903 fmt=26 flags=0x1
+[2026-10-28 23:34:19.966 IFO][NeuroDragon] [vv] rtv res=0x12f85f01790 1689x903 fmt=26 flags=0x1
+[2026-10-28 23:34:19.973 IFO][NeuroDragon] [vv] arg10 probe #271 native=0x0 handle=0xffff reason=notSampled hits=[] candidates=[] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:19.973 IFO][NeuroDragon] [vv] frame #271 lists=47: 0:v0x0z d0 1:v2560x1394z d0 2:v1689x920 d0 3:v1x1z d0 4:v1x1z d0 5:v1689x920 d0 6:v1689x920 d0 7:v1689x920 d0 8:v1689x920z d0 9:v1689x920 d0 11:v1689x920 d1 x6 12:v1689x920z d1 x6 13:v1x1z d0 14:v1x1z d0 15:v1689x920 d1 x6 16:v1689x920 d1 x6 17:v1689x920z d1 x6 18:v1689x920z d1 x6 19:v1689x920z d1 x6 20:v1689x920z d1 x6 21:v1689x920 d1 x6 22:v1689x920 d0 23:v1689x920z d1 x36 24:v2560x1394 d1 x6 25:v1x1z d0 26:v844x460 d1 x6 27:v422x230 d1 x6 28:v211x115 d1 x6 29:v105x57 d1 x6 30:v52x28 d1 x6 31:v26x14 d1 x6 32:v52x28 d1 x6 33:v1x1z d0 34:v1x1z d0 35:v105x57 d1 x6 36:v105x57 d1 x6 37:v211x115 d1 x6 38:v422x230 d1 x6 39:v844x460 d1 x6 40:v1x1z d0 41:v1689x920 d1 x6 42:v1689x920 d1 x6 43:v2560x1394z d1 x6 44:v2560x1394z d38 x6 45:v1x1z d0
+[2026-10-28 23:34:19.977 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0706 native=0x13098b90b60 1689x920 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:34:19.993 IFO][NeuroDragon] [vv] chain: now buffers=3 2560x1394 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:34:19.993 IFO][NeuroDragon] [vv] back-buffer view handles=2 (chain buffers=2, rtv views=342)
+[2026-10-28 23:34:19.993 IFO][NeuroDragon] [vv] long frame 125.4 ms at present #272
+[2026-10-28 23:34:20.014 IFO][NeuroDragon] [vv] tex res=0x13099194910 1024x2048 fmt=28 src=committed
+[2026-10-28 23:34:20.022 IFO][NeuroDragon] [vv] rtv res=0x13098b8f840 2560x1394 fmt=26 flags=0x1
+[2026-10-28 23:34:20.023 IFO][NeuroDragon] [vv] arg10 probe #272 native=0x13098b8f840 handle=0x6fe reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8F840,z=0,rt=1 44:r=00000130958F3AC0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.023 IFO][NeuroDragon] [vv] frame #272 lists=48: 1:v0x0z d0 2:v2560x1394z d0 3:v1689x920 d0 4:v1x1z d0 5:v1x1z d0 6:v1689x920 d0 7:v1689x920 d0 8:v1689x920 d0 9:v1689x920z d0 10:v1689x920 d0 12:v1689x920 d1 x6 13:v1689x920z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v1689x920 d1 x6 17:v1689x920 d1 x6 18:v1689x920z d1 x6 19:v1689x920z d1 x6 20:v1689x920z d1 x6 21:v1689x920z d1 x6 22:v1689x920 d1 x6 23:v1689x920 d0 24:v1689x920z d1 x36 25:v2560x1394 d1 x6 26:v1x1z d0 27:v844x460 d1 x6 28:v422x230 d1 x6 29:v211x115 d1 x6 30:v105x57 d1 x6 31:v52x28 d1 x6 32:v26x14 d1 x6 33:v52x28 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v105x57 d1 x6 37:v105x57 d1 x6 38:v211x115 d1 x6 39:v422x230 d1 x6 40:v844x460 d1 x6 41:v1x1z d0 42:v1689x920 d1 x6 43:v1689x920 d1 x6 44:v2560x1394z d1 x6 45:v2560x1394z d38 x6 46:v1x1z d0
+[2026-10-28 23:34:20.026 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0706 native=0x13098b90b60 1689x920 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:34:20.043 IFO][NeuroDragon] [vv] long frame 49.4 ms at present #273
+[2026-10-28 23:34:20.047 IFO][NeuroDragon] [vv] arg10 probe #273 native=0x13098b8eeb0 handle=0x48 reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8EEB0,z=0,rt=1 44:r=00000130958F4450,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.049 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0706 native=0x13098b90b60 1689x920 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:34:20.067 IFO][NeuroDragon] [vv] arg10 probe #274 native=0x13098b8f840 handle=0x6fe reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8F840,z=0,rt=1 44:r=00000130958F3130,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.072 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0706 native=0x13098b90b60 1689x920 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:34:20.090 IFO][NeuroDragon] [vv] tex res=0x13094c96090 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.090 IFO][NeuroDragon] [vv] tex res=0x13094c9a380 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.090 IFO][NeuroDragon] [vv] tex res=0x13094c999f0 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.090 IFO][NeuroDragon] [vv] tex res=0x13094c9ad10 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.092 IFO][NeuroDragon] [vv] arg10 probe #275 native=0x13098b8eeb0 handle=0x48 reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8EEB0,z=0,rt=1 44:r=00000130958F3AC0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.095 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0706 native=0x13098b90b60 1689x920 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:34:20.116 IFO][NeuroDragon] [vv] long frame 26.0 ms at present #276
+[2026-10-28 23:34:20.116 IFO][NeuroDragon] [vv] tex res=0x13094c9c030 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.124 IFO][NeuroDragon] [vv] arg10 probe #276 native=0x13098b8f840 handle=0x6fe reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8F840,z=0,rt=1 44:r=00000130958F4450,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.127 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0706 native=0x13098b90b60 1689x920 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 23:34:20.147 IFO][NeuroDragon] [vv] tex res=0x130832cb3b0 360x68 fmt=28 src=placed
+[2026-10-28 23:34:20.147 IFO][NeuroDragon] [vv] tex res=0x130832cbd40 360x68 fmt=28 src=placed
+[2026-10-28 23:34:20.147 IFO][NeuroDragon] [vv] tex res=0x130832caa20 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.147 IFO][NeuroDragon] [vv] tex res=0x130832cd060 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.147 IFO][NeuroDragon] [vv] tex res=0x130832ca090 256x256 fmt=28 src=placed
+[2026-10-28 23:34:20.153 IFO][NeuroDragon] [vv] arg10 probe #277 native=0x13098b8eeb0 handle=0x48 reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8EEB0,z=0,rt=1 44:r=00000130958F3130,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.177 IFO][NeuroDragon] [vv] tex res=0x1308fbfba60 360x68 fmt=28 src=placed
+[2026-10-28 23:34:20.177 IFO][NeuroDragon] [vv] tex res=0x1308fbfcd80 360x68 fmt=28 src=placed
+[2026-10-28 23:34:20.182 IFO][NeuroDragon] [vv] arg10 probe #278 native=0x13098b8f840 handle=0x6fe reason=ok hits=[ 25] candidates=[ 25:r=0000013098B8F840,z=0,rt=1 44:r=00000130958F3AC0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:20.347 IFO][NeuroDragon] [vv] taau #300 viewport=2560x1394+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=1 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=601 lists=14652
+[2026-10-28 23:34:22.374 IFO][NeuroDragon] [vv] tex res=0x1306886eb40 1133x895 fmt=26 src=committed
+[2026-10-28 23:34:22.375 IFO][NeuroDragon] [vv] tex res=0x13068871180 1133x895 fmt=26 src=committed
+[2026-10-28 23:34:22.376 IFO][NeuroDragon] [vv] tex res=0x1306886f4d0 747x590 fmt=28 src=committed
+[2026-10-28 23:34:22.377 IFO][NeuroDragon] [vv] tex res=0x130688737c0 747x590 fmt=44 src=committed
+[2026-10-28 23:34:22.377 IFO][NeuroDragon] [vv] tex res=0x13068872e30 747x590 fmt=26 src=committed
+[2026-10-28 23:34:22.377 IFO][NeuroDragon] [vv] tex res=0x13068875470 747x590 fmt=26 src=committed
+[2026-10-28 23:34:22.378 IFO][NeuroDragon] [vv] tex res=0x13068875e00 747x590 fmt=11 src=committed
+[2026-10-28 23:34:22.378 IFO][NeuroDragon] [vv] tex res=0x13068874150 747x590 fmt=54 src=committed
+[2026-10-28 23:34:22.378 IFO][NeuroDragon] [vv] tex res=0x13068874ae0 747x590 fmt=28 src=committed
+[2026-10-28 23:34:22.379 IFO][NeuroDragon] [vv] tex res=0x130b7b6a060 747x590 fmt=10 src=committed
+[2026-10-28 23:34:22.379 IFO][NeuroDragon] [vv] tex res=0x130b7b6b380 747x590 fmt=12 src=committed
+[2026-10-28 23:34:22.380 IFO][NeuroDragon] [vv] tex res=0x130b7b6d030 747x590 fmt=44 src=committed
+[2026-10-28 23:34:22.380 IFO][NeuroDragon] [vv] tex res=0x130b7b6bd10 747x590 fmt=44 src=committed
+[2026-10-28 23:34:22.381 IFO][NeuroDragon] [vv] tex res=0x130b7b6c6a0 747x590 fmt=41 src=committed
+[2026-10-28 23:34:22.381 IFO][NeuroDragon] [vv] tex res=0x130b7b6a9f0 747x590 fmt=26 src=committed
+[2026-10-28 23:34:22.381 IFO][NeuroDragon] [vv] tex res=0x130b7844c60 373x295 fmt=26 src=committed
+[2026-10-28 23:34:22.381 IFO][NeuroDragon] [vv] tex res=0x130b78472a0 186x147 fmt=26 src=committed
+[2026-10-28 23:34:22.383 IFO][NeuroDragon] [vv] tex res=0x130b7847c30 93x73 fmt=26 src=committed
+[2026-10-28 23:34:22.384 IFO][NeuroDragon] [vv] tex res=0x130b7ba2ce0 747x590 fmt=26 src=committed
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] tex res=0x130b7ba3670 747x590 fmt=26 src=committed
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x1306886f4d0 747x590 fmt=28 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] dsv res=0x130688737c0 747x590 fmt=44
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x13068875e00 747x590 fmt=11 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x13068872e30 747x590 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x13068875470 747x590 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x13068874150 747x590 fmt=54 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7b6b380 747x590 fmt=12 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x13068874ae0 747x590 fmt=28 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7b6a060 747x590 fmt=10 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] dsv res=0x130b7b6d030 747x590 fmt=44
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7b6c6a0 747x590 fmt=41 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7b6a9f0 747x590 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x1306886eb40 1133x895 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7844c60 373x295 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b78472a0 186x147 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7847c30 93x73 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b78455f0 46x36 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7845f80 23x18 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7846910 11x9 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7ba19c0 46x36 fmt=54 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7ba2ce0 747x590 fmt=26 flags=0x1
+[2026-10-28 23:34:22.385 IFO][NeuroDragon] [vv] rtv res=0x130b7ba3670 747x590 fmt=26 flags=0x1
+[2026-10-28 23:34:22.388 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:34:22.458 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 1133x895 fmt=28 flags=0x42 | chain buffers=3 2560x1394 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:34:22.458 IFO][NeuroDragon] [vv] resize: back buffer 0 other refs=0
+[2026-10-28 23:34:22.458 IFO][NeuroDragon] [vv] resize: back buffer 1 other refs=0
+[2026-10-28 23:34:22.458 IFO][NeuroDragon] [vv] resize: back buffer 2 other refs=0
+[2026-10-28 23:34:22.458 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x8febfd0b0
+[2026-10-28 23:34:22.461 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:34:22.461 IFO][NeuroDragon] [vv] rtv res=0x13088a8f3c0 1133x895 fmt=28 flags=0x1
+[2026-10-28 23:34:22.461 IFO][NeuroDragon] [vv] rtv res=0x13088a8fd50 1133x895 fmt=28 flags=0x1
+[2026-10-28 23:34:22.461 IFO][NeuroDragon] [vv] rtv res=0x13088a8e0a0 1133x895 fmt=28 flags=0x1
+[2026-10-28 23:34:22.462 IFO][NeuroDragon] [vv] tex res=0x13088a8ea30 1133x895 fmt=45 src=committed
+[2026-10-28 23:34:22.462 IFO][NeuroDragon] [vv] dsv res=0x13088a8ea30 1133x895 fmt=45
+[2026-10-28 23:34:22.469 IFO][NeuroDragon] [vv] arg10 probe #429 native=0x13098b8f840 handle=0x6fe reason=ok hits=[] candidates=[] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.469 IFO][NeuroDragon] [vv] frame #429 lists=47: 0:v0x0z d0 1:v1133x895z d0 2:v747x590 d0 3:v1x1z d0 4:v1x1z d0 5:v747x590 d0 6:v747x590 d0 7:v747x590 d0 8:v747x590z d0 9:v747x590 d0 11:v747x590 d1 x6 12:v747x590z d1 x6 13:v1x1z d0 14:v1x1z d0 15:v747x590 d1 x6 16:v747x590 d1 x6 17:v747x590z d1 x6 18:v747x590z d1 x6 19:v747x590z d1 x6 20:v747x590z d1 x6 21:v747x590 d1 x6 22:v747x590 d0 23:v747x590z d1 x36 24:v1133x895 d1 x6 25:v1x1z d0 26:v373x295 d1 x6 27:v186x147 d1 x6 28:v93x73 d1 x6 29:v46x36 d1 x6 30:v23x18 d1 x6 31:v11x9 d1 x6 32:v23x18 d1 x6 33:v1x1z d0 34:v1x1z d0 35:v46x36 d1 x6 36:v46x36 d1 x6 37:v93x73 d1 x6 38:v186x147 d1 x6 39:v373x295 d1 x6 40:v1x1z d0 41:v747x590 d1 x6 42:v747x590 d1 x6 43:v1133x895z d1 x6 44:v1133x895z d51 x6 45:v1x1z d0
+[2026-10-28 23:34:22.496 IFO][NeuroDragon] [vv] chain: now buffers=3 1133x895 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:34:22.517 IFO][NeuroDragon] [vv] tex res=0x12f83d56a30 1024x2048 fmt=28 src=committed
+[2026-10-28 23:34:22.523 IFO][NeuroDragon] [vv] rtv res=0x13068871180 1133x895 fmt=26 flags=0x1
+[2026-10-28 23:34:22.528 IFO][NeuroDragon] [vv] arg10 probe #430 native=0x13068871180 handle=0x31 reason=ok hits=[ 25] candidates=[ 25:r=0000013068871180,z=0,rt=1 44:r=0000013088A8FD50,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.528 IFO][NeuroDragon] [vv] frame #430 lists=48: 1:v0x0z d0 2:v1133x895z d0 3:v747x590 d0 4:v1x1z d0 5:v1x1z d0 6:v747x590 d0 7:v747x590 d0 8:v747x590 d0 9:v747x590z d0 10:v747x590 d0 12:v747x590 d1 x6 13:v747x590z d1 x6 14:v1x1z d0 15:v1x1z d0 16:v747x590 d1 x6 17:v747x590 d1 x6 18:v747x590z d1 x6 19:v747x590z d1 x6 20:v747x590z d1 x6 21:v747x590z d1 x6 22:v747x590 d1 x6 23:v747x590 d0 24:v747x590z d1 x36 25:v1133x895 d1 x6 26:v1x1z d0 27:v373x295 d1 x6 28:v186x147 d1 x6 29:v93x73 d1 x6 30:v46x36 d1 x6 31:v23x18 d1 x6 32:v11x9 d1 x6 33:v23x18 d1 x6 34:v1x1z d0 35:v1x1z d0 36:v46x36 d1 x6 37:v46x36 d1 x6 38:v93x73 d1 x6 39:v186x147 d1 x6 40:v373x295 d1 x6 41:v1x1z d0 42:v747x590 d1 x6 43:v747x590 d1 x6 44:v1133x895z d1 x6 45:v1133x895z d51 x6 46:v1x1z d0
+[2026-10-28 23:34:22.561 IFO][NeuroDragon] [vv] arg10 probe #431 native=0x1306886eb40 handle=0x30 reason=ok hits=[ 25] candidates=[ 25:r=000001306886EB40,z=0,rt=1 44:r=0000013088A8E0A0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.591 IFO][NeuroDragon] [vv] arg10 probe #432 native=0x13068871180 handle=0x31 reason=ok hits=[ 25] candidates=[ 25:r=0000013068871180,z=0,rt=1 44:r=0000013088A8F3C0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.628 IFO][NeuroDragon] [vv] arg10 probe #433 native=0x1306886eb40 handle=0x30 reason=ok hits=[ 25] candidates=[ 25:r=000001306886EB40,z=0,rt=1 44:r=0000013088A8FD50,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.659 IFO][NeuroDragon] [vv] arg10 probe #434 native=0x13068871180 handle=0x31 reason=ok hits=[ 25] candidates=[ 25:r=0000013068871180,z=0,rt=1 44:r=0000013088A8E0A0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.680 IFO][NeuroDragon] [vv] tex res=0x130899caa30 256x256 fmt=28 src=placed
+[2026-10-28 23:34:22.687 IFO][NeuroDragon] [vv] arg10 probe #435 native=0x1306886eb40 handle=0x30 reason=ok hits=[ 25] candidates=[ 25:r=000001306886EB40,z=0,rt=1 44:r=0000013088A8F3C0,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.714 IFO][NeuroDragon] [vv] tex res=0x1309a3380b0 256x256 fmt=28 src=placed
+[2026-10-28 23:34:22.717 IFO][NeuroDragon] [vv] arg10 probe #436 native=0x13068871180 handle=0x31 reason=ok hits=[ 25] candidates=[ 25:r=0000013068871180,z=0,rt=1 44:r=0000013088A8FD50,z=1,rt=1] copies=[] resolved=42 unresolved=0
+[2026-10-28 23:34:22.720 IFO][NeuroDragon] [vv] tex res=0x1308cdbdd40 256x256 fmt=28 src=placed
+[2026-10-28 23:34:25.556 IFO][NeuroDragon] [vv] tex res=0x1308cf650a0 464x231 fmt=26 src=committed
+[2026-10-28 23:34:25.557 IFO][NeuroDragon] [vv] tex res=0x130b7af1b50 464x231 fmt=26 src=committed
+[2026-10-28 23:34:25.559 IFO][NeuroDragon] [vv] tex res=0x130b7af2e70 306x152 fmt=28 src=committed
+[2026-10-28 23:34:25.559 IFO][NeuroDragon] [vv] tex res=0x130b7aefea0 306x152 fmt=44 src=committed
+[2026-10-28 23:34:25.560 IFO][NeuroDragon] [vv] tex res=0x130b7af0830 306x152 fmt=26 src=committed
+[2026-10-28 23:34:25.560 IFO][NeuroDragon] [vv] tex res=0x130b7af54b0 306x152 fmt=26 src=committed
+[2026-10-28 23:34:25.560 IFO][NeuroDragon] [vv] tex res=0x130b7af5e40 306x152 fmt=11 src=committed
+[2026-10-28 23:34:25.561 IFO][NeuroDragon] [vv] tex res=0x130b7af67d0 306x152 fmt=54 src=committed
+[2026-10-28 23:34:25.561 IFO][NeuroDragon] [vv] tex res=0x130b7af3800 306x152 fmt=28 src=committed
+[2026-10-28 23:34:25.562 IFO][NeuroDragon] [vv] tex res=0x130b7af7160 306x152 fmt=10 src=committed
+[2026-10-28 23:34:25.562 IFO][NeuroDragon] [vv] tex res=0x130b7af4190 306x152 fmt=12 src=committed
+[2026-10-28 23:34:25.562 IFO][NeuroDragon] [vv] tex res=0x130b7af4b20 306x152 fmt=44 src=committed
+[2026-10-28 23:34:25.563 IFO][NeuroDragon] [vv] tex res=0x130b7b5bd10 306x152 fmt=44 src=committed
+[2026-10-28 23:34:25.563 IFO][NeuroDragon] [vv] tex res=0x130b7b5b380 306x152 fmt=41 src=committed
+[2026-10-28 23:34:25.564 IFO][NeuroDragon] [vv] tex res=0x130b7b5a060 306x152 fmt=26 src=committed
+[2026-10-28 23:34:25.564 IFO][NeuroDragon] [vv] tex res=0x130b7b5c6a0 153x76 fmt=26 src=committed
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] tex res=0x130b7b5e350 306x152 fmt=26 src=committed
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] tex res=0x130b7b5ece0 306x152 fmt=26 src=committed
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af2e70 306x152 fmt=28 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af5e40 306x152 fmt=11 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af0830 306x152 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af54b0 306x152 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af67d0 306x152 fmt=54 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af4190 306x152 fmt=12 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af3800 306x152 fmt=28 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7af7160 306x152 fmt=10 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5b380 306x152 fmt=41 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5a060 306x152 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x1308cf650a0 464x231 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5c6a0 153x76 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5d9c0 76x38 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5d030 38x19 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5a9f0 19x9 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b60990 9x4 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b61320 4x2 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5f670 19x9 fmt=54 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5e350 306x152 fmt=26 flags=0x1
+[2026-10-28 23:34:25.566 IFO][NeuroDragon] [vv] rtv res=0x130b7b5ece0 306x152 fmt=26 flags=0x1
+[2026-10-28 23:34:25.569 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:34:25.637 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 464x231 fmt=28 flags=0x42 | chain buffers=3 1133x895 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:34:25.637 IFO][NeuroDragon] [vv] resize: back buffer 0 other refs=1
+[2026-10-28 23:34:25.637 IFO][NeuroDragon] [vv] resize: back buffer 1 other refs=1
+[2026-10-28 23:34:25.637 IFO][NeuroDragon] [vv] resize: back buffer 2 other refs=1
+[2026-10-28 23:34:25.637 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x8febfd0b0
+[2026-10-28 23:34:25.637 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x887A0001
+[2026-10-28 23:34:25.638 IFO][NeuroDragon] [vv] taau #600 viewport=464x231+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=13 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=1203 lists=29308
+[2026-10-28 23:34:25.640 IFO][NeuroDragon] [vv] taau draw #600 self=0x1308d15b810 tid=27520 qpc=332875498130

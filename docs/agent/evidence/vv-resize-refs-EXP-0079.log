@@ -1,0 +1,66 @@
+[2026-10-28 23:41:36.635 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:41:36.635 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:41:36.635 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:41:36.635 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:41:36.711 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 464x231 fmt=28 flags=0x42 | chain buffers=3 802x656 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:36.711 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x65340fd330
+[2026-10-28 23:41:36.711 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:41:36.711 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:41:36.711 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:41:36.715 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:41:36.747 IFO][NeuroDragon] [vv] chain: now buffers=3 464x231 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:46.555 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:41:46.555 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:41:46.555 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:41:46.555 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:41:46.630 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 1237x700 fmt=28 flags=0x42 | chain buffers=3 464x231 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:46.630 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x65340fd330
+[2026-10-28 23:41:46.630 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:41:46.630 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:41:46.630 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:41:46.633 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:41:46.666 IFO][NeuroDragon] [vv] chain: now buffers=3 1237x700 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:48.758 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:41:48.758 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:41:48.758 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:41:48.758 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:41:48.838 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 464x231 fmt=28 flags=0x42 | chain buffers=3 1237x700 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:48.838 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x65340fd330
+[2026-10-28 23:41:48.838 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:41:48.838 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:41:48.838 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:41:48.841 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:41:48.877 IFO][NeuroDragon] [vv] chain: now buffers=3 464x231 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:51.618 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:41:51.618 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:41:51.618 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:41:51.618 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:41:51.691 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 1909x942 fmt=28 flags=0x42 | chain buffers=3 464x231 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:51.691 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x65340fd330
+[2026-10-28 23:41:51.691 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:41:51.691 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:41:51.691 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:41:51.695 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:41:51.724 IFO][NeuroDragon] [vv] chain: now buffers=3 1909x942 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:56.268 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:41:56.268 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:41:56.268 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:41:56.268 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:41:56.343 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 464x231 fmt=28 flags=0x42 | chain buffers=3 1909x942 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:56.343 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x65340fd330
+[2026-10-28 23:41:56.343 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:41:56.343 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:41:56.343 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:41:56.345 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:41:56.373 IFO][NeuroDragon] [vv] chain: now buffers=3 464x231 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:59.288 IFO][NeuroDragon] [vv] resize: entry back buffer 0 other refs=1
+[2026-10-28 23:41:59.288 IFO][NeuroDragon] [vv] resize: entry back buffer 1 other refs=1
+[2026-10-28 23:41:59.288 IFO][NeuroDragon] [vv] resize: entry back buffer 2 other refs=1
+[2026-10-28 23:41:59.288 IFO][NeuroDragon] [vv] resize: released the old render-graph inventory
+[2026-10-28 23:41:59.360 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 req buffers=3 2560x1440 fmt=28 flags=0x42 | chain buffers=3 464x231 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-28 23:41:59.360 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 nodeMask=0x1 presentQueue=0x65341fd310
+[2026-10-28 23:41:59.360 IFO][NeuroDragon] [vv] resize: forward back buffer 0 other refs=0
+[2026-10-28 23:41:59.360 IFO][NeuroDragon] [vv] resize: forward back buffer 1 other refs=0
+[2026-10-28 23:41:59.360 IFO][NeuroDragon] [vv] resize: forward back buffer 2 other refs=0
+[2026-10-28 23:41:59.365 IFO][NeuroDragon] [vv] resize: ResizeBuffers1 -> hr=0x00000000
+[2026-10-28 23:41:59.397 IFO][NeuroDragon] [vv] chain: now buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20

@@ -579,6 +579,12 @@ void markDrew(void* list) {
 // must never be AddRef'd (ResizeBuffers would fail and the engine aborts); the
 // size gate below already excludes them, but this is the exact test when the
 // chain is known.
+//
+// The chain here has 2 or 3 buffers: MCBE presents a 3-buffer flip chain since
+// 2026-10-28 23:34 (EXP-0078), and asking for only two left the third back buffer
+// unrecognised - its RTV then entered gHeld with a reference, ResizeBuffers answered
+// DXGI_ERROR_INVALID_CALL and the engine aborted (0xC0000409). Four slots cover the
+// chain and leave room for a driver that adds one.
 bool isSwapChainBuffer(void* resource) {
     if (!resource) {
         return false;
@@ -587,8 +593,8 @@ bool isSwapChainBuffer(void* resource) {
     if (!chain) {
         return false;
     }
-    void*    buffers[2]{};
-    unsigned const count = swapChainBuffers(chain, buffers, 2);
+    void*    buffers[4]{};
+    unsigned const count = swapChainBuffers(chain, buffers, 4);
     bool     found = false;
     for (unsigned i = 0; i < count; ++i) {
         if (buffers[i] == resource) {
@@ -1931,31 +1937,50 @@ LL_STATIC_HOOK(
         if (peek(resource, 0, handle) && handle != kHandleInvalid) {
             TextureLookup const lookup = lookupTextureNative(handle);
             if (gInTaauDraw) {
-                RenderTargetInfo targets[48]{};
-                unsigned const   count = renderTargets(targets, 48, 64);
-                bool             matched = false;
-                bool             inRtv   = false;
-                RenderTargetInfo mvTarget{};
-                for (unsigned i = 0; lookup.native && i < count; ++i) {
-                    if (targets[i].resource != lookup.native) {
-                        continue;
+                // Classify the bound texture by its own description instead of by whether
+                // it is still in the RTV ring. A rebuild creates several hundred views,
+                // and the ring holds 128: the older entries (the ones the TAAU draw binds)
+                // are evicted before the draw runs. That is how the motion vectors stopped
+                // being captured after the 2026-10-28 23:11 world re-entry - the resize
+                // cleared gMotionVectorNative, nothing refilled it, and every SR frame was
+                // skipped for the rest of the session ("no usable arg11 ... native=0x0").
+                RenderTargetInfo detail{};
+                bool             inRtv = false;
+                if (lookup.native) {
+                    auto const info = nr::describe(lookup.native);
+                    detail.resource = lookup.native;
+                    detail.width    = static_cast<unsigned>(info.width);
+                    detail.height   = static_cast<unsigned>(info.height);
+                    detail.format   = static_cast<unsigned>(info.format);
+                    RenderTargetInfo ring[48]{};
+                    unsigned const   count = renderTargets(ring, 48, 64);
+                    for (unsigned i = 0; i < count; ++i) {
+                        if (ring[i].resource == lookup.native) {
+                            inRtv = true;
+                            break;
+                        }
                     }
-                    inRtv = true;
-                    if (targets[i].format == 26 && targets[i].width == renderWidth()
-                        && targets[i].height == renderHeight()) {
-                        gInputFinalColorWidth.store(targets[i].width, std::memory_order_release);
-                        gInputFinalColorHeight.store(targets[i].height, std::memory_order_release);
-                        gInputFinalColorFormat.store(targets[i].format, std::memory_order_release);
+                }
+                bool             matched = false;
+                RenderTargetInfo mvTarget{};
+                // Not named `near`: <Windows.h> still defines that as a macro.
+                auto const       closeEnough = [](unsigned a, unsigned b) { return (a > b ? a - b : b - a) <= 64; };
+                if (detail.resource) {
+                    if (detail.format == 26 && detail.width == renderWidth() && detail.height == renderHeight()) {
+                        gInputFinalColorWidth.store(detail.width, std::memory_order_release);
+                        gInputFinalColorHeight.store(detail.height, std::memory_order_release);
+                        gInputFinalColorFormat.store(detail.format, std::memory_order_release);
                         gInputFinalColorNative.store(lookup.native, std::memory_order_release);
                         gTextureHits.fetch_add(1, std::memory_order_relaxed);
                         matched = true;
-                        continue;
                     }
                     // R3 stage C: the TAAU draw binds exactly three textures - FinalColor
                     // (fmt26, render size), InputBufferMotionVectors (render size, any
-                    // other form) and InputTAAHistory (display size, so it never enters
-                    // this render-size list). The non-fmt26 entry is therefore the MV.
-                    mvTarget = targets[i];
+                    // other form) and InputTAAHistory (display size, so it is never this
+                    // close to the render size). The remaining render-sized entry is the MV.
+                    else if (closeEnough(detail.width, renderWidth()) && closeEnough(detail.height, renderHeight())) {
+                        mvTarget = detail;
+                    }
                 }
                 if (!matched && mvTarget.resource) {
                     gMotionVectorNative.store(mvTarget.resource, std::memory_order_release);
@@ -3667,9 +3692,10 @@ void noteSwapChain(void* swapChain) {
     // it is handed the pointer before the per-present bookkeeping below.
     inject::noteSwapChain(swapChain);
     // Re-read every present: a resize replaces the buffers, and a stale exclusion
-    // list would let the dump touch a back buffer (which lives in PRESENT).
-    void*    buffers[2]{};
-    unsigned const count = swapChainBuffers(swapChain, buffers, 2);
+    // list would let the dump touch a back buffer (which lives in PRESENT). Four
+    // slots because the chain is 2 or 3 buffers (EXP-0078); gExcluded has four.
+    void*    buffers[4]{};
+    unsigned const count = swapChainBuffers(swapChain, buffers, 4);
     // The back buffer is the display size, and it is the only source that does not
     // depend on the TAAU pass: `upscaling_mode` Bilinear never runs taauDetour, so
     // without this the inventory filter (tooSmallForRenderGraph) and the SR fallback

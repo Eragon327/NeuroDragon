@@ -1308,7 +1308,40 @@ bool hookSwapChainEntryPoints(HWND gameWindow) {
 // Hook bodies
 // ---------------------------------------------------------------------------
 
+// EXP-0078: a fullscreen transition can resize the chain inside DXGI, i.e. without
+// calling the ResizeBuffers we hook. Logging the description whenever it changes is
+// what tells "our hook ran and failed" from "the chain changed behind our hook".
+void logSwapChainChange(IDXGISwapChain* swapChain) {
+    DXGI_SWAP_CHAIN_DESC desc{};
+    if (FAILED(swapChain->GetDesc(&desc))) {
+        return;
+    }
+    static UINT lastBuffers = 0,
+                lastWidth   = 0,
+                lastHeight  = 0,
+                lastFlags   = 0;
+    if (desc.BufferCount == lastBuffers && desc.BufferDesc.Width == lastWidth
+        && desc.BufferDesc.Height == lastHeight && desc.Flags == lastFlags) {
+        return;
+    }
+    lastBuffers = desc.BufferCount;
+    lastWidth   = desc.BufferDesc.Width;
+    lastHeight  = desc.BufferDesc.Height;
+    lastFlags   = desc.Flags;
+    logger().info(
+        "[vv] chain: now buffers={} {}x{} fmt={} flags=0x{:x} effect={} usage=0x{:x}",
+        desc.BufferCount,
+        desc.BufferDesc.Width,
+        desc.BufferDesc.Height,
+        static_cast<unsigned>(desc.BufferDesc.Format),
+        desc.Flags,
+        static_cast<unsigned>(desc.SwapEffect),
+        desc.BufferUsage
+    );
+}
+
 HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT flags) {
+    logSwapChainChange(swapChain);
     probe::vv::noteSwapChain(swapChain);
     neurodragon::vv::dlss::runPending();
     probe::vv::onPresent();
@@ -1327,8 +1360,65 @@ present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
 
+// EXP-0078: a resize either succeeds or fails for a reason the engine only notices
+// one frame later ("Unable Initialize. FAILED 0x887a0001" and then abort). The
+// request, the chain's original description and the buffers' reference counts are
+// what separate "DXGI refused because someone still holds a buffer" from "DXGI
+// refused because the request does not match the chain" from "the resize worked".
+void logResizeRequest(char const* which, IDXGISwapChain* swapChain, UINT count, UINT width, UINT height,
+                      DXGI_FORMAT format, UINT flags) {
+    DXGI_SWAP_CHAIN_DESC desc{};
+    if (SUCCEEDED(swapChain->GetDesc(&desc))) {
+        logger().info(
+            "[vv] resize: {} req buffers={} {}x{} fmt={} flags=0x{:x} | chain buffers={} {}x{} fmt={} flags=0x{:x} effect={} usage=0x{:x}",
+            which,
+            count,
+            width,
+            height,
+            static_cast<unsigned>(format),
+            flags,
+            desc.BufferCount,
+            desc.BufferDesc.Width,
+            desc.BufferDesc.Height,
+            static_cast<unsigned>(desc.BufferDesc.Format),
+            desc.Flags,
+            static_cast<unsigned>(desc.SwapEffect),
+            desc.BufferUsage
+        );
+    } else {
+        logger().info(
+            "[vv] resize: {} req buffers={} {}x{} fmt={} flags=0x{:x} | GetDesc failed",
+            which,
+            count,
+            width,
+            height,
+            static_cast<unsigned>(format),
+            flags
+        );
+    }
+}
+
+// Two temporary references are ours (GetBuffer + AddRef), so what is printed is what
+// everybody else holds: ResizeBuffers answers DXGI_ERROR_INVALID_CALL for any
+// non-zero value here.
+void logBackBufferRefs(char const* when, IDXGISwapChain* swapChain) {
+    for (UINT i = 0; i < 4; ++i) {
+        ID3D12Resource* buffer = nullptr;
+        if (FAILED(swapChain->GetBuffer(i, IID_PPV_ARGS(&buffer))) || !buffer) {
+            break;
+        }
+        unsigned const held = buffer->AddRef();
+        buffer->Release();
+        buffer->Release();
+        logger().info("[vv] resize: {} back buffer {} other refs={}", when, i, held >= 2 ? held - 2 : 0);
+    }
+}
+
 HRESULT __stdcall
 resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height, DXGI_FORMAT format, UINT flags) {
+    // Before anything of ours runs: if the reference is already here, the holder is
+    // the steady-state per-frame code, not this hook.
+    logBackBufferRefs("entry", swapChain);
     std::unique_lock lock(gResourceMutex);
     // The probe holds references into the old render graph; release them before
     // ResizeBuffers or the engine aborts on its failure (2026-10-25 03:14).
@@ -1336,7 +1426,11 @@ resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height
     // ResizeBuffers requires every reference to the old back buffers to be gone.
     releaseGraphics();
     lock.unlock();
-    return gOriginalResizeBuffers(swapChain, count, width, height, format, flags);
+    logResizeRequest("ResizeBuffers", swapChain, count, width, height, format, flags);
+    logBackBufferRefs("forward", swapChain);
+    HRESULT const result = gOriginalResizeBuffers(swapChain, count, width, height, format, flags);
+    logger().info("[vv] resize: ResizeBuffers -> hr=0x{:08X}", static_cast<unsigned>(result));
+    return result;
 }
 
 HRESULT __stdcall resizeBuffers1Hook(
@@ -1349,11 +1443,22 @@ HRESULT __stdcall resizeBuffers1Hook(
     UINT const*      creationNodeMask,
     IUnknown* const* presentQueue
 ) {
+    logBackBufferRefs("entry", swapChain);
     std::unique_lock lock(gResourceMutex);
     probe::vv::onSwapChainResize();
     releaseGraphics();
     lock.unlock();
-    return gOriginalResizeBuffers1(swapChain, count, width, height, format, flags, creationNodeMask, presentQueue);
+    logResizeRequest("ResizeBuffers1", swapChain, count, width, height, format, flags);
+    logger().info(
+        "[vv] resize: ResizeBuffers1 nodeMask={:#x} presentQueue={:#x}",
+        creationNodeMask ? *creationNodeMask : 0u,
+        reinterpret_cast<std::uintptr_t>(presentQueue)
+    );
+    logBackBufferRefs("forward", swapChain);
+    HRESULT const result =
+        gOriginalResizeBuffers1(swapChain, count, width, height, format, flags, creationNodeMask, presentQueue);
+    logger().info("[vv] resize: ResizeBuffers1 -> hr=0x{:08X}", static_cast<unsigned>(result));
+    return result;
 }
 
 void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID3D12CommandList* const* lists) {
