@@ -44,19 +44,20 @@ suppress 断掉角色来源、**在后缓冲上覆盖，等于把引擎的显示
 
 | # | 前提 | 判据 | 不成立意味着 |
 |---|---|---|---|
-| V1 | `arg10` 被下游消费 | **写入者已证**（EXP-0055：前置无 DSV list，48-list 帧为 25）；消费者是谁未证。切在写者之后即可保证顺序，运行时用同帧 capture 确认画面被下游采用 | 若下游完全不使用，回查后处理链 |
+| V1 | `arg10` 被下游消费 | ✅ **已证**：写入者 = 前置无 DSV list（EXP-0055，48-list 帧为 25）；消费者 = `LuminanceHistogram` / `Bloom`×2 / `LocalExposure`，走共享帧图节点引用、无 GPU 复制（EXP-0056）。剩下 `WaitOnUpscalingOutput` 登记语义与 RQ-0004..0007 的静态复核 | 若下游完全不使用，回查后处理链 |
 | V2 | ✅ 静态已确认（2026-10-28 反编译）：`arg10` = `H + w*(C−H)`，与 `InputFinalColor` 同域、不做归一化 | — | 无需再测（运行时只需确认写的就是下游读的那张，并入 V5） |
 | V3 | 我们能安全写 `arg10` | PS+RTV 写入；状态由 `Color0` 写入 list 留下（RT），写 RT、留 RT，让下一个消费者自己做 barrier | 状态不可控 ⇒ 退 `CopyResource`（仍是 RT 目标） |
 | V4 | ✅ 静态已确认：TAAU 是纯 temporal resolve，无曝光/tonemap/encode、无深度、无 VP 使用 | — | 无需再测 |
 | V5 | 双缓冲语义正确 | `decl-pre/post` 两次采样（EXP-0032 已证 decl 阶段可读） | 写错缓冲 ⇒ 画面滞后一帧（可见） |
 
-V1/V2/V4 可以由**一次**诊断构建 + 一次会话同时回答。
+V1 已由 EXP-0055 / EXP-0056 关闭，V2/V4 由反编译静态确认；**只剩 V3/V5 要靠阶段 A 的一次实写**
+（[specs/vv.md](../specs/vv.md) §35.1 的 A1–A3）。
 
 ## 被否的替代
 
 - **继续补白点/编码**：复刻自适应函数，不可收敛（EXP-0048–0053 已付 6 个实验）。
 - **读 TAAU shader 复现**（research 的「High」方案）：方向对、成本 1 天 + 工具，但它回答的是
-  「TAAU 里有什么」；V1 未定时甚至可能挖错对象（归一化可能在 44 里）。保留为 V1 失败后的路线。
+  「TAAU 里有什么」；R3 走的是「写它的输出」，不需要复现。保留为**阶段 A 失败后**的路线。
 - **SDR 路**（用已 tonemap 的 8bit 面喂 DLSS）：可去掉整条曝光债，代价是量化与丢 HDR 高光；
   作为兜底，不在本轮。
 - **从 main 重开做 R3**：main 是 agent2 的祖先、只有 1087 行旧探针，重开=重拉 5k 行；
@@ -74,9 +75,9 @@ V1/V2/V4 可以由**一次**诊断构建 + 一次会话同时回答。
 
 命中任意一条即退回「读 shader」路线，不再在 R3 上加补丁：
 
-- V1 判据落在「`arg10` 不是 44 的输入」；
-- 实现后把 `arg10` 写成纯色、引擎画面不受影响；
-- `arg10` 的状态连续两次调试层报错。
+- 实现后把 `arg10` 写成纯色、引擎画面**不受影响**（= 阶段 A 的 A1）；
+- `arg10` 的状态连续两次调试层报错（= A3；先试 `CopyResource` 兜底，仍报错即停）；
+- 双缓冲写错、画面滞后一帧且按帧重取后仍不消失（= A2）。
 
 ## 2026-10-28 反编译补充
 
@@ -90,8 +91,14 @@ V1/V2/V4 可以由**一次**诊断构建 + 一次会话同时回答。
 - **EXP-0055 更正管线位置**：`Color0` 的写入者是**显示分辨率、无 DSV、单 draw** 的前置 list
   （48-list 帧为 25），后续带 DSV 的合成 list（44）写的是另一张 RTV。⇒ 切点 = 写入者之后，
   不是 44 之前；且 44 是否采样 `Color0` 未证（中间还有后处理）。
-- 证据：[research/2026-10-28-taau-decompiled.md](../research/2026-10-28-taau-decompiled.md) §9、
-  `docs/agent/evidence/arg10-list-binding-EXP-0055.log`。
+- **EXP-0056 补上下游**：`arg10` 出 TAAU 后以**共享帧图节点引用**进入 `LuminanceHistogram`、
+  `Bloom`（两次）、`LocalExposure`；每帧除 TAAU 自身绑定外恰好 3 次后续材质引用，
+  `CopyTextureRegion` / `CopyResource` 两条路径在采样帧内均无命中 ⇒ 下游是「引用 + shader
+  后处理」，不是先复制一份再由副本消费。⇒ V1 关闭（尾巴：`WaitOnUpscalingOutput` 的登记语义、
+  RQ-0004..0007 的静态复核）。
+- 证据：[research/2026-10-28-taau-decompiled.md](../research/2026-10-28-taau-decompiled.md) §9–§10、
+  `docs/agent/evidence/arg10-list-binding-EXP-0055.log`、
+  `docs/agent/evidence/arg10-downstream-EXP-0056.log`。
 
 ## 实施顺序
 
