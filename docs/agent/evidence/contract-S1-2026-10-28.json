@@ -1,0 +1,66 @@
+{
+  "goal": "在 MCBE VV（Vibrant Visuals）渲染路径里，用 NeuroDragon 自己的 DLSS-SR 替换引擎的 TAAU 上采样；HUD / 手 / 准星与切场景行为保持不变。",
+  "criteria": [
+    {
+      "id": "S1",
+      "stage": 1,
+      "kind": "stage",
+      "text": "最终目标、验收条件、阶段划分、出界事项已写明并经用户确认"
+    },
+    {
+      "id": "S2",
+      "stage": 2,
+      "kind": "stage",
+      "text": "静态检查（flow.py gate build）与构建通过，且没有任何未申请豁免的错误"
+    },
+    {
+      "id": "S3",
+      "stage": 3,
+      "kind": "stage",
+      "text": "核心功能在真实运行环境里实际执行成功：NGX EvaluateFeature 返回 1（日志 [eval] ... ret=0x00000001）"
+    },
+    {
+      "id": "S4",
+      "stage": 4,
+      "kind": "stage",
+      "text": "输出路径与用户可见结果：DLSS 画面确实上屏，且 HUD / 手 / 准星仍在"
+    },
+    {
+      "id": "S5",
+      "stage": 5,
+      "kind": "stage",
+      "text": "目标语义：TAAU 不再执行（提交里被跳过或替换），而不是 TAAU 照跑后覆盖"
+    },
+    {
+      "id": "S6",
+      "stage": 6,
+      "kind": "stage",
+      "text": "回归：暂停菜单 / 背包 / 切场景 / 窗口尺寸变化不崩，帧时间有记录"
+    },
+    {
+      "id": "F1",
+      "stage": 6,
+      "kind": "final",
+      "text": "TAAU 的每帧 1 次 draw 不再出现在提交里（有日志或注入统计作为原始证据）"
+    },
+    {
+      "id": "F2",
+      "stage": 6,
+      "kind": "final",
+      "text": "同一帧对比：DLSS 输出与切点参考图无整体偏色，差异只来自细节/锐化（离线差分数值）"
+    },
+    {
+      "id": "F3",
+      "stage": 6,
+      "kind": "final",
+      "text": "HUD、手、准星、UI 面板全部保留；DLSS 开关可来回切且不崩"
+    }
+  ],
+  "out_of_scope": [
+    "NR 位置轴与 NR 画质调参",
+    "FG（帧生成）与 RR（光线重建）",
+    "RT 路径的 SR/NR 行为"
+  ],
+  "stage": 5,
+  "updated": "2026-10-27T19:28:44.108+08:00"
+}

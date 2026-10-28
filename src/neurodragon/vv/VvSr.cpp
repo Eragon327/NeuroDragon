@@ -4,7 +4,6 @@
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/vv/VvDlssSr.h"
-#include "neurodragon/vv/VvTone.h"
 
 #include <Windows.h>
 #include <d3d12.h>
@@ -35,28 +34,20 @@ cbuffer P : register(b0)
 {
     uint W;
     uint H;
-    uint Mode;
+    uint Mode;   // bit 2: the engine texture carries the vector in .zw; bit 4: force zero motion
     uint Pad;
-};
-// Camera-relative view-projection, decoded from the TAAContext dump (vv.md §16):
-// the four logged rows are the *columns* of (right, up, forward, w) scaled by the
-// projection; the w row equals the forward row, so ndc.z = 1 - near/viewDepth
-// (infinite far plane, near = -m14).
-cbuffer MV : register(b2)
-{
-    float3 CurRight;  float CurSx;
-    float3 CurUp;     float CurSy;
-    float3 CurFwd;    float CurNear;
-    float3 PrevRight; float PrevSx;
-    float3 PrevUp;    float PrevSy;
-    float3 PrevFwd;   float PrevNear;
-    float3 CamDelta;  float MvPad;
 };
 Texture2D<float4>   Color    : register(t0);
 Texture2D<float>    Depth    : register(t1);
+// R3 stage C: the engine's own motion vectors (arg11 / InputBufferMotionVectors) - a
+// composite G-buffer whose .zw is the render-resolution-normalized displacement.
+Texture2D<float4>   EngineMv : register(t7);
 RWTexture2D<float4> OutColor : register(u0);
 RWTexture2D<float>  OutDepth : register(u1);
 RWTexture2D<float2> OutMv    : register(u2);
+// Diagnostics: arg11's four channels, copied verbatim at prep time so a dump shows what
+// the engine actually wrote, not what a transient target holds at present.
+RWTexture2D<float4> OutMvRaw : register(u5);
 
 [numthreads(8, 8, 1)]
 void main(uint3 id : SV_DispatchThreadID)
@@ -69,153 +60,14 @@ void main(uint3 id : SV_DispatchThreadID)
     const float d = Depth.Load(int3(id.xy, 0));
     OutDepth[id.xy] = d;
 
-    // Camera-relative world point of this pixel, then the same point in the previous
-    // frame's space (the camera moved by CamDelta) projected with the previous matrix.
-    float2 ndc    = float2(float(id.x + 0.5) / float(W) * 2.0 - 1.0,
-                           1.0 - float(id.y + 0.5) / float(H) * 2.0);
-    bool   sky    = d >= 0.999999;
-    float  depth  = sky ? 1000000.0 : CurNear / max(1.0 - d, 1.0e-6);
-    float3 p      = (ndc.x * depth / CurSx) * CurRight + (ndc.y * depth / CurSy) * CurUp + depth * CurFwd;
-    float3 pp     = p + (sky ? float3(0.0, 0.0, 0.0) : CamDelta);
-    float  wp     = dot(PrevFwd, pp);
-    float2 ndcPrev = float2(dot(PrevRight, pp) * PrevSx / max(wp, 1.0e-6),
-                            dot(PrevUp,    pp) * PrevSy / max(wp, 1.0e-6));
-    // DLSS wants the offset from the current pixel to where it was in the last frame.
-    OutMv[id.xy] = (ndcPrev - ndc) * 0.5 * float2(float(W), float(H));
-}
-)hlsl";
-
-char const* kExposureShader = R"hlsl(
-cbuffer P : register(b0)
-{
-    uint W;
-    uint H;
-    uint Mode;
-    uint Pad;
-};
-Texture2D<float4>   Color : register(t0);
-RWTexture2D<float>  White : register(u0);
-groupshared float   ExposureSum[64];
-groupshared uint    FloorCount[64];
-
-[numthreads(8, 8, 1)]
-void main(uint3 id : SV_DispatchThreadID)
-{
-    uint index = id.y * 8 + id.x;
-    uint textureWidth;
-    uint textureHeight;
-    Color.GetDimensions(textureWidth, textureHeight);
-    float sum = 0.0;
-    uint floorCount = 0;
-    for (uint y = 0; y < 8; ++y)
-    {
-        for (uint x = 0; x < 8; ++x)
-        {
-            uint2 p = uint2((id.x * 8 + x) * W / 64, (id.y * 8 + y) * H / 64);
-            float3 c = max(Color.Load(int3((int)p.x, (int)p.y, 0)).rgb, 0.0);
-            float rawLuma = dot(c, float3(0.2126, 0.7152, 0.0722));
-            floorCount += rawLuma <= 0.0001 ? 1 : 0;
-            sum += log2(max(rawLuma, 0.0001));
-        }
-    }
-    ExposureSum[index] = sum;
-    FloorCount[index] = floorCount;
-    GroupMemoryBarrierWithGroupSync();
-    [unroll] for (uint s = 32; s > 0; s >>= 1)
-    {
-        if (index < s)
-        {
-            ExposureSum[index] += ExposureSum[index + s];
-            FloorCount[index] += FloorCount[index + s];
-        }
-        GroupMemoryBarrierWithGroupSync();
-    }
-    if (index == 0)
-    {
-        // EXP-0048's reference is kept unchanged for the reset A/B. Its original 28-byte
-        // NDRW parse was later found to be four bytes short; recalibration is separate.
-        // Dividing by (this frame's mean / reference) pulls the 380x dark / 260x bright
-        // frames of EXP-0045/0046 back onto the same display brightness.
-        float meanLog   = ExposureSum[0] / 4096.0;
-        float target    = meanLog - log2(0.0671);
-        float previous  = White[uint2(0, 0)];
-        float current   = Mode != 0 || previous <= 0.0 || !isfinite(previous) ? target : lerp(log2(previous), target, 0.03);
-        float writes    = White[uint2(0, 1)];
-        White[uint2(0, 0)] = exp2(clamp(current, -9.0, 9.0));
-        White[uint2(1, 0)] = target;
-        White[uint2(2, 0)] = previous;
-        White[uint2(3, 0)] = float(Mode);
-        White[uint2(0, 1)] = Mode != 0 || writes <= 0.0 || !isfinite(writes) ? 1.0 : writes + 1.0;
-        White[uint2(1, 1)] = float(W);
-        White[uint2(2, 1)] = float(H);
-        White[uint2(3, 1)] = float(FloorCount[0]);
-        White[uint2(0, 2)] = float(textureWidth);
-        White[uint2(1, 2)] = float(textureHeight);
-        White[uint2(2, 2)] = meanLog;
-        float mirrorPrevious = White[uint2(3, 2)];
-        float mirrorCurrent  = Mode != 0 || mirrorPrevious <= 0.0 || !isfinite(mirrorPrevious)
-            ? target
-            : lerp(log2(mirrorPrevious), target, 0.03);
-        White[uint2(3, 2)] = exp2(clamp(mirrorCurrent, -9.0, 9.0));
-        uint ringIndex = writes > 0.0 && isfinite(writes) ? uint(writes) % 4 : 0;
-        White[uint2(ringIndex, 3)] = target;
-    }
-}
-)hlsl";
-
-char const* kFinalHead = R"hlsl(
-cbuffer P : register(b0)
-{
-    uint W;
-    uint H;
-    uint Mode;
-    uint Pad;
-};
-Texture2D<float4>   Color : register(t2);
-Texture2D<float4>   Depth : register(t3);
-Texture2D<float4>   Mv    : register(t4);
-Texture2D<float>    White : register(t6);
-SamplerState        Samp  : register(s0);
-RWTexture2D<float4> Dst   : register(u3);
-)hlsl";
-
-char const* kFinalBody = R"hlsl(
-[numthreads(8, 8, 1)]
-void main(uint3 id : SV_DispatchThreadID)
-{
-    if (id.x >= W || id.y >= H)
-    {
-        return;
-    }
-    float2 uv = (float2(id.xy) + 0.5) / float2(W, H);
-    float3 c;
-    if (Mode == 1)
-    {
-        c = saturate((1.0 - Depth.SampleLevel(Samp, uv, 0).r) * 20.0).rrr; // reversed-Z, stretched
-    }
-    else if (Mode == 2)
-    {
-        float2 mv = Mv.SampleLevel(Samp, uv, 0).rg;
-        c = float3(mv.x * 40.0 + 0.5, mv.y * 40.0 + 0.5, 0.5); // exaggerated
-    }
-    else if (Mode == 4)
-    {
-        c = vvEncode(Color.SampleLevel(Samp, uv, 0).rgb); // Bypass: no exposure normalisation
-    }
-    else if (Mode >= 3)
-    {
-        c = Color.SampleLevel(Samp, uv, 0).rgb;
-    }
-    else
-    {
-        // White is the ratio between this frame's geometric-mean luma and the
-        // reference (EXP-0048); it is only read in the DLSS mode, which always runs
-        // the exposure pass first. The floor keeps a missing texture from turning
-        // into a divide-by-zero rather than limiting the gain.
-        float white = max(White.Load(int3(0, 0, 0)), 0.002);
-        c = vvEncode(Color.SampleLevel(Samp, uv, 0).rgb / white);
-    }
-    Dst[id.xy] = float4(saturate(c), 1.0);
+    float4 engineMv = EngineMv.Load(int3(id.xy, 0));
+    OutMvRaw[id.xy] = engineMv;
+    float2 stored = ((Mode & 2u) != 0u) ? engineMv.zw : engineMv.xy;
+    // {z, -w} is the velocity (current - previous). DLSS wants the map current ->
+    // previous in render pixels: negate x, keep y.
+    OutMv[id.xy] = ((Mode & 4u) != 0u)
+        ? float2(0.0, 0.0)
+        : float2(-stored.x, stored.y) * float2(float(W), float(H));
 }
 )hlsl";
 
@@ -249,20 +101,20 @@ enum : unsigned {
     kSlotMvSrv       = 4,
     kSlotDlssSrv     = 5,
     kSlotExposureSrv = 6,
-    kSlotColorUav    = 7,
-    kSlotDepthUav    = 8,
-    kSlotMvUav       = 9,
-    kSlotFinalUav    = 10,
-    kSlotExposureUav = 11,
-    kSlotCount       = 12,
+    kSlotEngineMv    = 7, ///< R3 stage C: arg11, the engine's own motion vectors
+    kSlotColorUav    = 8,
+    kSlotDepthUav    = 9,
+    kSlotMvUav       = 10,
+    kSlotFinalUav    = 11,
+    kSlotExposureUav = 12,
+    kSlotMvRawUav    = 13, ///< R3 stage C: arg11's four channels, copied at prep time
+    kSlotCount       = 14,
 };
 
 struct Pipeline {
     ID3D12Device*               device{};
     ID3D12RootSignature*        root{};
     ID3D12PipelineState*        prep{};
-    ID3D12PipelineState*        exposure{};
-    ID3D12PipelineState*        final{};
     ID3D12PipelineState*        arg10Ps{};
     ID3D12DescriptorHeap*       heap{};
     ID3D12DescriptorHeap*       rtvHeap{};
@@ -273,18 +125,15 @@ struct Pipeline {
     ID3D12Resource*             colorHalf{};
     ID3D12Resource*             depthR32{};
     ID3D12Resource*             mvRg32{}; ///< R16G16_FLOAT: DLSS accepts this, not RG32F
-    ID3D12Resource*             finalRgba8{};
+    ID3D12Resource*             mvRaw{};  ///< RGBA16F copy of arg11's four channels (diagnostic)
     ID3D12Resource*             dlssOut{};
-    ID3D12Resource*             exposureR32{};
-    ID3D12Resource*             toneCb{};
-    ID3D12Resource*             mvCb{};  ///< per-frame camera-relative matrix rows for the MV pass
-    void*                       mvMapped{};
+    ID3D12Resource*             taauRef{}; ///< R11G11B10 copy of arg10 before our PS write (F2)
     D3D12_RESOURCE_STATES       colorState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       depthState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       mvState{D3D12_RESOURCE_STATE_COMMON};
-    D3D12_RESOURCE_STATES       finalState{D3D12_RESOURCE_STATE_COMMON};
+    D3D12_RESOURCE_STATES       mvRawState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       dlssState{D3D12_RESOURCE_STATE_COMMON};
-    D3D12_RESOURCE_STATES       exposureState{D3D12_RESOURCE_STATE_COMMON};
+    D3D12_RESOURCE_STATES       taauRefState{D3D12_RESOURCE_STATE_COMMON};
     unsigned                    renderWidth{};
     unsigned                    renderHeight{};
     unsigned                    displayWidth{};
@@ -294,16 +143,18 @@ struct Pipeline {
 std::mutex       gMutex;
 Pipeline         gPipeline{};
 Stats            gStats{};
-std::atomic<int> gView{static_cast<int>(View::Bypass)};
 std::atomic<int> gColorChoice{0};
 std::atomic<int> gDepthChoice{0};
 // One number per dump so a repeated trigger (panel button, file marker, F7 pair) keeps
 // every frame instead of overwriting the previous one. File scope because the TEST
 // hotkey path has to be able to name the run it just triggered.
 std::atomic<unsigned> gDumpNo{0};
+// F2: copy this frame's TAAU output (arg10, before our PS write) into taauRef, so the
+// engine's result and the DLSS result of the *same* frame can be compared offline.
+std::atomic<bool> gCaptureTaaRef{false};
+std::atomic<bool> gTaaRefFresh{false};
 unsigned         gColorCandidates = 0;
 unsigned         gDepthCandidates = 0;
-float            gToneValues[tone::kValues]{};
 
 void transition(ID3D12GraphicsCommandList* list, ID3D12Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
     if (!resource || before == after) {
@@ -353,13 +204,45 @@ ID3D12Resource* createTexture(ID3D12Device* device, unsigned width, unsigned hei
     return resource;
 }
 
+// R3 stage C: arg11 is bound as an SRV, and DXGI forbids an SRV format outside the
+// resource's own family. The concrete format is mapped once instead of inferring the
+// `.zw` layout from the material: `fourChannel` decides which pair the prep shader
+// reads, `srvFormat` is what the descriptor may legally use.
+bool engineMotionVectorSrvFormat(DXGI_FORMAT format, DXGI_FORMAT* srvFormat, bool* fourChannel) {
+    switch (format) {
+    case DXGI_FORMAT_R16G16_TYPELESS:
+    case DXGI_FORMAT_R16G16_FLOAT:
+        *srvFormat   = DXGI_FORMAT_R16G16_FLOAT;
+        *fourChannel = false;
+        return true;
+    case DXGI_FORMAT_R32G32_TYPELESS:
+    case DXGI_FORMAT_R32G32_FLOAT:
+        *srvFormat   = DXGI_FORMAT_R32G32_FLOAT;
+        *fourChannel = false;
+        return true;
+    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+    case DXGI_FORMAT_R16G16B16A16_FLOAT:
+        *srvFormat   = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        *fourChannel = true;
+        return true;
+    case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+    case DXGI_FORMAT_R32G32B32A32_FLOAT:
+        *srvFormat   = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        *fourChannel = true;
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned renderHeight, unsigned displayWidth, unsigned displayHeight) {
     if (gPipeline.colorHalf && gPipeline.renderWidth == renderWidth && gPipeline.renderHeight == renderHeight
         && gPipeline.displayWidth == displayWidth && gPipeline.displayHeight == displayHeight) {
         return true;
     }
     for (ID3D12Resource** resource :
-         {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.finalRgba8, &gPipeline.dlssOut, &gPipeline.exposureR32}) {
+         {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.mvRaw, &gPipeline.dlssOut,
+          &gPipeline.taauRef}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
@@ -368,23 +251,22 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
     gPipeline.colorHalf   = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     gPipeline.depthR32    = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R32_FLOAT);
     gPipeline.mvRg32      = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16_FLOAT);
-    gPipeline.finalRgba8  = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+    gPipeline.mvRaw       = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     gPipeline.dlssOut     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    // 4x4, not 1x1: dumpTextureRawAs refuses anything smaller (desc.Width < 4), and
-    // the F10 dump is the only way to check the white point after a run. Only [0,0]
-    // is written and read.
-    gPipeline.exposureR32 = createTexture(device, 4, 4, DXGI_FORMAT_R32_FLOAT);
-    if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.finalRgba8 || !gPipeline.dlssOut
-        || !gPipeline.exposureR32) {
+    // Same format as arg10 (fmt 26) so CopyResource is a straight texel copy; display
+    // size, used only by the explicit F2 pair dump.
+    gPipeline.taauRef     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R11G11B10_FLOAT);
+    if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.mvRaw
+        || !gPipeline.dlssOut || !gPipeline.taauRef) {
         setError(E_OUTOFMEMORY, "CreateCommittedResource");
         return false;
     }
     gPipeline.colorState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.depthState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.mvState       = D3D12_RESOURCE_STATE_COMMON;
-    gPipeline.finalState    = D3D12_RESOURCE_STATE_COMMON;
+    gPipeline.mvRawState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.dlssState     = D3D12_RESOURCE_STATE_COMMON;
-    gPipeline.exposureState = D3D12_RESOURCE_STATE_COMMON;
+    gPipeline.taauRefState  = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.renderWidth   = renderWidth;
     gPipeline.renderHeight  = renderHeight;
     gPipeline.displayWidth  = displayWidth;
@@ -394,8 +276,7 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
 }
 
 bool ensurePipeline(ID3D12Device* device) {
-    if (gPipeline.prep && gPipeline.exposure && gPipeline.final && gPipeline.arg10Ps && gPipeline.root
-        && gPipeline.heap && gPipeline.rtvHeap && gPipeline.toneCb && gPipeline.mvCb) {
+    if (gPipeline.prep && gPipeline.arg10Ps && gPipeline.root && gPipeline.heap && gPipeline.rtvHeap) {
         return true;
     }
     if (gPipeline.device && gPipeline.device != device) {
@@ -419,11 +300,11 @@ bool ensurePipeline(ID3D12Device* device) {
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
     srvRange.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    srvRange.NumDescriptors     = 7;
+    srvRange.NumDescriptors     = 8;
     srvRange.BaseShaderRegister = 0;
     D3D12_DESCRIPTOR_RANGE uavRange{};
     uavRange.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-    uavRange.NumDescriptors     = 5;
+    uavRange.NumDescriptors     = 6;
     uavRange.BaseShaderRegister = 0;
 
     D3D12_ROOT_PARAMETER params[5]{};
@@ -508,13 +389,6 @@ bool ensurePipeline(ID3D12Device* device) {
     if (!compileShader(kPrepShader, &gPipeline.prep)) {
         return false;
     }
-    if (!compileShader(kExposureShader, &gPipeline.exposure)) {
-        return false;
-    }
-    std::string const finalSource = std::string(kFinalHead) + tone::kHlsl + kFinalBody;
-    if (!compileShader(finalSource, &gPipeline.final)) {
-        return false;
-    }
 
     // R3 stage B: DLSS output -> arg10. A graphics PSO with a fullscreen triangle
     // reads the DLSS texture (t0) and writes the display-sized target; the RTV format
@@ -594,62 +468,9 @@ bool ensurePipeline(ID3D12Device* device) {
     gPipeline.cpu       = gPipeline.heap->GetCPUDescriptorHandleForHeapStart();
     gPipeline.gpu       = gPipeline.heap->GetGPUDescriptorHandleForHeapStart();
 
-    D3D12_HEAP_PROPERTIES upload{};
-    upload.Type = D3D12_HEAP_TYPE_UPLOAD;
-    D3D12_RESOURCE_DESC buffer{};
-    buffer.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-    buffer.Width            = 512;
-    buffer.Height           = 1;
-    buffer.DepthOrArraySize = 1;
-    buffer.MipLevels        = 1;
-    buffer.Format           = DXGI_FORMAT_UNKNOWN;
-    buffer.SampleDesc.Count = 1;
-    buffer.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    hr = device->CreateCommittedResource(
-        &upload,
-        D3D12_HEAP_FLAG_NONE,
-        &buffer,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&gPipeline.toneCb)
-    );
-    if (FAILED(hr) || !gPipeline.toneCb) {
-        setError(hr, "CreateCommittedResource(tone)");
-        return false;
-    }
-    tone::pack(gToneValues);
-    void* mapped = nullptr;
-    if (FAILED(gPipeline.toneCb->Map(0, nullptr, &mapped)) || !mapped) {
-        setError(E_FAIL, "Map(tone)");
-        return false;
-    }
-    std::memcpy(mapped, gToneValues, sizeof(gToneValues));
-    gPipeline.toneCb->Unmap(0, nullptr);
-
-    // Motion-vector rows: 7 x (float3 + float) = 112 bytes, mapped once and rewritten
-    // every frame (a torn read costs one frame of odd vectors, not a crash).
-    D3D12_RESOURCE_DESC mvBuffer = buffer;
-    mvBuffer.Width               = 256;
-    hr = device->CreateCommittedResource(
-        &upload,
-        D3D12_HEAP_FLAG_NONE,
-        &mvBuffer,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&gPipeline.mvCb)
-    );
-    if (FAILED(hr) || !gPipeline.mvCb) {
-        setError(hr, "CreateCommittedResource(mv)");
-        return false;
-    }
-    if (FAILED(gPipeline.mvCb->Map(0, nullptr, &gPipeline.mvMapped)) || !gPipeline.mvMapped) {
-        setError(E_FAIL, "Map(mv)");
-        return false;
-    }
-
     std::lock_guard lock(gMutex);
     gStats.pipelineReady = true;
-    utils::logger().info("[vvsr] sr pipeline ready (CBV encode, 5 root parameters)");
+    utils::logger().info("[vvsr] sr pipeline ready (prep + DLSS -> arg10)");
     return true;
 }
 
@@ -771,9 +592,6 @@ bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigne
 
 } // namespace
 
-void setView(View view) { gView.store(static_cast<int>(view), std::memory_order_relaxed); }
-View view() { return static_cast<View>(gView.load(std::memory_order_relaxed)); }
-
 void cycleColor() {
     int const next = gColorChoice.fetch_add(1, std::memory_order_relaxed) + 1;
     utils::logger().info("[vvsr] sr colour choice -> {}", next);
@@ -783,15 +601,14 @@ void cycleDepth() {
     utils::logger().info("[vvsr] sr depth choice -> {}", next);
 }
 
-// One frame of motion-vector parameters, decoded from the TAAContext the TAAU draw
-// handed us. Layout matches the b2 constant buffer declared in the prep shader.
-// Declared here (not next to decodeMvFrame) because dumpInputs reports the MV state of
-// every batch it writes; the definition is below, which is all a forward declaration
-// needs.
+// The per-frame TAAContext parameters that are still consumed: the sub-pixel jitter fed
+// to DLSS and, for the evidence lines, the camera-origin delta. The motion vectors
+// themselves are the engine's arg11 (stage C) - the struct no longer carries a
+// view-projection packing and the prep shader has no MV constant buffer.
 struct MvFrame {
-    float rows[7][4]{};
     float jitterX{};
     float jitterY{};
+    float delta[3]{};    ///< camera-origin delta (previous -> current); evidence only
     bool  reset{true};
     bool  valid{false};
     bool  prevSame{true}; ///< the two 16-float halves are identical (no camera motion,
@@ -802,6 +619,11 @@ MvFrame decodeMvFrame();
 
 unsigned dumpRuns() { return gDumpNo.load(std::memory_order_relaxed); }
 
+void captureTaaRef() {
+    gCaptureTaaRef.store(true, std::memory_order_release);
+    utils::logger().info("[vvsr] sr f2: TAAU reference capture armed (next injected frame)");
+}
+
 bool dumpInputs() {
     auto* const device = static_cast<ID3D12Device*>(probe::vv::engineDevice());
     auto* const queue  = static_cast<ID3D12CommandQueue*>(probe::vv::gameQueue());
@@ -811,7 +633,7 @@ bool dumpInputs() {
     }
     unsigned const run = gDumpNo.fetch_add(1, std::memory_order_relaxed) + 1;
     utils::logger().info(
-        "[vvsr] sr dump #{} frame={} view={} dlssReady={} start", run, snapshot.frame, snapshot.view, snapshot.dlssReady ? 1 : 0
+        "[vvsr] sr dump #{} frame={} dlssReady={} start", run, snapshot.frame, snapshot.dlssReady ? 1 : 0
     );
     // Per-batch motion state. A pair of dumps is only evidence if the two frames can be
     // told apart, and the camera delta is the part the user cannot fake by reporting
@@ -823,9 +645,9 @@ bool dumpInputs() {
         snapshot.frame,
         mv.valid ? 1 : 0,
         mv.prevSame ? 1 : 0,
-        mv.rows[6][0],
-        mv.rows[6][1],
-        mv.rows[6][2],
+        mv.delta[0],
+        mv.delta[1],
+        mv.delta[2],
         mv.jitterX,
         mv.jitterY
     );
@@ -875,20 +697,16 @@ bool dumpInputs() {
         semanticOk ? 1 : 0
     );
     bool midOk      = false;
-    bool finalOk    = false;
     bool mvOk       = false;
     bool depthR32Ok = false;
     bool dlssOk     = false;
-    bool exposureOk = false;
     // Our own textures are left in NON_PIXEL_SHADER_RESOURCE by the record path; the
     // 2026-10-26 dump read the MV as all zeros and the depth as all 1.0 with the
     // Common hint, which is the stale-byte failure the DumpState comment describes.
     auto const state = probe::vv::DumpState::NonPixelShaderResource;
-    if (gPipeline.colorHalf && gPipeline.finalRgba8) {
+    if (gPipeline.colorHalf) {
         std::swprintf(name, std::size(name), L"sr_mid_colourhalf_%u.bin", run);
         midOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.colorHalf, (directory + L"\\" + name).c_str(), state);
-        std::swprintf(name, std::size(name), L"sr_final_rgba8_%u.bin", run);
-        finalOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.finalRgba8, (directory + L"\\" + name).c_str(), state);
     }
     // The three textures that decide the reprojection: the prepared motion vectors
     // (RG16F), the prepared linear depth (R32F) and DLSS's own output. A localised
@@ -913,24 +731,30 @@ bool dumpInputs() {
         );
         dlssOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.dlssOut, (directory + L"\\" + name).c_str(), state);
     }
-    // The white point the final encode divides by (EXP-0048). 4x4 R32F, only [0,0] is
-    // written by the exposure pass; reading it back is the only way to tell "the pass
-    // never ran" from "the pass ran and the target is wrong".
-    if (gPipeline.exposureR32 && gPipeline.exposureState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
-        std::swprintf(name, std::size(name), L"sr_exposure_%u.bin", run);
-        exposureOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.exposureR32, (directory + L"\\" + name).c_str(), state);
+    // F2: the TAAU output of the frame the explicit capture was armed on (arg10 before
+    // our PS write). Present only after that button was pressed; one dump per capture.
+    bool taaurefOk = false;
+    if (gPipeline.taauRef && gTaaRefFresh.exchange(false, std::memory_order_acq_rel)) {
+        std::swprintf(
+            name,
+            std::size(name),
+            L"sr_taauref_%ux%u_%u.bin",
+            snapshot.displayWidth,
+            snapshot.displayHeight,
+            run
+        );
+        taaurefOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.taauRef, (directory + L"\\" + name).c_str(), state);
     }
     utils::logger().info(
-        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} final={} mv={} depth32={} dlss={} exposure={}",
+        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} mv={} depth32={} dlss={} taauref={}",
         run,
         colorOk ? 1 : 0,
         depthOk ? 1 : 0,
         midOk ? 1 : 0,
-        finalOk ? 1 : 0,
         mvOk ? 1 : 0,
         depthR32Ok ? 1 : 0,
         dlssOk ? 1 : 0,
-        exposureOk ? 1 : 0
+        taaurefOk ? 1 : 0
     );
     // Every candidate the pick path can see, not just the picked one (EXP-0026). The
     // only open question is whether the picked colour stops changing once the engine's
@@ -1068,8 +892,10 @@ bool inWorld() {
     return present;
 }
 
-// One frame of motion-vector parameters, decoded from the TAAContext the TAAU draw
-// handed us; the struct lives above dumpInputs, which reports it per batch.
+// The per-frame parameters that still come from the TAAContext: the sub-pixel jitter
+// fed to DLSS, plus the camera-origin delta kept for the evidence lines. The motion
+// vectors themselves are the engine's arg11 (stage C) - no view-projection decode and
+// no near-plane reconstruction remains here.
 MvFrame decodeMvFrame() {
     MvFrame frame{};
     float   cur[16]{};
@@ -1080,73 +906,29 @@ MvFrame decodeMvFrame() {
         return frame;
     }
     frame.prevSame = std::memcmp(cur, prev, sizeof(cur)) == 0;
-    // The four logged rows are the columns of (right, up, fwd, w); near = -m14.
-    auto const axis = [](float const* m, int i, float* out) {
-        out[0] = m[i];
-        out[1] = m[4 + i];
-        out[2] = m[8 + i];
-    };
-    float curRight[3]{};
-    float curUp[3]{};
-    float curFwd[3]{};
-    float prevRight[3]{};
-    float prevUp[3]{};
-    float prevFwd[3]{};
-    axis(cur, 0, curRight);
-    axis(cur, 1, curUp);
-    axis(cur, 2, curFwd);
-    axis(prev, 0, prevRight);
-    axis(prev, 1, prevUp);
-    axis(prev, 2, prevFwd);
-    float const curNear  = -cur[14];
-    float const prevNear = -prev[14];
-    auto const  length   = [](float const* v) { return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]); };
-    float const curRightLen  = length(curRight);
-    float const curUpLen     = length(curUp);
-    float const curFwdLen    = length(curFwd);
-    float const prevRightLen = length(prevRight);
-    float const prevUpLen    = length(prevUp);
-    float const prevFwdLen   = length(prevFwd);
-    // A wrong decode is worse than no vectors: require a sane basis and near plane.
-    if (curRightLen < 1.0e-3f || curUpLen < 1.0e-3f || curFwdLen < 1.0e-3f || prevRightLen < 1.0e-3f
-        || prevUpLen < 1.0e-3f || prevFwdLen < 1.0e-3f || curNear <= 0.0f || prevNear <= 0.0f) {
-        return frame;
-    }
-    auto const row = [](float* dst, float const* v, float len, float extra) {
-        dst[0] = v[0] / len;
-        dst[1] = v[1] / len;
-        dst[2] = v[2] / len;
-        dst[3] = extra;
-    };
-    row(frame.rows[0], curRight, curRightLen, curRightLen);
-    row(frame.rows[1], curUp, curUpLen, curUpLen);
-    row(frame.rows[2], curFwd, curFwdLen, curNear);
-    row(frame.rows[3], prevRight, prevRightLen, prevRightLen);
-    row(frame.rows[4], prevUp, prevUpLen, prevUpLen);
-    row(frame.rows[5], prevFwd, prevFwdLen, prevNear);
-    frame.rows[6][0] = cam[0] - cam[3];
-    frame.rows[6][1] = cam[1] - cam[4];
-    frame.rows[6][2] = cam[2] - cam[5];
-    frame.jitterX = jitter[0];
-    frame.jitterY = jitter[1];
-    frame.valid   = true;
+    frame.delta[0] = cam[0] - cam[3];
+    frame.delta[1] = cam[1] - cam[4];
+    frame.delta[2] = cam[2] - cam[5];
+    frame.jitterX  = jitter[0];
+    frame.jitterY  = jitter[1];
+    frame.valid    = true;
     return frame;
 }
 
-bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void) {
+bool recordInternal(void* commandListVoid, void* arg10Void) {
     auto* const list   = static_cast<ID3D12GraphicsCommandList*>(commandListVoid);
-    auto* const back   = static_cast<ID3D12Resource*>(backBufferVoid);
     auto* const arg10  = static_cast<ID3D12Resource*>(arg10Void);
     auto* const device = static_cast<ID3D12Device*>(probe::vv::engineDevice());
-    if (!list || (!back && !arg10) || !device) {
+    if (!list || !arg10 || !device) {
         return false;
     }
-    if (!inWorld()) {
-        // No world: record nothing, but do not report failure. A failed record makes
-        // the injector skip, and on 2026-10-25 that left the SR action dead after the
-        // world came back. An empty list is a valid no-op.
-        return true;
-    }
+    // World presence used to gate recording (an empty list outside the world): a failed
+    // record could kill the SR action after the world came back (2026-10-25). The
+    // Close fix (EXP-0065) removed that hazard, and the user asked for the original VV
+    // behaviour back: keep running DLSS after leaving a save, so the menu background
+    // is processed by the same pipeline instead of falling back to TAAU. The call is
+    // kept for its once-per-second world log; its result no longer decides anything.
+    (void)inWorld();
     // Step 2 groundwork: the motion-vector pass needs the engine's current/previous
     // view-projection pair, the camera origins and the sub-pixel jitter. The layout is
     // documented (docs/specs/vv.md §6) but the packing convention is not, so one frame
@@ -1181,17 +963,14 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     if (frameNo == 60) {
         MvFrame const probeFrame = decodeMvFrame();
         utils::logger().info(
-            "[vvsr] mv decode valid={} prev_same={} jitter=({:+.4f},{:+.4f}) delta=({:+.4f},{:+.4f},{:+.4f}) near={:+.4f} sx={:.4f} sy={:.4f}",
+            "[vvsr] mv decode valid={} prev_same={} jitter=({:+.4f},{:+.4f}) delta=({:+.4f},{:+.4f},{:+.4f})",
             probeFrame.valid ? 1 : 0,
             probeFrame.prevSame ? 1 : 0,
             probeFrame.jitterX,
             probeFrame.jitterY,
-            probeFrame.rows[6][0],
-            probeFrame.rows[6][1],
-            probeFrame.rows[6][2],
-            probeFrame.rows[2][3],
-            probeFrame.rows[0][3],
-            probeFrame.rows[1][3]
+            probeFrame.delta[0],
+            probeFrame.delta[1],
+            probeFrame.delta[2]
         );
     }
     if (frameNo == 30) {
@@ -1221,7 +1000,7 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     }
     unsigned       renderWidth  = probe::vv::renderWidth();
     unsigned       renderHeight = probe::vv::renderHeight();
-    D3D12_RESOURCE_DESC const sizeDesc = arg10 ? arg10->GetDesc() : back->GetDesc();
+    D3D12_RESOURCE_DESC const sizeDesc = arg10->GetDesc();
     unsigned const displayWidth  = static_cast<unsigned>(sizeDesc.Width);
     unsigned const displayHeight = sizeDesc.Height;
     if ((!renderWidth || !renderHeight) && displayWidth && displayHeight) {
@@ -1293,6 +1072,71 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     }
     device->CreateShaderResourceView(depthTexture, &srv, cpuAt(kSlotEngineDepth));
 
+    // R3 stage C: arg11 is the declarator's role for the engine motion vectors. Its own
+    // desc decides the SRV family. No barrier is issued for it, exactly like the engine
+    // colour above: the TAAU draw already bound it as a shader resource this frame, and
+    // a guessed StateBefore is worse than the state the engine left behind.
+    void* const    mvResource = probe::vv::motionVectorResource();
+    unsigned       prepMode   = 0;
+    unsigned       mvFormat   = 0;
+    if (mvResource) {
+        auto* const               mvTexture = static_cast<ID3D12Resource*>(mvResource);
+        D3D12_RESOURCE_DESC const mvDesc    = mvTexture->GetDesc();
+        mvFormat                            = static_cast<unsigned>(mvDesc.Format);
+        DXGI_FORMAT srvFormat               = DXGI_FORMAT_UNKNOWN;
+        bool        fourChannel             = false;
+        if (mvDesc.Width == renderWidth && mvDesc.Height == renderHeight
+            && engineMotionVectorSrvFormat(mvDesc.Format, &srvFormat, &fourChannel)) {
+            srv.Format = srvFormat;
+            device->CreateShaderResourceView(mvTexture, &srv, cpuAt(kSlotEngineMv));
+            prepMode = 1u | (fourChannel ? 2u : 0u);
+        }
+    }
+    {
+        static std::atomic<unsigned> mvLogs{0};
+        unsigned const               n = mvLogs.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 3 || n % 600 == 0) {
+            if (prepMode) {
+                utils::logger().info(
+                    "[vvsr] sr mv: engine arg11={:#x} fmt={} layout={} ({}x{}, pixels current->previous)",
+                    reinterpret_cast<std::uintptr_t>(mvResource),
+                    mvFormat,
+                    (prepMode & 2u) ? "zw" : "xy",
+                    renderWidth,
+                    renderHeight
+                );
+            } else {
+                utils::logger().warn(
+                    "[vvsr] sr mv: arg11={:#x} fmt={} unusable at {}x{}",
+                    reinterpret_cast<std::uintptr_t>(mvResource),
+                    mvFormat,
+                    renderWidth,
+                    renderHeight
+                );
+            }
+        }
+    }
+    // R3 stage C: both render paths must carry the engine's own motion vectors. After a
+    // resize the captured arg11 can still be the old size while the record already runs
+    // at the new one; feeding zero motion (or the deleted reconstructed pair) is exactly
+    // the failure this stage exists to remove. Skip the frame instead - the injector
+    // already treats a failed record as "do nothing", and the engine's TAAU output
+    // stays on screen.
+    if (prepMode == 0) {
+        static std::atomic<unsigned> skippedMv{0};
+        unsigned const               n = skippedMv.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 3 || n % 120 == 0) {
+            utils::logger().warn(
+                "[vvsr] sr mv: no usable arg11 for {}x{} (native={:#x} fmt={}); frame skipped",
+                renderWidth,
+                renderHeight,
+                reinterpret_cast<std::uintptr_t>(mvResource),
+                mvFormat
+            );
+        }
+        return false;
+    }
+
     D3D12_SHADER_RESOURCE_VIEW_DESC texSrv{};
     texSrv.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
     texSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1307,8 +1151,6 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     // table is complete before that exists.
     texSrv.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     device->CreateShaderResourceView(gPipeline.colorHalf, &texSrv, cpuAt(kSlotDlssSrv));
-    texSrv.Format = DXGI_FORMAT_R32_FLOAT;
-    device->CreateShaderResourceView(gPipeline.exposureR32, &texSrv, cpuAt(kSlotExposureSrv));
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC uav{};
     uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
@@ -1318,10 +1160,8 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     device->CreateUnorderedAccessView(gPipeline.depthR32, nullptr, &uav, cpuAt(kSlotDepthUav));
     uav.Format = DXGI_FORMAT_R16G16_FLOAT;
     device->CreateUnorderedAccessView(gPipeline.mvRg32, nullptr, &uav, cpuAt(kSlotMvUav));
-    uav.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    device->CreateUnorderedAccessView(gPipeline.finalRgba8, nullptr, &uav, cpuAt(kSlotFinalUav));
-    uav.Format = DXGI_FORMAT_R32_FLOAT;
-    device->CreateUnorderedAccessView(gPipeline.exposureR32, nullptr, &uav, cpuAt(kSlotExposureUav));
+    uav.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    device->CreateUnorderedAccessView(gPipeline.mvRaw, nullptr, &uav, cpuAt(kSlotMvRawUav));
 
     // --- prep: engine colour + depth -> RGBA16F / R32F / RG32F -------------
     transition(list, gPipeline.colorHalf, gPipeline.colorState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -1330,6 +1170,8 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     gPipeline.depthState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     transition(list, gPipeline.mvRg32, gPipeline.mvState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     gPipeline.mvState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    transition(list, gPipeline.mvRaw, gPipeline.mvRawState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    gPipeline.mvRawState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
     ID3D12DescriptorHeap* heaps[1] = {gPipeline.heap};
     list->SetDescriptorHeaps(1, heaps);
@@ -1337,13 +1179,9 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
     list->SetComputeRootDescriptorTable(1, gpuAt(kSlotEngineColor));
     list->SetComputeRootDescriptorTable(2, gpuAt(kSlotColorUav));
     list->SetPipelineState(gPipeline.prep);
-    unsigned const prepParams[4] = {renderWidth, renderHeight, 0, 0};
+    unsigned const prepParams[4] = {renderWidth, renderHeight, prepMode | (spatial ? 4u : 0u), 0};
     list->SetComputeRoot32BitConstants(0, 4, prepParams, 0);
     MvFrame mv = decodeMvFrame();
-    if (spatial) {
-        // Zero motion, zero jitter, invalid -> the DLSS branch also forces Reset.
-        mv = MvFrame{};
-    }
     // One-shot proof that the draw-time snapshot is doing its job: with a moving camera
     // the previous half differs from the current one. The post-frame read this replaced
     // could never log this line (prev==cur both halves), so it doubles as a regression.
@@ -1353,44 +1191,28 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
             utils::logger().info(
                 "[vvsr] mv snapshot: previous VP differs from current at frame {} (delta=({:+.4f},{:+.4f},{:+.4f}))",
                 frameNo,
-                mv.rows[6][0],
-                mv.rows[6][1],
-                mv.rows[6][2]
+                mv.delta[0],
+                mv.delta[1],
+                mv.delta[2]
             );
         }
     }
-    if (gPipeline.mvCb && gPipeline.mvMapped) {
-        std::memcpy(gPipeline.mvMapped, mv.rows, sizeof(mv.rows));
-        list->SetComputeRootConstantBufferView(4, gPipeline.mvCb->GetGPUVirtualAddress());
-    }
     list->Dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
-    // The final pass reads all three prepared buffers as SRVs.
+    // The DLSS evaluate reads the prepared buffers, so they become SRVs here.
     transition(list, gPipeline.colorHalf, gPipeline.colorState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     gPipeline.colorState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     transition(list, gPipeline.depthR32, gPipeline.depthState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     gPipeline.depthState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     transition(list, gPipeline.mvRg32, gPipeline.mvState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     gPipeline.mvState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    transition(list, gPipeline.finalRgba8, gPipeline.finalState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    gPipeline.finalState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    transition(list, gPipeline.mvRaw, gPipeline.mvRawState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    gPipeline.mvRawState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
-    int const view = arg10 ? static_cast<int>(View::Dlss) : gView.load(std::memory_order_relaxed);
-    // 4 = Bypass (encode only). Mode 0 reads the white-point texture, and only the
-    // DLSS branch runs the exposure pass that fills it; leaving the default at 0
-    // would divide every other view by a never-written texture (EXP-0048).
-    unsigned  finalMode      = 4;
-    bool      dlssEvaluated  = false;
-    bool      exposureReset  = false;
-    int       dlssCreateRet  = 0;
-    int       dlssEvalRet    = 0;
-    if (view == static_cast<int>(View::Depth)) {
-        finalMode = 1;
-    } else if (view == static_cast<int>(View::Motion)) {
-        finalMode = 2;
-    } else if (view == static_cast<int>(View::Raw)) {
-        finalMode = 3;
-    } else if (view == static_cast<int>(View::Dlss)) {
+    bool dlssEvaluated = false;
+    int  dlssCreateRet = 0;
+    int  dlssEvalRet   = 0;
+    {
         // DLSS-SR: our prepared colour/depth/motion are already in a shader-readable
         // state above, which is what NGX expects of its inputs.
         if (dlss::ensureSrFeature(device, list, renderWidth, renderHeight, displayWidth, displayHeight)) {
@@ -1403,32 +1225,33 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
             static std::atomic<unsigned> resetFrames{2};
             static std::atomic<bool>     lastWorld{false};
             static std::atomic<unsigned> lastGeneration{0};
-            static std::atomic<int>      lastView{-1};
             bool const                   world      = probe::vv::worldLoaded();
             unsigned const               generation = probe::vv::renderGeneration();
             if (frameNo <= 2 || world != lastWorld.load(std::memory_order_relaxed)
-                || generation != lastGeneration.load(std::memory_order_relaxed)
-                || view != lastView.load(std::memory_order_relaxed)) {
+                || generation != lastGeneration.load(std::memory_order_relaxed)) {
                 resetFrames.store(2, std::memory_order_relaxed);
                 lastWorld.store(world, std::memory_order_relaxed);
                 lastGeneration.store(generation, std::memory_order_relaxed);
-                lastView.store(view, std::memory_order_relaxed);
             }
             unsigned const pending = resetFrames.load(std::memory_order_relaxed);
             if (pending > 0) {
                 resetFrames.store(pending - 1, std::memory_order_relaxed);
             }
-            bool const gap   = arg10 && probe::vv::takeArg10Gap();
+            bool const gap = probe::vv::takeArg10Gap();
+            // Outside a world (menu / title screen) the panorama is not rendered with
+            // the world TAAU jitter, so feeding it shifts the image every frame - that
+            // was the up-down judder (EXP-0073). History is allowed to accumulate again
+            // (EXP-0074); if the panorama's MV does not describe its rotation this
+            // smears, which is what the next run checks.
             bool const reset = spatial || pending > 0 || !mv.valid || gap;
-            exposureReset  = reset;
-            dlssEvaluated  = dlss::evaluateSr(
+            dlssEvaluated    = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,
                 gPipeline.depthR32,
                 gPipeline.mvRg32,
                 gPipeline.dlssOut,
-                mv.jitterX,
-                mv.jitterY,
+                world ? mv.jitterX : 0.0f,
+                world ? mv.jitterY : 0.0f,
                 reset
             );
             dlss::SrState const state = dlss::srState();
@@ -1445,30 +1268,6 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
                 device->CreateShaderResourceView(gPipeline.dlssOut, &dlssSrv, cpuAt(kSlotColorSrv));
             }
         }
-        // EXP-0048: the engine's HDR input drifts 380x darker / 260x brighter between
-        // sessions and the DLSS output follows it one-for-one, so the encode divides by
-        // a white point measured from the same signal the final pass reads: descriptor
-        // 2 is colorHalf until evaluate succeeds and the DLSS output afterwards, so
-        // pointing the exposure table at it keeps both passes on one source.
-        finalMode = 0;
-        if (!arg10 && gPipeline.exposure) {
-            unsigned const sampleWidth  = dlssEvaluated ? displayWidth : renderWidth;
-            unsigned const sampleHeight = dlssEvaluated ? displayHeight : renderHeight;
-            transition(list, gPipeline.exposureR32, gPipeline.exposureState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-            gPipeline.exposureState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-            list->SetPipelineState(gPipeline.exposure);
-            list->SetComputeRootDescriptorTable(1, gpuAt(kSlotColorSrv));
-            list->SetComputeRootDescriptorTable(2, gpuAt(kSlotExposureUav));
-            unsigned const exposureParams[4] = {sampleWidth, sampleHeight, exposureReset ? 1U : 0U, 0};
-            list->SetComputeRoot32BitConstants(0, 4, exposureParams, 0);
-            list->Dispatch(1, 1, 1);
-            transition(list, gPipeline.exposureR32, gPipeline.exposureState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-            gPipeline.exposureState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-            // Both tables go back to the layout the final pass was written against:
-            // t2/t3/t4/t6 with the SRV base at 0 and u3 with the UAV base at 7.
-            list->SetComputeRootDescriptorTable(1, gpuAt(kSlotEngineColor));
-            list->SetComputeRootDescriptorTable(2, gpuAt(kSlotColorUav));
-        }
     }
     if (arg10) {
         if (!dlssEvaluated) {
@@ -1484,6 +1283,24 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
                 );
             }
             return false;
+        }
+        if (gCaptureTaaRef.exchange(false, std::memory_order_acq_rel) && gPipeline.taauRef) {
+            // F2: arg10 still holds this frame's TAAU result (the writer list ran before
+            // our injected list); copy it aside before the PS below overwrites it with
+            // DLSS. Same frame, same inputs -> the two outputs are directly comparable.
+            transition(list, arg10, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+            transition(list, gPipeline.taauRef, gPipeline.taauRefState, D3D12_RESOURCE_STATE_COPY_DEST);
+            gPipeline.taauRefState = D3D12_RESOURCE_STATE_COPY_DEST;
+            list->CopyResource(gPipeline.taauRef, arg10);
+            transition(list, gPipeline.taauRef, gPipeline.taauRefState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            gPipeline.taauRefState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+            transition(list, arg10, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            gTaaRefFresh.store(true, std::memory_order_release);
+            utils::logger().info(
+                "[vvsr] sr f2: captured TAAU arg10 {}x{} before the DLSS write",
+                static_cast<unsigned>(targetDesc.Width),
+                targetDesc.Height
+            );
         }
         // Stage A proved arg10 is left in RENDER_TARGET by its writer list, so this
         // pass only binds it and leaves the state alone. The DLSS output was last in
@@ -1522,7 +1339,6 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
         std::lock_guard lock(gMutex);
         gStats.recorded        = true;
         gStats.frame           = frameNo;
-        gStats.view            = view;
         gStats.dlssReady       = true;
         gStats.dlssCreateRet   = dlssCreateRet;
         gStats.dlssEvaluateRet = dlssEvalRet;
@@ -1534,6 +1350,8 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
         gStats.depthSource     = depth;
         gStats.colorFormat     = colorFormat;
         gStats.depthFormat     = depthFormat;
+        gStats.mvSource        = prepMode ? mvResource : nullptr;
+        gStats.mvFormat        = prepMode ? mvFormat : 0;
         gStats.colorCandidates = gColorCandidates;
         gStats.depthCandidates = gDepthCandidates;
         gStats.colorChoice     = gColorChoice.load(std::memory_order_relaxed);
@@ -1543,95 +1361,23 @@ bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void
         unsigned const               n = frames.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n <= 3 || n % 600 == 0) {
             utils::logger().info(
-                "[vvsr] sr arg10 #{}: {}x{} fmt={} eval={}",
+                "[vvsr] sr arg10 #{}: {}x{} fmt={} eval={} mv={}",
                 n,
                 displayWidth,
                 displayHeight,
                 static_cast<unsigned>(targetDesc.Format),
-                dlssEvalRet
+                dlssEvalRet,
+                prepMode ? "engine" : "vp"
             );
         }
         return true;
     }
-    list->SetPipelineState(gPipeline.final);
-    unsigned const finalParams[4] = {displayWidth, displayHeight, finalMode, 0};
-    list->SetComputeRoot32BitConstants(0, 4, finalParams, 0);
-    list->SetComputeRootConstantBufferView(3, gPipeline.toneCb->GetGPUVirtualAddress());
-    list->Dispatch((displayWidth + 7) / 8, (displayHeight + 7) / 8, 1);
-
-    transition(list, gPipeline.finalRgba8, gPipeline.finalState, D3D12_RESOURCE_STATE_COPY_SOURCE);
-    gPipeline.finalState = D3D12_RESOURCE_STATE_COPY_SOURCE;
-
-    D3D12_RESOURCE_BARRIER barrier{};
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource   = back;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-    list->ResourceBarrier(1, &barrier);
-
-    D3D12_TEXTURE_COPY_LOCATION dst{};
-    dst.pResource        = back;
-    dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    dst.SubresourceIndex = 0;
-    D3D12_TEXTURE_COPY_LOCATION src{};
-    src.pResource        = gPipeline.finalRgba8;
-    src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    src.SubresourceIndex = 0;
-    list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-    // The user sees a black band at the bottom of the screen while the game's own
-    // captures look complete (2026-10-25 23:16), so the geometry of what we copy is
-    // logged once: if these two agree and the copy carries no region, our write
-    // covers the whole back buffer and the band is added after this point.
-    static std::atomic<unsigned> copyLogged{0};
-    if (copyLogged.fetch_add(1, std::memory_order_relaxed) < 1) {
-        D3D12_RESOURCE_DESC const backDesc  = back->GetDesc();
-        D3D12_RESOURCE_DESC const finalDesc = gPipeline.finalRgba8->GetDesc();
-        utils::logger().info(
-            "[vvsr] sr copy back={}x{} fmt={} final={}x{} fmt={}",
-            static_cast<unsigned>(backDesc.Width),
-            backDesc.Height,
-            static_cast<unsigned>(backDesc.Format),
-            static_cast<unsigned>(finalDesc.Width),
-            finalDesc.Height,
-            static_cast<unsigned>(finalDesc.Format)
-        );
-    }
-
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
-    list->ResourceBarrier(1, &barrier);
-
-    std::lock_guard lock(gMutex);
-    gStats.recorded      = true;
-    gStats.frame         = frameNo;
-    gStats.view          = view;
-    gStats.dlssReady     = dlssEvaluated;
-    gStats.dlssCreateRet = dlssCreateRet;
-    gStats.dlssEvaluateRet = dlssEvalRet;
-    gStats.renderWidth   = renderWidth;
-    gStats.renderHeight  = renderHeight;
-    gStats.displayWidth  = displayWidth;
-    gStats.displayHeight = displayHeight;
-    gStats.colorSource   = color;
-    gStats.depthSource   = depth;
-    gStats.colorFormat   = colorFormat;
-    gStats.depthFormat   = depthFormat;
-    gStats.colorCandidates = gColorCandidates;
-    gStats.depthCandidates = gDepthCandidates;
-    gStats.colorChoice     = gColorChoice.load(std::memory_order_relaxed);
-    gStats.depthChoice     = gDepthChoice.load(std::memory_order_relaxed);
-    gStats.lastError     = 0;
-    return true;
-}
-
-bool record(void* commandList, void* backBuffer) {
-    return recordInternal(commandList, backBuffer, nullptr);
+    // R3 writes arg10 only; there is no back-buffer path left (EXP-0067).
+    return false;
 }
 
 bool recordArg10(void* commandList, void* arg10) {
-    return recordInternal(commandList, nullptr, arg10);
+    return recordInternal(commandList, arg10);
 }
 
 Stats stats() {
@@ -1645,11 +1391,8 @@ void release() {
          {&gPipeline.colorHalf,
           &gPipeline.depthR32,
           &gPipeline.mvRg32,
-          &gPipeline.finalRgba8,
-          &gPipeline.dlssOut,
-          &gPipeline.exposureR32,
-          &gPipeline.toneCb,
-          &gPipeline.mvCb}) {
+          &gPipeline.mvRaw,
+          &gPipeline.dlssOut}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
@@ -1657,8 +1400,6 @@ void release() {
     }
     if (gPipeline.heap) gPipeline.heap->Release();
     if (gPipeline.prep) gPipeline.prep->Release();
-    if (gPipeline.exposure) gPipeline.exposure->Release();
-    if (gPipeline.final) gPipeline.final->Release();
     if (gPipeline.root) gPipeline.root->Release();
     gPipeline = Pipeline{};
     gStats    = Stats{};

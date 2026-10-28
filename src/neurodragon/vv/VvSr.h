@@ -3,36 +3,24 @@
 namespace neurodragon::vv::sr {
 
 // ---------------------------------------------------------------------------
-// B2: the SR pipeline's own buffers and shaders (docs/specs/vv.md §15)
+// R3: the SR pipeline's own buffers and the DLSS evaluate (docs/specs/vv.md §35)
 // ---------------------------------------------------------------------------
 //
-// This is the plumbing between the engine's frame and a super-resolution pass:
-//
 //   engine colour (R11G11B10, render res) --\
-//   engine depth  (R24G8,     render res) ---> prep compute -> RGBA16F / R32F / RG32F
-//                                              |
-//                            (next step: NGX DLSS-SR evaluate)
-//                                              v
-//                                        final compute: VvTone encode -> RGBA8
-//                                              |
-//                                     CopyTextureRegion onto the back buffer
+//   engine depth  (R24G8,     render res) ---> prep compute -> RGBA16F / R32F / RG16F
+//   engine arg11  (MV, render res) ---------/          |
+//                                                      v
+//                                             NGX DLSS-SR evaluate
+//                                                      |
+//                                        PS + RTV into the engine's arg10
 //
-// Until the NGX feature is wired in, the final pass can show any of the prepared
-// buffers (colour / depth / motion), which is what makes the plumbing verifiable
-// on screen before a single DLSS parameter is written.
-enum class View : int {
-    Bypass = 0, ///< prepared colour through the measured encode (should match the game)
-    Depth  = 1, ///< R32F depth as greyscale (near = white, the engine is reversed-Z)
-    Motion = 2, ///< RG32F motion vectors, scaled for visibility
-    Dlss   = 3, ///< the NGX output texture (falls back to Bypass while there is none)
-    Raw    = 4, ///< prepared colour straight out, no encode (isolates read vs curve)
-};
-
+// There is no tonemap, no encode, no white point and no back-buffer copy: arg10 is
+// TAAU's own output, so the engine's downstream display chain applies to our result
+// exactly as it does to TAAU's (decisions/0005).
 struct Stats {
     bool     pipelineReady{};
     bool     recorded{};     ///< the last frame recorded the pipeline
     unsigned frame{};        ///< in-world SR frame number of that record (0 = none yet)
-    int      view{};
     int      lastError{};    ///< HRESULT of the last failed step
     unsigned renderWidth{};
     unsigned renderHeight{};
@@ -42,6 +30,8 @@ struct Stats {
     void*    depthSource{};  ///< engine texture read as depth this frame
     unsigned colorFormat{};
     unsigned depthFormat{};
+    void*    mvSource{};   ///< engine arg11 this frame (null = none; the frame is skipped)
+    unsigned mvFormat{};   ///< its DXGI format, 0 when there was none
     unsigned colorCandidates{}; ///< how many colour textures the inventory offered
     unsigned depthCandidates{};
     int      colorChoice{};     ///< which one is used (0 = newest)
@@ -50,9 +40,6 @@ struct Stats {
     int      dlssCreateRet{};
     int      dlssEvaluateRet{};
 };
-
-void setView(View view);
-[[nodiscard]] View view();
 
 /// The inventory order is creation order, not "current frame" - the B1c capture found
 /// three fmt=26 textures and only one of them is the colour TAAU reads. Cycling is
@@ -73,12 +60,14 @@ void cycleDepth();
 /// Only the TEST hotkey path needs it, so it can name the run it just triggered.
 [[nodiscard]] unsigned dumpRuns();
 
-/// Records the prep + final passes into `commandList` and copies the result over
-/// `backBuffer`. Both are void* so this header stays free of d3d12.h.
-[[nodiscard]] bool record(void* commandList, void* backBuffer);
+/// F2: copy the next injected frame's TAAU output (arg10, before the DLSS write) into
+/// our own texture, so `dumpInputs()` can save `sr_taauref_*.bin` next to
+/// `sr_dlssout_*.bin`. Same frame, same inputs - the offline comparison then has no
+/// exposure/motion gap. One shot; the capture frame is logged.
+void captureTaaRef();
 
-/// R3 stage B: the same prep + DLSS evaluate, but the output is written into the
-/// engine's arg10 with a PS + RTV (no tonemap, no encode, no back-buffer copy).
+/// R3 stage B: prep + DLSS evaluate, then a PS writes the DLSS output into the
+/// engine's arg10 with an RTV (no tonemap, no encode, no back-buffer copy).
 /// The resource is left in RENDER_TARGET; a missing DLSS evaluation fails instead
 /// of falling back to anything.
 [[nodiscard]] bool recordArg10(void* commandList, void* arg10);

@@ -1,0 +1,65 @@
+# EXP-0062 R3 stage C: engine arg11 never resolved (two runs)
+# builds: 19:13 3110a443 (run 1), 19:45 b56aa5cb (run 2)
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log
+# raw lines below are verbatim, 19:26 (run 1) and 19:39-19:40 (run 2)
+
+17382:[2026-10-28 19:39:42.877 IFO][NeuroDragon] [vv] in.color material handle=0x05F4 action=1 native=0x1a098fc3f60 entry=0x19ff3b5a910 match=0 rtv=0
+17384:[2026-10-28 19:39:42.877 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17389:[2026-10-28 19:39:43.203 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a0bb4c3390 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17390:[2026-10-28 19:39:43.213 IFO][NeuroDragon] [vv] in.color material handle=0x04F1 action=1 native=0x1a098fcc540 entry=0x19ff3b4eee8 match=0 rtv=1
+17391:[2026-10-28 19:39:43.214 IFO][NeuroDragon] [vv] in.color material handle=0x0243 action=1 native=0x1a098fc0600 entry=0x19ff3b301d8 match=0 rtv=0
+17393:[2026-10-28 19:39:43.214 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17398:[2026-10-28 19:39:43.554 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x19fcd6f6a60 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17399:[2026-10-28 19:39:43.562 IFO][NeuroDragon] [vv] in.color material handle=0x04F1 action=1 native=0x1a098fcc540 entry=0x19ff3b4eee8 match=0 rtv=1
+17400:[2026-10-28 19:39:43.564 IFO][NeuroDragon] [vv] in.color material handle=0x05F4 action=1 native=0x1a098fc3f60 entry=0x19ff3b5a910 match=0 rtv=0
+17402:[2026-10-28 19:39:43.564 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17408:[2026-10-28 19:39:43.624 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x19fcd6e75b0 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17409:[2026-10-28 19:39:43.637 IFO][NeuroDragon] [vv] in.color material handle=0x04F1 action=1 native=0x1a098fcc540 entry=0x19ff3b4eee8 match=0 rtv=1
+17410:[2026-10-28 19:39:43.638 IFO][NeuroDragon] [vv] in.color material handle=0x0243 action=1 native=0x1a098fc0600 entry=0x19ff3b301d8 match=0 rtv=0
+17412:[2026-10-28 19:39:43.638 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17418:[2026-10-28 19:39:43.959 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x19fcd6e9050 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17419:[2026-10-28 19:39:43.969 IFO][NeuroDragon] [vv] in.color material handle=0x04F1 action=1 native=0x1a098fcc540 entry=0x19ff3b4eee8 match=0 rtv=1
+17421:[2026-10-28 19:39:43.970 IFO][NeuroDragon] [vv] in.color material handle=0x05F4 action=1 native=0x1a098fc3f60 entry=0x19ff3b5a910 match=0 rtv=0
+17424:[2026-10-28 19:39:43.971 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17427:[2026-10-28 19:39:44.038 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a0894e0fb0 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17428:[2026-10-28 19:39:44.046 IFO][NeuroDragon] [vv] in.color material handle=0x04F1 action=1 native=0x1a098fcc540 entry=0x19ff3b4eee8 match=0 rtv=1
+17429:[2026-10-28 19:39:44.047 IFO][NeuroDragon] [vv] in.color material handle=0x0243 action=1 native=0x1a098fc0600 entry=0x19ff3b301d8 match=0 rtv=0
+17431:[2026-10-28 19:39:44.048 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17440:[2026-10-28 19:39:44.120 IFO][NeuroDragon] [vv] in.color material handle=0x04F1 action=1 native=0x1a098fcc540 entry=0x19ff3b4eee8 match=0 rtv=1
+17441:[2026-10-28 19:39:44.121 IFO][NeuroDragon] [vv] in.color material handle=0x05F4 action=1 native=0x1a098fc3f60 entry=0x19ff3b5a910 match=0 rtv=0
+17442:[2026-10-28 19:39:44.121 IFO][NeuroDragon] [vv] in.color material handle=0x0413 action=1 native=0x1a098fcd860 entry=0x19ff3b44f58 match=1 rtv=1
+17484:[2026-10-28 19:39:47.439 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x1a096083755 holder=0xa02f6ee841000000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17541:[2026-10-28 19:39:54.083 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x1a0e313ef19 holder=0x288074000231955 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17559:[2026-10-28 19:39:56.977 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a0c9e62ec0 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+17578:[2026-10-28 19:39:57.039 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1a098fcd860 1689x950 fmt=26 (arg9 InputFinalColor)
+17586:[2026-10-28 19:39:57.039 WRN][NeuroDragon] [vvsr] sr mv: arg11=0x0 fmt=0 unusable at 1689x950; reconstructing from depth + VP
+18106:[2026-10-28 19:39:59.311 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=vp
+18120:[2026-10-28 19:39:59.326 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1a098fcd860 1689x950 fmt=26 (arg9 InputFinalColor)
+18128:[2026-10-28 19:39:59.326 WRN][NeuroDragon] [vvsr] sr mv: arg11=0x0 fmt=0 unusable at 1689x950; reconstructing from depth + VP
+18134:[2026-10-28 19:39:59.327 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=vp
+18147:[2026-10-28 19:39:59.341 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1a098fcd860 1689x950 fmt=26 (arg9 InputFinalColor)
+18155:[2026-10-28 19:39:59.341 WRN][NeuroDragon] [vvsr] sr mv: arg11=0x0 fmt=0 unusable at 1689x950; reconstructing from depth + VP
+18158:[2026-10-28 19:39:59.341 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=vp
+18161:[2026-10-28 19:39:59.349 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1a098fcd860 1689x950 fmt=26 (arg9 InputFinalColor)
+18165:[2026-10-28 19:39:59.361 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1a098fcd860 1689x950 fmt=26 (arg9 InputFinalColor)
+18168:[2026-10-28 19:39:59.375 IFO][NeuroDragon] [vvsr] sr semantic colour=0x1a098fcd860 1689x950 fmt=26 (arg9 InputFinalColor)
+18204:[2026-10-28 19:40:03.388 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x1a0857a8ed0 holder=0x2930282070756f resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18222:[2026-10-28 19:40:06.186 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a0993a5d50 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18225:[2026-10-28 19:40:06.572 IFO][NeuroDragon] [vvsr] sr dump #1 semantic colour=0x1a098fcd860 ok=1
+18226:[2026-10-28 19:40:06.657 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=0 mvsrc=vp
+18276:[2026-10-28 19:40:08.769 IFO][NeuroDragon] [vvsr] sr dump #2 semantic colour=0x1a098fcd860 ok=1
+18277:[2026-10-28 19:40:08.829 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=0 mvsrc=vp
+18303:[2026-10-28 19:40:10.636 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x19fce81efe9 holder=0xb8000e420de8475 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18404:[2026-10-28 19:40:13.438 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x19fcf2241d0 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18434:[2026-10-28 19:40:17.519 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x1a083c577e5 holder=0x24fe3c48000000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18499:[2026-10-28 19:40:19.282 IFO][NeuroDragon] [vvsr] sr dump #3 semantic colour=0x1a098fcd860 ok=1
+18500:[2026-10-28 19:40:19.335 IFO][NeuroDragon] [vvsr] sr dump #3 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=0 mvsrc=vp
+18520:[2026-10-28 19:40:20.792 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a0993ba610 holder=0x3be70000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18524:[2026-10-28 19:40:21.439 IFO][NeuroDragon] [vvsr] sr dump #4 semantic colour=0x1a098fcd860 ok=1
+18525:[2026-10-28 19:40:21.502 IFO][NeuroDragon] [vvsr] sr dump #4 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=0 mvsrc=vp
+18551:[2026-10-28 19:40:25.007 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x0 holder=0x0 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18585:[2026-10-28 19:40:27.783 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a09918ea10 holder=0x1c2f0000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18594:[2026-10-28 19:40:31.552 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0x1a08b9792b5 holder=0x2b2e121b000000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18626:[2026-10-28 19:40:34.275 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c2fdf80 wrapper=0x1a08b0dd580 holder=0x1c2f0000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18642:[2026-10-28 19:40:38.259 IFO][NeuroDragon] [vv] arg11 mv phase=draw dep=0x1c1c2fdf80 wrapper=0xfffffffffffffffe holder=0x0 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)
+18712:[2026-10-28 19:40:41.777 IFO][NeuroDragon] [vv] arg11 mv phase=decl dep=0x1c1c3fe2d0 wrapper=0x1a095bfc2d0 holder=0x3f3b0000 resource=0x0 handle=0xFFFF native=0x0 reason=invalidChain (role=InputBufferMotionVectors)

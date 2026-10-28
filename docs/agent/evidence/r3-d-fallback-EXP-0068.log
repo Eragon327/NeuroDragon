@@ -1,0 +1,46 @@
+# EXP-0068 R3 stage D: invalid-input fallback + cleanup regression
+# build 22:04 58a1e16e (VvBypass/VvTone/white-point/final/SR-View/record() removed)
+# user: 「已完成，无异常。唯一的问题是…在 stage B + Suppress TAAU draw 退出存档后，
+#        主菜单背景变成了退出存档前的最后一帧。」
+# result: fallback PASS; one new bug found (menu background frozen), root cause below.
+
+## 1. Cleanup regression: stage B still injects after the old path is gone
+
+[2026-10-28 22:05:23.633 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 22:05:25.487 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1 skipped=1
+[2026-10-28 22:05:26.686 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=120 skipped=1
+[2026-10-28 22:05:39.427 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1320 skipped=1
+
+## 2. Draw suppress armed, skips every frame
+
+[2026-10-28 22:05:39.492 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-28 22:05:39.496 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1 list=0x1aad4d24db0 mv=0x1aaf3281f30
+[2026-10-28 22:05:39.505 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2 list=0x1aad4d25740 mv=0x1aaf3281f30
+[2026-10-28 22:05:45.855 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #600 list=0x1aa7fc27b70 mv=0x1aaf3281f30
+[2026-10-28 22:05:51.094 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=2400 skipped=1
+
+## 3. Fallback: Stop arg10 makes the skip stall; re-arm resumes it
+
+[2026-10-28 22:05:52.293 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-28 22:05:59.594 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 22:05:59.608 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1 skipped=1
+[2026-10-28 22:05:59.737 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1200 list=0x1aa7fc22560 mv=0x1aaf3281f30
+# 600 skips took 13.9 s (45.855 -> 59.737), spanning the 7.3 s Stop window:
+# skipping stopped while disarmed and resumed after the re-arm.
+[2026-10-28 22:06:13.168 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2400 list=0x1aad36711a0 mv=0x1aaf3281f30
+
+## 4. The menu bug (new, reproduced in the 22:14 session)
+
+[2026-10-28 22:14:29.702 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-28 22:15:26.241 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 22:15:30.939 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #5400 list=0x28e556c3720 mv=0x28ece56a4b0
+[2026-10-28 22:15:33.450 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=7560 skipped=2
+[2026-10-28 22:15:36.899 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6000 list=0x28e4f21f7f0 mv=0x28ece56a4b0
+[2026-10-28 22:15:42.880 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6600 list=0x28e556c3720 mv=0x28ece56a4b0
+
+# Root cause: the menu still runs a TAAU pass for its background, and injection outside
+# the world is a no-op (recordInternal returns true without recording), so
+# gLastInjectionOk stayed true and the draw-level suppress kept skipping that pass -
+# the menu kept showing the last world frame. The gate had no world check.
+# Fix under test in EXP-0069: require worldLoaded() and arg10SolidArmed() before the
+# quad is skipped.

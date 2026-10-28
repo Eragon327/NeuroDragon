@@ -1,0 +1,51 @@
+# EXP-0070 R3 stage D: keep DLSS running after leaving a save
+# build 22:29 8b775255 (no inWorld gate in recordInternal; draw suppress has no world gate)
+# user: 「已完成，主菜单还在动，似乎有点轻微的抖动，旋转时感觉在上下抖动。并且无法在主菜单
+#        就开启 VV R3 stage B，可能是进入世界的那个事件还在限制？」
+# result: main goal PASS (menu keeps DLSS, not frozen); two observations below.
+
+## 1. In world -> exit to menu: injection and DLSS keep running in the menu
+
+[2026-10-28 22:30:36.812 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 22:30:38.602 IFO][NeuroDragon] [vv] inject fixed k=30/51 injected=840 skipped=1
+[2026-10-28 22:30:42.227 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x21d9a690a50 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 22:30:42.227 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:30:42.228 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=1200 skipped=1
+[2026-10-28 22:30:43.120 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1200 list=0x21e7aa7cd20 mv=0x21d9a690a50
+[2026-10-28 22:30:48.228 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:31:47.258 IFO][NeuroDragon] [vv] inject fixed k=30/51 injected=6960 skipped=1
+# The menu background is now DLSS output from the same R3 pipeline; the user confirms
+# it keeps moving (not a frozen last frame).
+
+## 2. Re-entering the world continues normally
+
+[2026-10-28 22:30:58.714 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 22:30:59.365 IFO][NeuroDragon] [vv] session (world enter): ... dlssnr=0x7ffa9bb60000 ...
+[2026-10-28 22:33:25.336 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 22:33:27.911 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:33:27.913 IFO][NeuroDragon] [vv] inject fixed k=35/58 injected=1 skipped=1511
+# 1511 skips are all from the title-screen window below; the first in-world frame injected.
+
+## 3. Why stage B cannot start on the title screen (fresh process, before any world)
+
+[2026-10-28 22:33:09.386 IFO][NeuroDragon] [vvsr] sr pipeline ready (prep + DLSS -> arg10)
+[2026-10-28 22:33:09.390 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 22:33:09.390 IFO][NeuroDragon] [vvsr] sr pick: render=1689x950 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-28 22:33:09.390 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once ...
+[2026-10-28 22:33:09.390 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-28 22:33:14.323 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-28 22:33:23.400 WRN][NeuroDragon] [vv] inject skipped (1440): recording the injected work failed
+[2026-10-28 22:33:25.336 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+# The title-screen panorama does run TAAU (taau #2100..), but the render graph has no
+# render-size colour/depth targets (colourTargets=0, depthTargets=0), so pickInputs
+# fails and there is nothing to feed DLSS. This is not a world-event gate: the gate is
+# gone; the title screen simply has no inputs until a world has been loaded once.
+
+## 4. Observations recorded, not fixed here
+
+# - Slight vertical judder in the menu while the background rotates. The menu panorama
+#   is not a world render (its temporal signal is not reliable); the current path keeps
+#   accumulating history there. Candidate fix (EXP-0071): force DLSS Reset while
+#   !worldLoaded(), i.e. spatial-only in the menu.
+# - The title screen cannot be injected until one world has been entered in the process
+#   (no render-size colour/depth inventory). Not blocking; documented here.

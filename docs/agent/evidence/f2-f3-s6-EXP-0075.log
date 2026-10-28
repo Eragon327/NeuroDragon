@@ -1,0 +1,40 @@
+# EXP-0075 F2/F3/S6 run (build 1759239b)
+# user: 「已完成F2。F3我本来想暴力测试…连按好多次F11之后，还是出现了冻结+截断+强烈曝光，
+#        出事后已F7+F10采样。我是不应该这样操作吗？」
+
+## F2 screenshots (not usable as F2 evidence)
+
+E:\LeviLauncher\versions\1.26.51.01-r3\screenshots\20261028-225333-017-0.png  (DLSS)
+E:\LeviLauncher\versions\1.26.51.01-r3\screenshots\20261028-225339-595-1.png  (TAAU)
+
+- Both are 2560x1440 RGBA canvases but only the top-left 1133x933 is opaque; the rest
+  is alpha 0 (the game's own screenshot canvas quirk).
+- The shots are 6 s apart across a Stop (mode switch); opaque-region per-channel means
+  differ by 5.5%/6.2%/7.3% and luma by 6% - consistent with the engine exposure adapting
+  between the two modes, not a render colour cast. => F2 was re-done as a same-frame
+  dump pair in EXP-0076 (f2-same-frame-compare.log).
+
+## F11 stress: the freeze/truncation/exposure incident
+
+[2026-10-28 22:53:48.570 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 22:53:49.312 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 22:53:50.010 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 22:53:50.521 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 22:53:51.268 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 22:53:51.951 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 22:54:01.598 WRN][NeuroDragon] [vvsr] sr mv: no usable arg11 for 1689x950 (native=0x0 fmt=0); frame skipped
+[2026-10-28 22:54:03.201 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-28 22:54:03.534 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 22:54:03.979 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 22:54:04.759 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3000 list=0x265cde82a20 mv=0x265c001a9a0
+[2026-10-28 22:54:05.307 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=960 skipped=124
+# 124 injection skips during the resize churn; the draw was still being skipped on the
+# frame after each failure, so arg10 stayed at the previous frame (freeze/truncation) and
+# the engine's exposure followed it (blow-up). No crash; recovered in ~2 s.
+
+## Outcome
+
+# Fixed in EXP-0076 by the generation gate (skip the TAAU draw only after a successful
+# injection under the current render generation). Re-test: five quick F11 presses, 120
+# injection failures all stayed on TAAU, no freeze/truncation/exposure, skip resumed at
+# #3600 (r3-f11-hardening-EXP-0076.log).

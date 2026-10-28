@@ -179,10 +179,17 @@ struct ListSig {
     void*           arg10CopyPeer;
     // Every RTV handle this list bound during the current arming, not just its
     // first call: a list may bind a small target first and arg10 later, and the
-    // writer is "any binding", not "the first one" (EXP-0057 postmortem).
-    std::uintptr_t  rtvSeen[8];
+    // writer is "any binding", not "the first one" (EXP-0057 postmortem). 16, not 8:
+    // the 108/109-list shapes bind a longer mip chain before arg10, and when the
+    // eight slots filled the writer stopped resolving after the shape changed.
+    std::uintptr_t  rtvSeen[16];
     unsigned        rtvSeenCount;
     unsigned        rtvSeenGen;
+    // Direct evidence recorded at bind time: this list bound the *current* arg10
+    // native while the capture was armed, tagged with the declaration serial so a
+    // stale binding from the previous frame cannot match the alternating buffer.
+    void*           arg10Bound;
+    unsigned        arg10BoundSerial;
 };
 // 512, not 128: UI frames (panel open) bring new list objects into the table, and
 // when it filled the arg10 writer stopped resolving after the panel closed (EXP-0058).
@@ -203,7 +210,7 @@ ListSig* sigFor(void* list) {
     }
     unsigned const slot = gSigCount.fetch_add(1, std::memory_order_relaxed);
     if (slot < kSigSlots) {
-        gSigs[slot] = ListSig{list, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0, 0, 0, nullptr, {}, 0, ~0u};
+        gSigs[slot] = ListSig{list, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0, 0, 0, nullptr, {}, 0, ~0u, nullptr, 0};
         return &gSigs[slot];
     }
     static std::atomic<bool> warned{false};
@@ -417,19 +424,38 @@ void hookCommandList(void* list);
 class ID3D12GraphicsCommandList;
 void calibrateSlots(ID3D12GraphicsCommandList* list);
 
+// Direct-mapped handle -> resource cache in front of the append-only ring: the
+// bind-time arg10 proof needs one lookup per bound handle per call, and the ring
+// scan is O(4096). The cache is write-through on every creation, so a descriptor
+// reused for a new resource cannot serve a stale mapping.
+constexpr unsigned kRtvCacheSlots = 1024;
+struct RtvCacheEntry {
+    std::uintptr_t handle;
+    void*          resource;
+};
+RtvCacheEntry gRtvCache[kRtvCacheSlots]{};
+
 void recordRtv(std::uintptr_t handle, void* resource) {
+    // Ring, not a cap: the engine creates views for transient targets continuously,
+    // and once the old "stop after 4096" version filled, every newer handle became
+    // unresolvable - which is exactly how the arg10 writer anchor died mid-session.
     unsigned const n = gRtvCount.fetch_add(1, std::memory_order_relaxed);
-    if (n < kRtvSlots) {
-        gRtvs[n].handle   = handle;
-        gRtvs[n].resource = resource;
-    }
+    gRtvs[n % kRtvSlots] = RtvBinding{handle, resource};
+    gRtvCache[(handle >> 4) % kRtvCacheSlots] = RtvCacheEntry{handle, resource};
 }
 
 void* lookupRtv(std::uintptr_t handle) {
-    unsigned const n = gRtvCount.load(std::memory_order_relaxed);
-    for (unsigned i = n < kRtvSlots ? n : kRtvSlots; i > 0; --i) {
-        if (gRtvs[i - 1].handle == handle) {
-            return gRtvs[i - 1].resource;
+    auto const& cached = gRtvCache[(handle >> 4) % kRtvCacheSlots];
+    if (cached.handle == handle) {
+        return cached.resource;
+    }
+    unsigned const n     = gRtvCount.load(std::memory_order_relaxed);
+    unsigned const count = n < kRtvSlots ? n : kRtvSlots;
+    for (unsigned k = 0; k < count; ++k) {
+        unsigned const i = (n - 1 - k) % kRtvSlots;
+        if (gRtvs[i].handle == handle) {
+            gRtvCache[(handle >> 4) % kRtvCacheSlots] = RtvCacheEntry{handle, gRtvs[i].resource};
+            return gRtvs[i].resource;
         }
     }
     return nullptr;
@@ -450,6 +476,20 @@ bool sigBindsResource(ListSig const* sig, void* resource) {
         }
     }
     return false;
+}
+
+// Stage C writer anchor: prefer the bind-time proof tagged with this frame's
+// declaration serial; fall back to the lifetime handle set for frames recorded
+// before the tag existed. Shape-independent, because it does not need the handle
+// to stay resolvable until submission.
+bool sigBindsArg10(ListSig const* sig, void* native, unsigned serial) {
+    if (!sig || !native) {
+        return false;
+    }
+    if (sig->arg10Bound == native && sig->arg10BoundSerial == serial) {
+        return true;
+    }
+    return sigBindsResource(sig, native);
 }
 
 // --- content boundary helpers ----------------------------------------------
@@ -709,6 +749,17 @@ extern std::atomic<unsigned> gArg10ProbeFrames;
 extern std::atomic<bool>     gArg10SolidArmed;
 extern std::atomic<unsigned> gArg10ArmGeneration;
 
+// Declared below in this translation unit; the bind-time arg10 proof inside the
+// OMRT detour needs them before their definitions.
+extern std::atomic<void*>    gArg10Native;
+extern std::atomic<unsigned> gArg10DeclaredSerial;
+extern std::atomic<unsigned> gDrawTagProbeFrames;
+extern std::atomic<void*>    gMotionVectorNative;
+extern std::atomic<bool>     gDrawSuppressArmed;
+extern std::atomic<bool>     gLastInjectionOk;
+extern std::atomic<unsigned> gDrawSuppressSkips;
+extern std::atomic<unsigned> gInjectedGeneration;
+
 void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int single, std::uintptr_t const* dsv) {
     // Pure forward: nothing here changes an argument or a state. What it adds is the
     // one fact the frame does not expose anywhere else - which list binds a back
@@ -741,8 +792,10 @@ void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int 
                 if (sig->rtvSeenGen != gen) {
                     sig->rtvSeenCount = 0;
                     sig->rtvSeenGen   = gen;
+                    sig->arg10Bound   = nullptr;
                 }
-                unsigned const limit = count > 8 ? 8 : count;
+                void* const native = solid ? gArg10Native.load(std::memory_order_acquire) : nullptr;
+                unsigned const limit = count > 16 ? 16 : count;
                 for (unsigned i = 0; i < limit; ++i) {
                     std::uintptr_t const handle = (single && increment)
                         ? rtvs[0] + static_cast<std::uintptr_t>(i) * increment
@@ -755,6 +808,13 @@ void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int 
                     }
                     if (!known && sig->rtvSeenCount < std::size(sig->rtvSeen)) {
                         sig->rtvSeen[sig->rtvSeenCount++] = handle;
+                    }
+                    // Bind-time proof: this list bound the current arg10 native. Cheap
+                    // because lookupRtv is a write-through cache; tagged with the frame's
+                    // declaration serial so a stale buffer cannot match next frame.
+                    if (native && lookupRtv(handle) == native) {
+                        sig->arg10Bound       = native;
+                        sig->arg10BoundSerial = gArg10DeclaredSerial.load(std::memory_order_acquire);
                     }
                 }
                 // The probe summary still reports the first binding (that is what
@@ -1061,8 +1121,57 @@ void hookDevice(void* device) {
     }
 }
 
+// Stage D dry run: is this draw recorded into the list that bound the current arg10?
+// If yes, the fullscreen TAAU triangle can be identified at draw time by the same
+// bind-time proof the writer anchor uses, and only that one draw has to be skipped -
+// the material binding (the MV role channel) would still run. Logs only; nothing is
+// dropped while the probe window is armed.
+// Is this list the current frame's arg10 writer, by the bind-time proof? `firstDraw`
+// additionally requires that no draw has been recorded into it yet - the TAAU quad is
+// the first draw of its list (EXP-0066).
+bool inArg10WriterList(void* list, bool firstDraw) {
+    auto* const sig    = sigFor(list);
+    void* const native = gArg10Native.load(std::memory_order_acquire);
+    if (!sig || !native) {
+        return false;
+    }
+    if (firstDraw && sig->draws != 0) {
+        return false;
+    }
+    return sig->arg10Bound == native
+        && sig->arg10BoundSerial == gArg10DeclaredSerial.load(std::memory_order_acquire);
+}
+
+void probeDrawTag(void* list, char const* kind, unsigned a, unsigned b) {
+    if (gDrawTagProbeFrames.load(std::memory_order_relaxed) == 0) {
+        return;
+    }
+    auto* const sig    = sigFor(list);
+    void* const native = gArg10Native.load(std::memory_order_acquire);
+    if (!sig || !native) {
+        return;
+    }
+    bool const exact = inArg10WriterList(list, false);
+    if (!exact && !sigBindsResource(sig, native)) {
+        return;
+    }
+    static std::atomic<unsigned> logs{0};
+    unsigned const               n = logs.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (n <= 32 || n % 120 == 0) {
+        utils::logger().info(
+            "[vv] d-probe: draw in arg10 list kind={} a={} b={} exact={} draws={}",
+            kind,
+            a,
+            b,
+            exact ? 1 : 0,
+            sig->draws
+        );
+    }
+}
+
 void drawInstancedDetour(void* list, unsigned vertexCount, unsigned instanceCount, unsigned startVertex, unsigned startInstance) {
     markDrew(list);
+    probeDrawTag(list, "inst", vertexCount, instanceCount);
     if (auto* const sig = sigFor(list)) {
         if (sig->draws++ == 0) {
             sig->firstVerts = vertexCount;
@@ -1099,10 +1208,47 @@ void rssSetViewportsDetour(void* list, unsigned count, void const* viewports) {
 
 void drawIndexedInstancedDetour(void* list, unsigned indexCount, unsigned instanceCount, unsigned startIndex, int baseVertex, unsigned startInstance) {
     markDrew(list);
+    probeDrawTag(list, "indexed", indexCount, instanceCount);
+    // Stage D: skip exactly the TAAU quad (the first 6x1 indexed draw of the list that
+    // already bound this frame's arg10), and only while the last engine frame really
+    // injected. The callback, its material binds, the arg10 writer binding and the MV
+    // capture all stay; only the GPU draw leaves the submission.
+    //
+    // There is deliberately no world gate: since the user's 2026-10-28 decision the
+    // pipeline keeps running after leaving a save, and the menu background is processed
+    // by the same DLSS -> arg10 path (EXP-0068 showed what happens when the skip runs
+    // but the injection is a no-op: the background freezes on the last world frame).
+    // `arg10SolidArmed` makes Stop/Start take effect immediately; `gLastInjectionOk`
+    // restores TAAU on the frame after any failed injection; the generation and size
+    // checks keep a resize frame on TAAU until a correctly sized injection exists
+    // (rapid F11 used to leave a stale/truncated arg10, EXP-0075).
+    bool skipped = false;
+    if (indexCount == 6 && instanceCount == 1
+        && gDrawSuppressArmed.load(std::memory_order_acquire)
+        && gArg10SolidArmed.load(std::memory_order_acquire)
+        && gLastInjectionOk.load(std::memory_order_acquire)
+        && gInjectedGeneration.load(std::memory_order_acquire)
+               == gRenderGeneration.load(std::memory_order_relaxed)
+        && inArg10WriterList(list, true)
+        && gMotionVectorNative.load(std::memory_order_acquire)) {
+        unsigned const n = gDrawSuppressSkips.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 8 || n % 600 == 0) {
+            utils::logger().info(
+                "[vv] d-suppress: skipped TAAU draw #{} list={:#x} mv={:#x}",
+                n,
+                reinterpret_cast<std::uintptr_t>(list),
+                reinterpret_cast<std::uintptr_t>(gMotionVectorNative.load(std::memory_order_acquire))
+            );
+        }
+        skipped = true;
+    }
     if (auto* const sig = sigFor(list)) {
         if (sig->draws++ == 0) {
             sig->firstIndices = indexCount;
         }
+    }
+    if (skipped) {
+        return;
     }
     auto const n = gDrawIndexedCalls.fetch_add(1, std::memory_order_relaxed) + 1;
     if (n <= 8) {
@@ -1530,6 +1676,36 @@ std::atomic<bool>           gArg10FreshSubmission{false};
 // A world submission that had a new declaration but no writer: the DLSS history must
 // not span that gap (the camera moved while no frame was upscaled).
 std::atomic<bool>           gArg10Gap{false};
+// R3 stage C: arg11 (InputBufferMotionVectors) is an ExternalImage - it has no holder
+// chain at dep+0x10 (EXP-0062: that field is 0x3be70000 at declaration and a
+// non-pointer at draw), so it is captured where the resolved texture actually appears:
+// the TAAU material's own texture binding. The draw binds exactly three textures -
+// FinalColor (fmt26, render size), MV (any other render-size form) and History
+// (display size, so it never enters the render-size inventory) - which is the role
+// split §35.3 asks for.
+std::atomic<void*>          gMotionVectorNative{nullptr};
+
+// R3 stage D probe: the two questions that decide whether TAAU can be suppressed at
+// all - does the writer list still bind arg10, and does the MV material binding still
+// happen. SuppressProbeFrames skips the draw callback for exactly N frames and then
+// restores it; nothing else is armed by these.
+std::atomic<unsigned> gSuppressProbeFrames{0};
+std::atomic<unsigned> gDrawTagProbeFrames{0};
+std::atomic<unsigned> gChainProbeFrames{0};
+std::atomic<bool>     gProbeFrameSuppressed{false};
+
+// Stage D draw-level suppress: skip only the TAAU draw itself, keep the callback and
+// its material binds. `gLastInjectionOk` is written by inject::prepare so a frame
+// whose inputs went bad restores TAAU (its draw is not skipped) instead of leaving a
+// stale arg10 on screen.
+std::atomic<bool>     gDrawSuppressArmed{false};
+std::atomic<bool>     gLastInjectionOk{false};
+std::atomic<unsigned> gDrawSuppressSkips{0};
+// Generation of the last injection that really wrote arg10. A render-graph rebuild
+// (resize/F11/world enter) bumps renderGeneration(); until a frame has injected under
+// the new generation the draw is NOT skipped, so a resize can never leave a stale or
+// wrong-sized arg10 on screen (the rapid-F11 freeze/truncation in EXP-0075).
+std::atomic<unsigned> gInjectedGeneration{0};
 
 bool matchesBytes(void* target, unsigned char const* bytes, unsigned size) {
     return target && readable(target, size) && std::memcmp(target, bytes, size) == 0;
@@ -1758,28 +1934,74 @@ LL_STATIC_HOOK(
                 RenderTargetInfo targets[48]{};
                 unsigned const   count = renderTargets(targets, 48, 64);
                 bool             matched = false;
+                bool             inRtv   = false;
+                RenderTargetInfo mvTarget{};
                 for (unsigned i = 0; lookup.native && i < count; ++i) {
-                    if (targets[i].resource != lookup.native || targets[i].format != 26
-                        || targets[i].width != renderWidth() || targets[i].height != renderHeight()) {
+                    if (targets[i].resource != lookup.native) {
                         continue;
                     }
-                    gInputFinalColorWidth.store(targets[i].width, std::memory_order_release);
-                    gInputFinalColorHeight.store(targets[i].height, std::memory_order_release);
-                    gInputFinalColorFormat.store(targets[i].format, std::memory_order_release);
-                    gInputFinalColorNative.store(lookup.native, std::memory_order_release);
-                    gTextureHits.fetch_add(1, std::memory_order_relaxed);
-                    matched = true;
-                    break;
+                    inRtv = true;
+                    if (targets[i].format == 26 && targets[i].width == renderWidth()
+                        && targets[i].height == renderHeight()) {
+                        gInputFinalColorWidth.store(targets[i].width, std::memory_order_release);
+                        gInputFinalColorHeight.store(targets[i].height, std::memory_order_release);
+                        gInputFinalColorFormat.store(targets[i].format, std::memory_order_release);
+                        gInputFinalColorNative.store(lookup.native, std::memory_order_release);
+                        gTextureHits.fetch_add(1, std::memory_order_relaxed);
+                        matched = true;
+                        continue;
+                    }
+                    // R3 stage C: the TAAU draw binds exactly three textures - FinalColor
+                    // (fmt26, render size), InputBufferMotionVectors (render size, any
+                    // other form) and InputTAAHistory (display size, so it never enters
+                    // this render-size list). The non-fmt26 entry is therefore the MV.
+                    mvTarget = targets[i];
+                }
+                if (!matched && mvTarget.resource) {
+                    gMotionVectorNative.store(mvTarget.resource, std::memory_order_release);
+                    static std::atomic<unsigned> mvLogs{0};
+                    unsigned const               mvNo = mvLogs.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (mvNo <= 6 || mvNo % 900 == 0) {
+                        utils::logger().info(
+                            "[vv] arg11 mv material handle=0x{:04X} native={:#x} {}x{} fmt={} "
+                            "(role=InputBufferMotionVectors)",
+                            handle,
+                            reinterpret_cast<std::uintptr_t>(mvTarget.resource),
+                            mvTarget.width,
+                            mvTarget.height,
+                            mvTarget.format
+                        );
+                    }
                 }
                 unsigned const n = gSetTextureLogs.fetch_add(1, std::memory_order_relaxed) + 1;
                 if (n <= 24) {
+                    // Role channel probe: the bind call's `record` is the material-side
+                    // per-texture record; if it carries the uniform-name hash, the role
+                    // (MV / FinalColor / History) becomes exact instead of inferential.
+                    std::uint64_t word[6]{};
+                    bool const    recordOk = readable(record, sizeof(word));
+                    if (recordOk) {
+                        std::memcpy(word, record, sizeof(word));
+                    }
                     utils::logger().info(
-                        "[vv] in.color material handle=0x{:04X} action={} native={:#x} entry={:#x} match={}",
+                        "[vv] in.color material handle=0x{:04X} action={} native={:#x} entry={:#x} match={} rtv={}"
+                        " record={:#x} flags={:#x} view={:#x}"
+                        " q={:#x},{:#x},{:#x},{:#x},{:#x},{:#x}",
                         handle,
                         action,
                         reinterpret_cast<std::uintptr_t>(lookup.native),
                         reinterpret_cast<std::uintptr_t>(lookup.entry),
-                        matched ? 1 : 0
+                        matched ? 1 : 0,
+                        inRtv ? 1 : 0,
+                        reinterpret_cast<std::uintptr_t>(record),
+                        flags,
+                        view,
+                        word[0],
+                        word[1],
+                        word[2],
+                        word[3],
+                        word[4],
+                        word[5]
                     );
                 }
             }
@@ -1835,6 +2057,12 @@ void uninstallSetTextureHook() {
 //
 // The +0x8 value is a 0x20-byte dependency wrapper: +0x10/+0x18 are a shared holder
 // and its control block; the holder's +0x18 points to the resolved resource (EXP-0032).
+// That chain is the transient-output one (arg10). EXP-0062 showed it does not apply to
+// the ExternalImage dependencies (arg9 colour / arg11 motion): at dep2+0x10 the value
+// is 0x3be70000 at declaration and a non-pointer at draw, and the engine only resolves
+// those through the material texture binding. The motion vectors are therefore captured
+// in SetTextureHook (role split below), not here.
+
 void taauDetour(
     void* declarator,
     void* allocator,
@@ -1953,6 +2181,50 @@ void taauDetour(
         gArg10DeclaredSerial.fetch_add(1, std::memory_order_release);
         gArg10Handle.store(handle, std::memory_order_release);
         gArg10Reason.store(reason, std::memory_order_release);
+    }
+    // Stage D probe: one-shot walk of all four declarator dependencies. The arg10
+    // (dep1) chain is known; this says whether dep2 (arg11 MV) / dep3 (history) resolve
+    // here at all - which decides whether the MV channel can be made independent of
+    // the suppressed draw.
+    if (gChainProbeFrames.load(std::memory_order_acquire) > 0) {
+        gChainProbeFrames.fetch_sub(1, std::memory_order_acq_rel);
+        void* const       deps[4]  = {dep0, dep1, dep2, dep3};
+        char const* const names[4] = {"arg9 colour", "arg10 upscaling", "arg11 mv", "arg12 history"};
+        for (unsigned d = 0; d < 4; ++d) {
+            void*         wrapper  = nullptr;
+            void*         holder   = nullptr;
+            void*         resource = nullptr;
+            std::uint16_t handle   = kHandleInvalid;
+            char const*   why      = "invalidChain";
+            if (peek(deps[d], 0x8, wrapper)) {
+                why = "noWrapperField";
+                if (peek(wrapper, 0x10, holder)) {
+                    why = "noHolder";
+                    if (peek(holder, 0x18, resource)) {
+                        why = "noResource";
+                        if (peek(resource, 0, handle)) {
+                            why = handle == kHandleInvalid ? "invalidHandle" : "resolved";
+                        }
+                    }
+                }
+            }
+            void* native = nullptr;
+            if (handle != kHandleInvalid) {
+                native = lookupTextureNative(handle).native;
+            }
+            utils::logger().info(
+                "[vv] d-probe: chain {} dep={:#x} wrapper={:#x} holder={:#x} resource={:#x}"
+                " handle={:#x} why={} native={:#x}",
+                names[d],
+                reinterpret_cast<std::uintptr_t>(deps[d]),
+                reinterpret_cast<std::uintptr_t>(wrapper),
+                reinterpret_cast<std::uintptr_t>(holder),
+                reinterpret_cast<std::uintptr_t>(resource),
+                handle,
+                why,
+                reinterpret_cast<std::uintptr_t>(native)
+            );
+        }
     }
 }
 
@@ -2251,6 +2523,14 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
                 gReplacementMissed.load(std::memory_order_relaxed)
             );
         }
+        return;
+    }
+    // Stage D probe: skip exactly N draw callbacks, then restore. Independent of the
+    // replacement gate above - this is the diagnostic "what disappears with the draw".
+    if (gSuppressProbeFrames.load(std::memory_order_acquire) > 0) {
+        unsigned const left = gSuppressProbeFrames.fetch_sub(1, std::memory_order_acq_rel) - 1;
+        gProbeFrameSuppressed.store(true, std::memory_order_release);
+        utils::logger().info("[vv] d-probe: callback suppressed left={} draw#={}", left, index);
         return;
     }
     unsigned recaptureLeft = 0;
@@ -2841,7 +3121,7 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                 if (fresh) {
                     for (unsigned i = 0; native && i < listCount; ++i) {
                         auto const* sig = sigAt(i);
-                        if (sig && sigBindsResource(sig, native)) {
+                        if (sig && sigBindsArg10(sig, native, declared)) {
                             writer = i + 1;
                             break;
                         }
@@ -2857,6 +3137,20 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                 gArg10WriterList.store(nullptr, std::memory_order_release);
             }
             gArg10FreshSubmission.store(fresh, std::memory_order_release);
+            // Stage D probe: the submission right after a probe-suppressed draw says
+            // whether anything still bound arg10 as a render target (writer), and what
+            // the MV capture holds. This is the measurement the suppress decision needs.
+            if (gProbeFrameSuppressed.exchange(false, std::memory_order_acq_rel)) {
+                utils::logger().info(
+                    "[vv] d-probe: submit lists={} arg10={:#x} reason={} writer={} fresh={} mv={:#x}",
+                    listCount,
+                    reinterpret_cast<std::uintptr_t>(gArg10Native.load(std::memory_order_acquire)),
+                    gArg10Reason.load(std::memory_order_relaxed),
+                    gArg10WriterSplit.load(std::memory_order_acquire),
+                    fresh ? 1 : 0,
+                    reinterpret_cast<std::uintptr_t>(gMotionVectorNative.load(std::memory_order_acquire))
+                );
+            }
             if (displayW && displayH && sigs) {
                 if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
                     // The suppressed composite no longer satisfies draws==1. Cut
@@ -2926,7 +3220,7 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                                 ++unresolved;
                             }
                         }
-                        if (native && sigBindsResource(sig, native)) {
+                        if (native && sigBindsArg10(sig, native, gArg10DeclaredSerial.load(std::memory_order_acquire))) {
                             hits += " " + std::to_string(i);
                         }
                         if (sig->draws == 1 && aboutSame(sig->width, displayW) && aboutSame(sig->height, displayH)) {
@@ -3348,6 +3642,9 @@ void onSwapChainResize() {
     gInputFinalColorHeight.store(0, std::memory_order_release);
     gInputFinalColorFormat.store(0, std::memory_order_release);
     gInputFinalColorRecaptureDraws.store(4, std::memory_order_release);
+    // The motion-vector binding belongs to the old graph; the next TAAU draw re-captures
+    // it from the rebuilt material binding.
+    gMotionVectorNative.store(nullptr, std::memory_order_release);
     gArg10ProbeFrames.store(8, std::memory_order_release);
     gSetTextureLogs.store(0, std::memory_order_relaxed);
     gRenderGeneration.fetch_add(1, std::memory_order_relaxed);
@@ -3572,6 +3869,7 @@ void setArg10Solid(bool armed) {
     // Force one fresh RTV capture per list: the lists that existed before this arming
     // would otherwise keep a null/stale target forever.
     gArg10ArmGeneration.fetch_add(1, std::memory_order_relaxed);
+    gSetTextureLogs.store(0, std::memory_order_relaxed);
     gArg10WriterSplit.store(0, std::memory_order_relaxed);
     gArg10WriterList.store(nullptr, std::memory_order_relaxed);
     // Do not let a stale native from before the arming claim the first submission.
@@ -3583,6 +3881,45 @@ bool arg10SolidArmed() { return gArg10SolidArmed.load(std::memory_order_acquire)
 bool arg10FreshSubmission() { return gArg10FreshSubmission.load(std::memory_order_acquire); }
 void noteArg10Gap() { gArg10Gap.store(true, std::memory_order_release); }
 bool takeArg10Gap() { return gArg10Gap.exchange(false, std::memory_order_acq_rel); }
+
+void* motionVectorResource() { return gMotionVectorNative.load(std::memory_order_acquire); }
+
+void setSuppressProbeFrames(unsigned frames) {
+    gSuppressProbeFrames.store(frames > 240 ? 240 : frames, std::memory_order_release);
+    utils::logger().info("[vv] d-probe: suppress armed frames={}", frames > 240 ? 240 : frames);
+}
+unsigned suppressProbeFrames() { return gSuppressProbeFrames.load(std::memory_order_acquire); }
+
+void setDrawTagProbeFrames(unsigned frames) {
+    gDrawTagProbeFrames.store(frames > 3600 ? 3600 : frames, std::memory_order_release);
+    utils::logger().info("[vv] d-probe: draw tag armed frames={}", frames > 3600 ? 3600 : frames);
+}
+unsigned drawTagProbeFrames() { return gDrawTagProbeFrames.load(std::memory_order_relaxed); }
+
+void setChainProbeFrames(unsigned frames) {
+    gChainProbeFrames.store(frames > 4 ? 4 : frames, std::memory_order_release);
+    utils::logger().info("[vv] d-probe: chain armed frames={}", frames > 4 ? 4 : frames);
+}
+unsigned chainProbeFrames() { return gChainProbeFrames.load(std::memory_order_relaxed); }
+
+void setDrawSuppress(bool armed) {
+    bool const previous = gDrawSuppressArmed.exchange(armed, std::memory_order_acq_rel);
+    if (previous == armed) {
+        return;
+    }
+    utils::logger().info("[vv] d-suppress armed={}", armed ? 1 : 0);
+}
+bool drawSuppressArmed() { return gDrawSuppressArmed.load(std::memory_order_acquire); }
+unsigned drawSuppressSkips() { return gDrawSuppressSkips.load(std::memory_order_relaxed); }
+
+void noteInjectionResult(bool ok) {
+    gLastInjectionOk.store(ok, std::memory_order_release);
+    if (ok) {
+        // The frame really wrote arg10: only now may the draw be skipped under this
+        // render generation.
+        gInjectedGeneration.store(gRenderGeneration.load(std::memory_order_relaxed), std::memory_order_release);
+    }
+}
 
 void setTaauDrawReplacement(bool armed) {
     bool const previous = gReplaceTaauDraw.exchange(armed, std::memory_order_acq_rel);

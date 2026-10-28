@@ -1,0 +1,24 @@
+# F3: HUD / hand / crosshair / UI preserved; DLSS toggle works without crashes
+# build 23:02 37625c36 (EXP-0076 runbook: stage B -> suppress -> F11 stress -> inventory/pause)
+# user: 「已完成，连按无异常」 (the checklist part: HUD/hand/crosshair and UI panels normal)
+
+## This session (world, stage B + draw suppress + F11 stress)
+
+[2026-10-28 23:03:00.114 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 23:03:00.131 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 23:03:20.452 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 mv=1 depth32=1 dlss=1 taauref=1
+[2026-10-28 23:04:15.250 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 23:04:20.258 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-28 23:04:22.041 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3600 list=0x1add479bc40 mv=0x1af171ada70
+[2026-10-28 23:04:25.633 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+# The 120 failed records are the rapid-F11 window; the user reports no freeze/truncation/
+# exposure blow-up (the generation gate kept TAAU on screen), and the draw skip resumed
+# once a correctly sized injection succeeded (#3600 at 23:04:22).
+
+## Toggle coverage from earlier runs (same feature, different builds)
+
+- EXP-0067: `Restore` -> `Suppress TAAU draw` toggled repeatedly; skips stopped and
+  resumed; no crash.
+- EXP-0068: `Stop arg10` -> `DLSS -> arg10` re-armed; injection resumed from #1
+  (evidence r3-d-fallback-EXP-0068.log).
+- EXP-0070/0074: stage B armed in menu and world; world exit/re-entry with DLSS running.

@@ -1,0 +1,63 @@
+# EXP-0067 R3 stage D: draw-level TAAU suppress (skip only the quad)
+# build 21:47 b5d3072a (draw-level suppress, default off; Close fix from EXP-0065 included)
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log (verbatim excerpts)
+# user: 「已完成，无明显异常」
+# result: PASS - TAAU draw skipped every frame for ~30 s with injection and MV intact;
+#         Stop->Start also exercised and recovered (the EXP-0065 gap).
+
+## 1. Arm stage B, then the draw-level suppress
+
+[2026-10-28 21:49:09.399 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 21:49:09.406 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 21:49:11.522 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:49:11.522 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x2c5f0ee0010 target=0x2c5db8ef7f0
+[2026-10-28 21:49:20.197 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-28 21:49:20.200 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1 list=0x2c5e93ce170 mv=0x2c5db8f4470
+[2026-10-28 21:49:20.209 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2 list=0x2c5eb5f9aa0 mv=0x2c5db8f4470
+[2026-10-28 21:49:20.220 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3 list=0x2c5f037ea70 mv=0x2c5db8f4470
+
+## 2. Injection stayed continuous the whole time (skipped count stayed at 1)
+
+[2026-10-28 21:49:20.871 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=840 skipped=1
+[2026-10-28 21:49:22.187 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=960 skipped=1
+[2026-10-28 21:49:24.857 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x2c5db8f4470 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 21:49:24.857 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:49:26.805 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #600 list=0x2c5f0ee0010 mv=0x2c5db8f4470
+[2026-10-28 21:49:31.397 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:49:33.496 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1200 list=0x2c5c6885f60 mv=0x2c5db8f4470
+[2026-10-28 21:49:37.016 IFO][NeuroDragon] [vv] inject fixed k=87/109 injected=2280 skipped=1
+[2026-10-28 21:49:38.434 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:49:40.355 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1800 list=0x2c5ecce5650 mv=0x2c5db8f4470
+[2026-10-28 21:49:47.067 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2400 list=0x2c5e9f1d300 mv=0x2c5db8f4470
+[2026-10-28 21:49:50.409 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=3480 skipped=1
+
+## 3. Restore, then Stop -> Start (the EXP-0065 gap) both recover
+
+[2026-10-28 21:49:50.024 IFO][NeuroDragon] [vv] d-suppress armed=0
+# no further "skipped TAAU draw" line after this point
+[2026-10-28 21:49:51.749 IFO][NeuroDragon] [vvsr] sr arg10 #3600: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:49:52.547 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-28 21:49:56.964 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 21:49:56.980 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1 skipped=1
+[2026-10-28 21:49:58.254 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=120 skipped=1
+[2026-10-28 21:50:02.594 IFO][NeuroDragon] [vvsr] sr arg10 #4200: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:50:03.437 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=600 skipped=1
+[2026-10-28 21:50:11.080 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-28 21:50:14.988 IFO][LeviLamina] 正在禁用模组……
+
+## 4. What this proves / what it does not
+
+# PASS: the TAAU quad is skipped every frame while the callback, material binds, MV
+# capture and the arg10 writer binding stay intact:
+#   - "d-suppress: skipped TAAU draw" #1..#2400+ over ~30 s, one per frame;
+#   - "inject fixed" injected 840 -> 3480 during the window, skipped stays 1 (the arm
+#     frame only) => no RecordFailed, no NoBoundary storm;
+#   - sr arg10 #600..#3600 eval=1 mv=engine throughout, scene changes (87/109 shape)
+#     included;
+#   - Restore removes the skips; Stop -> Start re-arms and injects from #1 again.
+# No D3D12 errors, no crash; user reports no visible anomaly (picture identical to
+# stage B, as expected - DLSS still writes arg10).
+# NOT COVERED: re-arming the draw suppress after Restore (the runbook's second half;
+# only one suppress arm was performed). The invalid-input fallback (skipping TAAU only
+# after a frame that injected) was not triggered either; it needs Stop arg10 *while*
+# the draw suppress is armed.

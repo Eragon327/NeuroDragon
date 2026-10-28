@@ -11,7 +11,6 @@
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/ui/Widgets.h"
 #include "neurodragon/utils/Utils.h"
-#include "neurodragon/vv/VvBypass.h"
 #include "neurodragon/vv/VvCapture.h"
 #include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/vv/VvSr.h"
@@ -1157,42 +1156,10 @@ void drawB0Probe() {
         widgets::statRow("B1c last file", needed > 0 ? buffer : "?");
     }
 
-    // B2: the SR pipeline's own buffers. Same boundary as the bypass, but the world
-    // colour and depth are first copied into our render-resolution textures; the
-    // final pass encodes and writes the result. The depth / motion buttons are the
-    // visual check that those inputs are sane before DLSS is wired in.
-    widgets::sectionHeader("VV B2 SR (TEST)");
-    auto const startSr = [&](vv::sr::View view) {
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
-        probe::vv::inject::setFromTail(true);
-        probe::vv::inject::setK(4);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Sr);
-        probe::vv::inject::setUseBackBuffer(true);
-        vv::sr::setView(view);
-    };
-    // One row per pair: seven buttons on one line ran off the panel's right edge, so
-    // the last ones (Next SR depth / Dump SR inputs) were invisible (2026-10-25).
-    if (ImGui::Button("SR colour bypass")) {
-        startSr(vv::sr::View::Bypass);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("SR depth view")) {
-        startSr(vv::sr::View::Depth);
-    }
-    if (ImGui::Button("SR raw colour (no encode)")) {
-        startSr(vv::sr::View::Raw);
-    }
-    if (ImGui::Button("SR + DLSS")) {
-        startSr(vv::sr::View::Dlss);
-    }
-    if (ImGui::Button("SR motion view")) {
-        startSr(vv::sr::View::Motion);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Stop SR")) {
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
-    }
+    // R3 inputs: which colour/depth candidate is picked, plus the explicit dump trigger.
+    // The old B2 back-buffer path (depth/motion views through encode + white point) is
+    // gone; arg10 is the only output (docs/specs/vv.md §35.4).
+    widgets::sectionHeader("VV R3 inputs (TEST)");
     if (ImGui::Button("Next SR colour")) {
         vv::sr::cycleColor();
     }
@@ -1203,6 +1170,10 @@ void drawB0Probe() {
     if (ImGui::Button("Dump SR inputs")) {
         vv::sr::dumpInputs();
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Capture TAAU ref (F2)")) {
+        vv::sr::captureTaaRef();
+    }
     // TEST: the hotkey path, so a pair can be taken while the panel is closed and the
     // player keeps turning the camera (EXP-0027).
     widgets::hint("F7 (TEST): two input dumps 2 s apart - keep turning; the menu may stay closed.");
@@ -1210,15 +1181,14 @@ void drawB0Probe() {
     std::snprintf(
         buffer,
         sizeof(buffer),
-        "%s  view=%d  %ux%u -> %ux%u",
+        "%s  %ux%u -> %ux%u",
         sr.pipelineReady ? "ready" : "not built",
-        sr.view,
         sr.renderWidth,
         sr.renderHeight,
         sr.displayWidth,
         sr.displayHeight
     );
-    widgets::statRow("B2 pipeline", buffer);
+    widgets::statRow("R3 pipeline", buffer);
     std::snprintf(
         buffer,
         sizeof(buffer),
@@ -1227,20 +1197,7 @@ void drawB0Probe() {
         static_cast<unsigned>(sr.dlssCreateRet),
         static_cast<unsigned>(sr.dlssEvaluateRet)
     );
-    widgets::statRow("B2 DLSS", buffer);
-    auto const taau = probe::vv::taauDrawStats();
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "armed=%d declared=%llu callbacks=%llu forwarded=%llu suppressed=%llu missed=%llu",
-        probe::vv::taauDrawReplacementArmed() ? 1 : 0,
-        static_cast<unsigned long long>(taau.declared),
-        static_cast<unsigned long long>(taau.callbacks),
-        static_cast<unsigned long long>(taau.forwarded),
-        static_cast<unsigned long long>(taau.suppressed),
-        static_cast<unsigned long long>(taau.missed)
-    );
-    widgets::statRow("TAAU replacement", buffer);
+    widgets::statRow("R3 DLSS", buffer);
     std::snprintf(
         buffer,
         sizeof(buffer),
@@ -1255,10 +1212,10 @@ void drawB0Probe() {
         sr.depthCandidates,
         sr.recorded ? 1 : 0
     );
-    widgets::statRow("B2 inputs", buffer);
+    widgets::statRow("R3 inputs", buffer);
     if (sr.lastError) {
         std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(sr.lastError));
-        widgets::statRow("B2 last error", buffer);
+        widgets::statRow("R3 last error", buffer);
     }
 
     // R3 stage A (docs/specs/vv.md §35.1): write magenta into the engine's TAAU
@@ -1315,81 +1272,47 @@ void drawB0Probe() {
     );
     widgets::statRow("R3 B arg10", buffer);
 
-    // B1b-1: our colour bypass. The boundary is the content anchor now (the first
-    // list that bound a back buffer and drew = the world composite), so this follows
-    // the frame instead of counting from its end; tail 4 stays as the fallback when
-    // the probe did not see a writer.
-    widgets::sectionHeader("VV DLSS B1b (TEST)");
-    if (ImGui::Button("Colour bypass at content boundary (fallback tail 4)")) {
-        probe::vv::setArg10Solid(false);
-        probe::vv::inject::setUseArg10(false);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
-        probe::vv::inject::setFromTail(true);
-        probe::vv::inject::setK(4);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Bypass);
-        probe::vv::inject::setUseBackBuffer(true);
+    // R3 stage D probe (docs/specs/vv.md §35.4): answers what survives suppressing the
+    // TAAU draw before any suppress implementation is written. Suppress skips the draw
+    // callback for N frames and restores itself; the other two only log.
+    widgets::sectionHeader("VV R3 stage D probe (TEST)");
+    if (ImGui::Button("Suppress callback x8")) {
+        probe::vv::setSuppressProbeFrames(8);
     }
     ImGui::SameLine();
-    if (ImGui::Button("Stop injection")) {
-        probe::vv::setArg10Solid(false);
-        probe::vv::inject::setUseArg10(false);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
-        probe::vv::inject::setUseBackBuffer(false);
+    if (ImGui::Button("Draw tag probe x300")) {
+        probe::vv::setDrawTagProbeFrames(300);
     }
-    widgets::statRow(
-        "B1b boundary",
-        probe::vv::inject::useBackBuffer() ? "content: back-buffer writer" : "head/tail k (count)",
-        probe::vv::inject::useBackBuffer() ? ImGui::GetColorU32(ImGuiCol_Text) : 0
-    );
+    if (ImGui::Button("Chain probe x1")) {
+        probe::vv::setChainProbeFrames(1);
+    }
     std::snprintf(
         buffer,
         sizeof(buffer),
-        "split=%u  list=%p",
-        probe::vv::backBufferWriterSplit(),
-        probe::vv::backBufferWriterList()
+        "suppress=%u draw=%u chain=%u",
+        probe::vv::suppressProbeFrames(),
+        probe::vv::drawTagProbeFrames(),
+        probe::vv::chainProbeFrames()
     );
-    widgets::statRow(
-        "B1d writer",
-        buffer,
-        probe::vv::backBufferWriterSplit() ? ImGui::GetColorU32(ImGuiCol_Text) : 0
-    );
-    auto const bypass = vv::bypass::stats();
-    if (ImGui::Button("Next colour candidate")) {
-        vv::bypass::cycleColor();
+    widgets::statRow("R3 D probe", buffer);
+
+    // R3 stage D draw-level suppress: only the TAAU quad is skipped, the callback and
+    // its material binds stay. Needs the stage B arm above (the draw tag comes from
+    // arg10's bind-time proof); a frame whose injection failed restores TAAU itself.
+    widgets::sectionHeader("VV R3 stage D suppress (TEST)");
+    if (ImGui::Button(probe::vv::drawSuppressArmed() ? "Restore TAAU draw" : "Suppress TAAU draw")) {
+        probe::vv::setDrawSuppress(!probe::vv::drawSuppressArmed());
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Cycle encode (table / gamma / ACES+g)")) {
-        vv::bypass::cycleTonemap();
-    }
-    widgets::statRow("B1b pipeline", bypass.pipelineReady ? "ready" : "not built",
-                     bypass.pipelineReady ? ImGui::GetColorU32(ImGuiCol_Text) : 0);
     std::snprintf(
         buffer,
         sizeof(buffer),
-        "choice=%d/%u  tonemap=%d  ptr=%p",
-        bypass.colorChoice,
-        bypass.colorCandidates,
-        bypass.tonemap,
-        bypass.colorResource
+        "armed=%d skips=%u",
+        probe::vv::drawSuppressArmed() ? 1 : 0,
+        probe::vv::drawSuppressSkips()
     );
-    widgets::statRow("B1b colour", buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "%ux%u -> %ux%u  fmt=%u  recorded=%d",
-        bypass.srcWidth,
-        bypass.srcHeight,
-        bypass.dstWidth,
-        bypass.dstHeight,
-        bypass.colorFormat,
-        bypass.recorded ? 1 : 0
-    );
-    widgets::statRow("B1b sizes", buffer);
-    if (bypass.lastError) {
-        std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(bypass.lastError));
-        widgets::statRow("B1b last error", buffer);
-    }
+    widgets::statRow("R3 D draw", buffer);
+    widgets::hint("Arm stage B first; the TAAU quad is skipped only after a frame that injected.");
+
 }
 #endif
 

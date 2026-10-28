@@ -1,0 +1,88 @@
+# EXP-0064 R3 stage D regression (no suppress): F11 / world switch / Stop-Start
+# build 21:05 6cbf7cae (same dll as EXP-0063, no code change)
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log (verbatim excerpts)
+# user: 「已完成，无明显异常」 - the fallback to TAAU looks normal, so the user could not see it
+# result: FAIL - injection survives F11 both ways, dies permanently at world exit/re-entry
+
+## 1. Passed part: arm -> F11 window -> F11 fullscreen -> frame-shape change
+
+[2026-10-28 21:07:22.319 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 21:07:24.611 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 21:07:24.611 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1fb04c8fd90 target=0x1fd3c88b4c0
+[2026-10-28 21:07:25.997 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=120 skipped=1
+[2026-10-28 21:07:27.297 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=240 skipped=1
+[2026-10-28 21:07:28.712 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=360 skipped=1
+[2026-10-28 21:07:29.863 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 21:07:30.852 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=480 skipped=2
+[2026-10-28 21:07:32.207 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1fb20f20880 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 21:07:32.207 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:07:34.948 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=840 skipped=2
+[2026-10-28 21:07:35.901 WRN][NeuroDragon] [vv] inject skipped (3): no pre-HUD boundary; TAAU restored
+[2026-10-28 21:07:37.298 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=960 skipped=3
+[2026-10-28 21:07:38.867 IFO][NeuroDragon] [vv] inject fixed k=52/74 injected=1080 skipped=3
+[2026-10-28 21:07:40.247 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 21:07:40.257 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1fbff991a00 target=0x1fd0744b3c0
+[2026-10-28 21:07:43.033 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1440 skipped=3
+[2026-10-28 21:07:44.454 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1560 skipped=3
+
+## 2. World exit / render-graph rebuild: the last frame that entered sr::record
+
+[2026-10-28 21:07:45.856 IFO][NeuroDragon] [vv] tex res=0x1fd60344050 2560x1369 fmt=26 src=committed
+[2026-10-28 21:07:45.869 IFO][NeuroDragon] [vv] rtv res=0x1fd60344050 2560x1369 fmt=26 flags=0x1
+[2026-10-28 21:07:46.075 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 21:07:46.075 WRN][NeuroDragon] [vvsr] sr mv: no usable arg11 for 1689x903 (native=0x0 fmt=0); frame skipped
+
+## 3. From here on: RecordFailed on every interval, no sr::record entry at all
+
+# sr::recordInternal logs "[vvsr] world: getLevel()" once per second whenever it runs;
+# the last one is 21:07:45.673 and there is none afterwards. No "sr buffers", no "sr mv",
+# no "sr arg10" either -> inject::record() returned false before recordInternal.
+
+[2026-10-28 21:07:47.929 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-28 21:07:53.824 WRN][NeuroDragon] [vv] inject skipped (600): recording the injected work failed
+[2026-10-28 21:08:01.655 WRN][NeuroDragon] [vv] inject skipped (1200): recording the injected work failed
+[2026-10-28 21:08:08.769 IFO][NeuroDragon] [vv] session (world enter): shim=0x0 core=0x7ffaea9e0000 dlss=0x7ffae0130000 dlssnr=0x1fd6fdc0000 d3d12core=0x7ffaec7b0000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-28 21:08:10.070 WRN][NeuroDragon] [vv] inject skipped (1800): recording the injected work failed
+[2026-10-28 21:08:13.169 WRN][NeuroDragon] [vv] inject skipped (2040): recording the injected work failed
+[2026-10-28 21:08:21.650 WRN][NeuroDragon] [vv] inject skipped (2760): recording the injected work failed
+
+## 4. World is back (normal 69/70-list frames, TAAU runs, arg11 recaptured) but injection stays dead
+
+[2026-10-28 21:08:24.333 IFO][NeuroDragon] [vv] taau draw #7200 self=0x1fd0698dc30 tid=40452 qpc=245261954048
+[2026-10-28 21:08:24.729 IFO][NeuroDragon] [vv] arg11 mv material handle=0x0566 native=0x1fd6607e0d0 1689x950 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-28 21:08:32.971 IFO][NeuroDragon] [vv] frame #7956 lists=69: ... 25:v1689x950 d1 x6 26:v2560x1440 d1 x6 ...
+
+## 5. Stop -> Start does not recover
+
+[2026-10-28 21:08:22.735 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-28 21:08:28.281 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 21:08:28.652 WRN][NeuroDragon] [vv] inject skipped (2880): recording the injected work failed
+[2026-10-28 21:08:36.671 WRN][NeuroDragon] [vv] inject skipped (3480): recording the injected work failed
+
+# 21:08:37 game shut down normally; no D3D12/device error lines in the session.
+
+## 6. Root cause (code, verifiable)
+
+# The 21:07:46 frame is the expected resize-window skip: recordInternal() returns false at
+# the "no usable arg11" guard *after* inject::record() has already Reset the command list
+# and the allocator. inject::record() returns false on every sub-record failure WITHOUT
+# calling Close(). A D3D12 command list left in the recording state keeps its allocator
+# busy, so the next frame's allocator->Reset()/list->Reset() fails; inject::record() then
+# returns false at its first line forever. That is exactly the observed picture:
+#   - no sr::recordInternal logs after the first failure (fails before it is called),
+#   - RecordFailed on every interval, surviving world re-entry and Stop/Start,
+#   - no device error / crash: the HRESULTs are dropped silently.
+# The two earlier single-frame skips were "no pre-HUD boundary" (prepare returns before
+# record), which do not reset the list and therefore stayed recoverable.
+
+## 7. Postmortem addendum (written after EXP-0064 was closed fail)
+
+# Code path confirmed in src/neurodragon/probe/VvInject.cpp::record():
+#   Reset(allocator, list) -> sub-record -> ... -> SUCCEEDED(list->Close())
+# every `if (!sub-record) return false;` skipped the Close. The 21:07:46 frame took the
+# `!target || !sr::recordArg10(...)` branch (arg11 not yet resolvable at 2560x1369), so the
+# list stayed recording; allocator->Reset() then failed on every following frame at the
+# first line of record(), which is why no [vvsr] line appears after 21:07:46.
+# Fix under test in the next attempt: close the list at the top of record() (recovery from
+# a previous open list) and route every failure/success return through finish(), which
+# always Closes and logs a Close failure.

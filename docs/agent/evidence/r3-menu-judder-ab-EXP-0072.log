@@ -1,0 +1,26 @@
+# EXP-0072 R3 menu judder A/B (same build 1a6bfe90)
+# user: 「两者都抖，只有stop了才不抖」
+# interpretation: the A/B separated the injection, not the upscaler.
+
+## What the two "modes" actually were
+
+# - "Suppress TAAU draw" ON : the TAAU quad is skipped, our DLSS writes arg10.
+# - "Restore TAAU draw" OFF: the TAAU quad runs, but stage B is still armed, so our
+#   injected list writes the DLSS output into arg10 AFTER it. The user still sees DLSS.
+# - "Stop" (Stop arg10)   : injection off, arg10Solid off -> TAAU is the only writer.
+# => "both judder" = both were DLSS; "only stop is smooth" = pure TAAU is smooth.
+# The judder therefore comes from our DLSS -> arg10 path, not from the menu itself and
+# not from skipping the TAAU draw.
+
+## Log anchors (same session as EXP-0071 run)
+
+[2026-10-28 22:38:39.167 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 22:38:40.363 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:38:46.423 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:38:52.400 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+
+## Follow-up
+
+# EXP-0073: zero the jitter fed to DLSS outside a world (the TAAContext jitter belongs
+# to the world render; the panorama is not jittered by it). Panel note: "Restore TAAU
+# draw" is misleading while stage B is armed - a real TAAU A/B needs Stop arg10.

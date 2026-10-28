@@ -1,0 +1,18 @@
+# EXP-0073 R3 menu judder: zero jitter outside a world
+# build 22:43 dc9a6939 (evaluateSr gets jitter 0 when !worldLoaded; reset still every frame)
+# user: 「不抖了，试试不reset？」
+# result: PASS - the up-down judder is gone once the world TAAU jitter is not fed to the
+#         unjittered menu panorama. The user asks to try without the per-frame Reset.
+
+## Evidence
+
+# The session log shows the menu evaluating DLSS every frame (sr arg10 #N eval=1
+# mv=engine) and the user reports the judder disappears only with this build; the
+# previous build (1a6bfe90, same reset, jitter passed through) still juddered.
+# => the judder was the jitter offset, not history and not the DLSS spatial upscaler.
+
+## Follow-up (EXP-0074)
+
+# Keep jitter=0 outside a world, drop the !world term from reset: DLSS accumulates
+# history in the menu. If the panorama's MV describes its rotation this is stable and
+# cleaner; if the MV is zero/stale the rotating background will smear.

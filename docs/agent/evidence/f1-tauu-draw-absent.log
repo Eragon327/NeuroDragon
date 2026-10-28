@@ -1,0 +1,40 @@
+# F1: the TAAU draw is no longer submitted (draw-level skip statistics)
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log, session 22:46 (build 1759239b,
+#         stage B + Suppress TAAU draw), verbatim excerpts.
+# criterion: F1 "TAAU 的每帧 1 次 draw 不再出现在提交里（有日志或注入统计作为原始证据）".
+
+## 1. The skip counter advances once per frame, from the first armed frame
+
+[2026-10-28 22:46:40.996 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-28 22:46:41.002 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1 list=0x1d060f14de0 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.012 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2 list=0x1d061a757f0 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.022 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3 list=0x1cfd98a3c10 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.032 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #4 list=0x1d05b58daf0 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.041 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #5 list=0x1d060377710 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.052 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6 list=0x1d06037c390 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.062 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #7 list=0x1d060f23360 mv=0x1cfc0285d40
+[2026-10-28 22:46:41.072 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #8 list=0x1d05c11c100 mv=0x1cfc0285d40
+
+## 2. It keeps pace with the injected frames (replacement keeps up)
+
+[2026-10-28 22:46:41.719 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:46:41.719 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=1200 skipped=1
+[2026-10-28 22:46:46.783 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-28 22:46:47.304 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=1680 skipped=1
+[2026-10-28 22:46:47.832 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #600 list=0x1d037997000 mv=0x1cfc0285d40
+[2026-10-28 22:46:48.503 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:46:48.503 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=1800 skipped=1
+[2026-10-28 22:46:53.833 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1200 list=0x1d05b5960d0 mv=0x1cfc0285d40
+[2026-10-28 22:46:54.505 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+
+## 3. What the counter means
+
+# The skip happens in drawIndexedInstancedDetour: the exact call is the first
+# DrawIndexedInstanced(6,1) of the list whose bind-time tag equals this frame's arg10
+# (EXP-0066), and the detour returns without forwarding -> the draw is not recorded into
+# the command list and never reaches ExecuteCommandLists. #1200 over ~13 s at ~60 fps
+# is one skip per frame; `skipped=1` on the injection side is the single arm-frame skip,
+# so the DLSS write replaced every one of those frames.
+# Caveat: the frame-shape line still counts this list as "d1" because the detour keeps
+# sig->draws in sync with a normal frame; the skip counter above, not the shape line,
+# is the evidence for F1.

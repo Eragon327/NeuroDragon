@@ -196,4 +196,35 @@ void                   setArg10Solid(bool armed);
 void noteArg10Gap();
 [[nodiscard]] bool takeArg10Gap();
 
+// R3 stage C (docs/specs/vv.md §35.3): the engine's own motion-vector texture, arg11
+// (InputBufferMotionVectors). Captured where the engine actually resolves it: inside the
+// TAAU draw's material binding (SetTextureHook, role = render-size non-fmt26 target), not
+// from the declarator - the ExternalImage wrapper has no holder chain there (EXP-0062).
+// Null until a forwarded draw bound it. The caller reads the resource's own desc,
+// because the shader binds `.zw` per the material and the format decides the SRV family.
+[[nodiscard]] void* motionVectorResource();
+
+// R3 stage D probe (docs/specs/vv.md §35.4): read-only diagnostics that answer what
+// survives suppressing the TAAU draw *before* any suppress implementation exists.
+// All three are off by default and change no engine state except the first one, which
+// skips the draw callback for exactly N frames (the picture falls back to the last
+// arg10 contents for those frames and recovers on its own).
+void               setSuppressProbeFrames(unsigned frames);
+[[nodiscard]] unsigned suppressProbeFrames();
+void               setDrawTagProbeFrames(unsigned frames);
+[[nodiscard]] unsigned drawTagProbeFrames();
+void               setChainProbeFrames(unsigned frames);
+[[nodiscard]] unsigned chainProbeFrames();
+
+// R3 stage D draw-level suppress (docs/specs/vv.md §35.4): skip only the TAAU quad
+// (first DrawIndexedInstanced(6,1) of the list that already bound this frame's arg10),
+// keeping the callback, the material binds (MV role channel) and the arg10 writer
+// binding. A frame is only suppressed after the previous engine frame really injected;
+// noteInjectionResult(false) makes the next frame run TAAU again instead of leaving a
+// stale arg10 on screen.
+void               setDrawSuppress(bool armed);
+[[nodiscard]] bool drawSuppressArmed();
+[[nodiscard]] unsigned drawSuppressSkips();
+void               noteInjectionResult(bool ok);
+
 } // namespace neurodragon::probe::vv

@@ -1,6 +1,5 @@
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
-#include "neurodragon/vv/VvBypass.h"
 #include "neurodragon/vv/VvCapture.h"
 #include "neurodragon/vv/VvSr.h"
 
@@ -73,6 +72,9 @@ std::atomic<unsigned> gMinLists{0};
 std::atomic<unsigned> gMaxLists{0};
 
 void setReason(SkipReason reason) {
+    // The stage D draw-level suppress only skips TAAU after a frame that really
+    // injected; a skip here makes the next frame restore TAAU by itself.
+    probe::vv::noteInjectionResult(false);
     gReason.store(static_cast<unsigned>(reason), std::memory_order_relaxed);
     gSkipped.fetch_add(1, std::memory_order_relaxed);
     unsigned const n    = gSkips.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -196,7 +198,30 @@ void makeRtvDesc(DXGI_FORMAT format, D3D12_RENDER_TARGET_VIEW_DESC& desc, bool& 
     }
 }
 
+// Closes the list and reports whether the frame did its work. Every path out of
+// record() must go through here: EXP-0064 left the list in the recording state when a
+// sub-record failed, which kept its allocator busy and made every later Reset fail -
+// injection died for the rest of the session with "record failed", no device error.
+bool finish(bool ok) {
+    HRESULT const closed = g.list->Close();
+    if (FAILED(closed)) {
+        static std::atomic<unsigned> failures{0};
+        unsigned const               n = failures.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 3 || n % 600 == 0) {
+            utils::logger().warn(
+                "[vv] inject: list Close failed hr=0x{:08X}",
+                static_cast<unsigned>(closed)
+            );
+        }
+        return false;
+    }
+    return ok;
+}
+
 bool record(ID3D12Resource* buffer) {
+    // A list left recording by an earlier failed frame has to be closed before its
+    // allocator can be reset again; without this the first failure is permanent.
+    g.list->Close();
     if (FAILED(g.allocator->Reset()) || FAILED(g.list->Reset(g.allocator, nullptr))) {
         return false;
     }
@@ -204,34 +229,18 @@ bool record(ID3D12Resource* buffer) {
         // B1c: copy the back buffer into our own readback. Nothing on screen changes;
         // the picture is written to disk after the submission's fence passes.
         if (!neurodragon::vv::capture::record(g.list, buffer)) {
-            return false;
+            return finish(false);
         }
-        return SUCCEEDED(g.list->Close());
-    }
-    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Sr)) {
-        // B2: our own render-resolution buffers (colour / depth / motion) and the
-        // pass that writes them back, encoded, over the back buffer.
-        if (!neurodragon::vv::sr::record(g.list, buffer)) {
-            return false;
-        }
-        return SUCCEEDED(g.list->Close());
+        return finish(true);
     }
     if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::DlssArg10)) {
         // R3 stage B: prep + DLSS evaluate, then a PS writes the DLSS output into the
         // engine's arg10. No white point, no encode, no back-buffer copy.
         void* const target = probe::vv::arg10Target();
         if (!target || !neurodragon::vv::sr::recordArg10(g.list, target)) {
-            return false;
+            return finish(false);
         }
-        return SUCCEEDED(g.list->Close());
-    }
-    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Bypass)) {
-        // B1b-1: our own compute reads the render-resolution colour and ACESes it
-        // over the back buffer. No RTV/clear, no engine texture writes.
-        if (!neurodragon::vv::bypass::record(g.list, buffer)) {
-            return false;
-        }
-        return SUCCEEDED(g.list->Close());
+        return finish(true);
     }
     if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::SolidArg10)) {
         // R3 stage A: write the engine's TAAU output (arg10) instead of the back
@@ -240,7 +249,7 @@ bool record(ID3D12Resource* buffer) {
         // purpose - A3 is exactly "does that state hold?".
         auto* const target = static_cast<ID3D12Resource*>(probe::vv::arg10Target());
         if (!target) {
-            return false;
+            return finish(false);
         }
         D3D12_RENDER_TARGET_VIEW_DESC targetDesc{};
         bool                          targetUseDesc = false;
@@ -250,7 +259,7 @@ bool record(ID3D12Resource* buffer) {
         gRecordingView.store(false, std::memory_order_relaxed);
         float const magenta[4] = {1.0f, 0.0f, 1.0f, 1.0f};
         g.list->ClearRenderTargetView(g.rtv, magenta, 0, nullptr);
-        return SUCCEEDED(g.list->Close());
+        return finish(true);
     }
     D3D12_RENDER_TARGET_VIEW_DESC  desc{};
     bool                           useDesc = false;
@@ -281,16 +290,13 @@ bool record(ID3D12Resource* buffer) {
     barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
     g.list->ResourceBarrier(1, &barrier);
 
-    return SUCCEEDED(g.list->Close());
+    return finish(true);
 }
 
 } // namespace
 
 void setMode(Mode mode) {
     int const value = static_cast<int>(mode);
-    if (value == static_cast<int>(Mode::Off)) {
-        probe::vv::setTaauDrawReplacement(false);
-    }
     int const previous = gMode.exchange(value, std::memory_order_relaxed);
     if (previous == value) {
         return;
@@ -371,30 +377,6 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     if (g.queue && g.queue != queue) {
         return 0;
     }
-    // Only from here on is this submission the engine's frame - the one the replacement
-    // promise is about - so only from here on may a return disarm TAAU. The guard used
-    // to sit above the filters, and the overlay's own one-list submissions (several per
-    // frame) then disarmed the gate the engine frame had just armed: EXP-0025 logged
-    // 8653 arm / 8653 disarm transitions and never reached via=pre-hud.
-    bool const replacing = probe::vv::taauDrawReplacementArmed();
-    struct ReplacementGuard {
-        bool armed{}; ///< the gate was armed for this engine frame
-        bool commit{};
-        ~ReplacementGuard() {
-            if (commit) {
-                return;
-            }
-            if (armed) {
-                // Suppressed and not replaced: that frame is restored on the next one,
-                // but the count is what tells "the replacement is keeping up" from
-                // "suppression is outrunning it". Small/foreign submissions never get
-                // here - they return above.
-                probe::vv::noteTaauReplacementMiss();
-            }
-            probe::vv::setTaauDrawReplacement(false);
-        }
-    } guard;
-    guard.armed = replacing;
     noteListCount(listCount);
     if (!g.device) {
         setReason(SkipReason::NoDevice);
@@ -500,16 +482,6 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         }
     }
     if (!content) {
-        if (replacing) {
-            // The original TAAU draw was suppressed for this submission. Without a
-            // proven pre-HUD cut, injecting at a counted/first-writer boundary could
-            // erase the UI. Leave the frame untouched and re-enable TAAU next frame.
-            g.pending->Release();
-            g.pending = nullptr;
-            gSplit.store(0, std::memory_order_relaxed);
-            setReason(SkipReason::NoBoundary);
-            return 0;
-        }
         if (gFromTail.load(std::memory_order_relaxed)) {
             // k = 1 means "after the whole frame", k = 2 "before the last list", ...
             unsigned back = setting < 1 ? 1 : setting;
@@ -529,37 +501,10 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
             }
         }
     }
-    auto const sr = neurodragon::vv::sr::stats();
-    // sr::record() returns success without recording when no world is loaded, so
-    // sr.dlssReady survives the menu and "ready" alone cannot say the inputs of *this*
-    // frame were written. Suppressing TAAU on such a frame is exactly the EXP-0025
-    // picture: eval stopped at 21:34:12 while suppression ran on to 21:34:44.
-    bool const  world     = probe::vv::worldLoaded();
-    bool const  dlssReady = gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Sr)
-        && neurodragon::vv::sr::view() == neurodragon::vv::sr::View::Dlss && sr.dlssReady
-        && sr.dlssEvaluateRet == 1;
-    bool const  arm = dlssReady && content && world;
-    if (replacing && arm) {
-        // Own counter: `suppressed` is a session-wide draw count and the old
-        // `suppressed <= 1` test therefore printed this line at most once, so a later
-        // valid boundary was invisible. First three plus every 2 s at 60 fps.
-        static std::atomic<unsigned> gReplacementHits{0};
-        unsigned const               n = gReplacementHits.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (n <= 3 || n % 120 == 0) {
-            utils::logger().info(
-                "[vv] inject: replacement boundary split={}/{} via=pre-hud hit={} missed={}",
-                k,
-                listCount,
-                n,
-                probe::vv::taauDrawStats().missed
-            );
-        }
-    }
-    probe::vv::setTaauDrawReplacement(arm);
-    guard.commit = true;
     gSplit.store(k, std::memory_order_relaxed);
     gReason.store(static_cast<unsigned>(SkipReason::None), std::memory_order_relaxed);
     gInjected.fetch_add(1, std::memory_order_relaxed);
+    probe::vv::noteInjectionResult(true);
     return k;
 }
 

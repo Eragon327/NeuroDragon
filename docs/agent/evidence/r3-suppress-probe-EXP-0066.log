@@ -1,0 +1,70 @@
+# EXP-0066 R3 stage D probe: what survives suppressing the TAAU draw
+# build 21:24 336f3a9a (diagnostics only, default off)
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log (verbatim excerpts)
+# user: 「已完成，无异常，就是和没开一样正常」 - the 8-frame suppression was not visible
+# result: all three questions answered
+
+## 1. Declarator dependency chains (one-shot walk)
+
+[2026-10-28 21:25:27.570 IFO][NeuroDragon] [vv] d-probe: chain arg9 colour dep=0x9f07dfe280 wrapper=0x27a24b6e680 holder=0x0 resource=0x0 handle=0xffff why=noHolder native=0x0
+[2026-10-28 21:25:27.570 IFO][NeuroDragon] [vv] d-probe: chain arg10 upscaling dep=0x9f07dfe3a0 wrapper=0x27a24b6f4f0 holder=0x27a28393cc0 resource=0x27a294e1bf0 handle=0x1b why=resolved native=0x27a2880d9a0
+[2026-10-28 21:25:27.570 IFO][NeuroDragon] [vv] d-probe: chain arg11 mv dep=0x9f07dfdc00 wrapper=0x27a24b6eef0 holder=0x7df0000 resource=0x0 handle=0xffff why=noHolder native=0x0
+[2026-10-28 21:25:27.571 IFO][NeuroDragon] [vv] d-probe: chain arg12 history dep=0x9f07dfe8b0 wrapper=0x27a24b6f5e0 holder=0x27a28392980 resource=0x27a294e1d30 handle=0x1a why=resolved native=0x27a2880f650
+
+# arg11 (dep2) cannot be resolved at declaration: wrapper+0x10 is 0x7df0000, not a
+# holder pointer. arg12 history does resolve there, arg9 colour does not. So the MV
+# channel has no declarator-side source; it exists only in the draw's material bind.
+
+## 2. Draw inside the arg10 writer list (dry run, no draw dropped)
+
+[2026-10-28 21:25:35.232 IFO][NeuroDragon] [vv] d-probe: draw tag armed frames=300
+[2026-10-28 21:25:35.234 IFO][NeuroDragon] [vv] d-probe: draw in arg10 list kind=indexed a=6 b=1 exact=1 draws=0
+# ... 32 burst lines, then one line every 2 s (n % 120 throttle):
+[2026-10-28 21:25:37.069 IFO][NeuroDragon] [vv] d-probe: draw in arg10 list kind=indexed a=6 b=1 exact=1 draws=0
+[2026-10-28 21:25:44.440 IFO][NeuroDragon] [vv] d-probe: draw in arg10 list kind=indexed a=6 b=1 exact=1 draws=0
+
+# The TAAU fullscreen draw is DrawIndexedInstanced(6,1) (a quad, not a 3-vertex
+# triangle), it is the FIRST draw of the list, and the list has already bound the
+# current arg10 native at that moment (exact=1). One hit per frame. => the draw can
+# be identified precisely at draw time without any heuristics.
+
+## 3. Whole-callback suppression (8 frames) and automatic recovery
+
+[2026-10-28 21:25:42.984 IFO][NeuroDragon] [vv] d-probe: suppress armed frames=8
+[2026-10-28 21:25:42.999 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=7 draw#=10309
+[2026-10-28 21:25:43.009 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880d9a0 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.013 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=6 draw#=10310
+[2026-10-28 21:25:43.023 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880f650 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.027 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=5 draw#=10311
+[2026-10-28 21:25:43.038 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880d9a0 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.043 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=4 draw#=10312
+[2026-10-28 21:25:43.053 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880f650 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.058 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=3 draw#=10313
+[2026-10-28 21:25:43.070 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880d9a0 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.073 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=2 draw#=10314
+[2026-10-28 21:25:43.085 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880f650 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.090 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=1 draw#=10315
+[2026-10-28 21:25:43.099 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880d9a0 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+[2026-10-28 21:25:43.103 IFO][NeuroDragon] [vv] d-probe: callback suppressed left=0 draw#=10316
+[2026-10-28 21:25:43.115 IFO][NeuroDragon] [vv] d-probe: submit lists=69 arg10=0x27a2880f650 reason=ok writer=0 fresh=1 mv=0x27a288142d0
+
+## 4. Recovery after the 8 frames
+
+[2026-10-28 21:25:43.383 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=1560 skipped=9
+[2026-10-28 21:25:47.003 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x27a288142d0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 21:25:47.004 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:25:47.019 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x27a07a80210 target=0x27a2880d9a0
+# 9 skips total = 1 arm + 8 suppressed frames; the next frame injected normally.
+
+## 5. Conclusions
+
+# 1. Whole-callback suppress: arg10 is NOT bound as an RTV by any list (writer=0 on all
+#    8 frames). The current writer anchor would disappear; a suppress that skips the
+#    callback cannot reuse the arg10 writer cut.
+# 2. arg11 has no declarator-side channel (dep2 holder is not a pointer); the MV role
+#    channel exists only inside the draw's material binding. Suppressing the callback
+#    also removes MV capture (mv value stays at the last forwarded frame).
+# 3. The TAAU draw itself IS identifiable inside the arg10 writer list: first draw,
+#    DrawIndexedInstanced(6,1), bind-time exact tag. => the viable suppress is
+#    "skip only this draw call, keep the callback and its material bindings": the
+#    writer anchor survives, MV keeps updating, and the TAAU draw leaves the submission.

@@ -1,0 +1,34 @@
+# F2: same-frame comparison, TAAU output vs DLSS output
+# build 23:03 37625c36 (EXP-0076). Capture: before our PS write, recordInternal copies this
+# frame's arg10 (TAAU writer result) into taauRef; dumpInputs then saves both taauRef and
+# dlssOut with the same run number. Same frame, same inputs - no exposure/motion gap.
+
+## Raw files (game directory E:\LeviLauncher\versions\1.26.51.01-r3)
+
+aaeda2f16051f992e887ab9c117b4b88a4a770b0f065241c15cd9f0ebaf20044  sr_taauref_2560x1440_1.bin
+e3922f0b9a86ec1528f2a852abcfb4ab45a37f290d583a13806b524baec15c4c  sr_dlssout_2560x1440_1.bin
+f3bc0b52e0259af6918eff8f606eb65edbdbb25bdaf0b3ce98603de659d3aa5f  sr_taauref_2560x1440_3.bin
+e13c7e521dd31d1d5ada663f1927bdb65088b527d7cf3f4957a6256568b94326  sr_dlssout_2560x1440_3.bin
+
+# NDRW header: magic, version, width, height, format(26 = R11G11B10 / 10 = RGBA16F),
+# row pitch, bytes per pixel. Offline decode: R11G11B10 float11/float10 unpack, RGBA16F
+# half-float; stats over all pixels (all finite).
+
+## Results (offline, this machine)
+
+run 1: taau mean RGB (0.08341, 0.10347, 0.13890)  luma 0.10177
+       dlss mean RGB (0.08469, 0.10228, 0.13977)  luma 0.10179
+       dlss/taau per channel (1.0153, 0.9884, 1.0063); tile-32 luma corr 0.9572
+run 3: taau mean RGB (0.08403, 0.10219, 0.13962)  luma 0.10103
+       dlss mean RGB (0.08433, 0.10196, 0.13966)  luma 0.10152
+       dlss/taau per channel (1.0036, 0.9977, 1.0003); tile-32 luma corr 1.0000
+
+## Conclusion
+
+# No overall colour cast: the DLSS/TAAU per-channel mean ratios stay within 1.5% on run 1
+# and 0.4% on run 3, with no systematic channel skew; mean luma differs by 0.02% (run 1)
+# and 0.5% (run 3). The 32x32 tile structure correlates at 0.957/1.000, so the remaining
+# differences are detail/sharpening, not a global shift. The earlier two-screenshot
+# attempt (22:53) was not usable as F2 evidence: the game PNG is a 2560x1440 canvas with
+# only the top-left 1133x933 opaque, and the two shots were 6 s apart across a mode
+# switch (exposure adapting), which produced a ~6% luma gap.

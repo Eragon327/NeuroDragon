@@ -1,0 +1,67 @@
+# EXP-0065 R3 stage D regression, second attempt (Close fix under test)
+# build 21:15 fee85e7e (VvInject::record always Closes the list; no other change vs EXP-0063)
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log (verbatim excerpts)
+# user: 「已完成，我多做了一件事，21：17分后我把游戏窗口最小化了」
+# result: PASS for the rebuild path (two world exits/re-entries + both resize directions);
+#         Stop->Start was NOT exercised this session (no "arg10 write armed=0" line).
+
+## 1. Arm and continuous injection
+
+[2026-10-28 21:15:49.080 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 21:15:49.085 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 21:15:51.405 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:15:51.405 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x22143987740 target=0x221886046a0
+[2026-10-28 21:15:51.405 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=2 skipped=1
+[2026-10-28 21:16:05.351 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 21:16:11.942 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 21:16:18.725 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 21:16:26.032 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 2560x1440 fmt=26 eval=1 mv=engine
+
+## 2. F11 to fullscreen: 1689x903 -> 1689x950, injection continues
+
+[2026-10-28 21:15:57.201 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 21:15:57.317 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 21:15:58.685 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=600 skipped=2
+
+## 3. World exit #1 -> world enter #1: injection keeps running (empty list in the menu), then real frames
+
+[2026-10-28 21:16:31.688 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 21:16:32.308 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=3480 skipped=2
+[2026-10-28 21:16:35.983 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=3840 skipped=2
+[2026-10-28 21:16:37.954 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 21:16:38.524 IFO][NeuroDragon] [vv] session (world enter): ... dlssnr=0x221eeeb0000 ...
+[2026-10-28 21:16:39.851 IFO][NeuroDragon] [vv] inject fixed k=60/82 injected=4080 skipped=2
+[2026-10-28 21:16:40.074 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x221e7565840 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 21:16:41.389 IFO][NeuroDragon] [vv] inject: arg10 boundary split=60/82 list=0x221642196f0 target=0x220cb020420
+[2026-10-28 21:16:42.786 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=4320 skipped=2
+
+## 4. World exit #2 -> world enter #2 with a display-size change back to 1689x903: still fine
+
+[2026-10-28 21:16:53.730 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 21:17:05.344 WRN][NeuroDragon] [vv] inject skipped (3): no pre-HUD boundary; TAAU restored
+[2026-10-28 21:17:11.826 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=1
+[2026-10-28 21:17:11.835 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 21:17:12.643 IFO][NeuroDragon] [vv] inject fixed k=42/64 injected=6840 skipped=3
+[2026-10-28 21:17:13.291 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x2218a7900e0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 21:17:13.292 IFO][NeuroDragon] [vvsr] sr arg10 #4800: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 21:17:16.943 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x2216589ea00 target=0x2218a78a140
+[2026-10-28 21:17:24.481 IFO][NeuroDragon] [vv] inject: arg10 boundary split=27/48 list=0x2216b1b4fb0 target=0x2218a78a140
+
+## 5. Session end (user minimized the window after 21:17, then the client shut down)
+
+[2026-10-28 21:17:23.701 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 21:17:25.717 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=0
+[2026-10-28 21:17:25.896 IFO][LeviLamina] 正在禁用 NeuroDragon v0.1.0
+[2026-10-28 21:17:26.558 DBG][NeuroDragon] overlay: uninstalled
+
+## 6. What this proves / what it does not
+
+# PASS: the EXP-0064 permanent failure is gone. Across two render-graph rebuilds
+# (world exit/re-entry) and both display sizes (1689x903 <-> 1689x950) the injector
+# kept producing "inject fixed" with injected growing 1 -> 7920; only 3 single-frame
+# "no pre-HUD boundary" skips, and ZERO "recording the injected work failed".
+# sr arg10 #N kept advancing with eval=1 and mv=engine. No D3D12/device errors.
+# NOT COVERED: Stop -> Start (the panel was never disarmed: no "arg10 write armed=0"
+# line in this session). The reverse F11 was not a separate action either; the
+# 2560x1440 -> 2560x1369 resize came with world enter #2 (possibly the minimize).
+# The user's extra action (minimize after 21:17) is outside the judged window.

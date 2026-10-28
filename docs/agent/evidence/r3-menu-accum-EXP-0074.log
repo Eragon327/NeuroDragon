@@ -1,0 +1,18 @@
+# EXP-0074 R3 menu: allow history accumulation with jitter=0 outside a world
+# build 22:45 1759239b (reset drops !world; jitter still 0 when !worldLoaded)
+# user: 「无异常，已完成」
+# result: PASS - menu rotation stays smooth, no judder and no smear; history accumulates.
+
+## Menu segment after leaving the save (DLSS keeps running with accumulation)
+
+[2026-10-28 22:46:41.719 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:46:43.784 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 22:46:47.832 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #600 list=0x1d037997000 mv=0x1cfc0285d40
+[2026-10-28 22:46:48.503 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:46:53.833 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1200 list=0x1d05b5960d0 mv=0x1cfc0285d40
+[2026-10-28 22:46:54.505 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+
+# Second arm in the same session reproduces it (22:49:32 onward): menu keeps evaluating
+# DLSS (#1200 at 22:49:46) while the TAAU quad is skipped every frame, user reports no
+# judder and no smear. => the panorama's MV is good enough for accumulation; the earlier
+# judder was the world jitter fed to an unjittered panorama, not history.

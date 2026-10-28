@@ -1,0 +1,31 @@
+# EXP-0071 R3: force spatial-only DLSS outside a world (menu judder)
+# build 22:37 1a6bfe90 (reset adds !worldLoaded)
+# user: 「已完成，还是有抖动感」
+# result: FAIL for the hypothesis - the judder persists with history disabled.
+
+## 1. The menu really runs the new build (spatial-only) path
+
+[2026-10-28 22:38:23.517 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 22:38:25.660 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:38:29.479 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-28 22:38:39.167 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+[2026-10-28 22:38:40.363 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:38:46.423 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:38:52.400 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 22:38:42.428 IFO][NeuroDragon] [vv] taau #2700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 ... jitter=2 ...
+[2026-10-28 22:38:45.424 IFO][NeuroDragon] [vv] taau #3000 ... jitter=14 ...
+[2026-10-28 22:38:48.415 IFO][NeuroDragon] [vv] taau #3300 ... jitter=10 ...
+
+# The menu evaluates DLSS every frame with Reset forced (code: reset = ... || !world),
+# the engine's TAAU jitter pattern is still active (jitter index 2/14/10/6), and the
+# user still reports the same up-down judder while the panorama rotates.
+
+## 2. What this rules out / what is left
+
+# Ruled out: temporal accumulation in the menu (history is discarded every frame).
+# Still open: (a) the jitter offset fed to DLSS vs the panorama's actual sub-pixel
+# offset (a sign/scale mismatch would shift the image by 2*jitter every frame, i.e.
+# vertical judder); (b) DLSS spatial upscaling itself on a low-res rotating panorama;
+# (c) the menu's own presentation cadence, independent of which upscaler runs.
+# Next: A/B in the menu - same background with TAAU restored vs DLSS suppressed -
+# to separate (a/b) from (c). No new build needed.

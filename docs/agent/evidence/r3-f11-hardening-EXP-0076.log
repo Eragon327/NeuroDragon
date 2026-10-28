@@ -1,0 +1,26 @@
+# EXP-0076 R3: generation gate for the draw suppress + F2 same-frame capture
+# build 23:02 37625c36. User: 「已完成，连按无异常」
+
+## F2 same-frame capture works
+
+[2026-10-28 23:03:11.705 IFO][NeuroDragon] [vvsr] sr f2: TAAU reference capture armed (next injected frame)
+[2026-10-28 23:03:11.713 IFO][NeuroDragon] [vvsr] sr f2: captured TAAU arg10 2560x1440 before the DLSS write
+[2026-10-28 23:03:20.452 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 mv=1 depth32=1 dlss=1 taauref=1
+[2026-10-28 23:03:48.845 IFO][NeuroDragon] [vvsr] sr f2: captured TAAU arg10 2560x1440 before the DLSS write
+[2026-10-28 23:03:51.811 IFO][NeuroDragon] [vvsr] sr dump #3 inputs colour=1 depth=1 mid=1 mv=1 depth32=1 dlss=1 taauref=1
+
+## Five quick F11 presses: injection skips, no freeze, draw skip resumes after a good frame
+
+[2026-10-28 23:04:15.250 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 23:04:15.362 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 23:04:20.258 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-28 23:04:20.672 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 23:04:22.041 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3600 list=0x1add479bc40 mv=0x1af171ada70
+
+## Why it no longer freezes
+
+# The draw skip now also requires gInjectedGeneration == renderGeneration. Every rebuild
+# (resize / world enter) bumps the generation; until one frame has really injected under
+# the new generation the TAAU draw is NOT skipped. During the 2 s MV catch-up above the
+# screen therefore stayed on TAAU (120 failed injection attempts), then the skip resumed
+# at #3600. No crash, no D3D12 error, and the user reports no freeze/truncation/exposure.

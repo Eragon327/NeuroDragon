@@ -1,0 +1,36 @@
+# EXP-0062 R3 stage C: engine MV (arg11) feed, writer anchor after fix
+# build: 20:48 9059fdef ; window 20:51:19-20:52:13
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log (verbatim excerpts)
+
+[2026-10-28 20:51:19.062 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 20:51:19.068 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 20:51:19.134 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:21.290 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:21.290 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c47296c3c0 target=0x1c4e67e8c80
+[2026-10-28 20:51:21.305 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:21.306 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:21.306 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c46b8dc2a0 target=0x1c4e67e5cb0
+[2026-10-28 20:51:21.319 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:21.319 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:21.319 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c471e36a10 target=0x1c4e67e8c80
+[2026-10-28 20:51:21.335 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c47296ba30 target=0x1c4e67e5cb0
+[2026-10-28 20:51:27.663 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:27.663 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:27.675 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x1c46db9b0a0 target=0x1c4e67e8c80
+[2026-10-28 20:51:34.489 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:34.489 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:34.499 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c4712e1e20 target=0x1c4e67e8c80
+[2026-10-28 20:51:41.620 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:41.620 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:41.631 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c46dba2360 target=0x1c4e67e8c80
+[2026-10-28 20:51:47.940 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:47.942 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:47.951 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x1c46ae380f0 target=0x1c4e67e8c80
+[2026-10-28 20:51:54.801 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c49fa1a560 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:51:54.953 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:51:54.961 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c471e43c70 target=0x1c4e67e8c80
+[2026-10-28 20:52:02.184 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 20:52:03.102 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1c4df1695b0 fmt=10 layout=zw (1689x950, pixels current->previous)
+[2026-10-28 20:52:03.102 IFO][NeuroDragon] [vvsr] sr arg10 #3600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-28 20:52:03.117 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1c472969d80 target=0x1c4df15f320
+[2026-10-28 20:52:10.316 IFO][NeuroDragon] [vv] inject: arg10 boundary split=27/48 list=0x1c46e6c9180 target=0x1c4df15f320

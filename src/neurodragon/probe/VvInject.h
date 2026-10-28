@@ -38,19 +38,16 @@ enum class Mode : int {
 };
 
 /// What our inserted command list does. Clear is the M5 boundary experiment;
-/// Bypass is B1b-1 (read the render-resolution colour, ACES it over the back
-/// buffer); Capture is B1c (copy the back buffer into a readback and save a BMP,
-/// changing no pixel); SolidArg10 is R3 stage A (clear the engine's TAAU output,
-/// arg10, to magenta); DlssArg10 is R3 stage B (the DLSS output itself, PS + RTV
-/// into arg10). The first four write only our own resources; the two arg10 actions
-/// deliberately write one engine resource and leave it in RENDER_TARGET.
+/// Capture is B1c (copy the back buffer into a readback and save a BMP, changing no
+/// pixel); SolidArg10 is R3 stage A (clear the engine's TAAU output, arg10, to
+/// magenta); DlssArg10 is R3 stage B (the DLSS output itself, PS + RTV into arg10).
+/// Capture writes only our own resources; the two arg10 actions deliberately write
+/// one engine resource and leave it in RENDER_TARGET.
 enum class Action : int {
     Clear      = 0,
-    Bypass     = 1,
-    Capture    = 2,
-    Sr         = 3,
-    SolidArg10 = 4,
-    DlssArg10  = 5,
+    Capture    = 1,
+    SolidArg10 = 2,
+    DlssArg10  = 3,
 };
 
 /// Why an injection attempt did nothing. The panel turns these into text (the probe

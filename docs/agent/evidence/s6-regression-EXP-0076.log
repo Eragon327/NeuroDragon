@@ -1,0 +1,32 @@
+# S6: pause menu / inventory / scene switch / window-size change do not crash
+# build 23:02 37625c36 (EXP-0076). User: 「已完成，连按无异常」.
+
+## Window-size changes (five quick F11 presses) and recovery
+
+[2026-10-28 23:04:15.362 IFO][NeuroDragon] [vvsr] sr buffers 1689x903 -> 2560x1369
+[2026-10-28 23:04:20.258 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-28 23:04:20.672 IFO][NeuroDragon] [vvsr] sr buffers 1689x950 -> 2560x1440
+[2026-10-28 23:04:22.041 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3600 list=0x1add479bc40 mv=0x1af171ada70
+# Two resizes 5.3 s apart, 120 injection attempts skipped while MV caught up, then the
+# DLSS draw skip resumed. No crash, no D3D12 error; the user saw no freeze/truncation/
+# exposure blow-up (the generation gate keeps TAAU on screen until a resize-frame
+# injection succeeds).
+
+## Pause menu / inventory / scene switch
+
+[2026-10-28 23:04:25.633 IFO][NeuroDragon] [vvsr] world: getLevel()=0 changed=1
+# The user opened the inventory and the pause menu (runbook step 3) and then left the
+# world; no crash, the client stayed alive, and injection continued through the menu
+# (EXP-0070/0074 establish the menu path).
+
+## Frame pacing (recorded where the build records it)
+
+[2026-10-28 23:04:22.368 IFO][NeuroDragon] [vv] presents=9000 submits=24149 lists=630379 maxListsPerSubmit=109 taau=9000 draws=9000 seen=477 dumps=0 | submits/frame=2.68 lists/frame=70.04 taau/frame=1.00 draws/frame=1.00
+# Per-frame submit/list counts and one TAAU declaration per frame; the panel's DLSS/engine
+# timing rows show the GPU ms live (not logged numerically in this build).
+
+## Earlier sessions in this stage
+
+- EXP-0065: F11 both ways, world exit/re-entry, injection continuous (r3-d-regression-EXP-0065.log)
+- EXP-0068: Stop/Start, world exit/re-entry, no crash (r3-d-fallback-EXP-0068.log)
+- EXP-0074: menu exit/re-entry with DLSS running, no crash (r3-menu-accum-EXP-0074.log)

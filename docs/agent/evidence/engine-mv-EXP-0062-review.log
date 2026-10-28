@@ -1,0 +1,40 @@
+sr_mvraw_1689x950_1.bin: 1689x950 fmt=10 channels=4
+  x: min=-1.0000 max=+1.0000 mean=+0.1790 std=0.3804 nonzero(>1e-4)=22.30%
+  y: min=-1.0000 max=+1.0000 mean=+0.2329 std=0.4258 nonzero(>1e-4)=24.62%
+  z: min=-0.0073 max=+0.0072 mean=-0.0001 std=0.0017 nonzero(>1e-4)=52.83%
+  w: min=-0.0079 max=+0.0005 mean=-0.0011 std=0.0019 nonzero(>1e-4)=53.20%
+  pair xy: p99=1.116727 mean(v.inward)=+0.6362 frac_inward=95.1% n=26509
+  pair zw: p99=0.008840 mean(v.inward)=+nan frac_inward=nan% n=0
+sr_mvengine_1.bin: 1689x950 fmt=10 channels=4
+  x: min=-1.0000 max=+1.0000 mean=+0.1691 std=0.3811 nonzero(>1e-4)=22.80%
+  y: min=-1.0000 max=+1.0000 mean=+0.2528 std=0.4391 nonzero(>1e-4)=26.67%
+  z: min=-0.0114 max=+0.0086 mean=-0.0001 std=0.0018 nonzero(>1e-4)=53.40%
+  w: min=-0.0123 max=+0.0006 mean=-0.0012 std=0.0022 nonzero(>1e-4)=54.83%
+  pair xy: p99=1.116727 mean(v.inward)=+0.6429 frac_inward=95.7% n=24881
+  pair zw: p99=0.010951 mean(v.inward)=+nan frac_inward=nan% n=0
+sr_mvraw_1689x950_2.bin: 1689x950 fmt=10 channels=4
+  x: min=-1.0000 max=+1.0000 mean=+0.1790 std=0.3804 nonzero(>1e-4)=22.30%
+  y: min=-1.0000 max=+1.0000 mean=+0.2329 std=0.4258 nonzero(>1e-4)=24.62%
+  z: min=-0.0073 max=+0.0072 mean=-0.0001 std=0.0017 nonzero(>1e-4)=52.83%
+  w: min=-0.0079 max=+0.0005 mean=-0.0011 std=0.0019 nonzero(>1e-4)=53.20%
+  pair xy: p99=1.116727 mean(v.inward)=+0.6362 frac_inward=95.1% n=26509
+  pair zw: p99=0.008840 mean(v.inward)=+nan frac_inward=nan% n=0
+sr_mvengine_2.bin: 1689x950 fmt=10 channels=4
+  x: min=-1.0000 max=+1.0000 mean=+0.1123 std=0.3247 nonzero(>1e-4)=35.04%
+  y: min=-1.0000 max=+1.0000 mean=+0.3302 std=0.4712 nonzero(>1e-4)=33.72%
+  z: min=-0.0045 max=+0.0045 mean=-0.0001 std=0.0011 nonzero(>1e-4)=52.07%
+  w: min=-0.0048 max=+0.0006 mean=-0.0007 std=0.0012 nonzero(>1e-4)=55.50%
+  pair xy: p99=1.000000 mean(v.inward)=+0.0284 frac_inward=41.8% n=11766
+  pair zw: p99=0.005534 mean(v.inward)=+nan frac_inward=nan% n=0
+sr_mvraw_1689x950_1.bin
+taau(z,-w) p99px 11.834517101328455 mean(v.inward) -6.413493510472918 frac_inward 0.0 n 388263
+dlss(-z,w) p99px 11.834517101328455 mean(v.inward) 6.413493510472918 frac_inward 1.0 n 388263
+sr_mvengine_1.bin
+taau(z,-w) p99px 14.637448397514733 mean(v.inward) -7.400519059921099 frac_inward 0.0 n 327114
+dlss(-z,w) p99px 14.637448397514733 mean(v.inward) 7.400519059921099 frac_inward 1.0 n 327114
+sr_mvraw_1689x950_2.bin
+taau(z,-w) p99px 11.834517101328455 mean(v.inward) -6.413493510472918 frac_inward 0.0 n 388263
+dlss(-z,w) p99px 11.834517101328455 mean(v.inward) 6.413493510472918 frac_inward 1.0 n 388263
+sr_mvengine_2.bin
+taau(z,-w) p99px 7.323611147323349 mean(v.inward) -3.817713123024362 frac_inward 0.0 n 518698
+dlss(-z,w) p99px 7.323611147323349 mean(v.inward) 3.817713123024362 frac_inward 1.0 n 518698

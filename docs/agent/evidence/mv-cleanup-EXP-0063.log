@@ -1,0 +1,23 @@
+# EXP-0063 R3 stage C cleanup: engine-MV only, no VP/self-MV
+# build 20:56 6cbf7cae ; window 20:59:10-20:59:21
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log (verbatim excerpts)
+
+[2026-10-28 20:59:10.607 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 20:59:10.613 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 20:59:10.700 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x161e10021b0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:59:12.908 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:59:12.908 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x16175817d50 target=0x161e0ffdec0
+[2026-10-28 20:59:12.918 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x161e10021b0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:59:12.919 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:59:12.919 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x16174179390 target=0x161e0ffc210
+[2026-10-28 20:59:12.934 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x161e10021b0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:59:12.934 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:59:12.934 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x16147685f00 target=0x161e0ffdec0
+[2026-10-28 20:59:12.949 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x161735ccb00 target=0x161e0ffc210
+[2026-10-28 20:59:18.713 IFO][NeuroDragon] [vvsr] sr dump #1 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=0
+[2026-10-28 20:59:19.664 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x161e10021b0 fmt=10 layout=zw (1689x903, pixels current->previous)
+[2026-10-28 20:59:19.665 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1369 fmt=26 eval=1 mv=engine
+[2026-10-28 20:59:19.680 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x1617416d450 target=0x161e0ffdec0
+[2026-10-28 20:59:20.925 IFO][NeuroDragon] [vvsr] sr dump #2 inputs colour=1 depth=1 mid=1 final=1 mv=1 depth32=1 dlss=1 exposure=0
+
+# dumps: sr_mv_rg32_1689x903_1 p99=11.92px inward=100% ; _2 p99=8.12px inward=100%
