@@ -216,6 +216,15 @@ bool record(ID3D12Resource* buffer) {
         }
         return SUCCEEDED(g.list->Close());
     }
+    if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::DlssArg10)) {
+        // R3 stage B: prep + DLSS evaluate, then a PS writes the DLSS output into the
+        // engine's arg10. No white point, no encode, no back-buffer copy.
+        void* const target = probe::vv::arg10Target();
+        if (!target || !neurodragon::vv::sr::recordArg10(g.list, target)) {
+            return false;
+        }
+        return SUCCEEDED(g.list->Close());
+    }
     if (gAction.load(std::memory_order_relaxed) == static_cast<int>(Action::Bypass)) {
         // B1b-1: our own compute reads the render-resolution colour and ACESes it
         // over the back buffer. No RTV/clear, no engine texture writes.
@@ -304,7 +313,15 @@ Action action() { return static_cast<Action>(gAction.load(std::memory_order_rela
 void setUseBackBuffer(bool use) { gUseBackBuffer.store(use, std::memory_order_relaxed); }
 bool useBackBuffer() { return gUseBackBuffer.load(std::memory_order_relaxed); }
 
-void setUseArg10(bool use) { gUseArg10.store(use, std::memory_order_relaxed); }
+void setUseArg10(bool use) {
+    gUseArg10.store(use, std::memory_order_relaxed);
+    if (use) {
+        // The panel's injected/skipped numbers must describe this arm, not the
+        // previous action (EXP-0059's cumulative skips hid the world-frame rate).
+        gInjected.store(0, std::memory_order_relaxed);
+        gSkipped.store(0, std::memory_order_relaxed);
+    }
+}
 bool useArg10() { return gUseArg10.load(std::memory_order_relaxed); }
 
 void setK(unsigned k) { gK.store(k < 1 ? 1 : k, std::memory_order_relaxed); }
@@ -396,6 +413,19 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     if (g.fence && g.fence->GetCompletedValue() < g.fenceValue) {
         setReason(SkipReason::FenceBusy);
         return 0;
+    }
+    if (gUseArg10.load(std::memory_order_relaxed) && lists) {
+        unsigned const split = probe::vv::arg10WriterSplit();
+        if (split == 0 || split > listCount) {
+            // Do not record/evaluate DLSS on a submission that will not be injected:
+            // advancing the feature's history with a UI/other frame shows up as a
+            // one-frame corruption on the next world frame (EXP-0060's black flash).
+            if (probe::vv::arg10FreshSubmission()) {
+                probe::vv::noteArg10Gap();
+            }
+            setReason(SkipReason::NoBoundary);
+            return 0;
+        }
     }
     ID3D12Resource* buffer = currentBackBuffer();
     if (!buffer) {
@@ -538,6 +568,7 @@ void* list() { return g.list; }
 bool isOwnList(void* list) { return list && list == g.list; }
 
 bool recordingOwnView() { return gRecordingView.load(std::memory_order_relaxed); }
+void setRecordingOwnView(bool recording) { gRecordingView.store(recording, std::memory_order_relaxed); }
 
 void submitted(unsigned splitAt, unsigned listCount) {
     if (g.queue && g.fence) {

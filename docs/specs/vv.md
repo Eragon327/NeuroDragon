@@ -2004,8 +2004,8 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 
 ## 35. R3 实施阶段 A–D（2026-10-28 拍板「停止论证，进入实施」）
 
-> **状态**：**阶段 A 通过（EXP-0058，2026-10-28）**；下一步阶段 B，B–D 未开工。
-> 分支 `r3`，实例 `E:\LeviLauncher\versions\1.26.51.01-r3`。
+> **状态**：**阶段 A 通过（EXP-0058）**、**阶段 B 通过（EXP-0061，2026-10-28）**；
+> 下一步阶段 C，C–D 未开工。分支 `r3`，实例 `E:\LeviLauncher\versions\1.26.51.01-r3`。
 > 上位分析与判据表见 §34 与 [ADR 0005](../decisions/0005-vv-r3-write-arg10.md)；
 > 本文只回答「按什么顺序做、每一步怎么算过、哪一步失败就停」。
 > **不再继续反编译论证 R3**：V2/V4 已静态确认（TAAU 是纯 temporal resolve，无 tonemap/encode，
@@ -2092,6 +2092,28 @@ HUD 与准星在后缓冲上，只动 `arg10` 理应不受影响；若 HUD 一�
 - DLSS 与 TAAU 经过**同一条显示链**后无整体偏色、极亮或极暗（同帧参考比较只剩细节差异）；
 - F11 后输出尺寸与双缓冲仍正确；
 - HUD、手、准星保留。
+
+**实现（2026-10-28，待 EXP-0059）**：
+
+- `vv::sr::recordArg10`：走现有 prep + DLSS evaluate，然后用一个全屏三角形 PS（`vs_5_0` / `ps_5_0`）
+  把 `dlssOut` 写进 `arg10`；**不跑**白点 compute / `vvEncode` / `finalRgba8` / 后缓冲
+  `PRESENT → COPY_DEST → PRESENT`，也不发 `arg10` 的 barrier（沿用阶段 A 的 RT 状态）。
+- `VvInject` 新增 `Action::DlssArg10`；切点仍是 `arg10` writer 之后，面板
+  `VV R3 stage B (TEST)` → `DLSS -> arg10 (stage B)` / `Stop arg10`。
+- `kSigSlots` 128→512：EXP-0058 里面板打开后 writer 不再命中，疑似签名表满；满表会打
+  `list signature table full`。
+- 构建门禁同步支持 `*VsShader` / `*PsShader`（`checks.py`），VS/PS 分别用 `vs_5_0` / `ps_5_0` 编译。
+- 日志：`[vvsr] sr arg10: <w>x<h> fmt=26 eval=<ret>`；DLSS 评估失败时整帧跳过，不回退到任何旧路径。
+
+**结果（EXP-0061，2026-10-28）**：黑闪未复现，world 帧连续注入。
+
+- 用户原话：「这次轮到黑闪无法复现了，抖动来了一次，依然没有找到办法复现。」
+- 18:51:55 起 `split=48/70`，injected 1→1080 时 skipped=1；随后 45/70、44/69、46/71 继续注入到
+  3240；`sr arg10 #600..#2400` 与 injected 同步，说明 record 前早退生效。
+- 黑闪的两个已修原因：`record()` 在丢弃帧上 evaluate（历史污染）与 list 级 `!dsv` 误杀 writer
+  （EXP-0059/0060 复盘）。
+- **抖动仍是唯一未解**：一次、无触发、不可复现；疑与自算 MV/时域有关，阶段 C 换引擎 MV 后重点看。
+- 观察项：108-list UI 帧出现过一次 `split=13/108` 注入，本轮未见黑闪；若黑闪回来，先查这类 UI 帧。
 
 ### 35.3 阶段 C：切换引擎 MV，删除自算 MV
 

@@ -188,4 +188,12 @@ void dumpTaaContextWindows();
 void                   setArg10Solid(bool armed);
 [[nodiscard]] bool     arg10SolidArmed();
 
+// True when the submission just observed followed a new arg10 declaration (i.e. it
+// is the world frame, not a UI submission reusing the previous native).
+[[nodiscard]] bool arg10FreshSubmission();
+// A world submission missed its writer: the next injected frame must reset the DLSS
+// history rather than reproject across the gap.
+void noteArg10Gap();
+[[nodiscard]] bool takeArg10Gap();
+
 } // namespace neurodragon::probe::vv

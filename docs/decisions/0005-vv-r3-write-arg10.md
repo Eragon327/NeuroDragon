@@ -1,8 +1,8 @@
 # 0005. VV 的 SR 插入点上移一层：写 `arg10`，复用引擎的显示变换
 
 - **状态**：已采纳（2026-10-28，用户拍板「直接着手 R3」）；同日**进入实施**——阶段 A（纯色写 `arg10`）
-  已于 **EXP-0058 通过**（2026-10-28），下一步阶段 B；实施的阶段划分与判据见
-  [specs/vv.md](../specs/vv.md) §35
+  已于 **EXP-0058 通过**，阶段 B（DLSS 写 `arg10`）已于 **EXP-0061 通过**；下一步阶段 C；实施的阶段
+  划分与判据见 [specs/vv.md](../specs/vv.md) §35
 - **相关**：[specs/vv.md](../specs/vv.md) §34、
   [research/2026-10-28-vv-structural-review.md](../research/2026-10-28-vv-structural-review.md)、
   [decisions/0001-taau-insertion-point.md](0001-taau-insertion-point.md)
@@ -105,9 +105,11 @@ A1–A3，见 [specs/vv.md](../specs/vv.md) §35.1）。
 
 2026-10-28 定为 [specs/vv.md](../specs/vv.md) §35 的 **阶段 A–D**：
 
-1. **阶段 A**：纯色写 `arg10`（TAAU 照跑），只回答 V3/V5；A1 画面不受影响即停止实施；
-2. **阶段 B**：DLSS 输出走 PS+RTV 写 `arg10`，仍不 suppress；删白点 compute / `vvEncode` /
-   `finalRgba8` / 后缓冲 `PRESENT → COPY_DEST → PRESENT`；
+1. **阶段 A**：纯色写 `arg10`（TAAU 照跑），只回答 V3/V5；A1 画面不受影响即停止实施。
+   **EXP-0058 通过**；
+2. **阶段 B**：DLSS 输出走 PS+RTV 写 `arg10`，仍不 suppress；新路径删白点 compute / `vvEncode` /
+   `finalRgba8` / 后缓冲 `PRESENT → COPY_DEST → PRESENT`。**EXP-0061 通过**（抖动一次、不可复现，
+   留给阶段 C 的 MV 更换继续观察）；
 3. **阶段 C**：MV 改绑引擎输入（`{z, -w} * RenderResolution`），按材质角色区分通道，
    然后删 VP / 相机原点重建与自算 MV；深度语义单列未知；
 4. **阶段 D**：不 suppress 下先回归（F11 / 切世界 / Stop/Start），再处理角色通道与 suppress 回退。

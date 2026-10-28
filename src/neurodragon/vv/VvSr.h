@@ -77,6 +77,12 @@ void cycleDepth();
 /// `backBuffer`. Both are void* so this header stays free of d3d12.h.
 [[nodiscard]] bool record(void* commandList, void* backBuffer);
 
+/// R3 stage B: the same prep + DLSS evaluate, but the output is written into the
+/// engine's arg10 with a PS + RTV (no tonemap, no encode, no back-buffer copy).
+/// The resource is left in RENDER_TARGET; a missing DLSS evaluation fails instead
+/// of falling back to anything.
+[[nodiscard]] bool recordArg10(void* commandList, void* arg10);
+
 [[nodiscard]] Stats stats();
 
 void release();

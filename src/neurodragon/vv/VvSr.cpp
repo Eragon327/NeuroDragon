@@ -1,6 +1,7 @@
 #include "neurodragon/vv/VvSr.h"
 
 #include "neurodragon/probe/VvCalibrate.h"
+#include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/vv/VvTone.h"
@@ -218,6 +219,25 @@ void main(uint3 id : SV_DispatchThreadID)
 }
 )hlsl";
 
+// R3 stage B: the DLSS output (RGBA16F, display size) is already in the same domain
+// as TAAU's output, so this pass is a straight copy - no exposure, no encode. The
+// fullscreen triangle needs no vertex buffer; the PS loads the source by pixel.
+char const* kArg10VsShader = R"hlsl(
+void main(uint id : SV_VertexID, out float4 pos : SV_Position)
+{
+    float2 p = float2((id << 1) & 2, id & 2);
+    pos = float4(p * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
+}
+)hlsl";
+
+char const* kArg10PsShader = R"hlsl(
+Texture2D<float4> Src : register(t0);
+float4 main(float4 pos : SV_Position) : SV_Target
+{
+    return Src.Load(int3(int2(pos.xy), 0));
+}
+)hlsl";
+
 // Shader-visible descriptor slots. One SRV table (7) and one UAV table (5) keep the
 // root signature to four parameters - a per-pass split layout was rejected by the
 // runtime ("overlaps with another shader register range", 2026-10-25).
@@ -243,7 +263,10 @@ struct Pipeline {
     ID3D12PipelineState*        prep{};
     ID3D12PipelineState*        exposure{};
     ID3D12PipelineState*        final{};
+    ID3D12PipelineState*        arg10Ps{};
     ID3D12DescriptorHeap*       heap{};
+    ID3D12DescriptorHeap*       rtvHeap{};
+    D3D12_CPU_DESCRIPTOR_HANDLE arg10Rtv{};
     D3D12_CPU_DESCRIPTOR_HANDLE cpu{};
     D3D12_GPU_DESCRIPTOR_HANDLE gpu{};
     unsigned                    increment{};
@@ -371,8 +394,8 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
 }
 
 bool ensurePipeline(ID3D12Device* device) {
-    if (gPipeline.prep && gPipeline.exposure && gPipeline.final && gPipeline.root && gPipeline.heap && gPipeline.toneCb
-        && gPipeline.mvCb) {
+    if (gPipeline.prep && gPipeline.exposure && gPipeline.final && gPipeline.arg10Ps && gPipeline.root
+        && gPipeline.heap && gPipeline.rtvHeap && gPipeline.toneCb && gPipeline.mvCb) {
         return true;
     }
     if (gPipeline.device && gPipeline.device != device) {
@@ -492,6 +515,71 @@ bool ensurePipeline(ID3D12Device* device) {
     if (!compileShader(finalSource, &gPipeline.final)) {
         return false;
     }
+
+    // R3 stage B: DLSS output -> arg10. A graphics PSO with a fullscreen triangle
+    // reads the DLSS texture (t0) and writes the display-sized target; the RTV format
+    // is arg10's (R11G11B10_FLOAT). It shares the compute root signature: the PS uses
+    // only the SRV table at parameter 1, and the static sampler stays unused.
+    auto compileStage = [&](char const* source, char const* target) -> ID3DBlob* {
+        ID3DBlob* code = nullptr;
+        ID3DBlob* err  = nullptr;
+        HRESULT   result =
+            compile(source, std::strlen(source), "main", nullptr, nullptr, "main", target, 0, 0, &code, &err);
+        if (err) {
+            utils::logger().warn("[vvsr] sr {} shader: {}", target, static_cast<char const*>(err->GetBufferPointer()));
+            err->Release();
+        }
+        if (FAILED(result) || !code) {
+            setError(result, "D3DCompile");
+            return nullptr;
+        }
+        return code;
+    };
+    ID3DBlob* vsCode = compileStage(kArg10VsShader, "vs_5_0");
+    ID3DBlob* psCode = compileStage(kArg10PsShader, "ps_5_0");
+    if (!vsCode || !psCode) {
+        if (vsCode) {
+            vsCode->Release();
+        }
+        if (psCode) {
+            psCode->Release();
+        }
+        return false;
+    }
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC graphics{};
+    graphics.pRootSignature                                  = gPipeline.root;
+    graphics.VS.pShaderBytecode                              = vsCode->GetBufferPointer();
+    graphics.VS.BytecodeLength                               = vsCode->GetBufferSize();
+    graphics.PS.pShaderBytecode                              = psCode->GetBufferPointer();
+    graphics.PS.BytecodeLength                               = psCode->GetBufferSize();
+    graphics.RasterizerState.FillMode                        = D3D12_FILL_MODE_SOLID;
+    graphics.RasterizerState.CullMode                        = D3D12_CULL_MODE_NONE;
+    graphics.RasterizerState.DepthClipEnable                 = TRUE;
+    graphics.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    graphics.DepthStencilState.DepthEnable                   = FALSE;
+    graphics.DepthStencilState.StencilEnable                 = FALSE;
+    graphics.SampleMask                                      = UINT_MAX;
+    graphics.PrimitiveTopologyType                           = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    graphics.NumRenderTargets                                = 1;
+    graphics.RTVFormats[0]                                   = DXGI_FORMAT_R11G11B10_FLOAT;
+    graphics.SampleDesc                                      = {1, 0};
+    hr = device->CreateGraphicsPipelineState(&graphics, IID_PPV_ARGS(&gPipeline.arg10Ps));
+    vsCode->Release();
+    psCode->Release();
+    if (FAILED(hr)) {
+        setError(hr, "CreateGraphicsPipelineState");
+        return false;
+    }
+
+    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
+    rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    rtvHeapDesc.NumDescriptors = 1;
+    hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&gPipeline.rtvHeap));
+    if (FAILED(hr)) {
+        setError(hr, "CreateDescriptorHeap(rtv)");
+        return false;
+    }
+    gPipeline.arg10Rtv = gPipeline.rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
     heapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -1045,11 +1133,12 @@ MvFrame decodeMvFrame() {
     return frame;
 }
 
-bool record(void* commandListVoid, void* backBufferVoid) {
+bool recordInternal(void* commandListVoid, void* backBufferVoid, void* arg10Void) {
     auto* const list   = static_cast<ID3D12GraphicsCommandList*>(commandListVoid);
     auto* const back   = static_cast<ID3D12Resource*>(backBufferVoid);
+    auto* const arg10  = static_cast<ID3D12Resource*>(arg10Void);
     auto* const device = static_cast<ID3D12Device*>(probe::vv::engineDevice());
-    if (!list || !back || !device) {
+    if (!list || (!back && !arg10) || !device) {
         return false;
     }
     if (!inWorld()) {
@@ -1132,9 +1221,9 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     }
     unsigned       renderWidth  = probe::vv::renderWidth();
     unsigned       renderHeight = probe::vv::renderHeight();
-    D3D12_RESOURCE_DESC const backDesc = back->GetDesc();
-    unsigned const displayWidth  = static_cast<unsigned>(backDesc.Width);
-    unsigned const displayHeight = backDesc.Height;
+    D3D12_RESOURCE_DESC const sizeDesc = arg10 ? arg10->GetDesc() : back->GetDesc();
+    unsigned const displayWidth  = static_cast<unsigned>(sizeDesc.Width);
+    unsigned const displayHeight = sizeDesc.Height;
     if ((!renderWidth || !renderHeight) && displayWidth && displayHeight) {
         // Bilinear never runs the taau declarator, which is the only thing that used
         // to fill the render size. The engine still creates its render-resolution
@@ -1286,7 +1375,7 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     transition(list, gPipeline.finalRgba8, gPipeline.finalState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     gPipeline.finalState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
-    int const view = gView.load(std::memory_order_relaxed);
+    int const view = arg10 ? static_cast<int>(View::Dlss) : gView.load(std::memory_order_relaxed);
     // 4 = Bypass (encode only). Mode 0 reads the white-point texture, and only the
     // DLSS branch runs the exposure pass that fills it; leaving the default at 0
     // would divide every other view by a never-written texture (EXP-0048).
@@ -1329,7 +1418,8 @@ bool record(void* commandListVoid, void* backBufferVoid) {
             if (pending > 0) {
                 resetFrames.store(pending - 1, std::memory_order_relaxed);
             }
-            bool const reset = spatial || pending > 0 || !mv.valid;
+            bool const gap   = arg10 && probe::vv::takeArg10Gap();
+            bool const reset = spatial || pending > 0 || !mv.valid || gap;
             exposureReset  = reset;
             dlssEvaluated  = dlss::evaluateSr(
                 list,
@@ -1361,7 +1451,7 @@ bool record(void* commandListVoid, void* backBufferVoid) {
         // 2 is colorHalf until evaluate succeeds and the DLSS output afterwards, so
         // pointing the exposure table at it keeps both passes on one source.
         finalMode = 0;
-        if (gPipeline.exposure) {
+        if (!arg10 && gPipeline.exposure) {
             unsigned const sampleWidth  = dlssEvaluated ? displayWidth : renderWidth;
             unsigned const sampleHeight = dlssEvaluated ? displayHeight : renderHeight;
             transition(list, gPipeline.exposureR32, gPipeline.exposureState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -1379,6 +1469,89 @@ bool record(void* commandListVoid, void* backBufferVoid) {
             list->SetComputeRootDescriptorTable(1, gpuAt(kSlotEngineColor));
             list->SetComputeRootDescriptorTable(2, gpuAt(kSlotColorUav));
         }
+    }
+    if (arg10) {
+        if (!dlssEvaluated) {
+            return false;
+        }
+        D3D12_RESOURCE_DESC const targetDesc = arg10->GetDesc();
+        if (targetDesc.Format != DXGI_FORMAT_R11G11B10_FLOAT) {
+            static std::atomic<unsigned> warned{0};
+            if (warned.fetch_add(1, std::memory_order_relaxed) < 3) {
+                utils::logger().warn(
+                    "[vvsr] sr arg10: unexpected target format {}",
+                    static_cast<unsigned>(targetDesc.Format)
+                );
+            }
+            return false;
+        }
+        // Stage A proved arg10 is left in RENDER_TARGET by its writer list, so this
+        // pass only binds it and leaves the state alone. The DLSS output was last in
+        // a compute-read state; a pixel shader needs its own.
+        transition(list, gPipeline.dlssOut, gPipeline.dlssState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        gPipeline.dlssState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        probe::vv::inject::setRecordingOwnView(true);
+        device->CreateRenderTargetView(arg10, nullptr, gPipeline.arg10Rtv);
+        probe::vv::inject::setRecordingOwnView(false);
+        D3D12_VIEWPORT const viewport{
+            0.0f,
+            0.0f,
+            static_cast<float>(displayWidth),
+            static_cast<float>(displayHeight),
+            0.0f,
+            1.0f
+        };
+        D3D12_RECT const scissor{
+            0,
+            0,
+            static_cast<LONG>(displayWidth),
+            static_cast<LONG>(displayHeight)
+        };
+        ID3D12DescriptorHeap* heaps[1] = {gPipeline.heap};
+        list->SetDescriptorHeaps(1, heaps);
+        list->SetGraphicsRootSignature(gPipeline.root);
+        // The DLSS output was written to descriptor slot 2 by the evaluate branch;
+        // the graphics table starts there, so the PS sees it as t0.
+        list->SetGraphicsRootDescriptorTable(1, gpuAt(kSlotColorSrv));
+        list->OMSetRenderTargets(1, &gPipeline.arg10Rtv, FALSE, nullptr);
+        list->RSSetViewports(1, &viewport);
+        list->RSSetScissorRects(1, &scissor);
+        list->SetPipelineState(gPipeline.arg10Ps);
+        list->DrawInstanced(3, 1, 0, 0);
+
+        std::lock_guard lock(gMutex);
+        gStats.recorded        = true;
+        gStats.frame           = frameNo;
+        gStats.view            = view;
+        gStats.dlssReady       = true;
+        gStats.dlssCreateRet   = dlssCreateRet;
+        gStats.dlssEvaluateRet = dlssEvalRet;
+        gStats.renderWidth     = renderWidth;
+        gStats.renderHeight    = renderHeight;
+        gStats.displayWidth    = displayWidth;
+        gStats.displayHeight   = displayHeight;
+        gStats.colorSource     = color;
+        gStats.depthSource     = depth;
+        gStats.colorFormat     = colorFormat;
+        gStats.depthFormat     = depthFormat;
+        gStats.colorCandidates = gColorCandidates;
+        gStats.depthCandidates = gDepthCandidates;
+        gStats.colorChoice     = gColorChoice.load(std::memory_order_relaxed);
+        gStats.depthChoice     = gDepthChoice.load(std::memory_order_relaxed);
+        gStats.lastError       = 0;
+        static std::atomic<unsigned> frames{0};
+        unsigned const               n = frames.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 3 || n % 600 == 0) {
+            utils::logger().info(
+                "[vvsr] sr arg10 #{}: {}x{} fmt={} eval={}",
+                n,
+                displayWidth,
+                displayHeight,
+                static_cast<unsigned>(targetDesc.Format),
+                dlssEvalRet
+            );
+        }
+        return true;
     }
     list->SetPipelineState(gPipeline.final);
     unsigned const finalParams[4] = {displayWidth, displayHeight, finalMode, 0};
@@ -1451,6 +1624,14 @@ bool record(void* commandListVoid, void* backBufferVoid) {
     gStats.depthChoice     = gDepthChoice.load(std::memory_order_relaxed);
     gStats.lastError     = 0;
     return true;
+}
+
+bool record(void* commandList, void* backBuffer) {
+    return recordInternal(commandList, backBuffer, nullptr);
+}
+
+bool recordArg10(void* commandList, void* arg10) {
+    return recordInternal(commandList, nullptr, arg10);
 }
 
 Stats stats() {

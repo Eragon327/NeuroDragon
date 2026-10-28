@@ -184,7 +184,9 @@ struct ListSig {
     unsigned        rtvSeenCount;
     unsigned        rtvSeenGen;
 };
-constexpr unsigned kSigSlots = 128;
+// 512, not 128: UI frames (panel open) bring new list objects into the table, and
+// when it filled the arg10 writer stopped resolving after the panel closed (EXP-0058).
+constexpr unsigned kSigSlots = 512;
 ListSig               gSigs[kSigSlots]{};
 std::atomic<unsigned> gSigCount{0};
 std::atomic<unsigned> gSigFrames{0};
@@ -203,6 +205,10 @@ ListSig* sigFor(void* list) {
     if (slot < kSigSlots) {
         gSigs[slot] = ListSig{list, 0, 0, 0, 0, 0, 0, 0, 0, nullptr, 0, 0, 0, nullptr, {}, 0, ~0u};
         return &gSigs[slot];
+    }
+    static std::atomic<bool> warned{false};
+    if (!warned.exchange(true, std::memory_order_relaxed)) {
+        utils::logger().warn("[vv] list signature table full ({} slots); new lists are not tracked", kSigSlots);
     }
     return nullptr;
 }
@@ -1514,6 +1520,16 @@ std::atomic<bool>           gArg10SolidArmed{false};
 std::atomic<unsigned>       gArg10ArmGeneration{0};
 std::atomic<void*>          gArg10WriterList{nullptr};
 std::atomic<unsigned>       gArg10WriterSplit{0};
+// One declaration per world frame. A submission is allowed to look for the arg10
+// writer only when a new declaration arrived since the last submission; UI frames
+// reuse the previous native, and matching it there produced false cuts at 8/25/40/43
+// in 107-list frames (EXP-0059: occasional black flash).
+std::atomic<unsigned>       gArg10DeclaredSerial{0};
+std::atomic<unsigned>       gArg10ConsumedSerial{0};
+std::atomic<bool>           gArg10FreshSubmission{false};
+// A world submission that had a new declaration but no writer: the DLSS history must
+// not span that gap (the camera moved while no frame was upscaled).
+std::atomic<bool>           gArg10Gap{false};
 
 bool matchesBytes(void* target, unsigned char const* bytes, unsigned size) {
     return target && readable(target, size) && std::memcmp(target, bytes, size) == 0;
@@ -1934,6 +1950,7 @@ void taauDetour(
         }
         gArg10PreviousNative.store(gArg10Native.load(std::memory_order_acquire), std::memory_order_release);
         gArg10Native.store(lookup.native, std::memory_order_release);
+        gArg10DeclaredSerial.fetch_add(1, std::memory_order_release);
         gArg10Handle.store(handle, std::memory_order_release);
         gArg10Reason.store(reason, std::memory_order_release);
     }
@@ -2811,25 +2828,35 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                 return nullptr;
             };
             // Stage A: the writer is the list that binds the frame's arg10 native in
-            // any OMSetRenderTargets call. It has no DSV (EXP-0055), which is also what
-            // keeps the later composite list from matching. EXP-0057 showed that the
-            // first binding alone is not enough: a list can bind a small target first.
-            if (gArg10SolidArmed.load(std::memory_order_acquire)) {
+            // any OMSetRenderTargets call. EXP-0057 showed that the first binding alone
+            // is not enough; EXP-0060 showed that a list-level DSV test is too coarse
+            // (the writer can bind depth elsewhere), so the arg10 binding is the only
+            // criterion.
+            bool const     arg10Armed = gArg10SolidArmed.load(std::memory_order_acquire);
+            unsigned const declared   = gArg10DeclaredSerial.load(std::memory_order_acquire);
+            bool const     fresh = arg10Armed && declared != gArg10ConsumedSerial.load(std::memory_order_acquire);
+            if (arg10Armed) {
                 void* const native = gArg10Native.load(std::memory_order_acquire);
                 unsigned    writer = 0;
-                for (unsigned i = 0; native && i < listCount; ++i) {
-                    auto const* sig = sigAt(i);
-                    if (sig && !sig->dsv && sigBindsResource(sig, native)) {
-                        writer = i + 1;
-                        break;
+                if (fresh) {
+                    for (unsigned i = 0; native && i < listCount; ++i) {
+                        auto const* sig = sigAt(i);
+                        if (sig && sigBindsResource(sig, native)) {
+                            writer = i + 1;
+                            break;
+                        }
                     }
                 }
                 gArg10WriterSplit.store(writer, std::memory_order_release);
                 gArg10WriterList.store(writer ? lists[writer - 1] : nullptr, std::memory_order_release);
+                // Consume even on a miss: a UI submission in the same frame must not get
+                // a second chance at the previous frame's native.
+                gArg10ConsumedSerial.store(declared, std::memory_order_release);
             } else {
                 gArg10WriterSplit.store(0, std::memory_order_release);
                 gArg10WriterList.store(nullptr, std::memory_order_release);
             }
+            gArg10FreshSubmission.store(fresh, std::memory_order_release);
             if (displayW && displayH && sigs) {
                 if (gReplaceTaauDraw.load(std::memory_order_acquire)) {
                     // The suppressed composite no longer satisfies draws==1. Cut
@@ -3547,10 +3574,15 @@ void setArg10Solid(bool armed) {
     gArg10ArmGeneration.fetch_add(1, std::memory_order_relaxed);
     gArg10WriterSplit.store(0, std::memory_order_relaxed);
     gArg10WriterList.store(nullptr, std::memory_order_relaxed);
-    utils::logger().info("[vv] arg10 solid armed={}", armed ? 1 : 0);
+    // Do not let a stale native from before the arming claim the first submission.
+    gArg10ConsumedSerial.store(gArg10DeclaredSerial.load(std::memory_order_acquire), std::memory_order_release);
+    utils::logger().info("[vv] arg10 write armed={}", armed ? 1 : 0);
 }
 
 bool arg10SolidArmed() { return gArg10SolidArmed.load(std::memory_order_acquire); }
+bool arg10FreshSubmission() { return gArg10FreshSubmission.load(std::memory_order_acquire); }
+void noteArg10Gap() { gArg10Gap.store(true, std::memory_order_release); }
+bool takeArg10Gap() { return gArg10Gap.exchange(false, std::memory_order_acq_rel); }
 
 void setTaauDrawReplacement(bool armed) {
     bool const previous = gReplaceTaauDraw.exchange(armed, std::memory_order_acq_rel);

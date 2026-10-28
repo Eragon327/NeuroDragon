@@ -1,0 +1,137 @@
+[2026-10-28 18:51:54.158 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 18:51:54.165 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:51:55.757 IFO][NeuroDragon] [vvsr] sr params colour=90353216 depth=90355872 mv=90352480 out=90352256 jitter=-0.12,-0.28 reset=1
+[2026-10-28 18:51:55.874 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:51:55.874 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x215648655f0 target=0x215abac5000
+[2026-10-28 18:51:55.877 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=1 skipped=1
+[2026-10-28 18:51:55.890 IFO][NeuroDragon] [vvsr] sr params colour=90353216 depth=90355872 mv=90352480 out=90352256 jitter=0.38,0.06 reset=1
+[2026-10-28 18:51:55.891 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:51:55.891 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x2153e14cdc0 target=0x215abac4670
+[2026-10-28 18:51:55.891 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=2 skipped=1
+[2026-10-28 18:51:55.904 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:51:55.904 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x214d8f00610 target=0x215abac5000
+[2026-10-28 18:51:55.904 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=3 skipped=1
+[2026-10-28 18:51:55.915 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x21561a96540 target=0x215abac4670
+[2026-10-28 18:51:57.074 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=120 skipped=1
+[2026-10-28 18:51:58.285 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=240 skipped=1
+[2026-10-28 18:51:59.495 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=360 skipped=1
+[2026-10-28 18:52:00.721 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=480 skipped=1
+[2026-10-28 18:52:01.925 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:52:01.925 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=600 skipped=1
+[2026-10-28 18:52:01.935 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/70 list=0x21562666a90 target=0x215abac5000
+[2026-10-28 18:52:03.145 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=720 skipped=1
+[2026-10-28 18:52:04.426 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=840 skipped=1
+[2026-10-28 18:52:05.671 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=960 skipped=1
+[2026-10-28 18:52:06.880 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=1080 skipped=1
+[2026-10-28 18:52:07.477 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:07.572 WRN][NeuroDragon] [vv] inject skipped (3): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:08.800 WRN][NeuroDragon] [vv] inject skipped (120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:10.026 WRN][NeuroDragon] [vv] inject skipped (240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:11.241 WRN][NeuroDragon] [vv] inject skipped (360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:12.551 WRN][NeuroDragon] [vv] inject skipped (480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:13.877 WRN][NeuroDragon] [vv] inject skipped (600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:15.116 WRN][NeuroDragon] [vv] inject skipped (720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:16.357 WRN][NeuroDragon] [vv] inject skipped (840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:17.581 WRN][NeuroDragon] [vv] inject skipped (960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:18.816 WRN][NeuroDragon] [vv] inject skipped (1080): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:20.086 WRN][NeuroDragon] [vv] inject skipped (1200): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:21.296 WRN][NeuroDragon] [vv] inject skipped (1320): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:22.532 WRN][NeuroDragon] [vv] inject skipped (1440): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:23.632 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:52:23.632 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=1200 skipped=1517
+[2026-10-28 18:52:23.652 IFO][NeuroDragon] [vv] inject: arg10 boundary split=45/70 list=0x21567f49320 target=0x215abac4670
+[2026-10-28 18:52:24.132 WRN][NeuroDragon] [vv] inject skipped (1560): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:26.503 WRN][NeuroDragon] [vv] inject skipped (1680): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:26.669 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=1320 skipped=1687
+[2026-10-28 18:52:29.133 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=1440 skipped=1795
+[2026-10-28 18:52:29.223 WRN][NeuroDragon] [vv] inject skipped (1800): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:31.303 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=1560 skipped=1887
+[2026-10-28 18:52:31.957 WRN][NeuroDragon] [vv] inject skipped (1920): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:33.738 IFO][NeuroDragon] [vv] inject fixed k=44/69 injected=1680 skipped=2003
+[2026-10-28 18:52:34.508 WRN][NeuroDragon] [vv] inject skipped (2040): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:36.339 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:52:36.339 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=1800 skipped=2123
+[2026-10-28 18:52:36.363 IFO][NeuroDragon] [vv] inject: arg10 boundary split=45/70 list=0x2153e2c84c0 target=0x215abac4670
+[2026-10-28 18:52:37.313 WRN][NeuroDragon] [vv] inject skipped (2160): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:38.919 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=1920 skipped=2231
+[2026-10-28 18:52:40.029 WRN][NeuroDragon] [vv] inject skipped (2280): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:41.593 IFO][NeuroDragon] [vv] inject fixed k=46/71 injected=2040 skipped=2351
+[2026-10-28 18:52:42.613 WRN][NeuroDragon] [vv] inject skipped (2400): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:44.043 IFO][NeuroDragon] [vv] inject fixed k=46/71 injected=2160 skipped=2459
+[2026-10-28 18:52:45.475 WRN][NeuroDragon] [vv] inject skipped (2520): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:46.770 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=2280 skipped=2573
+[2026-10-28 18:52:48.438 WRN][NeuroDragon] [vv] inject skipped (2640): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:49.331 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:52:49.331 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=2400 skipped=2683
+[2026-10-28 18:52:49.349 IFO][NeuroDragon] [vv] inject: arg10 boundary split=45/70 list=0x21560fb53b0 target=0x215abac4670
+[2026-10-28 18:52:50.899 WRN][NeuroDragon] [vv] inject skipped (2760): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:51.835 IFO][NeuroDragon] [vv] inject fixed k=46/71 injected=2520 skipped=2801
+[2026-10-28 18:52:53.830 WRN][NeuroDragon] [vv] inject skipped (2880): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:52:54.460 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=2640 skipped=2909
+[2026-10-28 18:52:55.969 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=2760 skipped=2923
+[2026-10-28 18:52:57.426 IFO][NeuroDragon] [vv] inject fixed k=45/70 injected=2880 skipped=2923
+[2026-10-28 18:52:59.083 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:52:59.083 IFO][NeuroDragon] [vv] inject fixed k=15/81 injected=3000 skipped=2927
+[2026-10-28 18:52:59.105 IFO][NeuroDragon] [vv] inject: arg10 boundary split=17/81 list=0x2153e068110 target=0x215abac4670
+[2026-10-28 18:53:00.101 WRN][NeuroDragon] [vv] inject skipped (3000): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:01.515 WRN][NeuroDragon] [vv] inject skipped (3120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:02.900 WRN][NeuroDragon] [vv] inject skipped (3240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:04.266 WRN][NeuroDragon] [vv] inject skipped (3360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:05.656 WRN][NeuroDragon] [vv] inject skipped (3480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:07.587 WRN][NeuroDragon] [vv] inject skipped (3600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:09.197 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=3120 skipped=3669
+[2026-10-28 18:53:10.306 WRN][NeuroDragon] [vv] inject skipped (3720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:11.837 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=3240 skipped=3789
+[2026-10-28 18:53:13.047 WRN][NeuroDragon] [vv] inject skipped (3840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:14.831 WRN][NeuroDragon] [vv] inject skipped (3960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:16.252 WRN][NeuroDragon] [vv] inject skipped (4080): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:17.677 WRN][NeuroDragon] [vv] inject skipped (4200): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:19.086 WRN][NeuroDragon] [vv] inject skipped (4320): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:20.512 WRN][NeuroDragon] [vv] inject skipped (4440): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:21.962 WRN][NeuroDragon] [vv] inject skipped (4560): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:23.378 WRN][NeuroDragon] [vv] inject skipped (4680): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:24.813 WRN][NeuroDragon] [vv] inject skipped (4800): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:26.122 WRN][NeuroDragon] [vv] inject skipped (4920): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:27.573 WRN][NeuroDragon] [vv] inject skipped (5040): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:29.073 WRN][NeuroDragon] [vv] inject skipped (5160): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:30.448 WRN][NeuroDragon] [vv] inject skipped (5280): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:31.919 WRN][NeuroDragon] [vv] inject skipped (5400): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:33.383 WRN][NeuroDragon] [vv] inject skipped (5520): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:34.823 WRN][NeuroDragon] [vv] inject skipped (5640): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:36.423 WRN][NeuroDragon] [vv] inject skipped (5760): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:37.813 WRN][NeuroDragon] [vv] inject skipped (5880): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:39.198 WRN][NeuroDragon] [vv] inject skipped (6000): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:40.624 WRN][NeuroDragon] [vv] inject skipped (6120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:42.233 WRN][NeuroDragon] [vv] inject skipped (6240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:43.689 WRN][NeuroDragon] [vv] inject skipped (6360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:45.018 WRN][NeuroDragon] [vv] inject skipped (6480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:46.415 WRN][NeuroDragon] [vv] inject skipped (6600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:47.859 WRN][NeuroDragon] [vv] inject skipped (6720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:49.038 IFO][NeuroDragon] [vv] inject fixed k=13/108 injected=3360 skipped=6821
+[2026-10-28 18:53:49.330 WRN][NeuroDragon] [vv] inject skipped (6840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:50.735 WRN][NeuroDragon] [vv] inject skipped (6960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:52.136 WRN][NeuroDragon] [vv] inject skipped (7080): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:53.539 WRN][NeuroDragon] [vv] inject skipped (7200): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:54.861 WRN][NeuroDragon] [vv] inject skipped (7320): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:56.410 WRN][NeuroDragon] [vv] inject skipped (7440): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:57.931 WRN][NeuroDragon] [vv] inject skipped (7560): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:53:59.451 WRN][NeuroDragon] [vv] inject skipped (7680): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:00.986 WRN][NeuroDragon] [vv] inject skipped (7800): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:01.757 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-28 18:54:19.842 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-28 18:54:20.628 WRN][NeuroDragon] [vv] inject skipped (7920): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:22.162 WRN][NeuroDragon] [vv] inject skipped (8040): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:23.547 WRN][NeuroDragon] [vv] inject skipped (8160): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:24.958 WRN][NeuroDragon] [vv] inject skipped (8280): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:26.323 WRN][NeuroDragon] [vv] inject skipped (8400): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:27.707 WRN][NeuroDragon] [vv] inject skipped (8520): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:29.228 WRN][NeuroDragon] [vv] inject skipped (8640): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:30.823 WRN][NeuroDragon] [vv] inject skipped (8760): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:32.308 WRN][NeuroDragon] [vv] inject skipped (8880): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:33.859 WRN][NeuroDragon] [vv] inject skipped (9000): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:35.413 WRN][NeuroDragon] [vv] inject skipped (9120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:37.018 WRN][NeuroDragon] [vv] inject skipped (9240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:38.483 WRN][NeuroDragon] [vv] inject skipped (9360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:39.788 WRN][NeuroDragon] [vv] inject skipped (9480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:41.235 WRN][NeuroDragon] [vv] inject skipped (9600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:54:43.153 WRN][NeuroDragon] [vv] inject skipped (9720): no pre-HUD boundary; TAAU restored

@@ -1,0 +1,221 @@
+[2026-10-28 18:21:22.216 IFO][NeuroDragon] [vv] arg10 solid armed=1
+[2026-10-28 18:21:22.963 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_CreateFeature @ 0x7ffaed1d8540
+[2026-10-28 18:21:24.706 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x903 -> 2560x1369
+[2026-10-28 18:21:24.706 IFO][NeuroDragon] [vvsr] sr readback Width: u32 ret=1 val=1689 | f32 ret=1 val=1689.000
+[2026-10-28 18:21:24.706 IFO][NeuroDragon] [vvsr] sr readback OutWidth: u32 ret=1 val=2560 | f32 ret=1 val=2560.000
+[2026-10-28 18:21:24.706 IFO][NeuroDragon] [vvsr] sr params colour=2013244240 depth=2013246800 mv=2013244912 out=2013244016 jitter=0.38,0.06 reset=1
+[2026-10-28 18:21:24.706 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=0.375
+[2026-10-28 18:21:24.706 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+[2026-10-28 18:21:24.841 IFO][NeuroDragon] [vvsr] sr arg10: 2560x1369 fmt=26 eval=1
+[2026-10-28 18:21:24.841 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/69 list=0x1f0e3f17d80 target=0x1f261306b90
+[2026-10-28 18:21:24.843 IFO][NeuroDragon] [vv] inject fixed k=47/69 injected=1 skipped=0
+[2026-10-28 18:21:24.852 IFO][NeuroDragon] [vvsr] sr params colour=2013244240 depth=2013246800 mv=2013244912 out=2013244016 jitter=-0.44,0.39 reset=1
+[2026-10-28 18:21:24.852 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=-0.438
+[2026-10-28 18:21:24.852 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+[2026-10-28 18:21:24.853 IFO][NeuroDragon] [vvsr] sr arg10: 2560x1369 fmt=26 eval=1
+[2026-10-28 18:21:24.853 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/69 list=0x1f0c0912c20 target=0x1f218aae0a0
+[2026-10-28 18:21:24.853 IFO][NeuroDragon] [vv] inject fixed k=47/69 injected=2 skipped=0
+[2026-10-28 18:21:24.864 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/69 list=0x1f0e28653f0 target=0x1f261306b90
+[2026-10-28 18:21:24.864 IFO][NeuroDragon] [vv] inject fixed k=47/69 injected=3 skipped=0
+[2026-10-28 18:21:24.873 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/69 list=0x1f0e2865d80 target=0x1f218aae0a0
+[2026-10-28 18:21:26.028 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/74)
+[2026-10-28 18:21:26.028 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:26.053 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/74)
+[2026-10-28 18:21:26.053 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:26.063 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/72)
+[2026-10-28 18:21:26.063 WRN][NeuroDragon] [vv] inject skipped (3): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:26.073 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/74)
+[2026-10-28 18:21:26.123 IFO][NeuroDragon] [vv] inject fixed k=13/107 injected=120 skipped=5
+[2026-10-28 18:21:27.383 WRN][NeuroDragon] [vv] inject skipped (120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:27.393 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:28.583 WRN][NeuroDragon] [vv] inject skipped (240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:28.593 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:29.798 WRN][NeuroDragon] [vv] inject skipped (360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:29.809 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:31.008 WRN][NeuroDragon] [vv] inject skipped (480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:31.019 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:32.354 WRN][NeuroDragon] [vv] inject skipped (600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:32.364 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:21:33.553 WRN][NeuroDragon] [vv] inject skipped (720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:33.563 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:21:34.765 WRN][NeuroDragon] [vv] inject skipped (840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:34.773 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:21:36.024 WRN][NeuroDragon] [vv] inject skipped (960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:36.034 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:21:37.283 WRN][NeuroDragon] [vv] inject skipped (1080): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:37.293 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:21:38.679 WRN][NeuroDragon] [vv] inject skipped (1200): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:38.689 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:39.934 WRN][NeuroDragon] [vv] inject skipped (1320): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:39.944 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/68)
+[2026-10-28 18:21:41.189 WRN][NeuroDragon] [vv] inject skipped (1440): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:41.199 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/68)
+[2026-10-28 18:21:42.439 WRN][NeuroDragon] [vv] inject skipped (1560): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:42.449 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/68)
+[2026-10-28 18:21:43.655 WRN][NeuroDragon] [vv] inject skipped (1680): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:43.664 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:45.000 WRN][NeuroDragon] [vv] inject skipped (1800): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:45.010 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:46.219 WRN][NeuroDragon] [vv] inject skipped (1920): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:46.229 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:47.445 WRN][NeuroDragon] [vv] inject skipped (2040): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:47.455 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:48.675 WRN][NeuroDragon] [vv] inject skipped (2160): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:48.684 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:49.890 WRN][NeuroDragon] [vv] inject skipped (2280): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:49.899 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:51.620 WRN][NeuroDragon] [vv] inject skipped (2400): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:51.641 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:52.276 IFO][NeuroDragon] [vv] inject fixed k=47/69 injected=240 skipped=2431
+[2026-10-28 18:21:54.086 WRN][NeuroDragon] [vv] inject skipped (2520): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:54.105 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:54.715 IFO][NeuroDragon] [vv] inject fixed k=47/69 injected=360 skipped=2551
+[2026-10-28 18:21:56.581 WRN][NeuroDragon] [vv] inject skipped (2640): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:56.601 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:58.040 WRN][NeuroDragon] [vv] inject skipped (2760): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:58.050 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:21:59.256 WRN][NeuroDragon] [vv] inject skipped (2880): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:21:59.266 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:00.456 WRN][NeuroDragon] [vv] inject skipped (3000): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:00.466 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:01.656 WRN][NeuroDragon] [vv] inject skipped (3120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:01.665 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:02.856 WRN][NeuroDragon] [vv] inject skipped (3240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:02.865 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:03.101 IFO][NeuroDragon] [vv] inject fixed k=9/81 injected=480 skipped=3255
+[2026-10-28 18:22:04.161 WRN][NeuroDragon] [vv] inject skipped (3360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:04.172 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:05.426 WRN][NeuroDragon] [vv] inject skipped (3480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:05.436 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:06.737 WRN][NeuroDragon] [vv] inject skipped (3600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:06.751 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:08.002 WRN][NeuroDragon] [vv] inject skipped (3720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:08.012 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:09.332 WRN][NeuroDragon] [vv] inject skipped (3840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:09.342 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/74)
+[2026-10-28 18:22:10.703 WRN][NeuroDragon] [vv] inject skipped (3960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:10.712 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:12.003 WRN][NeuroDragon] [vv] inject skipped (4080): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:12.012 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:13.242 WRN][NeuroDragon] [vv] inject skipped (4200): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:13.253 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:14.448 WRN][NeuroDragon] [vv] inject skipped (4320): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:14.457 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:15.878 WRN][NeuroDragon] [vv] inject skipped (4440): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:15.903 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/81)
+[2026-10-28 18:22:17.183 WRN][NeuroDragon] [vv] inject skipped (4560): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:17.192 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:18.456 WRN][NeuroDragon] [vv] inject skipped (4680): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:18.467 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:19.667 WRN][NeuroDragon] [vv] inject skipped (4800): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:19.678 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:20.873 WRN][NeuroDragon] [vv] inject skipped (4920): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:20.883 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f218aae0a0, split=0/69)
+[2026-10-28 18:22:22.278 WRN][NeuroDragon] [vv] inject skipped (5040): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:22.288 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:23.523 WRN][NeuroDragon] [vv] inject skipped (5160): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:23.533 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:24.867 WRN][NeuroDragon] [vv] inject skipped (5280): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:24.878 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:26.217 WRN][NeuroDragon] [vv] inject skipped (5400): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:26.227 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:27.543 WRN][NeuroDragon] [vv] inject skipped (5520): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:27.559 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/69)
+[2026-10-28 18:22:29.382 WRN][NeuroDragon] [vv] inject skipped (5640): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:29.392 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/48)
+[2026-10-28 18:22:30.582 WRN][NeuroDragon] [vv] inject skipped (5760): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:22:30.593 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f261306b90, split=0/48)
+[2026-10-28 18:25:03.544 IFO][NeuroDragon] [vv] arg10 solid armed=1
+[2026-10-28 18:25:04.136 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_CreateFeature @ 0x7ffaebd88540
+[2026-10-28 18:25:05.248 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x950 -> 2560x1440
+[2026-10-28 18:25:05.248 IFO][NeuroDragon] [vvsr] sr readback Width: u32 ret=1 val=1689 | f32 ret=1 val=1689.000
+[2026-10-28 18:25:05.248 IFO][NeuroDragon] [vvsr] sr readback OutWidth: u32 ret=1 val=2560 | f32 ret=1 val=2560.000
+[2026-10-28 18:25:05.248 IFO][NeuroDragon] [vvsr] sr params colour=1089231248 depth=1089233904 mv=1089232592 out=1089232912 jitter=-0.19,-0.13 reset=1
+[2026-10-28 18:25:05.248 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=-0.188
+[2026-10-28 18:25:05.248 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+[2026-10-28 18:25:05.371 IFO][NeuroDragon] [vvsr] sr arg10: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:25:05.371 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:05.371 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:05.382 IFO][NeuroDragon] [vvsr] sr params colour=1089231248 depth=1089233904 mv=1089232592 out=1089232912 jitter=0.31,0.20 reset=1
+[2026-10-28 18:25:05.382 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=0.312
+[2026-10-28 18:25:05.382 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+[2026-10-28 18:25:05.382 IFO][NeuroDragon] [vvsr] sr arg10: 2560x1440 fmt=26 eval=1
+[2026-10-28 18:25:05.382 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f463f1c930, split=0/69)
+[2026-10-28 18:25:05.382 WRN][NeuroDragon] [vv] inject skipped (2): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:05.396 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:05.396 WRN][NeuroDragon] [vv] inject skipped (3): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:05.407 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f463f1c930, split=0/69)
+[2026-10-28 18:25:06.712 WRN][NeuroDragon] [vv] inject skipped (120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:06.722 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:07.967 WRN][NeuroDragon] [vv] inject skipped (240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:07.983 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:09.282 WRN][NeuroDragon] [vv] inject skipped (360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:09.292 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:10.533 WRN][NeuroDragon] [vv] inject skipped (480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:10.548 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:10.683 IFO][NeuroDragon] [vv] inject: arg10 boundary split=43/107 list=0x1f2e4324530 target=0x1f463f1c930
+[2026-10-28 18:25:10.686 IFO][NeuroDragon] [vv] inject fixed k=43/107 injected=1 skipped=489
+[2026-10-28 18:25:10.738 IFO][NeuroDragon] [vv] inject: arg10 boundary split=8/107 list=0x1f2e0aa4a70 target=0x1f463f1c930
+[2026-10-28 18:25:10.739 IFO][NeuroDragon] [vv] inject fixed k=8/107 injected=2 skipped=492
+[2026-10-28 18:25:11.893 WRN][NeuroDragon] [vv] inject skipped (600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:11.902 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:13.167 WRN][NeuroDragon] [vv] inject skipped (720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:13.177 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:14.453 WRN][NeuroDragon] [vv] inject skipped (840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:14.468 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:15.803 WRN][NeuroDragon] [vv] inject skipped (960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:15.812 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:17.148 WRN][NeuroDragon] [vv] inject skipped (1080): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:17.164 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/74)
+[2026-10-28 18:25:17.269 IFO][NeuroDragon] [vv] inject: arg10 boundary split=40/107 list=0x1f2e37fcc90 target=0x1f463f1c930
+[2026-10-28 18:25:17.270 IFO][NeuroDragon] [vv] inject fixed k=40/107 injected=3 skipped=1087
+[2026-10-28 18:25:17.284 IFO][NeuroDragon] [vv] inject: arg10 boundary split=25/107 list=0x1f2e21253b0 target=0x1f431037760
+[2026-10-28 18:25:18.638 WRN][NeuroDragon] [vv] inject skipped (1200): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:18.653 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:19.998 WRN][NeuroDragon] [vv] inject skipped (1320): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:20.008 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:21.364 WRN][NeuroDragon] [vv] inject skipped (1440): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:21.379 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/68)
+[2026-10-28 18:25:22.674 WRN][NeuroDragon] [vv] inject skipped (1560): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:22.689 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:23.985 WRN][NeuroDragon] [vv] inject skipped (1680): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:24.034 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f463f1c930, split=0/81)
+[2026-10-28 18:25:25.378 WRN][NeuroDragon] [vv] inject skipped (1800): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:25.388 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:26.578 WRN][NeuroDragon] [vv] inject skipped (1920): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:26.588 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:27.944 WRN][NeuroDragon] [vv] inject skipped (2040): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:27.953 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:29.253 WRN][NeuroDragon] [vv] inject skipped (2160): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:29.264 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:30.619 WRN][NeuroDragon] [vv] inject skipped (2280): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:30.629 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:31.903 WRN][NeuroDragon] [vv] inject skipped (2400): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:31.913 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:33.164 WRN][NeuroDragon] [vv] inject skipped (2520): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:33.174 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:34.510 WRN][NeuroDragon] [vv] inject skipped (2640): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:34.519 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:35.784 WRN][NeuroDragon] [vv] inject skipped (2760): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:35.794 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:37.275 WRN][NeuroDragon] [vv] inject skipped (2880): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:37.284 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:38.634 WRN][NeuroDragon] [vv] inject skipped (3000): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:38.645 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:39.900 WRN][NeuroDragon] [vv] inject skipped (3120): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:39.910 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:41.169 WRN][NeuroDragon] [vv] inject skipped (3240): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:41.179 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:42.435 WRN][NeuroDragon] [vv] inject skipped (3360): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:42.445 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:43.885 WRN][NeuroDragon] [vv] inject skipped (3480): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:43.895 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:45.165 WRN][NeuroDragon] [vv] inject skipped (3600): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:45.175 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:46.446 WRN][NeuroDragon] [vv] inject skipped (3720): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:46.455 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:47.710 WRN][NeuroDragon] [vv] inject skipped (3840): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:47.721 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:49.090 WRN][NeuroDragon] [vv] inject skipped (3960): no pre-HUD boundary; TAAU restored
+[2026-10-28 18:25:49.100 WRN][NeuroDragon] [vv] inject: arg10 writer not found (native=0x1f431037760, split=0/69)
+[2026-10-28 18:25:49.215 IFO][NeuroDragon] [vv] arg10 solid armed=0

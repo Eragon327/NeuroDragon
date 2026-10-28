@@ -258,7 +258,7 @@ def _compile(src: str, entry: bytes = ENTRY, target: bytes = TARGET) -> tuple[in
     return hr & 0xFFFFFFFF, message
 
 
-def _programs(root: Path) -> tuple[list[tuple[str, str, str]], list[str], list[str]]:
+def _programs(root: Path) -> tuple[list[tuple[str, str, str, bytes]], list[str], list[str]]:
     """Return (programs, blind-spots, out-of-scope-chunks).
 
     Only `src/neurodragon/vv/` is compiled here: every HLSL program in that folder
@@ -290,14 +290,22 @@ def _programs(root: Path) -> tuple[list[tuple[str, str, str]], list[str], list[s
         body_name = name[: -len("Head")] + "Body"
         if body_name in chunks:
             used.update({name, body_name, "kHlsl"})
-            programs.append((f"{name[:-4]} (Head + tone + Body)", body + tone + chunks[body_name][0], where))
+            programs.append(
+                (f"{name[:-4]} (Head + tone + Body)", body + tone + chunks[body_name][0], where, b"cs_5_0")
+            )
 
     for name, (body, where) in chunks.items():
         if name in used or name == "kHlsl":
             continue
-        if name.endswith("Shader"):
+        if name.endswith("VsShader"):
             used.add(name)
-            programs.append((name, body, where))
+            programs.append((name, body, where, b"vs_5_0"))
+        elif name.endswith("PsShader"):
+            used.add(name)
+            programs.append((name, body, where, b"ps_5_0"))
+        elif name.endswith("Shader"):
+            used.add(name)
+            programs.append((name, body, where, b"cs_5_0"))
 
     blind = [name for name in chunks if name not in used and name != "kHlsl"]
     return programs, blind, outside
@@ -330,8 +338,8 @@ def check_shaders(root: Path) -> list[dict]:
                     f"HLSL chunk {name!r} is neither a standalone *Shader nor half of a Head/Body pair, "
                     f"so it is not compiled by this check")
         )
-    for label, source, where in programs:
-        hr, message = _compile(source)
+    for label, source, where, target in programs:
+        hr, message = _compile(source, target=target)
         if hr != 0:
             first = message.strip().splitlines()[0] if message.strip() else f"hr=0x{hr:08X}"
             findings.append(finding("shader", "shader.compile", "error", f"{label}: {first}", where))

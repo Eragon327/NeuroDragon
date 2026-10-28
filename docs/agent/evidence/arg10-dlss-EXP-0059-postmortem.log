@@ -1,0 +1,34 @@
+EXP-0059 postmortem — DLSS -> arg10 (2026-10-28 18:21–18:25)
+source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log
+raw excerpt: docs/agent/evidence/arg10-dlss-EXP-0059.log
+
+What worked
+- `[vvsr] sr arg10: 2560x1369 fmt=26 eval=1` (and 2560x1440 in the second session):
+  prep + NGX evaluate + the PS draw all ran.
+- World frames found the writer: `inject: arg10 boundary split=47/69` and
+  `inject fixed k=47/69 injected=...`.
+- No persistent colour/brightness cast; the user reports "和没开一样".
+
+What went wrong
+1. UI-frame false positives. In 107-list frames (panel open) the stale
+   `gArg10Native` from the last world frame was matched by UI lists:
+   `inject: arg10 boundary split=8/107`, `25/107`, `40/107`, `43/107`.
+   Writing DLSS at those cuts can produce the observed one-frame black flash.
+   Fix: `gArg10DeclaredSerial` / `gArg10ConsumedSerial` — only the submission
+   that follows a new TAAU declarator may look for the writer; consume the serial
+   even on a miss, so a later UI submission cannot reuse the old native.
+2. RTV-map flood by our own view. `recordArg10` created an RTV on arg10 every
+   frame without setting `recordingOwnView`; `createRtvDetour` appended one
+   `handle -> resource` entry per frame to the 4096-slot `gRtvs` map. After
+   ~40 s new engine handles were no longer recorded, so `lookupRtv` failed and
+   the writer stopped resolving (69-list frames still `split=0` after the panel).
+   Fix: wrap the arg10 RTV creation with `inject::setRecordingOwnView(true/false)`.
+3. Screen shake. One episode, disappeared by itself, not reproducible in the
+   second test. No log evidence. Suspected temporal/MV behaviour; stage C (engine
+   MV) is the place to test it, not a reason to add a patch here.
+
+Confirmed vs not
+- Confirmed: the PS write path runs on world frames and does not introduce a
+  persistent cast; the "no visible difference" by itself is not a failure.
+- Not fixed: the shake; if it returns with a reproducible trigger, capture the
+  trigger and the frame range first.

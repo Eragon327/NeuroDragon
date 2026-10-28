@@ -41,14 +41,16 @@ enum class Mode : int {
 /// Bypass is B1b-1 (read the render-resolution colour, ACES it over the back
 /// buffer); Capture is B1c (copy the back buffer into a readback and save a BMP,
 /// changing no pixel); SolidArg10 is R3 stage A (clear the engine's TAAU output,
-/// arg10, to magenta). The first four write only our own resources; SolidArg10
-/// deliberately writes one engine resource and leaves it in RENDER_TARGET.
+/// arg10, to magenta); DlssArg10 is R3 stage B (the DLSS output itself, PS + RTV
+/// into arg10). The first four write only our own resources; the two arg10 actions
+/// deliberately write one engine resource and leave it in RENDER_TARGET.
 enum class Action : int {
     Clear      = 0,
     Bypass     = 1,
     Capture    = 2,
     Sr         = 3,
     SolidArg10 = 4,
+    DlssArg10  = 5,
 };
 
 /// Why an injection attempt did nothing. The panel turns these into text (the probe
@@ -140,6 +142,11 @@ unsigned prepare(void* queue, unsigned listCount, void* const* lists);
 /// hooks CreateRenderTargetView on the engine's device, and the back buffer is not
 /// part of the frame graph it is inventorying: its views must not enter that list.
 [[nodiscard]] bool recordingOwnView();
+
+/// Set around a view this module creates itself (the back buffer or the arg10
+/// target). Without it, one view per frame floods the probe's 4096-entry RTV map
+/// (EXP-0059: the arg10 writer stopped resolving after ~40 s).
+void setRecordingOwnView(bool recording);
 
 /// Called after the three-part submission: signals our fence, releases the back
 /// buffer reference and advances a Sweep.

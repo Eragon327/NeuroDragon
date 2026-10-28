@@ -1285,6 +1285,36 @@ void drawB0Probe() {
     );
     widgets::statRow("R3 A arg10", buffer);
 
+    // R3 stage B (docs/specs/vv.md §35.2): the same cut, but the DLSS output is
+    // written into arg10 instead of the solid colour - no encode, no white point.
+    widgets::sectionHeader("VV R3 stage B (TEST)");
+    if (ImGui::Button("DLSS -> arg10 (stage B)")) {
+        probe::vv::setArg10Solid(true);
+        probe::vv::inject::setUseArg10(true);
+        probe::vv::inject::setUseBackBuffer(false);
+        probe::vv::inject::setFromTail(false);
+        probe::vv::inject::setAction(probe::vv::inject::Action::DlssArg10);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Stop arg10")) {
+        probe::vv::setArg10Solid(false);
+        probe::vv::inject::setUseArg10(false);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
+    }
+    auto const srStats = vv::sr::stats();
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "dlss=%d eval=0x%X %ux%u",
+        srStats.dlssReady ? 1 : 0,
+        static_cast<unsigned>(srStats.dlssEvaluateRet),
+        srStats.displayWidth,
+        srStats.displayHeight
+    );
+    widgets::statRow("R3 B arg10", buffer);
+
     // B1b-1: our colour bypass. The boundary is the content anchor now (the first
     // list that bound a back buffer and drew = the world composite), so this follows
     // the frame instead of counting from its end; tail 4 stays as the fallback when
