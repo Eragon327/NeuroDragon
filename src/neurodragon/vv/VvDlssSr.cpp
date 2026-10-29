@@ -302,7 +302,9 @@ void runPending() {
     setI32(params, "PerfQualityValue", 3);
     setU32(params, "CreationNodeMask", 1);
     setU32(params, "VisibilityNodeMask", 1);
-    setI32(params, "DLSS.Feature.Create.Flags", 11); // IsHDR | MVLowRes | AutoExposure
+    // IsHDR | MVLowRes, same convention as the production create below (bit 3 is
+    // DepthInverted, not AutoExposure - see the comment on the production call).
+    setI32(params, "DLSS.Feature.Create.Flags", 3);
 
     // --- one temporary command list, execute it, wait ----------------------
     ID3D12CommandAllocator*    allocator = nullptr;
@@ -540,7 +542,12 @@ bool ensureSrFeature(void* deviceVoid, void* commandList, unsigned renderWidth, 
     paramI32(params, "PerfQualityValue", 3);
     paramU32(params, "CreationNodeMask", 1);
     paramU32(params, "VisibilityNodeMask", 1);
-    paramI32(params, "DLSS.Feature.Create.Flags", 11); // IsHDR | MVLowRes | AutoExposure
+    // IsHDR | MVLowRes. Bit 3 is DepthInverted and has to stay clear: the depth we
+    // hand over is d = 1 - near/z (near 0, sky 1), the same convention the engine's
+    // own SR declares with flags 3. EXP-0045 wrote 11 believing bit 3 was
+    // AutoExposure (that is 1 << 6), and every feature created since then made the
+    // runtime log "Depth Inverted 1" (evidence: depth-flag-EXP-0101-ngx-create.log).
+    paramI32(params, "DLSS.Feature.Create.Flags", 3);
     // Model preset, the same six keys and the same values the engine path writes
     // (src/neurodragon/nr/D3D12Bridge.cpp, srApplyCreateOverrides): 0 = driver default,
     // 5/6 = E/F, 10/11/12/13 = J/K/L/M. Our session's parameter object is our own, so
@@ -607,9 +614,12 @@ bool evaluateSr(void* commandList, void* color, void* depth, void* motionVectors
     int const depthRet = paramPtr(params, "Depth", depth);
     int const mvRet    = paramPtr(params, "MotionVectors", motionVectors);
     int const outRet   = paramPtr(params, "Output", output);
-    // The TAA-context projection has ndc.z = 1 - near/viewDepth: far/sky is 1,
-    // near is 0, so DLSS must treat the input as inverted depth.
-    paramI32(params, "DepthInverted", 1);
+    // No DepthInverted parameter here: for DLSS-SR the convention is a create-time
+    // feature flag (bit 3 of DLSS.Feature.Create.Flags, kept clear above) and this
+    // runtime does not know the key at all - its string table has Jitter.Offset.X,
+    // MV.Scale.X and the create flags, but no DepthInverted
+    // (docs/agent/evidence/depth-flag-EXP-0101-scan.txt). Writing it here is inert,
+    // which is why EXP-0041 saw no change when it flipped the value.
     paramI32(params, "Reset", reset ? 1 : 0);
     paramF32(params, "Jitter.Offset.X", jitterX);
     paramF32(params, "Jitter.Offset.Y", jitterY);

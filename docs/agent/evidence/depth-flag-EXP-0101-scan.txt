@@ -1,0 +1,24 @@
+# generated 2026-10-29 on agent2; commands are reproducible as-is
+
+## 1. nvngx_dlss.dll (SR runtime) parameter strings
+$ strings -a nvngx_dlss.dll | grep -E 'Jitter.Offset|MV.Scale|DLSS.Feature.Create.Flags'
+DLSS.Feature.Create.Flags
+Jitter.Offset.X
+Jitter.Offset.Y
+MV.Scale.X
+MV.Scale.X %f
+MV.Scale.Y
+MV.Scale.Y %f
+$ strings -a nvngx_dlss.dll | grep -c DepthInverted
+0
+
+## 2. nvngx_dlssnr.dll (NR runtime)
+$ strings -a nvngx_dlssnr.dll | grep -i depthinverted
+DLSSNR.DepthInverted
+
+## 3. depth dumps (engine fmt44 R24G8, render size)
+files=60  min over all=0.997893  median-of-medians=1.000000  max=1.000000
+sky band (top 5% rows) max value: 0.999793..1.000000  (1.000000 = cleared/far)
+  if d = 1 - near/z, near=0.05: closest visible surface = 23.7 blocks
+  if d = 1 - near/z, near=0.1: closest visible surface = 47.5 blocks
+  reversed-Z (d = near/z) would put sky at 0.0 -> refuted by the sky band above

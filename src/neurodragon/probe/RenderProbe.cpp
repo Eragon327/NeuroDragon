@@ -146,6 +146,38 @@ bool validParamObj(void* p) {
     return vt && readable(vt, 17 * sizeof(void*));
 }
 
+// What depth convention does this parameter object declare? DLSS-SR has no
+// DepthInverted parameter - the runtime's string table does not contain the name -
+// so the answer has to come from what it does read: a per-frame key if some
+// producer writes one, then the create-time flag bit 3. Nothing readable means
+// non-inverted, which is what the engine's own SR (flags 3) and our VV feature
+// (flags 3) both declare for a d = 1 - near/z buffer with sky at 1.0.
+// `source` is for the window log: 0 = parameter key, 1 = create flag, 2 = default.
+int declaredDepthInverted(void* params, int* source = nullptr) {
+    if (source) {
+        *source = 2;
+    }
+    if (!validParamObj(params)) {
+        return 0;
+    }
+    NgxParamProbe            probe{params};
+    using GetU32 = int (*)(void*, char const*, unsigned*);
+    unsigned value = 0;
+    if (probe.slot<GetU32>(11)(params, "DepthInverted", &value) == 1) {
+        if (source) {
+            *source = 0;
+        }
+        return value != 0u ? 1 : 0;
+    }
+    if (probe.slot<GetU32>(11)(params, "DLSS.Feature.Create.Flags", &value) == 1) {
+        if (source) {
+            *source = 1;
+        }
+        return (value & 8u) != 0u ? 1 : 0; // NVSDK_NGX_DLSS_Feature_Flags_DepthInverted
+    }
+    return 0;
+}
+
 // ---------------------------------------------------------------------------
 // Resource reporting (TEST build only: [desc] / [res] diagnostics)
 // ---------------------------------------------------------------------------
@@ -916,6 +948,11 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             if (sx > 0.0f) mvScaleX = sx;
             if (sy > 0.0f) mvScaleY = sy;
         }
+        // NR's guide depth is the very buffer DLSS reads, so its DepthInverted has to
+        // be what this parameter object declares, not a literal. On the engine path
+        // (RT) the engine declares it; on VV our own create flags do.
+        int       nrDepthSource   = 2;
+        int const nrDepthInverted = declaredDepthInverted(const_cast<void*>(params), &nrDepthSource);
         [[maybe_unused]] bool const recorded = nr::nrRecord(
             cmdList,
             nrPlacement == 0 ? color : out,
@@ -925,7 +962,7 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             nrGuideH,
             mvScaleX,
             mvScaleY,
-            1,
+            nrDepthInverted,
             nrReset,
             nrReplace ? const_cast<void*>(params) : nullptr,
             const_cast<void*>(out),
@@ -935,8 +972,10 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             nr::nrStampEnd(cmdList, n, 0);
         }
         if (nrReset) {
+            static char const* const kDepthSource[] = {"param", "create-flag", "default"};
             ND_DEBUG(
-                "[nr] 窗口 #{} 首帧 f={} placement={} 指南={}x{} 引擎渲染={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
+                "[nr] 窗口 #{} 首帧 f={} placement={} 指南={}x{} 引擎渲染={}x{} recorded={}"
+                "（depthInverted={} source={}）",
                 gNrWindowIndex,
                 n,
                 nrPlacement == 1 ? "after" : "before",
@@ -944,7 +983,9 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 nrGuideH,
                 width,
                 height,
-                recorded
+                recorded,
+                nrDepthInverted,
+                kDepthSource[nrDepthSource < 0 || nrDepthSource > 2 ? 2 : nrDepthSource]
             );
         }
 

@@ -47,7 +47,7 @@ struct Nr {
     // automatic skin mask, which needs skin classification our inputs cannot carry.
     // Kept for the TEST build's probe; 1.0 = the old hardcoded value.
     float skinStructure   = 1.0f;
-    int   depthInverted   = -1; // -1 = follow what the engine asked for
+    int   depthInverted   = -1; // -1 = follow what the parameter object declares (create flag bit 3)
 
     // NR input scaling (docs/L batch 2): 50 / 66 / 100. The feature's work extent
     // becomes render size x percent while depth/MV guides stay full resolution and
