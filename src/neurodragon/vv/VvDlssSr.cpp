@@ -2,6 +2,7 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/probe/VvProbe.h"
+#include "neurodragon/sr/SrSharpening.h"
 
 #include <Windows.h>
 #include <d3d12.h>
@@ -632,7 +633,12 @@ bool evaluateSr(void* commandList, void* color, void* depth, void* motionVectors
         logParamReadback(params, "Jitter.Offset.X");
         logParamReadback(params, "MV.Scale.X");
     }
-    int const ret = gEvaluate(commandList, gSrFeature, params, nullptr, nullptr);
+    // This call goes through the RT probe's EvaluateFeature hook (that is how NR is
+    // spliced in), and that hook also records the engine's RCAS. The engine pass
+    // assumes the engine output's resource state; this output is ours, so mark the
+    // call and let VvSr record the sharpening with the states it owns.
+    neurodragon::sr::OwnEvaluateScope const ownEvaluate;
+    int const                              ret = gEvaluate(commandList, gSrFeature, params, nullptr, nullptr);
     // The NR detour runs inside this call and (on a shared parameter object) used to
     // overwrite MV.Scale with the render size. Read it back once after the evaluate:
     // VV's pixel-space vectors must still see 1.0 (EXP-0088).

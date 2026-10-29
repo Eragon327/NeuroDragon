@@ -298,6 +298,12 @@ bool record(ID3D12Resource* buffer) {
 void setMode(Mode mode) {
     int const value = static_cast<int>(mode);
     int const previous = gMode.exchange(value, std::memory_order_relaxed);
+    if (value == static_cast<int>(Mode::Off)) {
+        // Stopping injection while the product stays armed is exactly the freeze: the
+        // draw gate would keep skipping TAAU over a picture nothing writes. One choke
+        // point - whoever turns injection off turns the product off.
+        probe::vv::setProductArmed(false);
+    }
     if (previous == value) {
         return;
     }
@@ -358,11 +364,10 @@ void setDevice(void* device) { g.device = static_cast<ID3D12Device*>(device); }
 void noteSwapChain(void* swapChain) { g.swapChain = static_cast<IDXGISwapChain*>(swapChain); }
 
 unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
-    if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Off)) {
-        return 0;
-    }
-    // The overlay's own D3D11On12 submission is one list; only the engine's frame is
-    // big enough to be worth cutting (docs/specs/vv.md §3).
+    // ---- is this an engine frame at all? -------------------------------------
+    // The decision below may only touch the inject/suppress state for submissions that
+    // could be a frame; the overlay's own D3D11On12 list and any async/copy queue are
+    // forwarded untouched (docs/specs/vv.md §3).
     if (!queueVoid || listCount < 8) {
         return 0;
     }
@@ -393,6 +398,17 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         g.queue = queue;
     }
     noteListCount(listCount);
+
+    // ---- from here on: one engine frame, so write the latch exactly once ------
+    // The draw gate reads "did the previous engine frame write arg10". A frame that
+    // decides *not* to inject has to say so too, otherwise the last `true` stays and
+    // the engine's TAAU draw keeps being skipped over a picture nobody updates (the
+    // 2026-10-29 freeze: injection stopped, suppress stayed). Every exit below either
+    // calls setReason (which reports false) or noteInjectionResult(false) here.
+    if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Off)) {
+        noteInjectionResult(false);
+        return 0;
+    }
     if (!g.device) {
         setReason(SkipReason::NoDevice);
         return 0;

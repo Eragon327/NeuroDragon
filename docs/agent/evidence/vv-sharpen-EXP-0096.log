@@ -1,0 +1,41 @@
+# EXP-0096 — VV 下的 RCAS（sr.sharpening）原始日志切片
+# 来源: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log
+# 窗口: 2026-10-29 14:34:26 .. 14:35:30（只保留 [NeuroDragon] 且与本实验相关的行，未改写）
+# 部署: NeuroDragon.dll sha256=d846ec24d91eed7a（flow.py deploy EXP-0096）
+# 操作: 用户回「已完成」；日志显示 14:34:51 打开锐化、14:35:29 正常退出
+# 未取到: [vvsr] sr dump —— F7 未触发，所以没有同帧 sr_dlssout_/sr_sharp_ 对
+
+[2026-10-29 14:34:26.473 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-29 14:34:26.547 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-29 14:34:26.553 WRN][NeuroDragon] [vv] inject skipped (3): recording the injected work failed
+[2026-10-29 14:34:27.618 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-29 14:34:28.573 WRN][NeuroDragon] [vv] inject skipped (240): recording the injected work failed
+[2026-10-29 14:34:29.539 WRN][NeuroDragon] [vv] inject skipped (360): recording the injected work failed
+[2026-10-29 14:34:30.498 WRN][NeuroDragon] [vv] inject skipped (480): recording the injected work failed
+[2026-10-29 14:34:31.467 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 14:34:31.473 WRN][NeuroDragon] [vv] inject skipped (600): recording the injected work failed
+[2026-10-29 14:34:32.485 WRN][NeuroDragon] [vv] inject skipped (720): recording the injected work failed
+[2026-10-29 14:34:33.859 WRN][NeuroDragon] [vv] inject skipped (840): recording the injected work failed
+[2026-10-29 14:34:34.889 WRN][NeuroDragon] [vv] inject skipped (960): recording the injected work failed
+[2026-10-29 14:34:35.954 WRN][NeuroDragon] [vv] inject skipped (1080): recording the injected work failed
+[2026-10-29 14:34:37.152 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 14:34:37.159 WRN][NeuroDragon] [vv] inject skipped (1200): recording the injected work failed
+[2026-10-29 14:34:39.546 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 14:34:40.059 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_EvaluateFeature @ 0x7ff911b28740
+[2026-10-29 14:34:40.059 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_CreateFeature @ 0x7ff911b28540
+[2026-10-29 14:34:40.059 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_GetCapabilityParameters @ 0x7ff911b280f0
+[2026-10-29 14:34:40.059 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_GetParameters @ 0x7ff911b28350
+[2026-10-29 14:34:41.636 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine sharp=off
+[2026-10-29 14:34:41.964 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=engine sharp=off
+[2026-10-29 14:34:41.994 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=engine sharp=off
+[2026-10-29 14:34:51.245 IFO][NeuroDragon] [sr] RCAS 就绪：cs_5_1 编译 + 根签名 + PSO 用时 31 ms（只在第一次启用时发生）
+[2026-10-29 14:34:51.245 IFO][NeuroDragon] [sr] RCAS 锐化已启用：强度 0.672（增量 2.69 倍），2560x1440（HDR→Reinhard 域，在显示变换与 UI 之前）
+[2026-10-29 14:34:51.245 DBG][NeuroDragon] [sr] RCAS 第 1 帧（2560x1440，强度 0.672）
+[2026-10-29 14:34:56.093 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:35:04.329 DBG][NeuroDragon] [sr] RCAS 第 600 帧（2560x1440，强度 0.672）
+[2026-10-29 14:35:06.847 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:35:29.105 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-29 14:35:29.105 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)
+[2026-10-29 14:35:29.169 IFO][NeuroDragon] [vv] texture table released (reads=18743 hits=5454)
+[2026-10-29 14:35:29.355 DBG][NeuroDragon] [nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）
+[2026-10-29 14:35:29.356 IFO][NeuroDragon] [sr] RCAS 已停止；纹理等 GPU 对象随进程释放（避免卸载时释放正在使用的资源）

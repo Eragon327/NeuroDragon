@@ -755,7 +755,7 @@ void createDsvDetour(void* device, void* resource, void const* desc, std::uintpt
 }
 
 extern std::atomic<unsigned> gArg10ProbeFrames;
-extern std::atomic<bool>     gArg10SolidArmed;
+extern std::atomic<bool>     gProductArmed;
 extern std::atomic<unsigned> gArg10ArmGeneration;
 
 // Declared below in this translation unit; the bind-time arg10 proof inside the
@@ -795,7 +795,7 @@ void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int 
         if (auto* const sig = sigFor(list)) {
             sig->dsv |= dsv ? 1u : 0u;
             bool const     probe = gArg10ProbeFrames.load(std::memory_order_relaxed) > 0;
-            bool const     solid = gArg10SolidArmed.load(std::memory_order_relaxed);
+            bool const     solid = gProductArmed.load(std::memory_order_relaxed);
             unsigned const gen   = gArg10ArmGeneration.load(std::memory_order_relaxed);
             if (probe || solid) {
                 if (sig->rtvSeenGen != gen) {
@@ -1227,14 +1227,14 @@ void drawIndexedInstancedDetour(void* list, unsigned indexCount, unsigned instan
     // pipeline keeps running after leaving a save, and the menu background is processed
     // by the same DLSS -> arg10 path (EXP-0068 showed what happens when the skip runs
     // but the injection is a no-op: the background freezes on the last world frame).
-    // `arg10SolidArmed` makes Stop/Start take effect immediately; `gLastInjectionOk`
+    // `productArmed` makes Stop/Start take effect immediately; `gLastInjectionOk`
     // restores TAAU on the frame after any failed injection; the generation and size
     // checks keep a resize frame on TAAU until a correctly sized injection exists
     // (rapid F11 used to leave a stale/truncated arg10, EXP-0075).
     bool skipped = false;
     if (indexCount == 6 && instanceCount == 1
         && gDrawSuppressArmed.load(std::memory_order_acquire)
-        && gArg10SolidArmed.load(std::memory_order_acquire)
+        && gProductArmed.load(std::memory_order_acquire)
         && gLastInjectionOk.load(std::memory_order_acquire)
         && gInjectedGeneration.load(std::memory_order_acquire)
                == gRenderGeneration.load(std::memory_order_relaxed)
@@ -1671,7 +1671,7 @@ std::atomic<unsigned>       gArg10ProbeFrames{0};
 // Stage A: when armed, every frame resolves the current arg10 native and the list
 // whose first OMSetRenderTargets binds it. The injection then cuts after that list
 // and writes a solid colour into arg10.
-std::atomic<bool>           gArg10SolidArmed{false};
+std::atomic<bool>           gProductArmed{false};
 std::atomic<unsigned>       gArg10ArmGeneration{0};
 std::atomic<void*>          gArg10WriterList{nullptr};
 std::atomic<unsigned>       gArg10WriterSplit{0};
@@ -2202,7 +2202,7 @@ void taauDetour(
         dep3
     );
     if (gArg10ProbeFrames.load(std::memory_order_relaxed) > 0
-        || gArg10SolidArmed.load(std::memory_order_relaxed)) {
+        || gProductArmed.load(std::memory_order_relaxed)) {
         void*         wrapper = nullptr;
         void*         holder = nullptr;
         void*         resource = nullptr;
@@ -3173,7 +3173,7 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
             // is not enough; EXP-0060 showed that a list-level DSV test is too coarse
             // (the writer can bind depth elsewhere), so the arg10 binding is the only
             // criterion.
-            bool const     arg10Armed = gArg10SolidArmed.load(std::memory_order_acquire);
+            bool const     arg10Armed = gProductArmed.load(std::memory_order_acquire);
             unsigned const declared   = gArg10DeclaredSerial.load(std::memory_order_acquire);
             bool const     fresh = arg10Armed && declared != gArg10ConsumedSerial.load(std::memory_order_acquire);
             if (arg10Armed) {
@@ -3925,8 +3925,8 @@ void* arg10Target() { return gArg10Native.load(std::memory_order_acquire); }
 unsigned arg10WriterSplit() { return gArg10WriterSplit.load(std::memory_order_acquire); }
 void*    arg10WriterList() { return gArg10WriterList.load(std::memory_order_acquire); }
 
-void setArg10Solid(bool armed) {
-    bool const previous = gArg10SolidArmed.exchange(armed, std::memory_order_acq_rel);
+void setProductArmed(bool armed) {
+    bool const previous = gProductArmed.exchange(armed, std::memory_order_acq_rel);
     if (previous == armed) {
         return;
     }
@@ -3941,7 +3941,7 @@ void setArg10Solid(bool armed) {
     utils::logger().info("[vv] arg10 write armed={}", armed ? 1 : 0);
 }
 
-bool arg10SolidArmed() { return gArg10SolidArmed.load(std::memory_order_acquire); }
+bool productArmed() { return gProductArmed.load(std::memory_order_acquire); }
 bool arg10FreshSubmission() { return gArg10FreshSubmission.load(std::memory_order_acquire); }
 void noteArg10Gap() { gArg10Gap.store(true, std::memory_order_release); }
 bool takeArg10Gap() { return gArg10Gap.exchange(false, std::memory_order_acq_rel); }

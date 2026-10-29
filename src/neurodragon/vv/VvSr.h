@@ -101,6 +101,21 @@ void syncConfig();
 /// keeps the render size stable while the engine rebinds its native-size motion vectors.
 [[nodiscard]] bool live();
 
+/// What Jitter.Offset DLSS is told. Zero by default (EXP-0098: the engine value makes
+/// the picture wobble, zero is stable, and the value is already in DLSS's space -
+/// docs/research/2026-10-29-taau-jitter-dlss-contract.md).
+///
+/// The other three are that document's §7 discrimination, kept as a diagnostic:
+///   Engine   j(n)     - as delivered by the TAA context (the original hand-off)
+///   Negated  -j(n)    - amplitude doubles => the frame really carries this jitter and
+///                       the value/sign is right; unchanged => the frame is not rendered
+///                       with it and only 0 is truthful
+///   Previous j(n-1)   - stable => the context value runs one frame ahead of the render
+enum class JitterSource : int { Zero = 0, Engine = 1, Negated = 2, Previous = 3 };
+
+void setJitterSource(JitterSource source);
+[[nodiscard]] JitterSource jitterSource();
+
 void release();
 
 } // namespace neurodragon::vv::sr

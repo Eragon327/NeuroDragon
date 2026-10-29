@@ -46,6 +46,34 @@ struct SharpStats {
 // UAV states).
 void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame);
 
+// VV path: the same RCAS, but between two of our own textures (the DLSS output ->
+// the sharpened copy the arg10 write samples). No copy and no engine resource: the
+// caller owns both textures and transitions them itself (source readable by the
+// compute shader, dest in UNORDERED_ACCESS), because its own state machine is the
+// only place that knows them. Returns false when the switch is off or the pass
+// cannot run, so the caller falls back to the unsharpened image for that frame.
+[[nodiscard]] bool recordSharpeningInto(
+    void* commandList,
+    void* source,
+    void* dest,
+    unsigned width,
+    unsigned height,
+    std::uint64_t frame
+);
+
+// The engine path above hard-codes the engine output's resource state, and VV's own
+// DLSS evaluate goes through the same EvaluateFeature hook, so the hook has to know
+// whose call it is before recording anything. VV wraps its evaluate in this scope.
+class OwnEvaluateScope {
+public:
+    OwnEvaluateScope();
+    ~OwnEvaluateScope();
+    OwnEvaluateScope(OwnEvaluateScope const&)            = delete;
+    OwnEvaluateScope& operator=(OwnEvaluateScope const&) = delete;
+};
+
+[[nodiscard]] bool insideOwnEvaluate();
+
 [[nodiscard]] SharpStats sharpStats();
 
 // Called from the mod's unload. The pipeline objects are released; textures still

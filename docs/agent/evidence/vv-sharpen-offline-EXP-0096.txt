@@ -1,0 +1,37 @@
+# EXP-0096 — VV 下 RCAS 的离线数值（同一个 shader 的数学，跑在这条管线自己的 1440p DLSS 输出上）
+# 脚本: _local/tools/rcas_offline.py（逐行重放 sr/SrSharpening.cpp 的 kRcasHlsl；不进 git）
+# 输入: 2026-10-28 由本管线 dump 的 sr_dlssout_*.bin（NDRW 头 + RGBA16F，2560x1440 / 2560x1369）
+# 判据: 编码域(R=8bit) 均值远小于 1/255，变化集中在边缘，整体均值不变
+
+file      E:/LeviLauncher/versions/1.26.51.01-r3/sr_dlssout_2560x1440_5.bin
+size      2560x1440  strength=0.672 amount=2.69
+input     linear rgb max=0.550 p99=0.336
+delta     encoded /255: mean=0.822 p99=8.586 max=41.584
+changed   >0.5/255: 26.2%   >2/255: 12.6%
+edges     top-decile gradient mean=4.125 vs rest=0.454
+overall   mean linear before=0.10927 after=0.10953 ratio=1.00238
+
+file      E:/LeviLauncher/versions/1.26.51.01-r3/sr_dlssout_2560x1440_3.bin
+size      2560x1440  strength=0.672 amount=2.69
+input     linear rgb max=0.550 p99=0.336
+delta     encoded /255: mean=0.817 p99=8.469 max=41.442
+changed   >0.5/255: 26.3%   >2/255: 12.7%
+edges     top-decile gradient mean=4.074 vs rest=0.455
+overall   mean linear before=0.10925 after=0.10950 ratio=1.00234
+
+file      E:/LeviLauncher/versions/1.26.51.01-r3/sr_dlssout_2560x1440_1.bin
+size      2560x1440  strength=0.672 amount=2.69
+input     linear rgb max=0.552 p99=0.337
+delta     encoded /255: mean=0.655 p99=6.663 max=43.294
+changed   >0.5/255: 25.8%   >2/255: 10.3%
+edges     top-decile gradient mean=3.044 vs rest=0.390
+overall   mean linear before=0.10956 after=0.10979 ratio=1.00206
+
+file      E:/LeviLauncher/versions/1.26.51.01-r3/sr_dlssout_2560x1369_4.bin
+size      2560x1369  strength=0.672 amount=2.69
+input     linear rgb max=4.164 p99=0.344
+delta     encoded /255: mean=0.371 p99=3.517 max=52.566
+changed   >0.5/255: 20.0%   >2/255: 2.3%
+edges     top-decile gradient mean=1.524 vs rest=0.243
+overall   mean linear before=0.07973 after=0.07988 ratio=1.00185
+

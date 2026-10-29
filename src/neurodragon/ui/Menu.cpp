@@ -973,16 +973,13 @@ void drawTabSr() {
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.sharpSection"_tr().c_str());
     // The DLSS "Sharpness" parameter is dead (docs/J §5), so sharpening is our own
-    // RCAS pass after the engine's upscale. Live: the render thread reads the config
-    // every evaluation, so Apply is enough - no feature rebuild, no restart.
+    // RCAS pass. Live: the render thread reads the config every frame, so Apply is
+    // enough - no feature rebuild, no restart.
     //
-    // The pass hangs off the engine's EvaluateFeature, which does not exist on the VV
-    // path yet: our DLSS output goes straight into arg10. The section stays visible and
-    // disabled rather than disappearing, so "why is there no sharpening here" has an
-    // answer on the same screen.
-    if (!enginePath) {
-        ImGui::BeginDisabled();
-    }
+    // Both backends run the same pass: on RT it works on the engine's Output, on VV
+    // on our DLSS output just before it is written into arg10 (docs/specs/sr.md §8).
+    // The section is gated by the backend block above, so "no backend" greys it with
+    // everything else.
     {
         auto const sharp = neurodragon::sr::sharpStats();
         if (widgets::toggle("ui.sr.sharpEnable"_tr().c_str(), &gDraftSr.sharpening)) {
@@ -1019,9 +1016,6 @@ void drawTabSr() {
         } else {
             widgets::hint(sharp.enabled ? "ui.sr.sharpZeroHint"_tr().c_str() : "ui.sr.sharpOffHint"_tr().c_str());
         }
-    }
-    if (!enginePath) {
-        ImGui::EndDisabled();
     }
 
     if (enginePath) {
@@ -1390,14 +1384,36 @@ void drawB0Probe() {
         std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(sr.lastError));
         widgets::statRow("R3 last error", buffer);
     }
+    // DLSS jitter. Default: zero - the world frame is not rendered with the TAA
+    // context's sub-pixel offset, so feeding it shifted the input by that offset every
+    // frame (a visible wobble; EXP-0098 A/B, same mechanism as the menu judder in
+    // EXP-0073). The other three entries are the discrimination from
+    // research/2026-10-29-taau-jitter-dlss-contract.md §7.
+    {
+        static char const* const kNames[4] = {
+            "0 (default)",
+            "engine j(n)",
+            "-engine -j(n)",
+            "previous j(n-1)",
+        };
+        int index = static_cast<int>(vv::sr::jitterSource());
+        if (widgets::combo("SR jitter (diagnostic)", &index, kNames, 4)) {
+            vv::sr::setJitterSource(static_cast<vv::sr::JitterSource>(index));
+        }
+        widgets::hint(
+            "§7: -j(n) wobbling twice as hard => the frame does carry this jitter (value/sign right); "
+            "about the same => it does not, and only 0 is truthful; j(n-1) steady => the context value "
+            "runs one frame ahead of the render."
+        );
+    }
 
     // R3 stage A (docs/specs/vv.md §35.1): write magenta into the engine's TAAU
     // output (arg10) after the list that wrote it. TAAU still runs; only the output
     // is replaced, and a missing writer stays a skip.
     widgets::sectionHeader("VV R3 stage A (TEST)");
-    if (ImGui::Button(probe::vv::arg10SolidArmed() ? "Disarm arg10 solid" : "Write solid arg10")) {
-        bool const arm = !probe::vv::arg10SolidArmed();
-        probe::vv::setArg10Solid(arm);
+    if (ImGui::Button(probe::vv::productArmed() ? "Disarm arg10 solid" : "Write solid arg10")) {
+        bool const arm = !probe::vv::productArmed();
+        probe::vv::setProductArmed(arm);
         probe::vv::inject::setUseArg10(arm);
         probe::vv::inject::setUseBackBuffer(false);
         probe::vv::inject::setFromTail(false);
@@ -1408,7 +1424,7 @@ void drawB0Probe() {
         buffer,
         sizeof(buffer),
         "armed=%d writer=%u list=%p target=%p",
-        probe::vv::arg10SolidArmed() ? 1 : 0,
+        probe::vv::productArmed() ? 1 : 0,
         probe::vv::arg10WriterSplit(),
         probe::vv::arg10WriterList(),
         probe::vv::arg10Target()
@@ -1419,7 +1435,7 @@ void drawB0Probe() {
     // written into arg10 instead of the solid colour - no encode, no white point.
     widgets::sectionHeader("VV R3 stage B (TEST)");
     if (ImGui::Button("DLSS -> arg10 (stage B)")) {
-        probe::vv::setArg10Solid(true);
+        probe::vv::setProductArmed(true);
         probe::vv::inject::setUseArg10(true);
         probe::vv::inject::setUseBackBuffer(false);
         probe::vv::inject::setFromTail(false);
@@ -1428,7 +1444,7 @@ void drawB0Probe() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Stop arg10")) {
-        probe::vv::setArg10Solid(false);
+        probe::vv::setProductArmed(false);
         probe::vv::inject::setUseArg10(false);
         probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
         probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
@@ -1547,11 +1563,25 @@ void drawB0Probe() {
 void drawVvInjection() {
     widgets::sectionHeader("ui.diag.vv"_tr().c_str());
 
-    static int  mode     = static_cast<int>(probe::vv::inject::Mode::Off);
+    // Read the live mode on the first draw and show it. This page used to initialise
+    // its own copy to Off with an "applied" sentinel of -1, so merely opening the tab
+    // wrote Mode::Off - which silently stopped the product's injection while the draw
+    // suppress stayed armed, i.e. a frozen picture (2026-10-29). The mode is now read,
+    // not assumed, and the controls are locked while the product owns the injection.
+    static int  mode     = -1;
     static int  boundary = 1;
     static int  hold     = 20;
     static int  applied  = -1;
     static bool tail     = false;
+    if (mode < 0) {
+        mode    = static_cast<int>(probe::vv::inject::mode());
+        applied = mode;
+    }
+
+    bool const productOwns = probe::vv::productArmed();
+    if (productOwns) {
+        ImGui::BeginDisabled();
+    }
 
     std::string const names[3] = {
         "ui.diag.vvOff"_tr(),
@@ -1587,6 +1617,10 @@ void drawVvInjection() {
         if (widgets::sliderInt("ui.diag.vvHold"_tr().c_str(), &hold, 1, 60)) {
             probe::vv::inject::setHoldFrames(static_cast<unsigned>(hold));
         }
+    }
+    if (productOwns) {
+        ImGui::EndDisabled();
+        widgets::hint("ui.diag.vvLocked"_tr().c_str());
     }
     if (mode != static_cast<int>(probe::vv::inject::Mode::Off)) {
         std::snprintf(buffer, sizeof(buffer), "%u / %u", stats.split, stats.listsPerSubmit);

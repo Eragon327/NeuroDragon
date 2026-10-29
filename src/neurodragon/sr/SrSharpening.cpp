@@ -204,6 +204,9 @@ struct SharpState {
     unsigned pendingTicks  = 0;
 
     std::uint64_t lastFrame  = ~std::uint64_t{0};
+    // Separate from lastFrame: VV calls the caller-owned entry point with its own
+    // frame counter, and the two counters must not be compared against each other.
+    std::uint64_t lastIntoFrame = ~std::uint64_t{0};
     bool          loggedOn   = false;
     bool          loggedOff  = true;
     // Pipeline creation is expensive (shader compile); a failure must not be retried
@@ -224,6 +227,12 @@ std::atomic<bool>     gReady{false};
 std::atomic<unsigned> gFrames{0};
 std::atomic<unsigned> gFailures{0};
 std::atomic<unsigned> gStrengthBits{0};
+
+// Depth of "this EvaluateFeature call is ours (VV), not the engine's". The hook runs
+// on the render thread only, and the scope is entered and left on that same stack,
+// so a thread-local counter is enough - and it stays correct if two threads ever
+// evaluate at once.
+thread_local int gOwnEvaluateDepth = 0;
 
 std::uint32_t floatBits(float value) {
     std::uint32_t bits = 0;
@@ -504,6 +513,56 @@ bool followOutputSize(D3D12_RESOURCE_DESC const& outputDesc, std::uint64_t frame
     return ensureTextures(outputDesc, frame);
 }
 
+// The RCAS dispatch itself: descriptor heap, root signature, constants, dispatch and
+// the UAV barrier. Both entry points end here, so the shader, the strength mapping
+// and the root-constant layout cannot drift apart. `target` is only used for the
+// barrier - the caller has already put it in UNORDERED_ACCESS.
+void dispatchPass(
+    ID3D12GraphicsCommandList* cmd,
+    ID3D12Resource*            target,
+    unsigned                   width,
+    unsigned                   height,
+    float                      strength
+) {
+    ID3D12DescriptorHeap* heap = g.heap;
+    cmd->SetDescriptorHeaps(1, &heap);
+    cmd->SetComputeRootSignature(g.root);
+    cmd->SetPipelineState(g.pso);
+    D3D12_GPU_DESCRIPTOR_HANDLE table = g.heap->GetGPUDescriptorHandleForHeapStart();
+    cmd->SetComputeRootDescriptorTable(0, table);
+    std::uint32_t const constants[4] = {floatBits(strength), width, height, 0};
+    cmd->SetComputeRoot32BitConstants(1, 4, constants, 0);
+    cmd->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, 1);
+
+    D3D12_RESOURCE_BARRIER uavBarrier{};
+    uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    uavBarrier.UAV.pResource = target;
+    cmd->ResourceBarrier(1, &uavBarrier);
+}
+
+// Counters, strength mirror and the on/off/periodic log lines, shared by the engine
+// path and the VV path so the panel reads one set of numbers either way.
+void publishFrame(float strength, unsigned width, unsigned height) {
+    unsigned const frames = gFrames.fetch_add(1, std::memory_order_relaxed) + 1;
+    gActive.store(true, std::memory_order_relaxed);
+    gStrengthBits.store(floatBits(strength), std::memory_order_relaxed);
+    if (!g.loggedOn) {
+        g.loggedOn  = true;
+        g.loggedOff = false;
+        srLog(
+            0,
+            "[sr] RCAS 锐化已启用：强度 %.3f（增量 %.2f 倍），%ux%u（HDR→Reinhard 域，在显示变换与 UI 之前）",
+            static_cast<double>(strength),
+            static_cast<double>(4.0f * strength),
+            width,
+            height
+        );
+    }
+    if (frames == 1 || frames % 600 == 0) {
+        SR_DEBUG("[sr] RCAS 第 %u 帧（%ux%u，强度 %.3f）", frames, width, height, static_cast<double>(strength));
+    }
+}
+
 void recordPass(
     ID3D12GraphicsCommandList* cmd,
     ID3D12Resource*            output,
@@ -525,20 +584,7 @@ void recordPass(
     transition(cmd, g.target, g.targetState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     g.targetState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
-    ID3D12DescriptorHeap* heap = g.heap;
-    cmd->SetDescriptorHeaps(1, &heap);
-    cmd->SetComputeRootSignature(g.root);
-    cmd->SetPipelineState(g.pso);
-    D3D12_GPU_DESCRIPTOR_HANDLE table = g.heap->GetGPUDescriptorHandleForHeapStart();
-    cmd->SetComputeRootDescriptorTable(0, table);
-    std::uint32_t const constants[4] = {floatBits(strength), width, height, 0};
-    cmd->SetComputeRoot32BitConstants(1, 4, constants, 0);
-    cmd->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, 1);
-
-    D3D12_RESOURCE_BARRIER uavBarrier{};
-    uavBarrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    uavBarrier.UAV.pResource = g.target;
-    cmd->ResourceBarrier(1, &uavBarrier);
+    dispatchPass(cmd, g.target, width, height, strength);
 
     // 3. Copy the sharpened frame back over the engine's output.
     transition(cmd, output, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -657,24 +703,91 @@ void recordSharpening(void* commandList, void* engineOutput, std::uint64_t frame
     }
 #endif
 
-    unsigned const frames = gFrames.fetch_add(1, std::memory_order_relaxed) + 1;
-    gActive.store(true, std::memory_order_relaxed);
-    gStrengthBits.store(floatBits(strength), std::memory_order_relaxed);
-    if (!g.loggedOn) {
-        g.loggedOn  = true;
-        g.loggedOff = false;
-        srLog(
-            0,
-            "[sr] RCAS 锐化已启用：强度 %.3f（增量 %.2f 倍），%ux%u（HDR→Reinhard 域，在引擎调色与 UI 之前）",
-            static_cast<double>(strength),
-            static_cast<double>(4.0f * strength),
-            width,
-            height
-        );
+    publishFrame(strength, width, height);
+}
+
+bool recordSharpeningInto(
+    void*         commandList,
+    void*         source,
+    void*         dest,
+    unsigned      width,
+    unsigned      height,
+    std::uint64_t frame
+) {
+    auto const& config = neurodragon::config::get().sr;
+    float const strength = std::clamp(config.sharpness, 0.0f, 1.0f);
+    if (!config.sharpening || strength <= 0.001f) {
+        // Same mirror as the engine path's off branch: the panel shows the draft
+        // strength and "no pass recorded" rather than a stale number.
+        gActive.store(false, std::memory_order_relaxed);
+        gStrengthBits.store(floatBits(strength), std::memory_order_relaxed);
+        if (!g.loggedOff) {
+            g.loggedOff = true;
+            g.loggedOn  = false;
+            srLog(0, "[sr] RCAS 锐化已关闭（不再记录任何 pass）");
+        }
+        return false;
     }
-    if (frames == 1 || frames % 600 == 0) {
-        SR_DEBUG("[sr] RCAS 第 %u 帧（%ux%u，强度 %.3f）", frames, width, height, static_cast<double>(strength));
+    if (!commandList || !source || !dest || width == 0 || height == 0) {
+        return false;
     }
+    if (frame == g.lastIntoFrame) {
+        return false;
+    }
+    g.lastIntoFrame = frame;
+
+    auto* cmd = static_cast<ID3D12GraphicsCommandList*>(commandList);
+    auto* src = static_cast<ID3D12Resource*>(source);
+    auto* dst = static_cast<ID3D12Resource*>(dest);
+
+    if (g.pipelineFailed && frame < g.pipelineRetryAt) {
+        gActive.store(false, std::memory_order_relaxed);
+        return false;
+    }
+    if (!ensurePipeline(dst)) {
+        ++gFailures;
+        g.pipelineFailed  = true;
+        g.pipelineRetryAt = frame + 600;
+        gActive.store(false, std::memory_order_relaxed);
+        return false;
+    }
+    g.pipelineFailed = false;
+
+    // The two scratch slots are re-pointed at the caller's textures. Both backends are
+    // mutually exclusive within a session (a graphics-mode change needs a restart), so
+    // this never races the engine path's own pair; if that ever stops being true, this
+    // has to become its own heap.
+    D3D12_CPU_DESCRIPTOR_HANDLE cpu = g.heap->GetCPUDescriptorHandleForHeapStart();
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv{};
+    srv.Format                  = src->GetDesc().Format;
+    srv.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv.Texture2D.MipLevels     = 1;
+    g.device->CreateShaderResourceView(src, &srv, cpu);
+    D3D12_CPU_DESCRIPTOR_HANDLE uavHandle{cpu.ptr + g.stride};
+    g.device->CreateUnorderedAccessView(dst, nullptr, nullptr, uavHandle);
+
+    // Bracket 5 of D3D12Bridge.cpp's stamp table (0 NR, 1 engine DLSS, 2 encode,
+    // 3 evaluate, 4 composite, 5 RCAS) - the frame number is the caller's own
+    // counter, and slot 5 has exactly one producer per session.
+    nr::nrStampBegin(cmd, frame, 5);
+    dispatchPass(cmd, dst, width, height, strength);
+    nr::nrStampEnd(cmd, frame, 5);
+
+    publishFrame(strength, width, height);
+    return true;
+}
+
+bool insideOwnEvaluate() {
+    return gOwnEvaluateDepth > 0;
+}
+
+OwnEvaluateScope::OwnEvaluateScope() {
+    ++gOwnEvaluateDepth;
+}
+
+OwnEvaluateScope::~OwnEvaluateScope() {
+    --gOwnEvaluateDepth;
 }
 
 SharpStats sharpStats() {

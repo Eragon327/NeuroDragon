@@ -4,6 +4,7 @@
 #include "neurodragon/probe/VvCalibrate.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
+#include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/vv/VvDlssSr.h"
 
 #include <Windows.h>
@@ -128,12 +129,14 @@ struct Pipeline {
     ID3D12Resource*             mvRg32{}; ///< R16G16_FLOAT: DLSS accepts this, not RG32F
     ID3D12Resource*             mvRaw{};  ///< RGBA16F copy of arg11's four channels (diagnostic)
     ID3D12Resource*             dlssOut{};
+    ID3D12Resource*             sharpOut{}; ///< RCAS result, sampled by the arg10 PS
     ID3D12Resource*             taauRef{}; ///< R11G11B10 copy of arg10 before our PS write (F2)
     D3D12_RESOURCE_STATES       colorState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       depthState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       mvState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       mvRawState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       dlssState{D3D12_RESOURCE_STATE_COMMON};
+    D3D12_RESOURCE_STATES       sharpState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       taauRefState{D3D12_RESOURCE_STATE_COMMON};
     unsigned                    renderWidth{};
     unsigned                    renderHeight{};
@@ -153,6 +156,17 @@ std::atomic<unsigned> gDumpNo{0};
 // Frames of forced Reset requested from the panel. Two, not one: the first frame after
 // a rebuild may still be the one the engine had already recorded before the request.
 std::atomic<unsigned> gManualReset{0};
+// What DLSS is told as Jitter.Offset. Default is zero: EXP-0098's A/B showed the engine
+// value makes the picture wobble and zero is stable, and the value itself is already in
+// DLSS's space (Halton(2,3)-0.5, render pixels, y-down - see
+// docs/research/2026-10-29-taau-jitter-dlss-contract.md). The three non-default modes
+// are the discriminating experiment of that document §7: which of "the frame is not
+// rendered with it", "the sign is flipped in our hand-off" or "the context value is one
+// frame ahead of the render" is true.
+std::atomic<int> gJitterSource{static_cast<int>(JitterSource::Zero)};
+// Last frame's context jitter, so the Previous mode can feed it.
+float gPrevJitterX = 0.0f;
+float gPrevJitterY = 0.0f;
 // The product switch's current state (config `sr.vvEnabled`), so syncConfig() only acts
 // on a change instead of re-arming every frame.
 std::atomic<bool> gEnabled{false};
@@ -261,7 +275,7 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
     }
     for (ID3D12Resource** resource :
          {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.mvRaw, &gPipeline.dlssOut,
-          &gPipeline.taauRef}) {
+          &gPipeline.sharpOut, &gPipeline.taauRef}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
@@ -272,11 +286,15 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
     gPipeline.mvRg32      = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16_FLOAT);
     gPipeline.mvRaw       = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     gPipeline.dlssOut     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    // RCAS lands here when sr.sharpening is on; the arg10 write then samples this
+    // instead of dlssOut. Same format as the DLSS output so the compute pass reads
+    // and writes one domain (docs/specs/sr.md §8).
+    gPipeline.sharpOut    = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     // Same format as arg10 (fmt 26) so CopyResource is a straight texel copy; display
     // size, used only by the explicit F2 pair dump.
     gPipeline.taauRef     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R11G11B10_FLOAT);
     if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.mvRaw
-        || !gPipeline.dlssOut || !gPipeline.taauRef) {
+        || !gPipeline.dlssOut || !gPipeline.sharpOut || !gPipeline.taauRef) {
         setError(E_OUTOFMEMORY, "CreateCommittedResource");
         return false;
     }
@@ -285,6 +303,7 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
     gPipeline.mvState       = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.mvRawState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.dlssState     = D3D12_RESOURCE_STATE_COMMON;
+    gPipeline.sharpState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.taauRefState  = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.renderWidth   = renderWidth;
     gPipeline.renderHeight  = renderHeight;
@@ -625,6 +644,26 @@ void requestReset() {
     utils::logger().info("[vvsr] sr reset requested (two frames)");
 }
 
+void setJitterSource(JitterSource source) {
+    int const value    = static_cast<int>(source);
+    int const previous = gJitterSource.exchange(value, std::memory_order_relaxed);
+    if (previous == value) {
+        return;
+    }
+    // One history wipe on both edges: the modes accumulate differently, and carrying
+    // samples across the switch would show up as a smear on the frame after.
+    gManualReset.store(2, std::memory_order_relaxed);
+    static char const* const kNames[] = {"0", "engine j(n)", "-engine -j(n)", "previous j(n-1)"};
+    utils::logger().info(
+        "[vvsr] sr jitter source={} (diagnostic; see research/2026-10-29-taau-jitter-dlss-contract.md §7)",
+        value >= 0 && value < 4 ? kNames[value] : "?"
+    );
+}
+
+JitterSource jitterSource() {
+    return static_cast<JitterSource>(gJitterSource.load(std::memory_order_relaxed));
+}
+
 void setEnabled(bool wantEnabled) {
     bool const was = gEnabled.exchange(wantEnabled, std::memory_order_acq_rel);
     if (was == wantEnabled) {
@@ -634,7 +673,7 @@ void setEnabled(bool wantEnabled) {
         // Arm the injection first, then the draw skip: the suppress gate only fires on
         // a frame that really injected, so this order leaves TAAU running for the one
         // frame that has no replacement yet.
-        probe::vv::setArg10Solid(true);
+        probe::vv::setProductArmed(true);
         probe::vv::inject::setUseArg10(true);
         probe::vv::inject::setUseBackBuffer(false);
         probe::vv::inject::setFromTail(false);
@@ -646,7 +685,7 @@ void setEnabled(bool wantEnabled) {
         // arg10, so no frame is drawn by neither path.
         gLive.store(false, std::memory_order_release);
         probe::vv::setDrawSuppress(false);
-        probe::vv::setArg10Solid(false);
+        probe::vv::setProductArmed(false);
         probe::vv::inject::setUseArg10(false);
         probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
         probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
@@ -803,6 +842,27 @@ bool dumpInputs() {
         );
         dlssOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.dlssOut, (directory + L"\\" + name).c_str(), state);
     }
+    // The RCAS result of the same pipeline (only meaningful while sr.sharpening is
+    // on). Paired with sr_dlssout_*, the offline diff is the pass's evidence: it must
+    // be concentrated on edges and average well under one 8-bit level.
+    bool sharpOk = false;
+    if (gPipeline.sharpOut) {
+        std::swprintf(
+            name,
+            std::size(name),
+            L"sr_sharp_%ux%u_%u.bin",
+            snapshot.displayWidth,
+            snapshot.displayHeight,
+            run
+        );
+        sharpOk = probe::vv::dumpTextureRawAs(
+            device,
+            queue,
+            gPipeline.sharpOut,
+            (directory + L"\\" + name).c_str(),
+            probe::vv::DumpState::ShaderResource
+        );
+    }
     // F2: the TAAU output of the frame the explicit capture was armed on (arg10 before
     // our PS write). Present only after that button was pressed; one dump per capture.
     bool taaurefOk = false;
@@ -818,7 +878,7 @@ bool dumpInputs() {
         taaurefOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.taauRef, (directory + L"\\" + name).c_str(), state);
     }
     utils::logger().info(
-        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} mv={} depth32={} dlss={} taauref={}",
+        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} mv={} depth32={} dlss={} sharp={} taauref={}",
         run,
         colorOk ? 1 : 0,
         depthOk ? 1 : 0,
@@ -826,6 +886,7 @@ bool dumpInputs() {
         mvOk ? 1 : 0,
         depthR32Ok ? 1 : 0,
         dlssOk ? 1 : 0,
+        sharpOk ? 1 : 0,
         taaurefOk ? 1 : 0
     );
     // Every candidate the pick path can see, not just the picked one (EXP-0026). The
@@ -1295,6 +1356,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     gPipeline.mvRawState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
     bool dlssEvaluated = false;
+    bool sharpened     = false;
     int  dlssCreateRet = 0;
     int  dlssEvalRet   = 0;
     {
@@ -1340,14 +1402,37 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // feature 0x12 on this same command list, and points Color at its
             // composite before the original evaluate runs. The VV side only has to
             // leave the prepared inputs in ALL_SHADER_RESOURCE (above).
+            // Jitter handed to DLSS. Default 0 (see gJitterSource); the other three
+            // modes exist only for the §7 discrimination.
+            float jitterX = 0.0f;
+            float jitterY = 0.0f;
+            if (world) {
+                switch (gJitterSource.load(std::memory_order_relaxed)) {
+                case static_cast<int>(JitterSource::Engine):
+                    jitterX = mv.jitterX;
+                    jitterY = mv.jitterY;
+                    break;
+                case static_cast<int>(JitterSource::Negated):
+                    jitterX = -mv.jitterX;
+                    jitterY = -mv.jitterY;
+                    break;
+                case static_cast<int>(JitterSource::Previous):
+                    jitterX = gPrevJitterX;
+                    jitterY = gPrevJitterY;
+                    break;
+                default: break;
+                }
+            }
+            gPrevJitterX = mv.jitterX;
+            gPrevJitterY = mv.jitterY;
             dlssEvaluated = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,
                 gPipeline.depthR32,
                 gPipeline.mvRg32,
                 gPipeline.dlssOut,
-                world ? mv.jitterX : 0.0f,
-                world ? mv.jitterY : 0.0f,
+                jitterX,
+                jitterY,
                 reset
             );
             dlss::SrState const state = dlss::srState();
@@ -1362,6 +1447,44 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                 dlssSrv.Texture2D.MipLevels     = 1;
                 dlssSrv.Format                  = DXGI_FORMAT_R16G16B16A16_FLOAT;
                 device->CreateShaderResourceView(gPipeline.dlssOut, &dlssSrv, cpuAt(kSlotColorSrv));
+            }
+            // RCAS on the DLSS output, before it is written into arg10 (docs/specs/sr.md
+            // §8): both textures are ours, so the states are the ones this function
+            // already tracks, and the engine-path entry point is skipped for this call
+            // (see OwnEvaluateScope). A refused pass leaves dlssOut as the source, i.e.
+            // the frame is simply unsharpened.
+            if (dlssEvaluated) {
+                transition(
+                    list,
+                    gPipeline.sharpOut,
+                    gPipeline.sharpState,
+                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+                );
+                gPipeline.sharpState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                sharpened            = neurodragon::sr::recordSharpeningInto(
+                    list,
+                    gPipeline.dlssOut,
+                    gPipeline.sharpOut,
+                    displayWidth,
+                    displayHeight,
+                    frameNo
+                );
+                if (sharpened) {
+                    transition(
+                        list,
+                        gPipeline.sharpOut,
+                        gPipeline.sharpState,
+                        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+                    );
+                    gPipeline.sharpState            = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                    D3D12_SHADER_RESOURCE_VIEW_DESC sharpSrv{};
+                    sharpSrv.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
+                    sharpSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+                    sharpSrv.Texture2D.MipLevels     = 1;
+                    sharpSrv.Format                  = DXGI_FORMAT_R16G16B16A16_FLOAT;
+                    // Same slot the unsharpened path uses: the PS reads t0 either way.
+                    device->CreateShaderResourceView(gPipeline.sharpOut, &sharpSrv, cpuAt(kSlotColorSrv));
+                }
             }
         }
     }
@@ -1399,10 +1522,13 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             );
         }
         // Stage A proved arg10 is left in RENDER_TARGET by its writer list, so this
-        // pass only binds it and leaves the state alone. The DLSS output was last in
-        // a compute-read state; a pixel shader needs its own.
-        transition(list, gPipeline.dlssOut, gPipeline.dlssState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        gPipeline.dlssState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        // pass only binds it and leaves the state alone. The source texture was last
+        // in a compute-read state; a pixel shader needs its own - except when RCAS
+        // ran, where sharpOut was already moved to PIXEL_SHADER_RESOURCE above.
+        if (!sharpened) {
+            transition(list, gPipeline.dlssOut, gPipeline.dlssState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            gPipeline.dlssState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        }
         probe::vv::inject::setRecordingOwnView(true);
         device->CreateRenderTargetView(arg10, nullptr, gPipeline.arg10Rtv);
         probe::vv::inject::setRecordingOwnView(false);
@@ -1457,13 +1583,14 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         unsigned const               n = frames.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n <= 3 || n % 600 == 0) {
             utils::logger().info(
-                "[vvsr] sr arg10 #{}: {}x{} fmt={} eval={} mv={}",
+                "[vvsr] sr arg10 #{}: {}x{} fmt={} eval={} mv={} sharp={}",
                 n,
                 displayWidth,
                 displayHeight,
                 static_cast<unsigned>(targetDesc.Format),
                 dlssEvalRet,
-                prepMode ? "engine" : "vp"
+                prepMode ? "engine" : "vp",
+                sharpened ? "on" : "off"
             );
         }
         gLive.store(true, std::memory_order_release);
@@ -1494,7 +1621,8 @@ void release() {
           &gPipeline.depthR32,
           &gPipeline.mvRg32,
           &gPipeline.mvRaw,
-          &gPipeline.dlssOut}) {
+          &gPipeline.dlssOut,
+          &gPipeline.sharpOut}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;

@@ -1,0 +1,257 @@
+# EXP-0097 — suppress 锁存不变量（注入停了就把 TAAU 还回来）的原始日志切片
+# 来源: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log
+# 窗口: 2026-10-29 14:41:00 .. 14:53:20（只保留 [NeuroDragon] 且与本实验相关的行，未改写）
+# 旧构建 d846ec24 在 14:41-14:45 仍冻结（只有 d-suppress）；14:45:01 用户关开关恢复
+# 新构建 0204cdef 从 14:49:05 起：armed=1 → 注入 #1..#12000 连续；14:51:43 Stop arg10（product armed=0）后未冻结；
+# 14:51:53 关开关、14:51:56 再开，注入继续到 14:53:13
+
+[2026-10-29 14:41:02.980 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6600 list=0x2596f0821a0 mv=0x25d5a4caad0
+[2026-10-29 14:41:09.545 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #7200 list=0x2596b9659d0 mv=0x25d5a4caad0
+[2026-10-29 14:41:16.000 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #7800 list=0x25973df89c0 mv=0x25d5a4caad0
+[2026-10-29 14:41:22.556 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #8400 list=0x25973df9350 mv=0x25d5a4caad0
+[2026-10-29 14:41:29.692 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #9000 list=0x2596ae30940 mv=0x25d5a4caad0
+[2026-10-29 14:41:36.968 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #9600 list=0x25949253b00 mv=0x25d5a4caad0
+[2026-10-29 14:41:43.608 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #10200 list=0x2596a2e1390 mv=0x25d5a4caad0
+[2026-10-29 14:41:53.544 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #10800 list=0x2596b962a00 mv=0x25d5a4caad0
+[2026-10-29 14:42:58.923 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #11400 list=0x25949912d90 mv=0x25d5a4caad0
+[2026-10-29 14:44:04.333 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #12000 list=0x25973df9ce0 mv=0x25d5a4caad0
+[2026-10-29 14:44:57.146 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #12600 list=0x259712cfa90 mv=0x25d5a4caad0
+[2026-10-29 14:45:01.370 IFO][NeuroDragon] [vv] d-suppress armed=0
+[2026-10-29 14:45:01.370 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-29 14:45:01.370 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)
+[2026-10-29 14:49:05.642 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-29 14:49:05.642 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-29 14:49:05.642 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+[2026-10-29 14:49:06.210 IFO][NeuroDragon] [vv] inject pipeline ready device=0x15a6658dd50 allocator=0x15c0599eaf0 list=0x15c0d7672e0 heap=0x15af9ee95f0
+[2026-10-29 14:49:06.210 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-29 14:49:06.284 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-29 14:49:06.295 WRN][NeuroDragon] [vv] inject skipped (3): recording the injected work failed
+[2026-10-29 14:49:07.210 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-29 14:49:08.225 WRN][NeuroDragon] [vv] inject skipped (240): recording the injected work failed
+[2026-10-29 14:49:09.250 WRN][NeuroDragon] [vv] inject skipped (360): recording the injected work failed
+[2026-10-29 14:49:10.356 WRN][NeuroDragon] [vv] inject skipped (480): recording the injected work failed
+[2026-10-29 14:49:11.201 WRN][NeuroDragon] [vv] inject skipped (600): recording the injected work failed
+[2026-10-29 14:49:11.895 WRN][NeuroDragon] [vv] inject skipped (720): recording the injected work failed
+[2026-10-29 14:49:12.750 WRN][NeuroDragon] [vv] inject skipped (840): recording the injected work failed
+[2026-10-29 14:49:13.470 WRN][NeuroDragon] [vv] inject skipped (960): recording the injected work failed
+[2026-10-29 14:49:14.235 WRN][NeuroDragon] [vv] inject skipped (1080): recording the injected work failed
+[2026-10-29 14:49:15.146 WRN][NeuroDragon] [vv] inject skipped (1200): recording the injected work failed
+[2026-10-29 14:49:16.060 WRN][NeuroDragon] [vv] inject skipped (1320): recording the injected work failed
+[2026-10-29 14:49:16.861 WRN][NeuroDragon] [vv] inject skipped (1440): recording the injected work failed
+[2026-10-29 14:49:17.810 WRN][NeuroDragon] [vv] inject skipped (1560): recording the injected work failed
+[2026-10-29 14:49:18.705 WRN][NeuroDragon] [vv] inject skipped (1680): recording the injected work failed
+[2026-10-29 14:49:19.516 WRN][NeuroDragon] [vv] inject skipped (1800): recording the injected work failed
+[2026-10-29 14:49:20.320 WRN][NeuroDragon] [vv] inject skipped (1920): recording the injected work failed
+[2026-10-29 14:49:21.131 WRN][NeuroDragon] [vv] inject skipped (2040): recording the injected work failed
+[2026-10-29 14:49:21.841 WRN][NeuroDragon] [vv] inject skipped (2160): recording the injected work failed
+[2026-10-29 14:49:22.661 WRN][NeuroDragon] [vv] inject skipped (2280): recording the injected work failed
+[2026-10-29 14:49:23.436 WRN][NeuroDragon] [vv] inject skipped (2400): recording the injected work failed
+[2026-10-29 14:49:24.366 WRN][NeuroDragon] [vv] inject skipped (2520): recording the injected work failed
+[2026-10-29 14:49:25.547 WRN][NeuroDragon] [vv] inject skipped (2640): recording the injected work failed
+[2026-10-29 14:49:26.337 WRN][NeuroDragon] [vv] inject skipped (2760): recording the injected work failed
+[2026-10-29 14:49:27.076 WRN][NeuroDragon] [vv] inject skipped (2880): recording the injected work failed
+[2026-10-29 14:49:27.821 WRN][NeuroDragon] [vv] inject skipped (3000): recording the injected work failed
+[2026-10-29 14:49:28.537 WRN][NeuroDragon] [vv] inject skipped (3120): recording the injected work failed
+[2026-10-29 14:49:29.276 WRN][NeuroDragon] [vv] inject skipped (3240): recording the injected work failed
+[2026-10-29 14:49:29.987 WRN][NeuroDragon] [vv] inject skipped (3360): recording the injected work failed
+[2026-10-29 14:49:30.957 WRN][NeuroDragon] [vv] inject skipped (3480): recording the injected work failed
+[2026-10-29 14:49:31.777 WRN][NeuroDragon] [vv] inject skipped (3600): recording the injected work failed
+[2026-10-29 14:49:32.577 WRN][NeuroDragon] [vv] inject skipped (3720): recording the injected work failed
+[2026-10-29 14:49:33.637 WRN][NeuroDragon] [vv] inject skipped (3840): recording the injected work failed
+[2026-10-29 14:49:34.697 WRN][NeuroDragon] [vv] inject skipped (3960): recording the injected work failed
+[2026-10-29 14:49:36.087 WRN][NeuroDragon] [vv] inject skipped (4080): recording the injected work failed
+[2026-10-29 14:49:36.867 WRN][NeuroDragon] [vv] inject skipped (4200): recording the injected work failed
+[2026-10-29 14:49:37.787 WRN][NeuroDragon] [vv] inject skipped (4320): recording the injected work failed
+[2026-10-29 14:49:42.709 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:49:42.709 IFO][NeuroDragon] [vv] inject: arg10 boundary split=35/58 list=0x15ad8d6ea00 target=0x15afb2b3c50
+[2026-10-29 14:49:42.713 IFO][NeuroDragon] [vv] inject fixed k=35/58 injected=1 skipped=4423
+[2026-10-29 14:49:42.734 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1 list=0x15adcffa400 mv=0x15ade747bb0
+[2026-10-29 14:49:42.738 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:49:42.738 IFO][NeuroDragon] [vv] inject: arg10 boundary split=35/58 list=0x15adcffa400 target=0x15afb2b6290
+[2026-10-29 14:49:42.739 IFO][NeuroDragon] [vv] inject fixed k=35/58 injected=2 skipped=4423
+[2026-10-29 14:49:42.758 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2 list=0x15addb649c0 mv=0x15ade747bb0
+[2026-10-29 14:49:42.762 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:49:42.762 IFO][NeuroDragon] [vv] inject: arg10 boundary split=42/63 list=0x15addb649c0 target=0x15afb2b3c50
+[2026-10-29 14:49:42.762 IFO][NeuroDragon] [vv] inject fixed k=42/63 injected=3 skipped=4423
+[2026-10-29 14:49:42.778 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3 list=0x15ad6bb7930 mv=0x15ade747bb0
+[2026-10-29 14:49:42.781 IFO][NeuroDragon] [vv] inject: arg10 boundary split=44/65 list=0x15ad6bb7930 target=0x15afb2b6290
+[2026-10-29 14:49:42.807 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #4 list=0x15ad8258070 mv=0x15ade747bb0
+[2026-10-29 14:49:42.823 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #5 list=0x15adc46db90 mv=0x15ade747bb0
+[2026-10-29 14:49:42.843 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6 list=0x15add003370 mv=0x15ade747bb0
+[2026-10-29 14:49:42.862 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #7 list=0x15ab68b0e00 mv=0x15ade747bb0
+[2026-10-29 14:49:42.884 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #8 list=0x15ad8d79fb0 mv=0x15ade747bb0
+[2026-10-29 14:49:45.010 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=120 skipped=4423
+[2026-10-29 14:49:46.851 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=240 skipped=4423
+[2026-10-29 14:49:48.652 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=360 skipped=4423
+[2026-10-29 14:49:50.466 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=480 skipped=4423
+[2026-10-29 14:49:52.266 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:49:52.266 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=600 skipped=4423
+[2026-10-29 14:49:52.278 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #600 list=0x15adb94e840 mv=0x15ade747bb0
+[2026-10-29 14:49:52.280 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x15adb94e840 target=0x15afb2b3c50
+[2026-10-29 14:49:54.071 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=720 skipped=4423
+[2026-10-29 14:49:55.871 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=840 skipped=4423
+[2026-10-29 14:49:58.057 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=960 skipped=4423
+[2026-10-29 14:49:59.867 IFO][NeuroDragon] [vv] inject fixed k=48/70 injected=1080 skipped=4423
+[2026-10-29 14:50:01.682 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:01.682 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1200 skipped=4423
+[2026-10-29 14:50:01.693 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1200 list=0x15ade746010 mv=0x15ade747bb0
+[2026-10-29 14:50:01.697 IFO][NeuroDragon] [vv] inject: arg10 boundary split=49/71 list=0x15ade746010 target=0x15afb2b3c50
+[2026-10-29 14:50:03.492 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1320 skipped=4423
+[2026-10-29 14:50:05.293 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1440 skipped=4423
+[2026-10-29 14:50:07.097 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1560 skipped=4423
+[2026-10-29 14:50:08.907 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1680 skipped=4423
+[2026-10-29 14:50:10.707 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:10.707 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=1800 skipped=4423
+[2026-10-29 14:50:10.719 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1800 list=0x15ab68b0470 mv=0x15ade747bb0
+[2026-10-29 14:50:10.723 IFO][NeuroDragon] [vv] inject: arg10 boundary split=50/72 list=0x15ab68b0470 target=0x15afb2b3c50
+[2026-10-29 14:50:12.913 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=1920 skipped=4423
+[2026-10-29 14:50:14.729 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=2040 skipped=4423
+[2026-10-29 14:50:16.532 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=2160 skipped=4423
+[2026-10-29 14:50:18.342 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=2280 skipped=4423
+[2026-10-29 14:50:20.151 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:20.152 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2400 skipped=4423
+[2026-10-29 14:50:20.165 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2400 list=0x15ab68b3dd0 mv=0x15ade747bb0
+[2026-10-29 14:50:20.168 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ab68b3dd0 target=0x15afb2b3c50
+[2026-10-29 14:50:21.983 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=2520 skipped=4423
+[2026-10-29 14:50:23.858 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=2640 skipped=4423
+[2026-10-29 14:50:26.093 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2760 skipped=4423
+[2026-10-29 14:50:27.908 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2880 skipped=4423
+[2026-10-29 14:50:29.835 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:29.836 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=3000 skipped=4423
+[2026-10-29 14:50:29.846 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3000 list=0x15ad76ed740 mv=0x15ade747bb0
+[2026-10-29 14:50:29.849 IFO][NeuroDragon] [vv] inject: arg10 boundary split=46/69 list=0x15ad76ed740 target=0x15afb2b3c50
+[2026-10-29 14:50:31.669 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=3120 skipped=4423
+[2026-10-29 14:50:33.489 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=3240 skipped=4423
+[2026-10-29 14:50:35.293 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3360 skipped=4423
+[2026-10-29 14:50:37.104 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3480 skipped=4423
+[2026-10-29 14:50:38.913 IFO][NeuroDragon] [vvsr] sr arg10 #3600: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:38.914 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3600 skipped=4423
+[2026-10-29 14:50:38.926 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3600 list=0x15ade73aa60 mv=0x15ade747bb0
+[2026-10-29 14:50:38.929 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ade73aa60 target=0x15afb2b3c50
+[2026-10-29 14:50:41.140 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3720 skipped=4423
+[2026-10-29 14:50:42.939 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3840 skipped=4423
+[2026-10-29 14:50:44.745 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3960 skipped=4423
+[2026-10-29 14:50:46.564 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4080 skipped=4423
+[2026-10-29 14:50:48.379 IFO][NeuroDragon] [vvsr] sr arg10 #4200: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:48.379 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4200 skipped=4423
+[2026-10-29 14:50:48.392 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #4200 list=0x15ad76eea60 mv=0x15ade747bb0
+[2026-10-29 14:50:48.394 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ad76eea60 target=0x15afb2b3c50
+[2026-10-29 14:50:50.191 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4320 skipped=4423
+[2026-10-29 14:50:51.995 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4440 skipped=4423
+[2026-10-29 14:50:54.221 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4560 skipped=4423
+[2026-10-29 14:50:56.031 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4680 skipped=4423
+[2026-10-29 14:50:57.840 IFO][NeuroDragon] [vvsr] sr arg10 #4800: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:50:57.841 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4800 skipped=4423
+[2026-10-29 14:50:57.852 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #4800 list=0x15ad6bc4b90 mv=0x15ade747bb0
+[2026-10-29 14:50:57.856 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ad6bc4b90 target=0x15afb2b3c50
+[2026-10-29 14:50:59.651 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4920 skipped=4423
+[2026-10-29 14:51:01.464 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=5040 skipped=4423
+[2026-10-29 14:51:03.282 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=5160 skipped=4423
+[2026-10-29 14:51:05.090 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=5280 skipped=4423
+[2026-10-29 14:51:06.896 IFO][NeuroDragon] [vvsr] sr arg10 #5400: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:51:06.896 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=5400 skipped=4423
+[2026-10-29 14:51:06.908 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #5400 list=0x15addb6bc80 mv=0x15ade747bb0
+[2026-10-29 14:51:06.911 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15addb6bc80 target=0x15afb2b3c50
+[2026-10-29 14:51:09.166 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=5520 skipped=4423
+[2026-10-29 14:51:10.991 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=5640 skipped=4423
+[2026-10-29 14:51:12.797 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=5760 skipped=4423
+[2026-10-29 14:51:14.652 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=5880 skipped=4423
+[2026-10-29 14:51:16.502 IFO][NeuroDragon] [vvsr] sr arg10 #6000: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:51:16.502 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6000 skipped=4423
+[2026-10-29 14:51:16.514 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6000 list=0x15adc474e50 mv=0x15ade747bb0
+[2026-10-29 14:51:16.516 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15adc474e50 target=0x15afb2b3c50
+[2026-10-29 14:51:18.412 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6120 skipped=4423
+[2026-10-29 14:51:20.242 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6240 skipped=4423
+[2026-10-29 14:51:22.547 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6360 skipped=4423
+[2026-10-29 14:51:24.362 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6480 skipped=4423
+[2026-10-29 14:51:26.217 IFO][NeuroDragon] [vvsr] sr arg10 #6600: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:51:26.217 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6600 skipped=4423
+[2026-10-29 14:51:26.230 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #6600 list=0x15addb65ce0 mv=0x15ade747bb0
+[2026-10-29 14:51:26.232 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15addb65ce0 target=0x15afb2b3c50
+[2026-10-29 14:51:28.078 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6720 skipped=4423
+[2026-10-29 14:51:29.908 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6840 skipped=4423
+[2026-10-29 14:51:31.723 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=6960 skipped=4423
+[2026-10-29 14:51:33.623 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=7080 skipped=4423
+[2026-10-29 14:51:35.468 IFO][NeuroDragon] [vvsr] sr arg10 #7200: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:51:35.468 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=7200 skipped=4423
+[2026-10-29 14:51:35.480 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #7200 list=0x15adcff90e0 mv=0x15ade747bb0
+[2026-10-29 14:51:35.482 IFO][NeuroDragon] [vv] inject: arg10 boundary split=46/69 list=0x15adcff90e0 target=0x15afb2b3c50
+[2026-10-29 14:51:37.738 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=7320 skipped=4423
+[2026-10-29 14:51:39.608 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=7440 skipped=4423
+[2026-10-29 14:51:41.485 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=7560 skipped=4423
+[2026-10-29 14:51:43.415 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=7680 skipped=4423
+[2026-10-29 14:51:43.524 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-29 14:51:53.561 IFO][NeuroDragon] [vv] d-suppress armed=0
+[2026-10-29 14:51:53.561 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)
+[2026-10-29 14:51:56.172 IFO][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-29 14:51:56.172 IFO][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-29 14:51:56.172 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+[2026-10-29 14:51:56.205 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1 skipped=1
+[2026-10-29 14:51:56.220 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2 skipped=1
+[2026-10-29 14:51:56.235 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3 skipped=1
+[2026-10-29 14:51:57.905 IFO][NeuroDragon] [vvsr] sr arg10 #7800: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:51:57.919 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ad8d7bc60 target=0x15afb2b3c50
+[2026-10-29 14:51:57.932 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #7800 list=0x15ad8d72cf0 mv=0x15c6599b700
+[2026-10-29 14:51:58.015 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=120 skipped=1
+[2026-10-29 14:51:59.830 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=240 skipped=1
+[2026-10-29 14:52:01.635 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=360 skipped=1
+[2026-10-29 14:52:03.910 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=480 skipped=1
+[2026-10-29 14:52:05.710 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=600 skipped=1
+[2026-10-29 14:52:07.465 IFO][NeuroDragon] [vvsr] sr arg10 #8400: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:52:07.480 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ade741d20 target=0x15afb2b3c50
+[2026-10-29 14:52:07.492 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #8400 list=0x15ad6bc3870 mv=0x15c6599b700
+[2026-10-29 14:52:07.570 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=720 skipped=1
+[2026-10-29 14:52:09.370 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=840 skipped=1
+[2026-10-29 14:52:11.251 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=960 skipped=1
+[2026-10-29 14:52:13.101 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1080 skipped=1
+[2026-10-29 14:52:15.071 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1200 skipped=1
+[2026-10-29 14:52:16.836 IFO][NeuroDragon] [vvsr] sr arg10 #9000: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:52:16.851 IFO][NeuroDragon] [vv] inject: arg10 boundary split=46/69 list=0x15ade744cf0 target=0x15afb2b3c50
+[2026-10-29 14:52:16.863 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #9000 list=0x15ade738420 mv=0x15c6599b700
+[2026-10-29 14:52:16.940 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1320 skipped=1
+[2026-10-29 14:52:18.760 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1440 skipped=1
+[2026-10-29 14:52:20.622 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=1560 skipped=1
+[2026-10-29 14:52:22.471 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1680 skipped=1
+[2026-10-29 14:52:24.362 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1800 skipped=1
+[2026-10-29 14:52:26.217 IFO][NeuroDragon] [vvsr] sr arg10 #9600: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:52:26.232 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ade739740 target=0x15afb2b3c50
+[2026-10-29 14:52:26.244 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #9600 list=0x15adcffd3d0 mv=0x15c6599b700
+[2026-10-29 14:52:26.331 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=1920 skipped=1
+[2026-10-29 14:52:28.242 IFO][NeuroDragon] [vv] inject fixed k=50/72 injected=2040 skipped=1
+[2026-10-29 14:52:30.057 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2160 skipped=1
+[2026-10-29 14:52:31.981 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2280 skipped=1
+[2026-10-29 14:52:33.888 IFO][NeuroDragon] [vv] inject fixed k=48/71 injected=2400 skipped=1
+[2026-10-29 14:52:35.718 IFO][NeuroDragon] [vvsr] sr arg10 #10200: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:52:35.737 IFO][NeuroDragon] [vv] inject: arg10 boundary split=48/71 list=0x15ad76e9450 target=0x15afb2b3c50
+[2026-10-29 14:52:35.750 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #10200 list=0x15ab64a1e70 mv=0x15c6599b700
+[2026-10-29 14:52:35.827 IFO][NeuroDragon] [vv] inject fixed k=48/71 injected=2520 skipped=1
+[2026-10-29 14:52:37.718 IFO][NeuroDragon] [vv] inject fixed k=48/71 injected=2640 skipped=1
+[2026-10-29 14:52:39.648 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2760 skipped=1
+[2026-10-29 14:52:41.583 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=2880 skipped=1
+[2026-10-29 14:52:43.418 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3000 skipped=1
+[2026-10-29 14:52:45.158 IFO][NeuroDragon] [vvsr] sr arg10 #10800: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:52:45.174 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15adc4787b0 target=0x15afb2b3c50
+[2026-10-29 14:52:45.186 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #10800 list=0x15adb94e840 mv=0x15c6599b700
+[2026-10-29 14:52:45.262 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3120 skipped=1
+[2026-10-29 14:52:47.113 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3240 skipped=1
+[2026-10-29 14:52:48.922 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3360 skipped=1
+[2026-10-29 14:52:50.798 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3480 skipped=1
+[2026-10-29 14:52:52.669 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3600 skipped=1
+[2026-10-29 14:52:54.424 IFO][NeuroDragon] [vvsr] sr arg10 #11400: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:52:54.445 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15ad76ecdb0 target=0x15afb2b3c50
+[2026-10-29 14:52:54.461 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #11400 list=0x15ab6330340 mv=0x15c6599b700
+[2026-10-29 14:52:54.544 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3720 skipped=1
+[2026-10-29 14:52:56.469 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3840 skipped=1
+[2026-10-29 14:52:58.334 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=3960 skipped=1
+[2026-10-29 14:53:00.144 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4080 skipped=1
+[2026-10-29 14:53:02.019 IFO][NeuroDragon] [vv] inject fixed k=46/69 injected=4200 skipped=1
+[2026-10-29 14:53:03.805 IFO][NeuroDragon] [vvsr] sr arg10 #12000: 2560x1440 fmt=26 eval=1 mv=engine sharp=on
+[2026-10-29 14:53:03.820 IFO][NeuroDragon] [vv] inject: arg10 boundary split=47/70 list=0x15adcff7430 target=0x15afb2b3c50
+[2026-10-29 14:53:03.837 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #12000 list=0x15adc476b00 mv=0x15c6599b700
+[2026-10-29 14:53:03.919 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4320 skipped=1
+[2026-10-29 14:53:05.820 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4440 skipped=1
+[2026-10-29 14:53:07.776 IFO][NeuroDragon] [vv] inject fixed k=47/70 injected=4560 skipped=1
+[2026-10-29 14:53:10.119 IFO][NeuroDragon] [vv] inject fixed k=27/48 injected=4680 skipped=1
+[2026-10-29 14:53:13.151 IFO][NeuroDragon] [vv] d-suppress armed=0
+[2026-10-29 14:53:13.151 IFO][NeuroDragon] [vv] arg10 write armed=0
+[2026-10-29 14:53:13.151 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)

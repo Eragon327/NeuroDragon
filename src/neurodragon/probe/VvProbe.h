@@ -177,16 +177,21 @@ void dumpTaaContextWindows();
 [[nodiscard]] unsigned backBufferWriterSplit();
 [[nodiscard]] void*    backBufferWriterList();
 
-// Stage A (docs/specs/vv.md §35.1): the current frame's arg10 native, and the
-// submission index after which that resource is written (1-based; 0 when the writer
-// list was not identified). onExecuteCommandLists refreshes both, so inject::prepare
-// reads them from the submission it is about to split. `setArg10Solid` arms the
-// resolution; it is off by default and does not change any engine state.
+// The product switch, and the only one: "our DLSS writes arg10 and the engine's TAAU
+// draw is skipped". Everything that drives the product reads this flag, and every
+// path that stops injecting clears it (see inject::setMode(Off)), so the draw gate
+// can never stay armed over a picture nothing is writing.
+//
+// Alongside it, `arg10Target`/`arg10WriterSplit` describe where the current frame's
+// arg10 is (1-based; 0 when the writer list was not identified). onExecuteCommandLists
+// refreshes those, so inject::prepare reads them from the submission it is about to
+// split. Arming forces one fresh RTV capture per list; it is off by default and does
+// not change any engine state by itself.
 [[nodiscard]] void*    arg10Target();
 [[nodiscard]] unsigned arg10WriterSplit();
 [[nodiscard]] void*    arg10WriterList();
-void                   setArg10Solid(bool armed);
-[[nodiscard]] bool     arg10SolidArmed();
+void                   setProductArmed(bool armed);
+[[nodiscard]] bool     productArmed();
 
 // True when the submission just observed followed a new arg10 declaration (i.e. it
 // is the world frame, not a UI submission reusing the previous native).
@@ -219,9 +224,14 @@ void               setChainProbeFrames(unsigned frames);
 // R3 stage D draw-level suppress (docs/specs/vv.md §35.4): skip only the TAAU quad
 // (first DrawIndexedInstanced(6,1) of the list that already bound this frame's arg10),
 // keeping the callback, the material binds (MV role channel) and the arg10 writer
-// binding. A frame is only suppressed after the previous engine frame really injected;
-// noteInjectionResult(false) makes the next frame run TAAU again instead of leaving a
-// stale arg10 on screen.
+// binding.
+//
+// The invariant that keeps it from freezing the picture: TAAU is skipped only while
+// `productArmed()` and the *previous engine submission* really wrote arg10. That
+// latch is written exactly once per engine submission by inject::prepare - including
+// the paths that decide not to inject - so "nobody is writing arg10" always reaches
+// the gate as a plain false, instead of leaving the last true in place (the 2026-10-29
+// 14:40 freeze: injection had stopped, the draw kept being skipped).
 void               setDrawSuppress(bool armed);
 [[nodiscard]] bool drawSuppressArmed();
 [[nodiscard]] unsigned drawSuppressSkips();

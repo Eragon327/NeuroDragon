@@ -1216,7 +1216,12 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // the upscale and before the engine's colour grading/UI composition. Only on a
     // successful evaluation: a failed one leaves the previous Output in place, and
     // sharpening that every frame would stack artifacts.
-    if (result == 1 && out) {
+    //
+    // VV's own DLSS evaluate passes through this same hook, but that path owns the
+    // output texture and its state, so its sharpening is recorded there instead
+    // (vv::sr -> sr::recordSharpeningInto). Running this branch on it would declare
+    // an engine state the resource is not in.
+    if (result == 1 && out && !sr::insideOwnEvaluate()) {
         sr::recordSharpening(cmdList, out, n);
     }
 
