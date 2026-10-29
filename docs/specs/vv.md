@@ -43,8 +43,8 @@
 > A2 相机探针 `probe::vv::camera`。删掉的实现见 `git log`（本轮 commit 的 subject 带 `vv:`）。
 > 现行代码的入口只有：`sr.vvEnabled`（＝Fixed + DlssArg10 + drawSuppress）、
 > `sr.vvPercent`（引擎 `upscaling_percentage`）、`sr.preset`/`sr.sharpening`、
-> `sr::requestReset()`（面板「重置历史」）、`setJitterSource`（面板只给 `0` / `Engine` 两档，
-> 默认 0）。
+> `sr::requestReset()`（面板「重置历史」）、`setJitterSource`（四档 `0 / j(n) / -j(n) / j(n-1)`，
+> 默认 0；见 §37）。
 
 ## 0. 一句话
 
@@ -2643,8 +2643,11 @@ VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution
 - `-j(n)` 幅度不变 ⇒ 这一帧确实没按它渲染 ⇒ 只能喂 0；想要亚像素采样增益就得在渲染侧自己施加 jitter（另一个工程）；
 - `j(n-1)` 稳 ⇒ 引擎 ctx 的 jitter 领先渲染一帧，属相位 bug，修 source。
 
-**顺序**：产品侧维持 jitter = 0（`VvSr` 默认）。**2026-10-29 清理**：面板与 `JitterSource` 现在只保留
-`0 / j(n)` 两档（`-j(n)` 与 `j(n-1)` 在本次判别里已经答完、没有入口，分支随枚举一起删除；
-需要复查时按本节表格临时加回）。若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`
+**顺序**：产品侧维持 jitter = 0（`VvSr` 的默认值）。面板保留**四档** `0 / j(n) / -j(n) / j(n-1)`
+（`JitterSource` 0..3，非法值在 `setJitterSource()` 折回 0；切换时照旧做一次两帧历史重置），
+供随时复跑本节表格的判别：`Engine` 用当帧 `mv.jitterX/Y`，`Negated` 取其相反数，`Previous` 用
+上一帧保存的 `j(n-1)`（首帧还没保存过时安全回落 0，逐帧无条件保存当帧 jitter 供下一帧；
+只在世界内生效——菜单全景没有按世界 jitter 渲染，喂回去就是 EXP-0073 的上下抖）。
+若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`
 （直写 factor 的同一个钩子）里**自己抖投影**，再把同一个值交给 DLSS —— 这是新工程，不在本轮。
 depth 语义（`near/(1-d)` 与 `DepthInverted=1`）仍待收口：它影响的是重投影精度，与 jitter 是否喂值相互独立。

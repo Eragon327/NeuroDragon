@@ -48,11 +48,19 @@ config::Sr  gDraftSr{};
 // frame carries no TAA sub-pixel offset (EXP-0098).
 int gDraftJitter{static_cast<int>(vv::sr::JitterSource::Zero)};
 
-// The combo offers Zero and Engine only. Anything else (a value an older diagnostics
-// build left in this process) is staged as Zero, which is what a fresh run starts with.
+// The combo offers all four sources; an unknown value is staged as Zero, which is both
+// the default and the only one that is a shipping setting (the other three are the
+// discriminators from the jitter contract, kept for diagnosis).
 int stagedJitter(vv::sr::JitterSource running) {
-    return running == vv::sr::JitterSource::Engine ? static_cast<int>(vv::sr::JitterSource::Engine)
-                                                   : static_cast<int>(vv::sr::JitterSource::Zero);
+    switch (running) {
+    case vv::sr::JitterSource::Engine:
+    case vv::sr::JitterSource::Negated:
+    case vv::sr::JitterSource::Previous:
+        return static_cast<int>(running);
+    case vv::sr::JitterSource::Zero:
+    default:
+        return static_cast<int>(vv::sr::JitterSource::Zero);
+    }
 }
 
 // Re-reads the running value: the panel's "start from what is running" rule, used when
@@ -109,6 +117,14 @@ std::vector<std::string> gModelFiles;
 int         gActiveTab{};
 bool        gDirty{};
 std::string gStatus;
+
+// NR/SR slot swap in the pipeline strip (after-upscaling placement): 0 = NR then SR,
+// 1 = SR then NR. The first frame after the panel opens snaps to the target; later
+// changes animate over kSwapSeconds, so a placement change reads as a swap rather than
+// a jump. Driven from drawPipeline().
+constexpr float kSwapSeconds = 0.25f;
+float           gSwapProgress{};
+bool            gSwapPrimed{};
 
 // Window position. The ImGui window is not movable (NoMove): dragging is handled
 // by the title strip only, exactly like a Win32 window, so a click anywhere else in
@@ -660,31 +676,57 @@ void drawPipeline(Layout const& layout, Live const& live) {
         char const* line2{};
         bool        active{};
     };
-    Node const nodes[4] = {
-        {titles[0].c_str(), render,              rasterSub.c_str(), worldActive                   },
-        {titles[1].c_str(), nrPlacement.c_str(), nrState.c_str(),   live.nr == Stage::Running     },
-        {titles[2].c_str(), upName.c_str(),      upLine.c_str(),    upActive                      },
-        {titles[3].c_str(), output,              outSub.c_str(),    outActive                     },
-    };
+    Node const worldNode{titles[0].c_str(), render,              rasterSub.c_str(), worldActive               };
+    Node const nrNode   {titles[1].c_str(), nrPlacement.c_str(), nrState.c_str(),   live.nr == Stage::Running };
+    Node const srNode   {titles[2].c_str(), upName.c_str(),      upLine.c_str(),    upActive                  };
+    Node const outNode  {titles[3].c_str(), output,              outSub.c_str(),    outActive                 };
 
-    for (int index = 0; index < 4; ++index) {
-        float const x = left + static_cast<float>(index) * (nodeWidth + arrowWidth);
-        widgets::nodeBox(
-            ImVec2(x, top),
-            ImVec2(nodeWidth, height),
-            nodes[index].title,
-            nodes[index].line1,
-            nodes[index].line2,
-            nodes[index].active
-        );
-
-        if (index < 3) {
-            float const fromX = x + nodeWidth + 5.0f * s;
-            float const toX   = x + nodeWidth + arrowWidth - 2.0f * s;
-            float const midY  = top + height * 0.5f;
-            widgets::nodeArrow(ImVec2(fromX, midY), ImVec2(toX, midY), nodes[index + 1].active);
-        }
+    // The two middle boxes swap places with the actual placement: before upscaling the
+    // picture goes World -> NR -> SR -> Output, after upscaling it goes World -> SR ->
+    // NR -> Output. A refused after side is the before side the render thread really
+    // ran, so it takes the before order (`placement` is already 0 then, the explicit
+    // check keeps the intent readable). The first frame after the panel opens snaps to
+    // the current order instead of replaying the move; later changes animate (~0.25 s)
+    // so a placement change reads as a swap rather than a jump.
+    float const target = (live.stats.placement == 1 && !live.stats.afterFallback) ? 1.0f : 0.0f;
+    if (!gSwapPrimed) {
+        gSwapProgress = target;
+        gSwapPrimed   = true;
+    } else {
+        // A hitch must not make the boxes jump: cap the step at the frame delta.
+        float const dt   = std::min(ImGui::GetIO().DeltaTime, 0.1f);
+        float const step = dt / kSwapSeconds;
+        gSwapProgress    = std::clamp(gSwapProgress + std::clamp(target - gSwapProgress, -step, step), 0.0f, 1.0f);
     }
+    // smoothstep: ease out of one slot and into the other.
+    float const t = gSwapProgress * gSwapProgress * (3.0f - 2.0f * gSwapProgress);
+
+    auto const  slotX   = [&](int index) { return left + static_cast<float>(index) * (nodeWidth + arrowWidth); };
+    float const nrX     = slotX(1) + (slotX(2) - slotX(1)) * t;
+    float const srX     = slotX(2) + (slotX(1) - slotX(2)) * t;
+    bool const  nrFirst = t < 0.5f; // which of the two middle slots holds NR right now
+
+    // Arrows first, so a sliding box covers a gap arrow instead of being covered by it.
+    // They always point right: the middle arrow connects whatever sits in the left slot
+    // to whatever sits in the right slot, which is the real flow in both orders - the
+    // swap therefore never shows a reversed arrow.
+    float const midY = top + height * 0.5f;
+    for (int index = 0; index < 3; ++index) {
+        bool active = outNode.active;
+        if (index == 0) active = nrFirst ? nrNode.active : srNode.active;
+        else if (index == 1) active = nrFirst ? srNode.active : nrNode.active;
+        float const fromX = slotX(index) + nodeWidth + 5.0f * s;
+        float const toX   = slotX(index) + nodeWidth + arrowWidth - 2.0f * s;
+        widgets::nodeArrow(ImVec2(fromX, midY), ImVec2(toX, midY), active);
+    }
+
+    auto const drawNode = [&](Node const& node, float x) {
+        widgets::nodeBox(ImVec2(x, top), ImVec2(nodeWidth, height), node.title, node.line1, node.line2, node.active);
+    };
+    drawNode(worldNode, slotX(0));
+    drawNode(nrNode, nrX);
+    drawNode(srNode, srX);
+    drawNode(outNode, slotX(3));
 }
 
 // Tabs ----------------------------------------------------------------------
@@ -797,6 +839,9 @@ void drawTabNeural() {
     widgets::sectionHeader("ui.neural.enableSection"_tr().c_str());
 
     if (widgets::toggle("ui.neural.enable"_tr().c_str(), &gDraft.enabled)) markDirty();
+    // Asked for explicitly (2026-10-29): the two consequences a user cannot see - the
+    // history restart and what "save as default" does while it is off.
+    widgets::tip("ui.neural.enableTip"_tr().c_str());
     // A state, not an explanation: while this is off everything below is grey and the
     // reason has to be visible without hovering anything.
     if (!gDraft.enabled) widgets::hint("ui.neural.disabledHint"_tr().c_str());
@@ -823,6 +868,8 @@ void drawTabNeural() {
             )) {
             markDirty();
         }
+        // Asked for explicitly: the after side's cost and the rebuild/reset a switch costs.
+        widgets::tip("ui.neural.placementTip"_tr().c_str());
     }
     widgets::hint(
         gDraft.placement == 1 ? "ui.neural.placementAfterHint"_tr().c_str() : "ui.neural.placementHint"_tr().c_str()
@@ -1157,19 +1204,34 @@ void drawTabSr(Live const& live) {
         // Staged like every other control: the combo only moves the draft, and
         // applyDraft() is what writes vv::sr. It has no config entry, so Apply affects
         // this run and "Save as default" does not carry it over.
-        std::string const jitterItems[2] = {
+        //
+        // All four sources are offered again (2026-10-29): Zero is the shipping default,
+        // Engine is the A/B, Negated/Previous are the discriminators from
+        // research/2026-10-29-taau-jitter-dlss-contract.md §7 - the tip says so, because
+        // neither is a better picture.
+        std::string const jitterItems[4] = {
             "ui.sr.jitterZero"_tr(),
             "ui.sr.jitterEngine"_tr(),
+            "ui.sr.jitterNegated"_tr(),
+            "ui.sr.jitterPrevious"_tr(),
         };
-        char const* jitterPointers[2] = {jitterItems[0].c_str(), jitterItems[1].c_str()};
-        int const   jitterValues[2]   = {
+        char const* jitterPointers[4] = {
+            jitterItems[0].c_str(),
+            jitterItems[1].c_str(),
+            jitterItems[2].c_str(),
+            jitterItems[3].c_str(),
+        };
+        int const jitterValues[4] = {
             static_cast<int>(vv::sr::JitterSource::Zero),
             static_cast<int>(vv::sr::JitterSource::Engine),
+            static_cast<int>(vv::sr::JitterSource::Negated),
+            static_cast<int>(vv::sr::JitterSource::Previous),
         };
         if (!vvMode) ImGui::BeginDisabled();
-        if (mappedCombo("ui.sr.jitterSource"_tr().c_str(), &gDraftJitter, jitterPointers, jitterValues, 2)) {
+        if (mappedCombo("ui.sr.jitterSource"_tr().c_str(), &gDraftJitter, jitterPointers, jitterValues, 4)) {
             markDirty();
         }
+        widgets::tip("ui.sr.jitterTip"_tr().c_str());
         if (!vvMode) ImGui::EndDisabled();
         widgets::hint(vvMode ? "ui.sr.jitterHint"_tr().c_str() : "ui.sr.jitterRtHint"_tr().c_str());
     }
@@ -1690,6 +1752,10 @@ void onOpened() {
     gModelFiles = utils::listNrModelFiles();
     gDirty      = false;
     gStatus.clear();
+
+    // The pipeline strip shows the current NR/SR order immediately; the swap animation is
+    // for changes made while the panel is open.
+    gSwapPrimed = false;
 
     // Counters are re-primed so "growth since the panel was opened" starts at zero
     // instead of inheriting the previous session's numbers.

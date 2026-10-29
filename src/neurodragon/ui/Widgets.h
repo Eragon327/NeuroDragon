@@ -29,6 +29,13 @@ bool toggle(char const* label, bool* value);
 
 // Label + value on one line, then a full-width track with a small orange handle.
 // Returns true on the frame the value changed.
+//
+// The number on the right is clickable: it turns into a text box prefilled with the
+// value the row showed. Enter or clicking away commits - the text has to parse as one
+// whole finite number, which is then clamped to [min, max]; anything else ("" , "-",
+// "1e", "nan") keeps the previous value. Escape always keeps it. `format` is what the
+// row displays and what the box is prefilled with; `suffix` is a unit and stays out of
+// the box. A disabled row is not editable.
 bool slider(
     char const* label,
     float*      value,
@@ -38,6 +45,8 @@ bool slider(
     char const* suffix  = nullptr,
     bool        enabled = true
 );
+// slider() over an int: the box takes the same text, and a committed fraction is
+// rounded to the nearest integer like the track produces.
 bool sliderInt(char const* label, int* value, int min, int max, char const* suffix = nullptr);
 
 // Label above a full-width dropdown.
@@ -69,9 +78,15 @@ bool button(char const* label, ImVec2 size = ImVec2(0, 0), bool primary = false)
 // same line, vertically centred on that element. Hovering it shows `text` in a
 // bordered box of fixed width (280 logical px, scaled by theme::scale()) whose height
 // follows the wrapped paragraph; the box sits beside the cursor, flips to the other
-// side when it would not fit and stays on screen near an edge. It is a marker, not a
-// control: it stays hoverable while that element is disabled, which is when a hint is
-// needed.
+// side when it would not fit and stays on screen near an edge.
+//
+// When the element leaves no room after itself - the label-above combo spans the whole
+// column - the marker moves inside the element's right end, left of a combo's
+// drop-down arrow. Either way the marker is placed by hand and the caller's cursor is
+// left where it was, so a hint never shifts the layout around it.
+//
+// It is a marker, not a control: it stays hoverable while that element is disabled,
+// which is when a hint is needed.
 //
 // The panel ships without hints - this is kept for the ones the user asks for.
 void tip(char const* text);

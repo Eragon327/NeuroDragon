@@ -149,6 +149,11 @@ std::atomic<unsigned> gManualReset{0};
 // rendered with it", "the sign is flipped in our hand-off" or "the context value is one
 // frame ahead of the render" is true.
 std::atomic<int> gJitterSource{static_cast<int>(JitterSource::Zero)};
+// Last frame's context jitter, so the Previous mode can feed j(n-1). Zero until the
+// first recorded frame saves one, which is the safe fallback the panel's "previous"
+// entry needs on a fresh session (and after `release()`, since these are file-scope).
+float gPrevJitterX = 0.0f;
+float gPrevJitterY = 0.0f;
 // The product switch's current state (config `sr.vvEnabled`), so syncConfig() only acts
 // on a change instead of re-arming every frame.
 std::atomic<bool> gEnabled{false};
@@ -576,16 +581,18 @@ void requestReset() {
 }
 
 void setJitterSource(JitterSource source) {
-    // Two values only (Zero / Engine); anything else folds to Zero so a stale panel
-    // draft cannot leave the pipeline on a mode that no longer has a branch.
-    int const value    = source == JitterSource::Engine ? static_cast<int>(JitterSource::Engine)
-                                                       : static_cast<int>(JitterSource::Zero);
+    // The panel's four entries; anything outside the enum folds to Zero so a stale
+    // draft (or a future edit) cannot leave the pipeline on a value with no branch.
+    int const raw   = static_cast<int>(source);
+    int const value = raw >= static_cast<int>(JitterSource::Zero) && raw <= static_cast<int>(JitterSource::Previous)
+                        ? raw
+                        : static_cast<int>(JitterSource::Zero);
     int const previous = gJitterSource.exchange(value, std::memory_order_relaxed);
     if (previous == value) {
         return;
     }
-    // One history wipe on both edges: the two modes accumulate differently, and
-    // carrying samples across the switch would show up as a smear on the frame after.
+    // One history wipe on both edges: the modes accumulate differently, and carrying
+    // samples across the switch would show up as a smear on the frame after.
     gManualReset.store(2, std::memory_order_relaxed);
     ND_DEBUG("[vvsr] sr jitter source={}", value);
 }
@@ -961,14 +968,37 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // feature 0x12 on this same command list, and points Color at its
             // composite before the original evaluate runs. The VV side only has to
             // leave the prepared inputs in ALL_SHADER_RESOURCE (above).
-            // Jitter handed to DLSS. Default 0; `Engine` is the one A/B the panel still
-            // offers (§7's negated/previous probes answered and are gone).
+            // Jitter handed to DLSS. Default 0 (see gJitterSource); the other three modes
+            // are the §7 discrimination the panel still offers. Only applied inside a
+            // world: outside it the panorama was not rendered with the world jitter and
+            // feeding it back shifts the image every frame (EXP-0073).
             float jitterX = 0.0f;
             float jitterY = 0.0f;
-            if (world && gJitterSource.load(std::memory_order_relaxed) == static_cast<int>(JitterSource::Engine)) {
-                jitterX = mv.jitterX;
-                jitterY = mv.jitterY;
+            if (world) {
+                switch (gJitterSource.load(std::memory_order_relaxed)) {
+                case static_cast<int>(JitterSource::Engine):
+                    jitterX = mv.jitterX;
+                    jitterY = mv.jitterY;
+                    break;
+                case static_cast<int>(JitterSource::Negated):
+                    jitterX = -mv.jitterX;
+                    jitterY = -mv.jitterY;
+                    break;
+                case static_cast<int>(JitterSource::Previous):
+                    // j(n-1): the value saved by the frame before this one. Zero until a
+                    // frame has been saved, which is the intended fallback for the first
+                    // recorded frame (and after a release/reload).
+                    jitterX = gPrevJitterX;
+                    jitterY = gPrevJitterY;
+                    break;
+                default: break;
+                }
             }
+            // Saved every recorded frame, whatever the mode: Previous needs it on the
+            // next one, and saving it only while Previous is selected would feed a stale
+            // value across a mode switch.
+            gPrevJitterX = mv.jitterX;
+            gPrevJitterY = mv.jitterY;
             dlssEvaluated = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,
@@ -1154,6 +1184,10 @@ void release() {
     if (gPipeline.rtvHeap) gPipeline.rtvHeap->Release();
     gPipeline = Pipeline{};
     gStats    = Stats{};
+    // Drop the saved frame so a reload starts the Previous mode from its documented
+    // fallback (zero) instead of the last frame of the previous session.
+    gPrevJitterX = 0.0f;
+    gPrevJitterY = 0.0f;
 }
 
 } // namespace neurodragon::vv::sr

@@ -1,0 +1,47 @@
+# slider value baseline - 2026-10-30
+# 面板里滑条的数值比左边标签高一个 FramePadding.y：数值是 DrawList::AddText 手绘的，不吃行基线偏移。
+
+## pinned ImGui (main/xmake.lua)
+38:add_requires("imgui v1.91.9", {configs = {shared = false, win32 = true, dx11 = true, no_demo_windows = true}})
+
+## imgui_widgets.cpp:1565  AlignTextToFramePadding 把行基线偏移写成 FramePadding.y
+void ImGui::AlignTextToFramePadding()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    ImGuiContext& g = *GImGui;
+    window->DC.CurrLineSize.y = ImMax(window->DC.CurrLineSize.y, g.FontSize + g.Style.FramePadding.y * 2);
+    window->DC.CurrLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, g.Style.FramePadding.y);
+}
+
+
+## imgui_widgets.cpp:176  Text() 的行按 CursorPos.y + CurrLineTextBaseOffset 绘制
+    const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
+
+## imgui.cpp:10720  ItemSize 从行顶量高度，往下挪的 item 会把行撑高
+    // Always align ourselves on pixel boundaries
+    //if (g.IO.KeyAlt) window->DrawList->AddRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, line_height), IM_COL32(255,0,0,200)); // [DEBUG]
+    window->DC.CursorPosPrevLine.x = window->DC.CursorPos.x + size.x;
+    window->DC.CursorPosPrevLine.y = line_y1;
+    window->DC.CursorPos.x = IM_TRUNC(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);    // Next line
+    window->DC.CursorPos.y = IM_TRUNC(line_y1 + line_height + g.Style.ItemSpacing.y);                       // Next line
+    window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
+    window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y - g.Style.ItemSpacing.y);
+    //if (g.IO.KeyAlt) window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // [DEBUG]
+
+    window->DC.PrevLineSize.y = line_height;
+    window->DC.CurrLineSize.y = 0.0f;
+    window->DC.PrevLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, text_baseline_y);
+
+## ours: Widgets.cpp statRow() 两侧都用 Text()，所以左栏数值与标签对齐
+9:    ImGui::TextColored(toColor(kTextDim), "%s", labelText.c_str());
+12:    ImGui::SetCursorPosX(gRowRight - valueWidth);
+13:    ImGui::TextColored(toColor(valueColor ? valueColor : kText), "%s", value);
+
+## ours: slider() 数值走 AddText，只见 CursorPos，因此在行顶（比标签高 FramePadding.y）
+305:            drawList->AddText(valuePos, ImGui::GetColorU32(toColor(kText)), shown.c_str());
+
+## main/src/neurodragon/ui/Theme.cpp:97  FramePadding.y = 6 x scale
+    style.FramePadding            = {10.0f * s, 6.0f * s};

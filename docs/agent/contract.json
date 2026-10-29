@@ -1,31 +1,37 @@
 {
-  "goal": "完善实时面板与上采样观测：NR 顶格显示实际位置，恢复页脚原顺序，VV/RT 从游戏首批帧持续读取分辨率与 TAAU/引擎 DLSS GPU 时间",
+  "goal": "完善面板交互：滑条数字编辑、NR/SR位置交换动画、四档jitter与指定性能/测试tips",
   "criteria": [
     {
-      "id": "UI3-S2",
+      "id": "UI4-S2",
       "stage": 2,
       "kind": "stage",
       "text": "flow.py verify、TEST 构建与 release 构建通过，字图集同步"
     },
     {
-      "id": "UI3-F1",
+      "id": "UI4-F1",
       "stage": 6,
       "kind": "final",
-      "text": "顶部 NR 格显示实际放大前/放大后与状态，NR GPU 时间在 Live 栏；页脚恢复放弃、应用、保存为默认的原顺序与主按钮"
+      "text": "滑条数字可点击编辑，提交时完整解析并 clamp；非法数字、NaN/Inf 与 Escape 回滚到编辑前数值，拖动行为不变"
     },
     {
-      "id": "UI3-F2",
+      "id": "UI4-F2",
       "stage": 6,
       "kind": "final",
-      "text": "VV 与 RT 从首批实际上采样帧开始观测，不受 NR/SR 开关或面板是否打开影响：分辨率持续可读，实际 TAAU/引擎 DLSS draw 使用同一时间戳环计时；跳过 TAAU 时不伪造样本"
+      "text": "实际 NR placement 改变时顶部 NR/SR 节点相向滑动交换顺序，初次显示不播动画，回退也按实际 before"
+    },
+    {
+      "id": "UI4-F3",
+      "stage": 6,
+      "kind": "final",
+      "text": "jitter 提供0、j(n)、-j(n)、j(n-1)并保留暂存语义；仅jitter、NR开关和NR位置显示指定橙色tips，提示测试/性能风险且组件横向显示"
     }
   ],
   "out_of_scope": [
-    "改变 DLSS 替换 TAAU 的产品开关语义",
-    "为了计时强制执行本应跳过的 TAAU draw",
-    "配置暂存与保存规则的其他变更",
-    "渲染画质算法调整"
+    "改变默认jitter=0及暂存/保存语义",
+    "改变实际NR placement算法",
+    "新增其他tips",
+    "提交或部署"
   ],
   "stage": 6,
-  "updated": "2026-10-29T21:15:28.917+08:00"
+  "updated": "2026-10-29T23:42:15.290+08:00"
 }

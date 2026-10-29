@@ -76,11 +76,17 @@ void syncConfig();
 /// the picture wobble, zero is stable, and the value is already in DLSS's space -
 /// docs/research/2026-10-29-taau-jitter-dlss-contract.md).
 ///
-/// Engine is the A/B that discrimination left open to the user: feed the TAA context's
-/// j(n) as delivered. The two finer probes of that document (§7: negated / previous
-/// frame) answered "only 0 is truthful" and had no entry point left in the panel, so
-/// they are gone - the enum is exactly the two values the panel offers.
-enum class JitterSource : int { Zero = 0, Engine = 1 };
+/// The other three are that document's §7 discrimination, and the panel offers all
+/// four so the A/B can be re-run without a rebuild:
+///   Engine   j(n)     - as delivered by the TAA context (the original hand-off)
+///   Negated  -j(n)    - amplitude doubles => the frame really carries this jitter and
+///                       the value/sign is right; unchanged => the frame is not rendered
+///                       with it and only 0 is truthful
+///   Previous j(n-1)   - stable => the context value runs one frame ahead of the render
+///
+/// Only applied inside a world (outside it the panorama is not rendered with the world
+/// jitter, EXP-0073); a value outside this enum is folded to Zero on the way in.
+enum class JitterSource : int { Zero = 0, Engine = 1, Negated = 2, Previous = 3 };
 
 void setJitterSource(JitterSource source);
 [[nodiscard]] JitterSource jitterSource();
