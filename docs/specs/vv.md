@@ -2550,5 +2550,28 @@ VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution
 
 **顺序**：产品侧维持 jitter = 0（`VvSr` 默认；四档诊断只剩 `0 / j(n) / -j(n) / j(n-1)` 供复查）。
 若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`（直写 factor 的同一个钩子）里**自己抖投影**，
-再把同一个值交给 DLSS —— 这是新工程，不在本轮。depth 语义（`near/(1-d)` 与 `DepthInverted=1`）仍待收口：
-它影响的是重投影精度，与 jitter 是否喂值相互独立。
+再把同一个值交给 DLSS —— 这是新工程，不在本轮。depth 语义已于 EXP-0101 定案（非反向，见
+[nr.md §9 P8](nr.md) 与 §35 的说明），不再与 jitter 纠缠。
+
+## 38. feature 级回退梯子（EXP-0104，2026-10-29）
+
+RT 路径的失败是"创建策略降级"（core → runtime → after → before → percent）；VV 只有一个 feature，
+可选的东西只有 NR 输入、RCAS pass 和 feature 本身，所以梯子是：
+
+| 档 | 还在跑 | 触发 |
+|---|---|---|
+| `Full` | DLSS + NR + RCAS | — |
+| `NoNr` | DLSS + RCAS | eval 连续失败 120 帧 |
+| `NoSharp` | DLSS | 再连续 120 帧 |
+| `TAAU` | 引擎 TAAU | 再连续 120 帧，或 create 连续失败 3 次 |
+
+- 每档锁存，不来回跳。`NoNr` 由 `nr::nrSetBypass` 停掉 detour 的合成与重建（Color 保持调用方给的原样），
+  `NoSharp` 只是跳过 `recordSharpeningInto`；两者都不改用户配置。
+- 自愈：`TAAU` 停 600 sr 帧后重试 `Full`；处于 `NoNr`/`NoSharp` 时连续成功 600 帧就升一档。故障持续时
+  表现为"每 ~10 秒 probe 一次再退回 TAAU"，不是每帧 alloc。
+- 面板「有效档位」显示档位 + 原因（create/eval/retry）+ 连续失败计数；`SR fault (TEST)` 下拉可强制
+  create / eval 失败，一次跑完四档。
+- EXP-0104 实测：create → 3 次失败直接 TAAU；eval → NoNr(1.8 s) → NoSharp(1.4 s) → TAAU(1.4 s)；
+  清注入后 600 帧回 Full；TAAU 期间 `inject skipped` 连续出现、画面确由 TAAU 覆盖。证据：
+  `docs/agent/evidence/vv-fallback-EXP-0104-run.log`。
+- 已知：`NoNr` 档有轻微颜色变化（NR 合成被停），那是档位生效的标志，不是故障。
