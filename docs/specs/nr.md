@@ -169,11 +169,17 @@ SetPtr MotionVectors3D / IsParticleMask / AnimatedTextureMask / DepthHighRes /
 | 每帧 | `DLSSNR.{Depth,MVec}Subrect` | 0,0 / guide 尺寸（渲染分辨率，整张 guide 纹理） |
 | 每帧 | `DLSSNR.UI / UIAlpha / ControlMask` 及其子矩形 | null / 0 |
 | 每帧 | `DLSSNR.MVecScaleX/Y` | guide 尺寸（像素单位）；`nr.mvecScale` 可覆盖 |
-| 每帧 | `DLSSNR.Enabled/Style/UseAutoMask/UICorrection/DepthInverted/Reset` | 1 / style / 0 / 0 / depthInverted / 窗口首帧 1 |
+| 每帧 | `DLSSNR.Enabled/Style/UseAutoMask/UICorrection/DepthInverted/Reset` | 1 / style / 0 / 0 / 深度约定 / 窗口首帧 1 |
 | 每帧 | `DLSSNR.Intensity/LocalTone/LocalStructure/SkinStructure` | 配置值（TRP 默认 1.0） |
 
 类型随运行时分：310.x 的 `Enabled/Style/Reset/DepthInverted/UseAutoMask/UICorrection/Hint.Render.Preset`
 是 **int**，尺寸/子矩形是 **unsigned**，强度是 **float**。
+
+**`DepthInverted` 是输入约定，不是画质偏好。** guide 深度是 `d = 1 - near/z`（近处 0、天空 1），
+所以必须是 **0**；NXG 的语义（`e = DepthInverted ? d : 1 - d`，正比于 1/视距）与 TRP 的实现一致。
+2026-10-29 之前这里写死 `1`（"1=反向 Z"），与实参相反。`nvngx_dlssnr.dll` 的字符串表里确实有
+`DLSSNR.DepthInverted`（这个参数会被读）；而对 **DLSS-SR** 而言同一件事是**创建标志 bit 3**
+（`nvngx_dlss.dll` 里没有 `DepthInverted` 这个参数名）——见 §9 P8。
 
 固定/未启用项：`SkinStructureStrength`（`-1` 哨兵在 MC 内容上无可辨差异，正式版面板不提供，TEST 保留）、
 `UseAutoMask` / `UICorrection`（没有 `ControlMask`/`UI`/`UIAlpha` 输入纹理，写了也是假开关）、
@@ -391,6 +397,7 @@ EXP-0085 又暴露两条 NR 侧问题（均已修）：
 | P5 | `Replace=6` 与 5 的画面差异 | 用户拍板默认 **6（TRP Ratio）**；删除「只求值」模式，不做配置迁移 |
 | P6 | 小 feature + 全分辨率 guide | 实机四条验收通过：创建日志/诊断回读/三行计时/画面正常 |
 | P7 | 自适应曝光是否让室内外一致 | 用户反馈肉眼无差异；结构性原因见 §8.2，**搁置**，等白点回读探针 |
+| P8 | 深度的正反向（`near/(1−d)` vs `DepthInverted`） | **非反向（flag=0）**。① TAA context 的 VP 反推 `z_ndc = 1.0010 − 0.1001/d`（near=0.1、远平面无穷）⇒ 近 0 远 1；② 60 份 `sr_depth_*_fmt44` dump：天空恒 1.000000、地面 0.9979–0.9996 随距离单调；③ 引擎自己的 SR 创建标志=3（bit3=0）。而 SR runtime 的字符串表里**没有** `DepthInverted` 参数（正对照 `Jitter.Offset.X`/`MV.Scale.X`/`DLSS.Feature.Create.Flags` 都在）⇒ EXP-0041 改的是死键；真凶是 VV 的创建标志 `11`（=IsHDR\|MVLowRes\|**DepthInverted**，注释误标成 AutoExposure=1<<6），NGX 创建日志写着 `Depth Inverted 1`。证据：`docs/agent/evidence/depth-flag-EXP-0101-scan.txt`、`depth-flag-EXP-0101-ngx-create.log` |
 
 ## 10. 不做（结构性，逐条给理由）
 

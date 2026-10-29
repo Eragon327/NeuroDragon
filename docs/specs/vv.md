@@ -284,8 +284,11 @@ hook `CreateCommittedResource` / `CreatePlacedResource` 之后，渲染分辨率
 > 96 字节常量缓冲里（只有 jitter / params / ratio / display / render 分辨率 6 个 float4）。
 > 证据：[research/2026-10-28-taau-decompiled.md](../research/2026-10-28-taau-decompiled.md) §3–§4、§7。
 >
-> **顺带暴露的未决项（本轮不猜）**：代码里 depth→view 的换算是 `near/(1-d)`（标准 Z：近 0 远 1），
-> 与 DLSS 的 `DepthInverted=1` 互相矛盾；需要一次判定（dump 一个已知距离的像素在两端的值）。
+> **已定案（2026-10-29，EXP-0101）**：`near/(1-d)` 是对的（标准 Z：近 0、远 1），矛盾出在"告诉
+> 运行时"的两处——VV 的 SR 创建标志写了 `11`，把 bit3（`DepthInverted`，1<<3）当成 AutoExposure
+> （1<<6）打开；NR 每帧参数也写死 1。而 DLSS-SR 根本不读每帧 `DepthInverted` 参数（runtime 字符串表
+> 没有该名），所以 EXP-0041 改键无效。现在 SR 创建标志=3、NR 取自参数对象的声明，判据是 NGX 创建
+> 日志 `Depth Inverted 1→0`。证据见 [nr.md §9 P8](nr.md) 与 `docs/agent/evidence/depth-flag-EXP-0101-*`。
 
 **已证伪的路子**（省得再走）：依赖对象 `+0x8` / `+0x10` 是**帧图节点**（带 vtable、带 pass 名字符串），
 不是资源也不是 bgfx handle；递归扫节点对象图 3 跳、与已知资源指针比对，命中的全是后缓冲，

@@ -111,9 +111,13 @@ Streamline 的 `jitterOffset` 同约定（Streamline 只是把 `slConstants` 翻
 量级上可以排除「尺度错」：若只是显示像素 vs 渲染像素的错，残差上限 0.17 px（真值是 `0.66×jitter` 时）
 到 0.25 px（我们把 `1.5×jitter` 传进去时），属轻微 shimmer；用户描述的抖更像整份 jitter 量级的错位。
 
-另有一个放大器：depth 语义（`near/(1−d)` 与 `DepthInverted=1`）尚未收口。depth 偏了，DLSS 的重投影
-本来就在近似，此时再给它一个非零 jitter，亚像素错位就从"看不见"变成"看得见"。**重新打开 jitter 之前
-应该先把 depth 定下来。**
+另有一个放大器：depth 语义（`near/(1−d)` 与 `DepthInverted=1`）当时尚未收口。depth 偏了，DLSS 的重投影
+本来就在近似，此时再给它一个非零 jitter，亚像素错位就从"看不见"变成"看得见"。
+
+**2026-10-29 已定案（EXP-0101）**：`near/(1−d)` 是对的；错的是 VV 的 SR 创建标志 `11`（bit3 是
+`DepthInverted`，不是 AutoExposure）与 NR 每帧写死的 `1`。SR 的每帧 `DepthInverted` 参数不被 runtime
+读取，所以 EXP-0041 的 A/B 没有测到任何东西。现在创建标志=3、NR 取参数对象声明；结论与证据链在
+[nr.md §9 P8](../specs/nr.md)。jitter 若要重新打开，起点是"depth 已对本，剩下的相位/抖动归因"。
 
 ## 7. 判别实验（每个都是改几行 + 面板切换，不需要新测量工具）
 
