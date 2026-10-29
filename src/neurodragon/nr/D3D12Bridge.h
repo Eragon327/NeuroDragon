@@ -148,6 +148,12 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // Domain of the resource above: 0 = linear HDR, 1 = display-encoded.
 [[nodiscard]] int   nrFedDomain();
 
+// Extent and DXGI format of the texture the engine's DLSS was last pointed at.
+// False until a composed frame actually swapped. The allocation is "grow only",
+// so after a window shrink this can exceed the guide extent - the unverified
+// resize path in docs/specs/nr.md §7.6.
+[[nodiscard]] bool nrFedExtent(unsigned* width, unsigned* height, unsigned* format);
+
 // The tone-mapped, gamma-encoded copy of Color that the network is fed (item
 // "HDR -> LDR encode"). Null until nrCreate has built the encoder.
 [[nodiscard]] void* nrEncodedColorResource();

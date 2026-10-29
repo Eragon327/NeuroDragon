@@ -698,6 +698,13 @@ void* gFedResource = nullptr;
 int   gFedDomain   = 0; // 0 = linear HDR, 1 = display-encoded
 #endif
 
+// Extent the engine's DLSS was last pointed at. Not TEST-only: the window-start
+// probe logs it so a window shrink can be told apart from a working resize
+// (docs/specs/nr.md §7.6 - the allocation is "grow only").
+unsigned gFedWidth  = 0;
+unsigned gFedHeight = 0;
+unsigned gFedFormat = 0;
+
 // The engine writes "Color" into its parameter object ONCE (docs/D §6.16), so from
 // the first swap onwards the object keeps handing back OUR texture. Compositing
 // onto whatever the object currently says is therefore a feedback loop: every
@@ -2692,6 +2699,20 @@ void* nrEncodedColorResource() { return gEncodedColor; }
 bool nrParamLogEnabled() { return config::get().nr.paramLog != 0; }
 #endif
 
+bool nrFedExtent(unsigned* width, unsigned* height, unsigned* format) {
+    bool const fed = gFedWidth != 0 && gFedHeight != 0;
+    if (width) {
+        *width = gFedWidth;
+    }
+    if (height) {
+        *height = gFedHeight;
+    }
+    if (format) {
+        *format = gFedFormat;
+    }
+    return fed;
+}
+
 // NR composites on every in-world frame: the old "evaluate only" mode is gone, so the
 // probe no longer needs a window schedule to decide when the picture updates.
 bool nrReplaceContinuous() { return true; }
@@ -2871,6 +2892,12 @@ void compositeGain(
         paramSetPtr(engineParams, "Color", gDecodedColor);
         gSwapParams   = engineParams;
         gColorSwapped = true;
+        if (gDecodedColor) {
+            D3D12_RESOURCE_DESC const fedDesc = gDecodedColor->GetDesc();
+            gFedWidth  = static_cast<unsigned>(fedDesc.Width);
+            gFedHeight = static_cast<unsigned>(fedDesc.Height);
+            gFedFormat = static_cast<unsigned>(fedDesc.Format);
+        }
     }
 #ifdef TEST
     gFedResource = gDecodedColor;

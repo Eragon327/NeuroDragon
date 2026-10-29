@@ -971,7 +971,11 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         if (timed) {
             nr::nrStampEnd(cmdList, n, 0);
         }
-        if (nrReset) {
+        // Window-start snapshot. Keyed on the window index, not on `nrReset`: reset
+        // fires only on world/size changes, which is why EXP-0101 never printed it.
+        static int loggedWindow = -2;
+        if (gNrWindowIndex >= 0 && gNrWindowIndex != loggedWindow) {
+            loggedWindow = gNrWindowIndex;
             static char const* const kDepthSource[] = {"param", "create-flag", "default"};
             ND_DEBUG(
                 "[nr] 窗口 #{} 首帧 f={} placement={} 指南={}x{} 引擎渲染={}x{} recorded={}"
@@ -986,6 +990,23 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 recorded,
                 nrDepthInverted,
                 kDepthSource[nrDepthSource < 0 || nrDepthSource > 2 ? 2 : nrDepthSource]
+            );
+            // What DLSS is about to sample: nrRecord pointed the parameter object's
+            // Color at NR's composed texture. That allocation is "grow only", so after
+            // a window shrink it can be larger than the guide (nr.md §7.6), and this
+            // path writes no subrect key at all - hence `subrect=none`.
+            unsigned fedW      = 0;
+            unsigned fedH      = 0;
+            unsigned fedFormat = 0;
+            bool const fed     = nr::nrFedExtent(&fedW, &fedH, &fedFormat);
+            utils::logger().info(
+                "[nr] size: guide={}x{} fed={}x{} fmt={} oversized={} subrect=none",
+                nrGuideW,
+                nrGuideH,
+                fed ? fedW : 0u,
+                fed ? fedH : 0u,
+                fed ? fedFormat : 0u,
+                (fed && (fedW > nrGuideW || fedH > nrGuideH)) ? 1 : 0
             );
         }
 
