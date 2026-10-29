@@ -139,10 +139,11 @@ LL_AUTO_STATIC_HOOK(
         }
     }
 
-    gNativeRender.store(native && applied, std::memory_order_relaxed);
+    bool const nativeNow = native && applied;
+    gNativeRender.store(nativeNow, std::memory_order_relaxed);
     auto const result = origin(self, views, shared, shadow);
 
-    if (native && applied && readable(data, 0x40)) {
+    if (nativeNow && readable(data, 0x40)) {
         // frameImpl reads +0x4 after this call to decide whether the upscaling branch
         // exists. A factor of 1.0 removes TAAU/arg10 entirely (EXP-0089), so restore a
         // sub-1 value for the branch; the camera/resources were already built at 1.0.
@@ -165,6 +166,24 @@ LL_AUTO_STATIC_HOOK(
                 "[vv] direct factor {:.4f} -> {:.4f} (dynamic off, option untouched)",
                 before,
                 target
+            );
+        }
+    }
+    // 100% and below-100% are two different branches, and the direct branch's own log
+    // is keyed on the target factor: a 66 -> 100 -> 66 round trip returns to the same
+    // 0.6667, so that line stays silent. The transition itself is what shows the
+    // downswitch rebuilt the camera at the sub-1 factor (EXP-0103).
+    static std::atomic<int> lastNative{-1};
+    int const               now      = nativeNow ? 1 : 0;
+    int const               previous = lastNative.exchange(now, std::memory_order_relaxed);
+    if (applied && previous != -1 && previous != now) {
+        if (now == 1) {
+            utils::logger().info("[vv] percent: {}% -> native 100% (camera rebuilt at 1.000)", percent);
+        } else {
+            utils::logger().info(
+                "[vv] percent: native 100% -> {}% (camera rebuilt at {:.4f})",
+                percent,
+                factorForPercent(percent)
             );
         }
     }
