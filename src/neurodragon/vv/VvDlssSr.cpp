@@ -633,6 +633,13 @@ bool evaluateSr(void* commandList, void* color, void* depth, void* motionVectors
         logParamReadback(params, "MV.Scale.X");
     }
     int const ret = gEvaluate(commandList, gSrFeature, params, nullptr, nullptr);
+    // The NR detour runs inside this call and (on a shared parameter object) used to
+    // overwrite MV.Scale with the render size. Read it back once after the evaluate:
+    // VV's pixel-space vectors must still see 1.0 (EXP-0088).
+    static std::atomic<bool> loggedScaleAfter{false};
+    if (!loggedScaleAfter.exchange(true, std::memory_order_relaxed)) {
+        logParamReadback(params, "MV.Scale.X");
+    }
     gSrState.evaluateRet = ret;
     return ret == 1;
 }

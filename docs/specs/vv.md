@@ -1213,6 +1213,31 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 stale 字节（MV 全 0、depth 全 1.0），看起来像"MV 坏了"。`dumpTextureRawAs` 必须传对应状态；
 `DumpState` 里已补 `NonPixelShaderResource = 0x40`。
 
+### 17.9 不写 percentage option 的直接控制点（2026-10-29，静态确认）
+
+Mac 全符号库与 Windows 26.51 已逐字段对应：VV `frameImpl` 最早调用的
+`createDeferredRenderingCameras`（canon: `bgfxbridge_createdeferredrenderingcameras`）收到
+`shared_ptr<UpscalingData>`，函数入口读取 `mUpscalingFactor`（对象 `+0x4`），并计算：
+
+```text
+dynamic = !mEnableDynamicResolution (+0x8)
+    ? 1.0
+    : clamp(useOverride (+0x9) ? override (+0xC) : mDynamicResolutionScale (+0x38),
+            mMinUpscalingFactor (+0x10), 1.0)
+effective = mUpscalingFactor * dynamic
+```
+
+`effective` 随后交给 `camerautils::resizeCameraViewport`（canon: `camerautils_resizecameraviewport`），
+直接缩放相机视口与渲染矩形。Windows 的 `frameImpl` 还在该调用之后读取同一对象的 `+0x4`，
+决定上采样分支是否启用；后面调用 `taau` 时，传入的也是 renderer 持有的这同一个
+`UpscalingData` 指针。⇒ 在 `createDeferredRenderingCameras` 入口、原函数之前改写共享对象的
+`+0x4`，即可同时控制场景渲染尺寸、TAAU 分支和 TAAU ratio，不需要写 Option 579。
+Windows 下 shared_ptr 是函数第 3 个参数（`r8`）；先解引用得到对象，再写对象 `+0x4`。
+
+这是比 `taauDetour` 更早且语义完整的 hook 点；只在 `taauDetour` 改 factor 仍然太晚，
+因为相机和帧图尺寸已经确定。资源按新尺寸重建、切场景与 `1.0` 往返尚需实机验证，
+静态结论不冒充运行时通过。
+
 ## 18. S5：callback 级替换（EXP-0025 失败，见 §19）
 
 ### 18.1 反编译依据
@@ -2326,3 +2351,126 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
 
 **只做阶段 A 的纯色 `arg10` 实写**：A1–A3 任一不成立就停。通过后就以 §35.2 为下一步，
 不再回到反编译论证 R3。
+
+## 36. NR 接入 VV（EXP-0083 / EXP-0085，2026-10-29）
+
+> **状态**：EXP-0083 首次实机**全黑**（原因见 §36.4）；EXP-0084（detour 透传）取消；
+> 现行设计是**删掉 VV 侧 NR 编排，完全由 RT 探针的 NR detour 驱动**。EXP-0085 实机确认
+> 不再全黑；退出崩溃与窗口 reset 已修（§36.6），移动闪动定位到 MV 单位并修复（§36.7）。
+> **EXP-0088 实机通过**：移动 30–60 秒无闪动、正常退出无崩溃。NR 在 VV 的输入级接入
+> 完成（DLL `f0955df3`）。**已知限制**：F11/改分辨率后的 NR 合成纹理尺寸未验证。
+> 设计目标：把 NGX feature `0x12` 作为 R3 DLSS-SR 的**输入级**跑起来，不新增输出路径。
+
+### 36.1 管线
+
+```text
+引擎 color (R11G11B10, render res) ──\
+引擎 depth (R24G8,      render res) ───> prep -> RGBA16F / R32F / RG16F
+引擎 arg11 (MV,        render res) ──/                 |
+                                                       v
+                       RenderProbe::ngxEvaluateDetour（RT 的 NR 代码）
+                       nrCreate -> nrEnsureRenderSize -> nrRecord
+                       encode -> evaluate -> ratio composite
+                                                       |
+                                              gDecodedColor (RGBA16F, linear HDR)
+                                                       v
+                                   original NGX DLSS-SR evaluate（同一参数对象）
+                                                       v
+                                        PS + RTV -> arg10（原有 R3 输出）
+```
+
+- NR 的 `Color/Depth/MVec` 就是 VV `evaluateSr()` 写进参数对象的三张 prep 纹理
+  （RGBA16F/R32F/RG16F），**不碰引擎资源**；detour 在调用 original DLSS 之前把
+  `Color` 指到 NR 合成结果；
+- **VV 侧没有 NR 代码**：不建 feature、不调 `nrRecord`、不读 `nrFedResource`；
+  `nrCreate/nrEnsureRenderSize/nrRecord` 全部由 RT 探针现成的 detour 执行；
+- detour 用 `gNgxCreateOriginal` / `gNgxEvalOriginal` 建/调 NR，所以 NR 的 evaluate
+  不会再次进入 detour（无递归）；
+- `nr.enabled` 门控，默认关闭；`nr.placement` 在 VV 下也生效（0 = 放大前默认，
+  1 = 在 DLSS 之后处理 `dlssOut`），`nr.inputPercent` 同样生效。
+
+### 36.2 会话与创建
+
+- VV 不加载引擎 NGX；`VvDlssSr` 自己 `Init_ProjectID`（app id 与 NR 相同）并持有 core；
+- 第一次 `nr.enabled` 的 DLSS evaluate 上，detour 看到参数对象里的
+  Color/Depth/MotionVectors/Output/Width/Height 齐全，于是用**同一个会话**创建
+  feature `0x12`；core 从 exe 同目录加载 `nvngx_dlssnr.dll`；
+- 之后每帧 `nrEnsureRenderSize` 跟随 render size，尺寸变化走重建。
+
+### 36.3 状态与回退
+
+- prep 后 color/depth/MV 统一留在 `ALL_SHADER_RESOURCE`：对 DLSS 合法，也是 NR 桥
+  encode/composite 的前置（桥自己会还原）；这样切换 `nr.enabled` 时不会出现
+  「VV 设的状态」与「detour 的判断」不一致的窄窗口；
+- NR 创建失败、`nrEnsureRenderSize` 拒绝、evaluate≠1 或本帧未合成时，detour 不会改
+  `Color`，DLSS 读到的仍是 `colorHalf`——**整帧退回无 NR**，不拿上一帧结果顶替；
+- 合成纹理是「只增不减」的：窗口缩小后它会大于当前 render size，而我们的 DLSS evaluate
+  不设 Color subrect。**因此 VV 下的 NR 目前只保证固定窗口尺寸**；F11/改分辨率后的
+  行为不在本轮判据里，需另做 Color subrect 或按当前尺寸重建；
+- 关闭 `nr.enabled` 只停止调用，feature 常驻到进程结束（与 RT 路径的「应用不卸载」一致）。
+
+### 36.4 为什么删 VV 侧 NR（EXP-0083）
+
+第一版让 VV 自己调 `nrRecord`。RT 探针在 `_nvngx.dll` 上装了 `EvaluateFeature` detour，
+VV 的 DLSS evaluate 也会经过它，于是同一帧出现两次 `nrRecord`：
+
+- 桥的 encode/composite 描述符槽固定（6..10 / 12..16），后一次写入覆盖前一次的 encode 输入；
+- 第二次以参数对象里的 `Color`（上一次的 `gDecodedColor`）为 base，合成结果又回灌输入，
+  形成自反馈；实测 `out_after_w1.bmp max=5.96e-08`，画面几帧内全黑。
+  证据 `docs/agent/evidence/nr-vv-black-EXP-0083.log`、`nr-vv-detour-EXP-0083.log`。
+
+修复没有选「detour 对 VV handle 透传」（EXP-0084 已取消），而是**删掉 VV 侧编排**：
+detour 本来就是为「在引擎 DLSS 的 EvaluateFeature 前插入 NR」写的，VV 的 DLSS evaluate
+正好提供同样形状的参数对象。这样每帧只有一次 `nrRecord`，代码也只有一份 NR 实现。
+
+### 36.5 判据（EXP-0085）
+
+| # | 判据 | 不成立 |
+|---|---|---|
+| N1 | `[nr]` detour 出现 create / record；`[eval]` 只显示 VV SR handle（c/d/mv/o 非空）；不再有 `[vvsr] nr` 行 | 按 `[nr]` 返回码判断模型/驱动/会话 |
+| N2 | 画面不黑、`sr arg10` 连续 `eval=1`、HUD/手/准星保留 | 查 NR 输入域与合成纹理；同帧 dump |
+| N3 | 关掉 `nr.enabled` 后回到无 NR 输入，不崩 | 查 detour 的 falling-edge Color 归还 |
+
+代价：NR 前档 ~3.5 ms @1485×835（RT 实测），叠加 DLSS ~1.5 ms。首次启用有模型加载的一次性卡顿。
+
+### 36.6 EXP-0085 的两个新问题（已修，待 EXP-0086/0087）
+
+**退出崩溃**（trace `nr-vv-exit-crash-EXP-0085.log`）：栈是
+`evaluateSr → ngxEvaluateDetour:1146 → original DLSS`，崩在 `nvwgf2umx.dll`。日志里
+`[nr] 把引擎 Color 交还 color=0x17609432720` 的指针就是 `colorHalf`（`[desc] fmt=10 1280x720`），
+而 `vv::sr::release()` 已经先把它释放了；`nrShutdown` 在释放之后又把该悬空指针写回 NGX 参数对象，
+下一帧 DLSS evaluate 读它。修法：
+
+- `VvSr` 增加 `gRecordMutex` / `gReleased`：`recordInternal` 全程持锁，`release()` 先置
+  `gReleased` 再等锁，保证录帧结束后才释放纹理/PSO；
+- `NeuroDragon::disable()` 先 `vv::sr::setEnabled(false)`（停注入），再 release；
+- `nrShutdown()` 退出时**不再**回写 `Color`（`nrUnload()` 仍保留回写，它跑在渲染线程）。
+
+**周期性闪动**（EXP-0085 用户「明显的闪动」）：`[nr] 窗口 #0/#1/#2` 每 600 次求值
+（~12 s）开一个诊断窗口，窗口起点 `nrReset = true` 给 NR 发 `Reset=1`，时域历史被清空。
+诊断窗口只该管计时/dump。修法：窗口起点不再 reset；换世界/进出存档时改发一次
+`nrRequestReset()`（NR + engine DLSS 双侧），显式重置热键不变。换世界的监听器现在**无论
+启动时 NR 是否开启都注册**，因为 VV 是在面板里运行时开启 NR 的；否则 detour 收不到换关卡的
+信号，NR 历史会跨世界残留。EXP-0087 实机确认窗口 reset 已消失，但**移动时仍闪** ⇒ 另有原因。
+
+### 36.7 移动才闪：MV 单位（EXP-0087 fail → EXP-0088）
+
+VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution`），而 NR detour
+沿用了 RT 的归一化契约：把参数对象的 `Width/Height`（1280/720）当 MV scale 传给
+`nrRecord`。更糟的是 `nrRecord` 会把**共享参数对象**的 unprefixed `MV.Scale.X/Y` 写成
+`guideWidth/Height`，随后 original DLSS evaluate 也读这个值 ⇒ NR 和 DLSS 都把像素向量再乘
+1280。静止时 MV≈0 看不出来，移动时历史重投影飞天，表现就是闪/拖影。
+
+修法：
+
+- detour 从参数对象读 `MV.Scale.X/Y`（float）作为 `nrRecord` 的 `motionVectorScale`：
+  VV 是 1.0，RT 是 Width/Height；读不到才退回 width/height；
+- `nrRecord` 的 unprefixed `MV.Scale.X/Y` 改成写**同一个有效 scale**（四舍五入，最小 1），
+  不再写 guideWidth/Height；变化时打一行 `[nr] MV scale x,y (guide WxH)`；
+- `evaluateSr` 在 evaluate 后回读一次 `MV.Scale.X`（`[vvsr] sr readback`），证明 detour
+  没有再把 1.0 覆盖成 1280。
+
+方向没有改：VV 的 `{-z,+w}` 与 RT 的 MV 都是 current→previous；差异在单位/缩放，不在符号。
+
+**EXP-0088 结果**：`[nr] MV scale 1.000,1.000 (guide 1280x720)`；用户「已完成，无闪动」；
+12:56:31 正常退出，无新 crash dump。证据 `docs/agent/evidence/nr-vv-mv-scale-EXP-0088.log`。

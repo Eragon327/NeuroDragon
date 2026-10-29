@@ -323,6 +323,41 @@ color（输出分辨率）小，310.x 运行时接不接受。
 - release 已部署主目录（DLL SHA-256 `fd90f578…`）；TEST 备份 `.bak-test-placement`，
   改动前备份 `.bak-before-placement`。
 
+### 7.6 VV 路径（2026-10-29，EXP-0083 → EXP-0085）
+
+VV 不加载引擎 NGX，但 VV 的 DLSS-SR 自己有一个 `Init_ProjectID` 会话。NR **完全由 RT 探针的
+`ngxEvaluateDetour` 驱动**：它在 VV 的 DLSS evaluate 上看到参数对象里的
+Color/Depth/MotionVectors/Output/Width/Height，于是用同一个会话 `nrCreate`，之后每帧
+`nrEnsureRenderSize` + `nrRecord`，再调用 original DLSS。创建/求值用的是
+`gNgxCreateOriginal`/`gNgxEvalOriginal`，所以 NR 自己的 evaluate 不会再次进入 detour。
+
+- VV 侧**没有 NR 编排**：只把 prep 的 color/depth/MV 留在 `ALL_SHADER_RESOURCE`，其余交给
+  detour；NR 的输入是 VV 的 RGBA16F/R32F/RG16F 私有纹理，输出 `gDecodedColor` 再交给 DLSS，
+  `arg10` 输出路径不变；
+- `nr.enabled` 门控，`nr.placement`（before/after）与 `nr.inputPercent` 在 VV 下同样生效；
+- 失败/未合成时 detour 不改 `Color`，DLSS 读回 `colorHalf`（整帧无 NR）；
+- **已知限制**：合成纹理「只增不减」，窗口缩小后大于 render size，而 VV 的 DLSS 不设 Color
+  subrect；固定尺寸之外的 resize 行为未验证。
+
+第一版曾在 VV 里自己调 `nrRecord`，与 detour 同一帧跑两次：固定描述符槽被后一次覆盖，
+第二次又以 `gDecodedColor` 为 base 自反馈，画面数帧内全黑（EXP-0083）。修复是删掉 VV 侧
+编排，只留 detour 这一份 NR 代码。详见 [vv.md §36](vv.md)。
+
+EXP-0085 又暴露两条 NR 侧问题（均已修）：
+
+- **退出崩溃**：`nrShutdown()` 曾在 `vv::sr::release()` 之后把已释放的 `colorHalf` 写回
+  参数对象，下一帧 DLSS evaluate 在驱动里崩。退出路径不再回写 `Color`；`nrUnload()`（渲染
+  线程）仍保留回写。
+- **周期性闪动**：detour 曾在每个 600 次求值的诊断窗口起点发 `DLSSNR.Reset=1`，NR 历史
+  每 ~12 s 被清空。窗口起点不再 reset；换世界时用 `nrRequestReset()` 做双侧重置。
+- **移动才闪（MV 单位）**：`nrRecord` 默认把 `motionVectorScale = width/height` 当归一化
+  MV；VV 的 `mvRg32` 已是像素（`MV.Scale=1`），而且 unprefixed `MV.Scale` 会被写成
+  `guideWidth/Height`，连带 original DLSS 也按 1280× 重投影。现在 detour 从参数对象读
+  `MV.Scale.X/Y` 传给 `nrRecord`，unprefixed 写同一个有效值；方向仍为 current→previous。
+
+**EXP-0088 通过**（2026-10-29）：`[nr] MV scale 1.000,1.000 (guide 1280x720)`，用户确认
+移动无闪动、退出不崩。NR 在 VV 的接入到此可用；`nr.enabled` 仍是 opt-in。
+
 ## 8. 已完成 / 未完成
 
 ### 8.1 已完成

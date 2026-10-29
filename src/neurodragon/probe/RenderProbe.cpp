@@ -114,6 +114,13 @@ struct NgxParamProbe {
         return value;
     }
 
+    [[nodiscard]] float f32(char const* name) const {
+        float value = 0.0f;
+        using Get   = int (*)(void*, char const*, float*);
+        slot<Get>(14)(self, name, &value);
+        return value;
+    }
+
     [[nodiscard]] void* resAny(char const* name, int* slotOut = nullptr) const {
         static constexpr int kSlots[] = {8, 9, 14};
         using Get                     = int (*)(void*, char const*, void**);
@@ -894,6 +901,21 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             nr::queueColorDumpN(3, cmdList, const_cast<void*>(out), name, 0);
         }
 #endif
+        // The MV texture and its scale belong together. The RT path stores
+        // normalized vectors and writes MV.Scale = Width/Height; the VV path
+        // prepares pixel vectors and writes MV.Scale = 1. Read the scale the DLSS
+        // evaluate itself uses instead of assuming RT's convention (EXP-0088: the
+        // width/height fallback multiplied VV's pixel vectors by 1280 again, which
+        // only shows while moving).
+        float mvScaleX = static_cast<float>(width);
+        float mvScaleY = static_cast<float>(height);
+        if (validParamObj(const_cast<void*>(params))) {
+            NgxParamProbe scaleProbe{const_cast<void*>(params)};
+            float const   sx = scaleProbe.f32("MV.Scale.X");
+            float const   sy = scaleProbe.f32("MV.Scale.Y");
+            if (sx > 0.0f) mvScaleX = sx;
+            if (sy > 0.0f) mvScaleY = sy;
+        }
         [[maybe_unused]] bool const recorded = nr::nrRecord(
             cmdList,
             nrPlacement == 0 ? color : out,
@@ -901,8 +923,8 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             mv,
             nrGuideW,
             nrGuideH,
-            static_cast<float>(width),
-            static_cast<float>(height),
+            mvScaleX,
+            mvScaleY,
             1,
             nrReset,
             nrReplace ? const_cast<void*>(params) : nullptr,
@@ -1056,6 +1078,10 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             gNrWindowIndex = -1;
             gNrWindowOpen  = false;
             gNrReportAt    = 0;
+            // Entering/leaving a world invalidates the temporal history: both NR and
+            // the engine DLSS get one Reset=1. This replaces the old window-start
+            // reset, which fired on the diagnostic schedule instead of on an event.
+            nr::nrRequestReset();
             ND_DEBUG("[nr] 窗口重新锚定 f={}（此前窗口全部作废）", n);
         }
 
@@ -1129,8 +1155,13 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 auto const mvInfo = nr::describe(mv);
                 nrGuideW          = mvInfo.width ? static_cast<unsigned>(mvInfo.width) : width;
                 nrGuideH          = mvInfo.height ? static_cast<unsigned>(mvInfo.height) : height;
-                nrReset           = n == gNrWindowStart;
-                nrReady           = true;
+                // The diagnostic window is timing/dump bookkeeping, not a temporal
+                // event. Resetting NR at every window start wiped its history about
+                // once every 600 evaluations, which the VV product path shows as a
+                // visible flash (EXP-0085). Real resets come from level changes and
+                // the explicit reset hotkey below.
+                nrReset = false;
+                nrReady = true;
             }
             if (nrPlacement == 0 && nrReady) {
                 recordNrFrame();
@@ -1488,9 +1519,10 @@ bool install() {
     nr::nrSetModDirectory(modDirFull.c_str());
 #endif
     neurodragon::log::write(0, gNrEnabled ? "nr.info.enabled"_tr() : "nr.info.disabled"_tr());
-    if (gNrEnabled) {
-        registerLevelListeners();
-    }
+    // Registered regardless of the startup value: NR can be enabled at runtime from
+    // the panel, and its temporal history still has to be reset on a level change
+    // (the VV path has no other level signal in the NR detour).
+    registerLevelListeners();
     startWatcher();
     installSrFrameContextHook();
     return true;

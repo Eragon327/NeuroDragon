@@ -1,5 +1,5 @@
 {
-  "goal": "在 MCBE VV（Vibrant Visuals）渲染路径里，用 NeuroDragon 自己的 DLSS-SR 替换引擎的 TAAU 上采样；HUD / 手 / 准星与切场景行为保持不变。",
+  "goal": "在 MCBE VV（Vibrant Visuals）渲染路径里，用 NeuroDragon 自己的 DLSS-SR 替换引擎的 TAAU 上采样，并把 NR（NGX feature 0x12）接入同一条管线作为 DLSS 的输入；HUD / 手 / 准星与切场景行为保持不变。",
   "criteria": [
     {
       "id": "S1",
@@ -57,10 +57,10 @@
     }
   ],
   "out_of_scope": [
-    "NR 位置轴与 NR 画质调参",
     "FG（帧生成）与 RR（光线重建）",
-    "RT 路径的 SR/NR 行为"
+    "RT 路径的 SR/NR 行为",
+    "VV 里的 NR 位置轴（固定放大前）与 NR 画质调参"
   ],
   "stage": 6,
-  "updated": "2026-10-28T23:06:49.061+08:00"
+  "updated": "2026-10-29T11:19:06.020+08:00"
 }

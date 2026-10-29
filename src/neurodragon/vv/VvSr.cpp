@@ -156,6 +156,13 @@ std::atomic<unsigned> gManualReset{0};
 // The product switch's current state (config `sr.vvEnabled`), so syncConfig() only acts
 // on a change instead of re-arming every frame.
 std::atomic<bool> gEnabled{false};
+// Serialises recordInternal() against release(). The render thread may still be
+// recording an injected list when the mod is disabled; freeing the pipeline textures
+// under it is a use-after-free (EXP-0085 exit crash). release() takes this lock after
+// setting gReleased, so an in-flight record finishes before anything is released and
+// a later frame refuses to start.
+std::mutex       gRecordMutex;
+std::atomic<bool> gReleased{false};
 // F2: copy this frame's TAAU output (arg10, before our PS write) into taauRef, so the
 // engine's result and the DLSS result of the *same* frame can be compared offline.
 std::atomic<bool> gCaptureTaaRef{false};
@@ -971,6 +978,14 @@ MvFrame decodeMvFrame() {
 }
 
 bool recordInternal(void* commandListVoid, void* arg10Void) {
+    if (gReleased.load(std::memory_order_acquire)) {
+        return false;
+    }
+    // Held for the whole record: release() waits here before freeing the pipeline.
+    std::lock_guard recordLock(gRecordMutex);
+    if (gReleased.load(std::memory_order_acquire)) {
+        return false;
+    }
     auto* const list   = static_cast<ID3D12GraphicsCommandList*>(commandListVoid);
     auto* const arg10  = static_cast<ID3D12Resource*>(arg10Void);
     auto* const device = static_cast<ID3D12Device*>(probe::vv::engineDevice());
@@ -1254,13 +1269,18 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     }
     list->Dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
-    // The DLSS evaluate reads the prepared buffers, so they become SRVs here.
-    transition(list, gPipeline.colorHalf, gPipeline.colorState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    gPipeline.colorState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    transition(list, gPipeline.depthR32, gPipeline.depthState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    gPipeline.depthState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    transition(list, gPipeline.mvRg32, gPipeline.mvState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    gPipeline.mvState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    // The DLSS evaluate reads the prepared buffers, so they become SRVs here. The
+    // NR detour's encode/composite assume ALL_SHADER_RESOURCE and restore it
+    // themselves, so the inputs are published in that state unconditionally: it is
+    // valid for DLSS too, and it removes the toggle-frame disagreement between this
+    // transition and the detour's own `nr.enabled` read.
+    D3D12_RESOURCE_STATES const srInputState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+    transition(list, gPipeline.colorHalf, gPipeline.colorState, srInputState);
+    gPipeline.colorState = srInputState;
+    transition(list, gPipeline.depthR32, gPipeline.depthState, srInputState);
+    gPipeline.depthState = srInputState;
+    transition(list, gPipeline.mvRg32, gPipeline.mvState, srInputState);
+    gPipeline.mvState = srInputState;
     transition(list, gPipeline.mvRaw, gPipeline.mvRawState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     gPipeline.mvRawState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
@@ -1305,7 +1325,12 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // (EXP-0074); if the panorama's MV does not describe its rotation this
             // smears, which is what the next run checks.
             bool const reset = spatial || pending > 0 || manual > 0 || !mv.valid || gap;
-            dlssEvaluated    = dlss::evaluateSr(
+            // NR is driven by the RT probe's EvaluateFeature detour: it sees this
+            // call's Color/Depth/MotionVectors from the parameter object, records
+            // feature 0x12 on this same command list, and points Color at its
+            // composite before the original evaluate runs. The VV side only has to
+            // leave the prepared inputs in ALL_SHADER_RESOURCE (above).
+            dlssEvaluated = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,
                 gPipeline.depthR32,
@@ -1447,6 +1472,10 @@ Stats stats() {
 }
 
 void release() {
+    // Stop new records first, then wait for the one that may already be running. The
+    // detour/NR state is left to nrShutdown(); here only our own pipeline goes away.
+    gReleased.store(true, std::memory_order_release);
+    std::lock_guard recordLock(gRecordMutex);
     std::lock_guard lock(gMutex);
     for (ID3D12Resource** resource :
          {&gPipeline.colorHalf,

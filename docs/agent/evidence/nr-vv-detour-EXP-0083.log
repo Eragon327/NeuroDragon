@@ -1,0 +1,13 @@
+[2026-10-29 11:27:39.396 DBG][NeuroDragon] [eval] f=1200 tid=32912 cl=0x2ab06ee1bf0 h=0x2ab13dd7110 1280x720 c=0x2ab06ee4120 d=0x2ab06ee4ab0 mv=0x2ab06ee5440 o=0x2ab06ee2e00 ret=0x1
+[2026-10-29 11:27:45.440 DBG][NeuroDragon] [eval] f=1800 tid=32912 cl=0x2ab06ee1bf0 h=0x2ab13dd7110 1280x720 c=0x2ab06ee4120 d=0x2ab06ee4ab0 mv=0x2ab06ee5440 o=0x2ab06ee2e00 ret=0x1
+[2026-10-29 11:27:47.652 IFO][NeuroDragon] [vvsr] nr: feature 0x12 create ok (1280x720 -> 2560, placement=before)
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [nr] 本窗参数 Style=0 Enabled=1 Intensity=1.00 Skin=1.00 DepthInverted=1 Replace=6 NrEncode=3 NRReset=0（窗口 #-1）
+[2026-10-29 11:27:47.659 IFO][NeuroDragon] [vvsr] nr: eval=1 composite=-1 fed=no (1280x720)
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [nr] 窗口 #0 开始 f=1957..2016，dump 于 1987（每次求值都合成，窗口只影响计时/dump）
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [nr] 本窗参数 Style=0 Enabled=1 Intensity=1.00 Skin=1.00 DepthInverted=1 Replace=6 NrEncode=3 NRReset=0（窗口 #0）
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [nr] 窗口 #0 首帧 f=1957 placement=before 指南=1280x720 引擎渲染=1280x720 recorded=true（DepthInverted 暂按 1=反向 Z）
+[2026-10-29 11:27:47.681 IFO][NeuroDragon] [vvsr] nr: eval=1 composite=4 fed=yes (1280x720)
+[2026-10-29 11:27:47.681 WRN][NeuroDragon] [nr] 引擎参数对象的 Color 仍是我方纹理：引擎没有每帧重写 Color
+[2026-10-29 11:27:47.695 IFO][NeuroDragon] [vvsr] nr: eval=1 composite=4 fed=yes (1280x720)
+[2026-10-29 11:27:48.051 DBG][NeuroDragon] [nr] 窗口 #0 统计：
+[2026-10-29 11:27:50.167 DBG][NeuroDragon] [eval] f=2400 tid=32912 cl=0x2ab06ee1bf0 h=0x2ab06bd37f0 1280x720 c=0x0 d=0x0 mv=0x0 o=0x0 ret=0x1

@@ -144,6 +144,8 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // Replace mode actually swaps. Diagnostic only: dumped so a frozen picture can
 // be attributed to our write versus the upscaler.
 [[nodiscard]] void* nrFedResource();
+
+// Domain of the resource above: 0 = linear HDR, 1 = display-encoded.
 [[nodiscard]] int   nrFedDomain();
 
 // The tone-mapped, gamma-encoded copy of Color that the network is fed (item

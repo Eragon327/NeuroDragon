@@ -2584,7 +2584,12 @@ void nrShutdown() {
     // use-after-free on the GPU. Objects are deliberately leaked instead - the
     // process is either exiting or the mod stays PINned anyway, and leaking a few
     // hundred MB once is strictly better than taking the machine down.
-    nrRestoreEngineColor(gSwapParams, gEngineColor);
+    // No color hand-back here: this path runs on the disable thread while the render
+    // thread may still be evaluating, and the target may already have been retired by
+    // the VV pipeline's release (EXP-0085: handing back colorHalf after vv::sr::release
+    // left a released pointer in the parameter object and the next DLSS evaluate
+    // crashed inside nvwgf2umx). The process is exiting; the NR-owned composite stays
+    // alive (deliberately leaked) and nothing reads it after this point.
     gNr.shutdown = true;
     gNr.created  = false; // hooks pass through from here on
     NR_DEBUG("[nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）");
@@ -2676,9 +2681,9 @@ void nrRequestUnload() { gUnloadRequested.store(true, std::memory_order_release)
 bool nrTakeUnloadRequest() { return gUnloadRequested.exchange(false, std::memory_order_acq_rel); }
 
 #ifdef TEST
-void* nrOutputResource() { return gNr.output; }
-
 void* nrFedResource() { return gFedResource; }
+
+void* nrOutputResource() { return gNr.output; }
 
 int nrFedDomain() { return gFedDomain; }
 
@@ -2869,7 +2874,7 @@ void compositeGain(
     }
 #ifdef TEST
     gFedResource = gDecodedColor;
-    gFedDomain   = 0;
+    gFedDomain = 0;
 #endif
 #ifdef TEST
     static bool logged = false;
@@ -3011,13 +3016,13 @@ bool nrRecord(
 
     // Motion-vector scale: 1.0 for pixel-space vectors, the render size for
     // normalised ones. Getting this wrong leaves the temporal history fixed to the
-    // screen (ghost clouds, ), because nothing is reprojected.
+    // screen (ghost clouds), because nothing is reprojected.
     //
-    // The engine's own DLSS is driven with MV.Scale = render width/height (see the
-    // parameter table in docs/D §6.16), i.e. its motion vectors are normalised.
-    // The probe passes exactly those numbers in; defaulting to 1.0 here was the
-    // reason NR's history never reprojected: every halo stayed nailed to the same
-    // screen pixels while the camera moved. MVecScale= still overrides both axes.
+    // The caller passes the scale the DLSS evaluate itself uses: the engine path
+    // writes MV.Scale = Width/Height (normalised vectors), the VV path writes 1.0
+    // (prep already multiplied by the render size). Do not fall back to width/height
+    // here for VV: that multiplies pixel vectors by 1280 again and only shows while
+    // moving. MVecScale= still overrides both axes.
     float const fallbackX = motionVectorScaleX > 0.0f ? motionVectorScaleX : static_cast<float>(w);
     float const fallbackY = motionVectorScaleY > 0.0f ? motionVectorScaleY : static_cast<float>(h);
     float const mvScaleX  = config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : fallbackX;
@@ -3028,14 +3033,24 @@ bool nrRecord(
     // setup: MV.Scale.X=1485 / MV.Scale.Y=835, Width/Height/OutWidth/OutHeight).
     // Without them the feature sees a zero motion-vector scale, i.e. "the camera
     // never moves": history sticks to the screen (ghost clouds/silhouettes).
-    unsigned const mvX = static_cast<unsigned>(
-        config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : static_cast<float>(guideWidth)
-    );
-    unsigned const mvY = static_cast<unsigned>(
-        config::get().nr.mvecScale >= 0.0f ? config::get().nr.mvecScale : static_cast<float>(guideHeight)
-    );
+    //
+    // This object can be the same one the DLSS evaluate reads (VV passes its own
+    // capability object). It must carry the same numeric scale, not guideWidth:
+    // writing 1280 over the VV value of 1.0 made both NR and DLSS reproject pixel
+    // vectors 1280x too far (EXP-0088, only visible while moving).
+    unsigned const mvX = static_cast<unsigned>(std::lround(std::max(1.0f, mvScaleX)));
+    unsigned const mvY = static_cast<unsigned>(std::lround(std::max(1.0f, mvScaleY)));
     paramSetU32(params, "MV.Scale.X", mvX);
     paramSetU32(params, "MV.Scale.Y", mvY);
+    {
+        static float lastX = -1.0f;
+        static float lastY = -1.0f;
+        if (mvScaleX != lastX || mvScaleY != lastY) {
+            lastX = mvScaleX;
+            lastY = mvScaleY;
+            nrLog(1, "[nr] MV scale %.3f,%.3f (guide %ux%u)", mvScaleX, mvScaleY, guideWidth, guideHeight);
+        }
+    }
     // Deliberately NOT touching Width/Height/OutWidth/OutHeight here: if this
     // parameter object is the one the engine's own SR also reads, writing our 1:1
     // guide size into OutWidth/OutHeight makes the engine's upscaler write a

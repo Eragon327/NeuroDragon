@@ -1,0 +1,171 @@
+[2026-10-29 11:27:46.128 IFO][NeuroDragon] [sr] ctx #8400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-29 11:27:46.130 IFO][NeuroDragon] [vv] content boundary split=68/71 list=0x2a9d1eaaa00 via=signature+hud marks=1 sigs=70
+[2026-10-29 11:27:46.140 IFO][NeuroDragon] [vv] frame #8401 lists=71: 1:v0x0z d0 2:v2560x1440z d0 3:v1280x720 d0 4:v1x1z d0 5:v1x1z d0 6:v1280x720 d0 7:v1280x720 d0 8:v1280x720 d0 9:v1280x720z d0 10:v1280x720z d327 x1404 11:v1280x720z d108 x138 12:v1280x720 d0 13:v1280x720 d190 x1536 15:v1280x720 d1 x6 16:v1280x720z d1 x6 17:v20x12z d0 18:v20x12z d190 x1536 19:v20x12z d0 20:v20x12z d190 x1536 21:v2048x2048 d0 22:v2048x2048 d512 x4992 23:v2048x2048 d22 x6228 24:v2048x2048 d246 x138 25:v2048x2048 d0 26:v64x64 d7 x144 27:v2048x2048 d0 28:v2048x2048 d1 x12528 29:v1x1z d0 30:v1x1z d0 31:v1x1z d0 32:v1280x720 d1 x6 33:v1280x720 d1 x6 34:v1280x720z d1 x6 35:v1280x720z d190 x1536 36:v1280x720 d190 x1536 37:v1280x720z d1 x6 38:v1280x720z d1 x6 39:v1280x720z d1 x6 40:v1280x720 d1 x6 41:v1280x720 d0 42:v1280x720z d1 x6 43:v1280x720z d2 x12528 44:v1280x720z d10 x372 45:v1280x720z d11 x12528 46:v1280x720 d1 x72 47:v1280x720z d1 x72 48:v2560x1440 d1 x6 49:v1x1z d0 50:v640x360 d1 x6 51:v320x180 d1 x6 52:v160x90 d1 x6 53:v80x45 d1 x6 54:v40x22 d1 x6 55:v20x11 d1 x6 56:v40x22 d1 x6 57:v1x1z d0 58:v1x1z d0 59:v80x45 d1 x6 60:v80x45 d1 x6 61:v160x90 d1 x6 62:v320x180 d1 x6 63:v640x360 d1 x6 64:v1x1z d0 65:v1280x720 d1 x6 66:v1280x720 d1 x6 67:v2560x1440z d1 x6 68:v2560x1440z d53 x6 69:v1024x1024 d170 x6
+[2026-10-29 11:27:46.621 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-29 11:27:46.641 IFO][NeuroDragon] [vv] inject fixed k=49/71 injected=1920 skipped=1
+[2026-10-29 11:27:46.891 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=1.000 enabled=true info=Upscaling Mode: Fallback
+[2026-10-29 11:27:47.001 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：开始…
+[2026-10-29 11:27:47.002 DBG][NeuroDragon] [nr] create：placement=before 域 1280x720（guide 1280x720）→ 特征 1280x720（100%）
+[2026-10-29 11:27:47.317 IFO][NeuroDragon] [nr] encode shader compile diagnostics: E:\LeviLauncher\versions\1.26.51.01-r3\nr_encode(176,16-32): warning X3571: pow(f, e) will not work for negative f, use abs(f) or conditionally handle negative values if you expect them
+E:\LeviLauncher\versions\1.26.51.01-r3\nr_encode(92,5): warning X4000: use of potentially uninitialized variable (HueGuard)
+
+[2026-10-29 11:27:47.371 DBG][NeuroDragon] [nr] encode PSO ok (170536 bytes)
+[2026-10-29 11:27:47.374 DBG][NeuroDragon] [nr] HDR↔LDR shader 就绪（Reinhard + gamma 2.2 / 反变换）
+[2026-10-29 11:27:47.374 DBG][NeuroDragon] [nr] core module=00007FF898A50000
+[2026-10-29 11:27:47.379 DBG][NeuroDragon] [nr] core GetFeatureRequirements(0x12) ret=0x00000001 supported=0 (0=ok,1=check,2=driver,4=adapter,8=os,16=notimpl) minHW=0x1B0 minOS=10.0.0
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [nr] core GetFeatureRequirements(0x01) ret=0x00000001 supported=0 (0=ok,1=check,2=driver,4=adapter,8=os,16=notimpl) minHW=0x160 minOS=10.0.0
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [nr] 引擎初始化上下文 appId=0 dataPath=<none>（0/空 表示没抓到）
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [nr] runtime module=00007FF8857B0000（由 core 自己从应用目录加载）
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [sr] wrapped optimal-settings callback params=000002AD3A29BFD0 orig=00007FF895626290
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [nr] params vtable ours=00007FF898B059B8 engine=00007FF898B059B8 same=1
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [nr] create: networkPreset=0 (0=默认, 1=上一版)
+[2026-10-29 11:27:47.382 DBG][NeuroDragon] [nr] 参数往返 DLSSNR.Width=1280 期望=1280
+[2026-10-29 11:27:47.382 IFO][NeuroDragon] [sr] create stack: exe+19023f2bd exe+190230324 exe+19022e976 exe+1902a710e exe+1902a9b9f exe+1902464a0 exe+190245cf6 exe+190290cb9
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [create-export] feature=18 ret=0x1 handle=0x2ab06bd37f0
+[2026-10-29 11:27:47.652 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：完成，用时 651 ms
+[2026-10-29 11:27:47.652 IFO][NeuroDragon] [vvsr] nr: feature 0x12 create ok (1280x720 -> 2560, placement=before)
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [nr] 本窗参数 Style=0 Enabled=1 Intensity=1.00 Skin=1.00 DepthInverted=1 Replace=6 NrEncode=3 NRReset=0（窗口 #-1）
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [nr] 资源往返校验 DLSSNR.Color=000002AD6FB01790 写入=000002AD6FB01790 ok
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [res] Color f=1956 -> null
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [res] Depth f=1956 -> null
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [res] MotionVectors f=1956 -> null
+[2026-10-29 11:27:47.652 DBG][NeuroDragon] [res] Output f=1956 -> null
+[2026-10-29 11:27:47.659 IFO][NeuroDragon] [vvsr] nr: eval=1 composite=-1 fed=no (1280x720)
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [res] Color f=1957 -> set
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [res] Depth f=1957 -> set
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [res] MotionVectors f=1957 -> set
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [res] Output f=1957 -> set
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [nr] 窗口 #0 开始 f=1957..2016，dump 于 1987（每次求值都合成，窗口只影响计时/dump）
+[2026-10-29 11:27:47.659 DBG][NeuroDragon] [nr] placement 切换 → before（重建 + 双侧 Reset）
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [nr] 本窗参数 Style=0 Enabled=1 Intensity=1.00 Skin=1.00 DepthInverted=1 Replace=6 NrEncode=3 NRReset=0（窗口 #0）
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [res] Color f=1958 -> null
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [res] Depth f=1958 -> null
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [res] MotionVectors f=1958 -> null
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [res] Output f=1958 -> null
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [nr] 一次性重置：给引擎 DLSS 发一次 Reset=1（进存档或热键）
+[2026-10-29 11:27:47.660 DBG][NeuroDragon] [nr] 窗口 #0 首帧 f=1957 placement=before 指南=1280x720 引擎渲染=1280x720 recorded=true（DepthInverted 暂按 1=反向 Z）
+[2026-10-29 11:27:47.680 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [nr] Replace=6 placement=before 生效：TRP Ratio 合成（strength=0.00 white=1.00 colour=1.00 maxRatio=2.00）
+[2026-10-29 11:27:47.681 IFO][NeuroDragon] [vvsr] nr: eval=1 composite=4 fed=yes (1280x720)
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] Color f=1960 -> set
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] Depth f=1960 -> set
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] MotionVectors f=1960 -> set
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] Output f=1960 -> set
+[2026-10-29 11:27:47.681 WRN][NeuroDragon] [nr] 引擎参数对象的 Color 仍是我方纹理：引擎没有每帧重写 Color
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] Color f=1961 -> null
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] Depth f=1961 -> null
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] MotionVectors f=1961 -> null
+[2026-10-29 11:27:47.681 DBG][NeuroDragon] [res] Output f=1961 -> null
+[2026-10-29 11:27:47.695 IFO][NeuroDragon] [vvsr] nr: eval=1 composite=4 fed=yes (1280x720)
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] Color f=1963 -> set
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] Depth f=1963 -> set
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] MotionVectors f=1963 -> set
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] Output f=1963 -> set
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] Color f=1964 -> null
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] Depth f=1964 -> null
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] MotionVectors f=1964 -> null
+[2026-10-29 11:27:47.695 DBG][NeuroDragon] [res] Output f=1964 -> null
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] Color f=1966 -> set
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] Depth f=1966 -> set
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] MotionVectors f=1966 -> set
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] Output f=1966 -> set
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] Color f=1967 -> null
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] Depth f=1967 -> null
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] MotionVectors f=1967 -> null
+[2026-10-29 11:27:47.710 DBG][NeuroDragon] [res] Output f=1967 -> null
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] Color f=1969 -> set
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] Depth f=1969 -> set
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] MotionVectors f=1969 -> set
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] Output f=1969 -> set
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] Color f=1970 -> null
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] Depth f=1970 -> null
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] MotionVectors f=1970 -> null
+[2026-10-29 11:27:47.726 DBG][NeuroDragon] [res] Output f=1970 -> null
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] Color f=1972 -> set
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] Depth f=1972 -> set
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] MotionVectors f=1972 -> set
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] Output f=1972 -> set
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] Color f=1973 -> null
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] Depth f=1973 -> null
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] MotionVectors f=1973 -> null
+[2026-10-29 11:27:47.741 DBG][NeuroDragon] [res] Output f=1973 -> null
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] Color f=1975 -> set
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] Depth f=1975 -> set
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] MotionVectors f=1975 -> set
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] Output f=1975 -> set
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] Color f=1976 -> null
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] Depth f=1976 -> null
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] MotionVectors f=1976 -> null
+[2026-10-29 11:27:47.755 DBG][NeuroDragon] [res] Output f=1976 -> null
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] Color f=1978 -> set
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] Depth f=1978 -> set
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] MotionVectors f=1978 -> set
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] Output f=1978 -> set
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] Color f=1979 -> null
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] Depth f=1979 -> null
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] MotionVectors f=1979 -> null
+[2026-10-29 11:27:47.771 DBG][NeuroDragon] [res] Output f=1979 -> null
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] Color f=1981 -> set
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] Depth f=1981 -> set
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] MotionVectors f=1981 -> set
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] Output f=1981 -> set
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] Color f=1982 -> null
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] Depth f=1982 -> null
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] MotionVectors f=1982 -> null
+[2026-10-29 11:27:47.786 DBG][NeuroDragon] [res] Output f=1982 -> null
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] Color f=1984 -> set
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] Depth f=1984 -> set
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] MotionVectors f=1984 -> set
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] Output f=1984 -> set
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] Color f=1985 -> null
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] Depth f=1985 -> null
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] MotionVectors f=1985 -> null
+[2026-10-29 11:27:47.801 DBG][NeuroDragon] [res] Output f=1985 -> null
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] Color f=1987 -> set
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] Depth f=1987 -> set
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] MotionVectors f=1987 -> set
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] Output f=1987 -> set
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] Color f=1988 -> null
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] Depth f=1988 -> null
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] MotionVectors f=1988 -> null
+[2026-10-29 11:27:47.822 DBG][NeuroDragon] [res] Output f=1988 -> null
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] Color f=1990 -> set
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] Depth f=1990 -> set
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] MotionVectors f=1990 -> set
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] Output f=1990 -> set
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] Color f=1991 -> null
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] Depth f=1991 -> null
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] MotionVectors f=1991 -> null
+[2026-10-29 11:27:47.841 DBG][NeuroDragon] [res] Output f=1991 -> null
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] Color f=1993 -> set
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] Depth f=1993 -> set
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] MotionVectors f=1993 -> set
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] Output f=1993 -> set
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] Color f=1994 -> null
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] Depth f=1994 -> null
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] MotionVectors f=1994 -> null
+[2026-10-29 11:27:47.856 DBG][NeuroDragon] [res] Output f=1994 -> null
+[2026-10-29 11:27:47.873 DBG][NeuroDragon] [dump] nr_dump_w0.bmp domain=encoded max=0.004 mean=0.0002 above1=0.00%
+[2026-10-29 11:27:47.893 DBG][NeuroDragon] [nr] dump out_after_w0.bmp written max=0.004333496 nz=2749364
+[2026-10-29 11:27:47.911 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=1.000 enabled=true info=Upscaling Mode: Fallback
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] Color f=1996 -> set
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] Depth f=1996 -> set
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] MotionVectors f=1996 -> set
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] Output f=1996 -> set
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] Color f=1997 -> null
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] Depth f=1997 -> null
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] MotionVectors f=1997 -> null
+[2026-10-29 11:27:47.911 DBG][NeuroDragon] [res] Output f=1997 -> null
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] Color f=1999 -> set
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] Depth f=1999 -> set
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] MotionVectors f=1999 -> set
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] Output f=1999 -> set
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] Color f=2000 -> null
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] Depth f=2000 -> null
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] MotionVectors f=2000 -> null
+[2026-10-29 11:27:47.926 DBG][NeuroDragon] [res] Output f=2000 -> null
+[2026-10-29 11:27:47.941 DBG][NeuroDragon] [res] Color f=2002 -> set
+[2026-10-29 11:27:47.941 DBG][NeuroDragon] [res] Depth f=2002 -> set
+[2026-10-29 11:27:47.941 DBG][NeuroDragon] [res] MotionVectors f=2002 -> set
+[2026-10-29 11:27:47.941 DBG][NeuroDragon] [res] Output f=2002 -> set
+[2026-10-29 11:27:47.941 DBG][NeuroDragon] [res] Color f=2003 -> null

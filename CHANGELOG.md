@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 功能（2026-10-29：VV 下接入 NR，opt-in）
+
+- **NR（NGX feature `0x12`）现在可以在 VV 路径作为 DLSS-SR 的输入级运行**：NR 的创建/尺寸跟随/
+  逐帧求值完全由 RT 探针现成的 `ngxEvaluateDetour` 驱动（`nrCreate` / `nrEnsureRenderSize` /
+  `nrRecord`），VV 侧只把 prep 的 RGBA16F / R32F / RG16F 留在 `ALL_SHADER_RESOURCE`。开关仍是
+  「神经渲染 → 启用神经渲染」+「应用」，默认关闭；`nr.placement` 与 `nr.inputPercent` 在 VV 下也生效。
+- 修复首轮接入的三处问题：同帧两次 `nrRecord` 导致描述符槽覆盖/自反馈（删除 VV 侧编排，只留 detour
+  一份实现）；退出时 `nrShutdown` 回写已释放的 `colorHalf` 导致 `nvwgf2umx` 崩溃（release 前停注入
+  并等录帧结束，退出时不回写）；诊断窗口起点清 NR 历史造成周期性闪动（改为换世界时
+  `nrRequestReset`）；移动闪动是 MV 单位错误（detour 把归一化 width/height 当像素 scale）——现在
+  从参数对象读 `MV.Scale`。
+- 已知限制：F11/改分辨率后的 NR 合成纹理尺寸未验证；固定窗口尺寸路径已通过 EXP-0088。
+
 ### 修复/研究（2026-10-26：运行时切 Bilinear、相机对象、MV 快照时机）
 
 - **P0-2 修复（已实机）**：`VvProbe::drawDetour` 在转发前快照 TAA context 的
