@@ -1,0 +1,20 @@
+# F2 same-frame comparison: sr_taauref_2560x1369_1.bin (TAAU output at the F2 cut)
+# vs sr_dlssout_2560x1369_1.bin (DLSS output), both linear HDR, camera static
+# (mv delta 0, prev_same=1). Capture 19:49:27, dump 19:49:34.
+# Metric: Reinhard-encoded domain (x/(1+x)), reported in 8-bit levels.
+
+taauref 2560x1369 fmt26 | dlssout 2560x1369 fmt10
+
+encoded per-channel means:
+  R: taau=0.064130 dlss=0.064428 delta=+0.000298  (0.08/255)
+  G: taau=0.078826 dlss=0.079182 delta=+0.000356  (0.09/255)
+  B: taau=0.096165 dlss=0.096868 delta=+0.000703  (0.18/255)
+  luma: taau=0.076953 dlss=0.077322 ratio=1.0048
+
+difference structure:
+  mean |dL| = 0.36/255   p99 = 6.44/255
+  edge decile = 0.65/255   flat half = 0.26/255   ratio = 2.52
+  best alignment dx,dy = 0,0   NCC = 0.9921
+
+=> no global colour cast (all channel biases < 0.2/255, luma within 0.5%);
+   the difference is concentrated on edges (detail), not a shift or a tint.
