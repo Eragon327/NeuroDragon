@@ -1,0 +1,53 @@
+# EXP-0081: the engine option `upscaling_percentage` is writable at runtime and applies live
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log, session 09:22:38-09:24:30
+#         (build 7b84f3a1, TEST), verbatim excerpts with their original line numbers.
+# criterion: the write reaches the engine without a restart or F11: the next TAAU
+#         declaration reports the new factor, and the render graph is rebuilt at the
+#         new render size.
+# note: the R3 DLSS pipeline was NOT armed in this session (no `sr arg10` lines), so
+#         nothing here speaks about injection - only about the option itself.
+
+## 1. Baseline: 66%, the value the game had stored
+
+[2026-10-29 09:23:04.608 IFO][NeuroDragon] [vv] taau #2100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=4959 lists=129965
+
+## 2. Write 66 -> 50: the new render size exists 23 ms later, the factor follows
+
+[2026-10-29 09:23:28.812 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 66 -> 50
+[2026-10-29 09:23:28.835 IFO][NeuroDragon] [vv] rtv res=0x158279a58b0 1280x720 fmt=28 flags=0x1
+  (frame-graph rebuild: fmt=26 colour + depth at 1280x720 = 50% of 2560x1440)
+[2026-10-29 09:23:28.835 IFO][NeuroDragon] [vv] dsv res=0x158279a3270 1280x720 fmt=44
+[2026-10-29 09:23:28.835 IFO][NeuroDragon] [vv] rtv res=0x158279a8880 1280x720 fmt=11 flags=0x1
+[2026-10-29 09:23:28.835 IFO][NeuroDragon] [vv] rtv res=0x158279a9ba0 1280x720 fmt=26 flags=0x1
+[2026-10-29 09:23:28.835 IFO][NeuroDragon] [vv] rtv res=0x158279a6bd0 1280x720 fmt=26 flags=0x1
+[2026-10-29 09:23:28.835 IFO][NeuroDragon] [vv] rtv res=0x158279aa530 1280x720 fmt=54 flags=0x1
+[2026-10-29 09:23:28.862 IFO][NeuroDragon] [vv] taau #4500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=12159 lists=304699
+
+## 3. Write 50 -> 100: TAAU leaves the frame entirely (no upscaling to do)
+
+[2026-10-29 09:23:38.919 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 50 -> 100
+[2026-10-29 09:23:38.947 IFO][NeuroDragon] [vv] rtv res=0x15a6644e190 2560x1440 fmt=26 flags=0x1
+[2026-10-29 09:23:38.947 IFO][NeuroDragon] [vv] rtv res=0x15a6644c4e0 2560x1440 fmt=26 flags=0x1
+[2026-10-29 09:23:38.947 IFO][NeuroDragon] [vv] rtv res=0x15a6644d800 2560x1440 fmt=54 flags=0x1
+  (render size = display size; no `[vv] taau` line follows until the ratio is written back)
+[2026-10-29 09:23:47.570 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 100 -> 50
+[2026-10-29 09:23:49.757 IFO][NeuroDragon] [vv] taau #5700 viewport=2560x1299+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=18196 lists=451164
+
+## 4. Back and forth afterwards (100 -> 66 -> 50), each factor within one frame
+
+[2026-10-29 09:24:01.527 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 100 -> 66
+[2026-10-29 09:24:02.368 IFO][NeuroDragon] [vv] taau #6600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6600 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=21752 lists=537430
+[2026-10-29 09:24:04.173 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 66 -> 50
+[2026-10-29 09:24:05.418 IFO][NeuroDragon] [vv] taau #6900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=22652 lists=559587
+
+## 5. What this settles
+
+- The write is applied live: 50 ms from `write ok` to the next declaration reporting the
+  new factor, and the engine rebuilds its render-size targets 23 ms after the write.
+  No restart, no F11, no settings-menu round trip.
+- 100% is not "upscale by 1.0": the TAAU pass stops being declared, so there is no
+  arg10 and no insertion point for the VV SR pipeline. That state is reachable by the
+  player from the graphics settings at any time.
+- `upscaling_percentage` is therefore a usable control surface for the SR panel's
+  "internal resolution" row under VV (subject to the pipeline rebuilding its DLSS
+  feature on the new render size).

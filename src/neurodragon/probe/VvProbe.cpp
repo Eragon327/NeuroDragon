@@ -14,6 +14,7 @@
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
 #include "ll/api/event/client/ClientJoinLevelEvent.h"
+#include "ll/api/event/world/ClientLevelTickEvent.h"
 #include "ll/api/memory/Hook.h"
 
 
@@ -303,6 +304,7 @@ std::atomic<void*> gEngineDevice{nullptr};
 std::atomic<bool>      gWorldLoaded{false};
 ll::event::ListenerPtr gJoinLevelListener{};
 ll::event::ListenerPtr gExitLevelListener{};
+ll::event::ListenerPtr gLevelTickListener{};
 // The TAAContext handed to the TAAU draw callback, kept per frame. It holds the
 // current/previous view-projection pair (+0x200/+0x240), the camera origins
 // (+0x280..) and the sub-pixel jitter (+0x1e4 ..) that the motion-vector
@@ -2966,18 +2968,27 @@ bool install() {
         auto& bus          = ll::event::EventBus::getInstance();
         gJoinLevelListener = bus.emplaceListener<ll::event::client::ClientJoinLevelEvent>([](auto&) {
             gWorldLoaded.store(true, std::memory_order_relaxed);
-            // TEST: the client thread is right here, so the runtime option switch
-            // (A2) does not have to wait for the executor queue that did not deliver
-            // during startup (EXP-0018/0019). No-op when nothing is pending.
-            options::applyNow();
+            // TEST: the client thread is right here, so a queued option write (A2, or
+            // the panel) does not have to wait for the executor queue that did not
+            // deliver during startup (EXP-0018/0019). No-op when nothing is pending.
+            options::applyPending();
         });
         gExitLevelListener = bus.emplaceListener<ll::event::client::ClientExitLevelEvent>([](auto&) {
             gWorldLoaded.store(false, std::memory_order_relaxed);
         });
+        // The join event only fires once per world; a panel write happens while the
+        // level is already running. The level tick is the client-thread heartbeat that
+        // is guaranteed to keep running (the executor drains itself on it, §17.3), so
+        // a queued write lands within one tick instead of waiting for a two-second
+        // retry window.
+        gLevelTickListener = bus.emplaceListener<ll::event::world::ClientLevelTickEvent>([](auto&) {
+            options::applyPending();
+        });
         utils::logger().info(
-            "[vv] level listeners join={} exit={}",
+            "[vv] level listeners join={} exit={} tick={}",
             gJoinLevelListener != nullptr,
-            gExitLevelListener != nullptr
+            gExitLevelListener != nullptr,
+            gLevelTickListener != nullptr
         );
     }
 
@@ -3052,6 +3063,10 @@ void uninstall() {
         if (gExitLevelListener) {
             bus.removeListener<ll::event::client::ClientExitLevelEvent>(gExitLevelListener);
             gExitLevelListener = nullptr;
+        }
+        if (gLevelTickListener) {
+            bus.removeListener<ll::event::world::ClientLevelTickEvent>(gLevelTickListener);
+            gLevelTickListener = nullptr;
         }
         gWorldLoaded.store(false, std::memory_order_relaxed);
     }
@@ -3655,9 +3670,6 @@ void onPresent() {
         }
     }
     lastPresent = now;
-    // TEST only: hand a queued runtime option request (upscaling_mode -> Bilinear)
-    // over to the client thread. Cheap when nothing is queued.
-    options::applyRequested();
 }
 
 void onSwapChainResize() {

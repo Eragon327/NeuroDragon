@@ -2,16 +2,15 @@
 
 #include "neurodragon/utils/Utils.h"
 
-#include <atomic>
-#include <chrono>
-#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
 #ifdef TEST
 #include "ll/api/service/TargetedBedrock.h"
-#include "ll/api/thread/ClientThreadExecutor.h"
 
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/options/IOptionRegistry.h"
@@ -20,147 +19,182 @@
 #endif
 
 namespace neurodragon::probe::options {
-namespace {
-
-std::atomic<bool> gRequested{false};
-std::atomic<bool> gDone{false};
-
-} // namespace
 
 #ifdef TEST
 namespace {
 
-using ll::thread::ClientThreadExecutor;
-
-// The engine registers every saved option under a string tag (the key in
-// options.txt). `OptionID` is shipped empty, so the tag is the only stable name in
-// these headers; isValidOption() is the bounds-checked query, which is what makes a
-// scan over the low id range safe even when the real enum has holes.
-constexpr int kFirstOptionId = 0;
-constexpr int kLastOptionId  = 1023;
-
-std::atomic<std::uint64_t> gLastPostMs{0};
-
-std::uint64_t nowMs() {
-    return static_cast<std::uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()
-        )
-            .count()
-    );
-}
-
-void scanAndSwitch(int attempt) {
-    utils::logger().info("[vv] options: client-thread task running (attempt {})", attempt);
-    auto client = ll::service::getClientInstance();
-    if (!client) {
-        utils::logger().warn("[vv] options: no client instance on this thread; switch not attempted");
-        return;
-    }
-    auto& registry = client->getOptions();
-    utils::logger().info("[vv] options: registry reached (attempt {})", attempt);
-
-    int         valid       = 0;
-    int         found       = -1;
-    int         interesting = 0;
-    std::string before;
-    for (int i = kFirstOptionId; i <= kLastOptionId; ++i) {
-        auto const id = static_cast<OptionID>(i);
-        if (!registry.isValidOption(id)) {
-            continue;
-        }
-        ++valid;
-        Option* option = registry.get(id);
-        if (!option) {
-            continue;
-        }
-        std::vector<std::pair<std::string, std::string>> pairs;
-        option->save(pairs);
-        for (auto const& [key, value] : pairs) {
-            bool const relevant = key.find("upscal") != std::string::npos
-                || key == "graphics_mode" || key == "target_resolution";
-            if (relevant && interesting < 24) {
-                ++interesting;
-                utils::logger().info("[vv] options: id={} {}={}", i, key, value);
-            }
-            if (key == "upscaling_mode") {
-                found  = i;
-                before = value;
-            }
-        }
-    }
-    utils::logger().info(
-        "[vv] options: scan done valid={} upscaling_mode id={} value={}",
-        valid,
-        found,
-        before
-    );
-    if (found < 0) {
-        utils::logger().warn("[vv] options: upscaling_mode not found by save tag; runtime switch not attempted");
-        return;
-    }
-    Option* const option = registry.get(static_cast<OptionID>(found));
-    if (!option) {
-        utils::logger().warn("[vv] options: upscaling_mode id={} vanished between scan and get", found);
-        return;
-    }
-    option->load("1");
-    std::vector<std::pair<std::string, std::string>> after;
-    option->save(after);
+// One slot, not a queue: the panel only ever asks for "the value I just picked", and
+// a pile-up of stale writes would apply in an order nobody asked for.
+struct Pending {
+    std::mutex  mutex;
+    bool        has{};
+    Known       option{};
     std::string value;
-    for (auto const& [key, v] : after) {
-        if (key == "upscaling_mode") {
-            value = v;
-        }
-    }
-    utils::logger().info("[vv] options: load upscaling_mode {} -> {}", before, value);
-    utils::logger().info("[vv] options: reread upscaling_mode = {}", value);
+    WriteResult last;
+};
+
+Pending& pending() {
+    static Pending instance;
+    return instance;
 }
 
-// Runs at most once: the first route to get here wins, the rest are no-ops.
-void switchOnce(int attempt) {
-    if (gDone.exchange(true, std::memory_order_acq_rel)) {
-        return;
+char const* tagOf(Known option) {
+    switch (option) {
+    case Known::UpscalingPercentage:
+        return "upscaling_percentage";
+    case Known::UpscalingMode:
+        return "upscaling_mode";
+    case Known::AdvancedUpscaling:
+        return "gfx_upscaling";
+    case Known::TargetResolution:
+        return "target_resolution";
+    case Known::GraphicsMode:
+        return "graphics_mode";
     }
-    scanAndSwitch(attempt);
+    return "";
+}
+
+// The option's own answer for `tag`: empty means the id no longer points at the
+// option we mean (a game update shifted the enum), which is the refusal condition.
+std::string savedValue(Option& option, char const* tag) {
+    std::vector<std::pair<std::string, std::string>> pairs;
+    option.save(pairs);
+    for (auto const& [key, value] : pairs) {
+        if (key == tag) {
+            return value;
+        }
+    }
+    return {};
+}
+
+// `load` is the engine's own string parser, so what it stores is not guaranteed to be
+// byte-identical to what went in ("50" vs "50.0"). Compare numerically when both sides
+// parse, by string otherwise.
+bool sameValue(std::string const& before, std::string const& wanted) {
+    if (before == wanted) {
+        return true;
+    }
+    char* endBefore = nullptr;
+    char* endWanted = nullptr;
+    double const a  = std::strtod(before.c_str(), &endBefore);
+    double const b  = std::strtod(wanted.c_str(), &endWanted);
+    bool const aOk  = endBefore && *endBefore == '\0' && endBefore != before.c_str();
+    bool const bOk  = endWanted && *endWanted == '\0' && endWanted != wanted.c_str();
+    return aOk && bOk && a == b;
+}
+
+WriteResult write(IOptionRegistry& registry, Known option, std::string const& value) {
+    WriteResult result{};
+    char const* const tag = tagOf(option);
+    int const         id  = static_cast<int>(option);
+
+    auto  found      = registry.getIfValid(static_cast<OptionID>(id));
+    result.attempted = true;
+    if (!found || !*found) {
+        std::snprintf(result.text, sizeof(result.text), "%d %s: no option at that id", id, tag);
+        return result;
+    }
+
+    Option&           target = **found;
+    std::string const before = savedValue(target, tag);
+    if (before.empty()) {
+        std::snprintf(
+            result.text,
+            sizeof(result.text),
+            "%d is not %s; write refused (ids moved?)",
+            id,
+            tag
+        );
+        return result;
+    }
+
+    target.load(value);
+    std::string const after = savedValue(target, tag);
+    result.ok = sameValue(after, value);
+    std::snprintf(
+        result.text,
+        sizeof(result.text),
+        "%d %s %s -> %s%s",
+        id,
+        tag,
+        before.c_str(),
+        after.c_str(),
+        result.ok ? "" : " (requested was not stored)"
+    );
+    return result;
 }
 
 } // namespace
 
+void requestWrite(Known option, std::string value) {
+    auto& state = pending();
+    std::lock_guard lock(state.mutex);
+    if (state.has) {
+        utils::logger().warn(
+            "[vv] options: dropping the pending write {} -> {}, replacing it with {} -> {}",
+            static_cast<int>(state.option),
+            state.value,
+            static_cast<int>(option),
+            value
+        );
+    }
+    state.has    = true;
+    state.option = option;
+    state.value  = std::move(value);
+}
+
+void applyPending() {
+    {
+        auto& state = pending();
+        std::lock_guard lock(state.mutex);
+        if (!state.has) {
+            return;
+        }
+    }
+    // Checked before consuming: on the title screen there is no client instance, and
+    // the request must survive to the first level tick instead of being lost.
+    auto client = ll::service::getClientInstance();
+    if (!client) {
+        return;
+    }
+
+    Known       option{};
+    std::string value;
+    {
+        auto& state = pending();
+        std::lock_guard lock(state.mutex);
+        option = state.option;
+        value  = std::move(state.value);
+        state.has = false;
+    }
+
+    WriteResult const result = write(client->getOptions(), option, value);
+    utils::logger().info(
+        "[vv] options: write {} {}",
+        result.ok ? "ok" : "failed",
+        result.text
+    );
+    auto& state = pending();
+    std::lock_guard lock(state.mutex);
+    state.last = result;
+}
+
+WriteResult lastWrite() {
+    auto& state = pending();
+    std::lock_guard lock(state.mutex);
+    return state.last;
+}
+
 void requestBilinear() {
     utils::logger().info("[vv] options: bilinear switch requested at load time");
-    gRequested.store(true, std::memory_order_relaxed);
-}
-
-void applyRequested() {
-    if (!gRequested.load(std::memory_order_relaxed) || gDone.load(std::memory_order_relaxed)) {
-        return;
-    }
-    // The executor path did not deliver during startup (EXP-0018/0019), so retry at
-    // a slow rate instead of once: the client thread processing the queue is what
-    // this waits for, and the join-event route is the one expected to win.
-    std::uint64_t const now  = nowMs();
-    std::uint64_t const last = gLastPostMs.load(std::memory_order_relaxed);
-    if (last && now - last < 2000) {
-        return;
-    }
-    gLastPostMs.store(now, std::memory_order_relaxed);
-    utils::logger().info("[vv] options: handing the switch request to the client thread");
-    ClientThreadExecutor::getDefault().execute([] { switchOnce(0); });
-}
-
-void applyNow() {
-    if (!gRequested.load(std::memory_order_relaxed) || gDone.load(std::memory_order_relaxed)) {
-        return;
-    }
-    utils::logger().info("[vv] options: applying the switch from the client level event");
-    switchOnce(1);
+    requestWrite(Known::UpscalingMode, "1");
 }
 
 #else
+void requestWrite(Known, std::string) {}
+void applyPending() {}
+WriteResult lastWrite() { return {}; }
 void requestBilinear() {}
-void applyRequested() {}
-void applyNow() {}
 #endif
 
 } // namespace neurodragon::probe::options

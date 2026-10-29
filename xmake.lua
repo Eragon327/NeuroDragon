@@ -21,7 +21,13 @@ option_end()
 -- add_requires("levilamina x.x.x") for a specific version
 -- add_requires("levilamina develop") to use develop version
 -- please note that you should add bdslibrary yourself if using dev version
-add_requires("levilamina", {configs = {target_type = get_config("target_type")}})
+--
+-- Pinned on purpose (2026-10-29, docs/specs/vv.md §17.2): the three test instances run
+-- the 26.51.7 loader, and this mod compiles against that package's headers. An
+-- unpinned requirement may resolve to a newer 26.51.x on the next reconfigure, which
+-- would compile against one ABI and load under another. Bump the headers and the
+-- instance loaders together, never one of them.
+add_requires("levilamina 26.51.7", {configs = {target_type = get_config("target_type")}})
 
 add_requires("levibuildscript")
 

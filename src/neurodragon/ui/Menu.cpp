@@ -4,6 +4,7 @@
 #include "neurodragon/Test.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/RuntimeOptions.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/sr/SrSharpening.h"
@@ -1313,6 +1314,35 @@ void drawB0Probe() {
     widgets::statRow("R3 D draw", buffer);
     widgets::hint("Arm stage B first; the TAAU quad is skipped only after a frame that injected.");
 
+    // Engine option writes (docs/specs/vv.md §17). `upscaling_percentage` is the knob
+    // that decides the VV render size, so this answers whether the SR panel can ever
+    // own "internal resolution" under VV - or whether that row has to stay read-only.
+    // Three fixed values are enough: the question is "does a runtime write reach the
+    // frame", not which ratio looks best.
+    widgets::sectionHeader("VV options (TEST)");
+    struct RatioChoice {
+        char const* label;
+        char const* value;
+    };
+    RatioChoice const ratios[3] = {{"50%", "50"}, {"66%", "66"}, {"100%", "100"}};
+    for (int index = 0; index < 3; ++index) {
+        if (index != 0) {
+            ImGui::SameLine();
+        }
+        if (ImGui::Button(ratios[index].label)) {
+            probe::options::requestWrite(
+                probe::options::Known::UpscalingPercentage,
+                ratios[index].value
+            );
+        }
+    }
+    auto const write = probe::options::lastWrite();
+    widgets::statRow(
+        "options last write",
+        write.text[0] ? write.text : "(none)",
+        write.attempted ? (write.ok ? kAccent : kRed) : kTextDim
+    );
+    widgets::hint("Writes the engine option, not config.json; the value lands on the next level tick.");
 }
 #endif
 

@@ -1120,17 +1120,46 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 - 可行做法：`IOptionRegistry::isValidOption(id)`（有边界检查）扫 0..1023 → `get(id)` →
   `Option::save(vector<pair<string,string>>&)` 拿 save tag（就是 options.txt 的键名），
   匹配后 `Option::load("1")`。EXP-0020 实测 `valid=470`、`id=580 upscaling_mode`。
+- **2026-10-29 起运行时写死编号**（`probe/RuntimeOptions.h` 的 `Known`）：579/580/581/582/703
+  就是上面那五条实测值，写入前用 `save()` 复核目标的 save tag，对不上就拒绝并记
+  `[vv] options: write failed …`，所以改版后编号移位只会变成有日志的 no-op，不会写错选项。
+  0..1023 的扫描退回「一次性取证」（EXP-0020），不再进运行时路径。排空点也从「Present 投递 +
+  join 一次」改成 `ClientLevelTickEvent`（客户端线程 20 Hz）——join 只触发一次，而面板按钮要在
+  世界里随时可用。
+- **LeviLamina 暂不升级（26.51.7 → 26.51.9，2026-10-29 决定）**：完整 `OptionID` 只在 26.51.9 的
+  头里，且与上面五条运行时实测逐条一致；但本检出的 xmake 包与实例 loader 都是 26.51.7，只换头是
+  ABI 赌博，换 loader 又要同时动三个实例与部署账本——为五个整数不值得。为此把依赖改成
+  `add_requires("levilamina 26.51.7")`：不锁版本时重新配置可能解析到 26.51.9，编译一个 ABI、
+  跑另一个。
+  将来要升就**头 + 三个实例 loader 一起升**，升完重跑 `flow.py verify` 与一次启动自检
+  （26.51.8 改了 reflection / function_traits，26.51.9 还 bump 了 bedrock-runtime-data；
+  本 mod 直接读引擎结构体偏移，这类改动要当风险项看待）。
 
 ### 17.3 运行时切换（不碰 options.txt）
 
 - 入口：`ClientInstance::getOptions()` → `IOptionRegistry` → `Option::load("1")`。
   EXP-0020：load 之后再无一条 `[vv] taau #`（含随后进世界），退出时引擎写回 `mode=1`。
 - **必须在客户端线程**。`ll::thread::ClientThreadExecutor` 在启动早期投递的任务不保证及时执行
-  （EXP-0018/19：hand-off 有日志，任务没跑或很晚才跑）；可靠做法是每 2 s 重投，
-  或直接在 `ClientLevelJoinEvent` 里调用（那一刻就是客户端线程）。
-- 测试开关：`<mod>\config\force_bilinear.flag` 存在时，TEST 构建在 load 时排队、Present 投递、
-  join 事件直接调用。日志序列：`marker … present=1` → `requested` → `handing…` →
-  `task running` → `scan done` → `load … -> 1` → `reread = 1`。
+  （EXP-0018/19：hand-off 有日志，任务没跑或很晚才跑）；它本身也是在 `ClientLevelTickEvent` 上
+  排空的，所以现在直接挂同一个 tick（20 Hz）——排队到写盘最多一个 tick，不再有 2 s 重投窗口。
+  join 事件仍会顺手排空一次（标题界面没有 tick，早到的请求留到第一次 level tick）。
+- 测试开关：`<mod>\config\force_bilinear.flag` 存在时，TEST 构建在 load 时排队，由 join / level tick
+  排空。日志序列：`marker … present=1` → `bilinear switch requested at load time` →
+  `[vv] options: write ok 580 upscaling_mode 0 -> 1`。
+- **`upscaling_percentage` 也是实时生效的（EXP-0081，2026-10-29 实测）**：
+
+  | 时刻 | 事件 |
+  |---|---|
+  | 09:23:28.812 | `write ok 579 upscaling_percentage 66 -> 50` |
+  | 09:23:28.835（+23 ms） | 渲染图出现新的渲染尺寸目标 `1280x720`（fmt=26 colour ×2 + 深度） |
+  | 09:23:28.862（+50 ms） | `[vv] taau #4500 … factor=0.5000`，viewport 仍是 2560x1440 |
+
+  100/66/50 来回写，每次 factor 都在下一帧跟随；反过来 **写 100 时 `taau` 声明整条消失**
+  （渲染尺寸 = 显示尺寸，没有上采样可做），写回 50 后立刻恢复。⇒ 面板的「内部分辨率」在 VV 下
+  可以做成真开关（写 579），但必须同时处理：① 按新渲染尺寸重建我们自己的 DLSS feature；
+  ② 玩家把比例设成 100% 时后端不存在，SR 分区要禁用。
+  证据：`docs/agent/evidence/option-percentage-EXP-0081.log`。注意 R3 管线那次**没有 arm**
+  （日志里没有 `sr arg10`），所以这条只证明选项本身，不证明注入在新尺寸上重建成功。
 
 ### 17.4 相机对象能拿到什么、拿不到什么
 
