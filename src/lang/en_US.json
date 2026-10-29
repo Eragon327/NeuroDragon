@@ -365,6 +365,7 @@
             "vvNotBuilt": "not built",
             "vvPipeline": "Pipeline",
             "vvFeature": "DLSS feature",
+            "vvRung": "Effective mode",
             "vvInputs": "Input formats",
             "vvError": "Last error"
         }

@@ -365,6 +365,7 @@
             "vvNotBuilt": "未建立",
             "vvPipeline": "管线",
             "vvFeature": "DLSS 特征",
+            "vvRung": "有效档位",
             "vvInputs": "输入格式",
             "vvError": "最近一次错误"
         }

@@ -1187,12 +1187,18 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             nrInWindow = gNrWindowOpen && n >= gNrWindowStart && n < gNrWindowEnd;
             // No "evaluate only" mode any more: NR records every in-world frame so
             // the picture can be judged by eye; only timing/dump stay windowed.
-            nrReplace = nr::nrReplaceContinuous();
+            // The ladder's NoNr/EngineTaau rungs set the bypass: no composite, no
+            // rebuild, Color stays whatever the caller set.
+            bool const bypass = nr::nrBypass();
+            nrReplace          = !bypass && nr::nrReplaceContinuous();
+            if (bypass) {
+                nrInWindow = false;
+            }
             // Follow the engine's sizes and the configured placement before
             // recording. A window resize, an upscaling-quality change or a
             // placement switch rebuilds the feature here (no-op on ordinary frames).
             bool sizeOk = false;
-            if (nr::nrIsCreated()) {
+            if (nr::nrIsCreated() && !bypass) {
                 sizeOk =
                     nr::nrEnsureRenderSize(cmdList, color, width, height, out, config::get().nr.placement);
             }

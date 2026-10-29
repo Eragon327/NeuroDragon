@@ -158,6 +158,13 @@ void nrSetEngineInit(unsigned long long appId, wchar_t const* dataPath);
 // "HDR -> LDR encode"). Null until nrCreate has built the encoder.
 [[nodiscard]] void* nrEncodedColorResource();
 
+// Feature-level fallback (docs/specs/vv.md §38): while set, the detour stops
+// recording NR and leaves the engine's Color alone, so DLSS runs without the NR
+// input. Session-only; the ladder in vv::sr owns it. RT is unaffected in practice
+// because a process runs either the engine's SR or ours, never both.
+void nrSetBypass(bool bypass);
+[[nodiscard]] bool nrBypass();
+
 // nr.paramLog in config.json: the probe logs every engine NGX parameter write.
 [[nodiscard]] bool nrParamLogEnabled();
 #endif

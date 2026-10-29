@@ -705,6 +705,10 @@ unsigned gFedWidth  = 0;
 unsigned gFedHeight = 0;
 unsigned gFedFormat = 0;
 
+// Ladder-owned switch: while set, the detour records no NR and leaves Color alone
+// (docs/specs/vv.md §38). Reset to false whenever the ladder returns to Full.
+std::atomic<bool> gBypass{false};
+
 // The engine writes "Color" into its parameter object ONCE (docs/D §6.16), so from
 // the first swap onwards the object keeps handing back OUR texture. Compositing
 // onto whatever the object currently says is therefore a feedback loop: every
@@ -2716,6 +2720,10 @@ bool nrFedExtent(unsigned* width, unsigned* height, unsigned* format) {
 // NR composites on every in-world frame: the old "evaluate only" mode is gone, so the
 // probe no longer needs a window schedule to decide when the picture updates.
 bool nrReplaceContinuous() { return true; }
+
+void nrSetBypass(bool bypass) { gBypass.store(bypass, std::memory_order_relaxed); }
+
+bool nrBypass() { return gBypass.load(std::memory_order_relaxed); }
 namespace {
 
 // Route A (docs/D §6.14): make the engine's own upscaler consume the NR result,

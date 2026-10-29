@@ -1143,6 +1143,23 @@ void drawTabSr() {
             static_cast<unsigned>(vvStats.dlssEvaluateRet)
         );
         widgets::statRow("ui.sr.vvFeature"_tr().c_str(), buffer, vvStats.dlssReady ? kAccent : kTextDim);
+        {
+            vv::sr::Fallback const fb = vv::sr::fallback();
+            std::snprintf(
+                buffer,
+                sizeof(buffer),
+                "%s (%s) create=%u eval=%u",
+                vv::sr::rungName(fb.rung),
+                vv::sr::rungReasonName(fb.reason),
+                fb.createFails,
+                fb.evalFails
+            );
+            widgets::statRow(
+                "ui.sr.vvRung"_tr().c_str(),
+                buffer,
+                fb.rung == vv::sr::Rung::EngineTaau ? kRed : (fb.rung == vv::sr::Rung::Full ? 0 : kAccent)
+            );
+        }
         std::snprintf(
             buffer,
             sizeof(buffer),
@@ -1405,6 +1422,23 @@ void drawB0Probe() {
             "about the same => it does not, and only 0 is truthful; j(n-1) steady => the context value "
             "runs one frame ahead of the render."
         );
+    }
+
+    // Fallback ladder injection (docs/specs/vv.md §38). Create failures jump to TAAU
+    // (the optional passes cannot fix a missing feature); eval failures walk
+    // NoNr -> NoSharp -> TAAU, one rung per ~2 s. The picture falls back to TAAU while
+    // a rung is failing, exactly as a real failure does.
+    {
+        static char const* const kFaults[3] = {
+            "fault: none",
+            "fault: create fails",
+            "fault: eval fails",
+        };
+        int index = static_cast<int>(vv::sr::fault());
+        if (widgets::combo("SR fault (TEST)", &index, kFaults, 3)) {
+            vv::sr::setFault(static_cast<vv::sr::Fault>(index));
+        }
+        widgets::hint("Walks the ladder on demand: create -> TAAU after 3 attempts; eval -> NoNr, NoSharp, TAAU every ~120 frames.");
     }
 
     // R3 stage A (docs/specs/vv.md §35.1): write magenta into the engine's TAAU
