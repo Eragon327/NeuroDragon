@@ -1,0 +1,15 @@
+EXP-0101 postmortem (2026-10-29)
+
+Original smoke evidence: docs/agent/evidence/smoke-taau-timing-EXP-0101.log
+Deployed DLL sha256 recorded by agentflow: 8e4e8ecf449b2e6c
+Result: no [vv] TAAU timing available line after 180 s.
+
+Checks after the failed run:
+- .xmake/windows/x64/xmake.conf contained test = false.
+- Binary scan of bin/NeuroDragon/NeuroDragon.dll found none of: [input], TAAU timing available, [vv] taau #, [vv] session (install).
+- Therefore the failed run used a release DLL without the TEST assertion; it does not refute the timestamp implementation.
+
+Corrective build only (no source change):
+- Reconfigured explicitly with xmake f -p windows -a x64 -m release --test=y -y.
+- Rebuilt with xmake -r -y.
+- Binary scan then confirmed both [input] and TAAU timing available are present.

@@ -13,7 +13,7 @@
 //
 // A release build keeps the user-facing info/warn/error lines, the stage
 // markers (Log.h) and every functional path: feature creation, the per-frame
-// evaluate, the gain composite, the panel and the GPU timing it reads.
+// evaluate, the ratio-resolve composite, the panel and the GPU timing it reads.
 //
 //   xmake f --test=y && xmake build -y   # diagnostics build (TEST defined)
 //   xmake f --test=n && xmake build -y   # release build (default)

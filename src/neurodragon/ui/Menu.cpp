@@ -1,27 +1,22 @@
 #include "neurodragon/ui/Menu.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/Log.h"
 #include "neurodragon/Test.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
-#include "neurodragon/probe/RuntimeOptions.h"
-#include "neurodragon/probe/VvInject.h"
-#include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/sr/SrSharpening.h"
 #include "neurodragon/sr/SrStatus.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/ui/Widgets.h"
 #include "neurodragon/utils/Utils.h"
-#include "neurodragon/vv/VvCapture.h"
 #include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/vv/VvSr.h"
 
 #include "ll/api/i18n/I18n.h"
 
 #include <imgui.h>
-
-#include <Windows.h>
 
 #include <algorithm>
 #include <array>
@@ -46,6 +41,23 @@ using namespace theme;
 
 config::Nr  gDraft{};
 config::Sr  gDraftSr{};
+// SR jitter is staged like every other control in the right column, but it has no
+// config entry: it is an A/B switch, not a preference. So Apply is the only thing that
+// writes it into the running pipeline, "Save as default" leaves it out, and closing
+// the panel without applying leaves the running value alone. Default Zero - the world
+// frame carries no TAA sub-pixel offset (EXP-0098).
+int gDraftJitter{static_cast<int>(vv::sr::JitterSource::Zero)};
+
+// The combo offers Zero and Engine only. Anything else (a value an older diagnostics
+// build left in this process) is staged as Zero, which is what a fresh run starts with.
+int stagedJitter(vv::sr::JitterSource running) {
+    return running == vv::sr::JitterSource::Engine ? static_cast<int>(vv::sr::JitterSource::Engine)
+                                                   : static_cast<int>(vv::sr::JitterSource::Zero);
+}
+
+// Re-reads the running value: the panel's "start from what is running" rule, used when
+// it opens and when Discard is pressed.
+void stageJitterDraft() { gDraftJitter = stagedJitter(vv::sr::jitterSource()); }
 
 // A percentage saved by an older build (75%) is no longer offered. Treat any
 // unknown value as "follow the engine" so the dropdown and the live config agree.
@@ -72,6 +84,14 @@ config::Sr sanitizedSr(config::Sr sr) {
         sr.sharpness = std::clamp(std::isfinite(sr.sharpness) ? sr.sharpness : 0.672f, 0.0f, 1.0f);
     }
     return sr;
+}
+
+// Only TRP's Ratio composite ships (2026-10-29): the gain composite's controls are
+// gone, so a config (or a hand edit) that still says Replace=5 is staged as 6. Keeping
+// this at the panel boundary means Apply can never write the removed mode back.
+config::Nr sanitizedNr(config::Nr nr) {
+    nr.replace = 6;
+    return nr;
 }
 
 // Hotkey drafts. Combinations, like everything the overlay matches: "apply" writes
@@ -105,6 +125,244 @@ void setStatus(std::string text) { gStatus = std::move(text); }
 
 void at(ImVec2 position) { ImGui::SetCursorScreenPos(position); }
 
+// Column caption. Plain text, not a section rule: a rule directly above the first
+// real section rule read as a doubled header.
+void columnCaption(char const* text) {
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(kTextDim));
+    ImGui::TextUnformatted(text);
+    ImGui::PopStyleColor();
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+//
+// Every button in the panel goes through here. The shared widget owns the look and
+// the TEST activation log, so a press produces exactly one line no matter which
+// panel surface it came from.
+// ---------------------------------------------------------------------------
+bool menuButton(char const* label, ImVec2 size = ImVec2(0.0f, 0.0f), bool primary = false) {
+    return widgets::button(label, size, primary);
+}
+
+// ---------------------------------------------------------------------------
+// Live observation (docs/specs/ui.md §3, §6)
+//
+// The pipeline strip and the left column answer one question: what is the renderer
+// doing *right now*. A config flag says what was asked for, `featureCreated` says
+// something was built - neither says a frame went through it. Every state shown on
+// those two surfaces is therefore derived from counters that only move when the
+// renderer actually runs: PanelStats::evalCount for NR, SrStats::evalCount for the
+// engine's DLSS, the recorded frame number for our own VV pipeline. `sr::status()`
+// answers "which upscaler is live" the same way, from observation.
+//
+// GPU timestamps being unavailable (stampsActive false) does not remove the
+// evidence: a counter delta that keeps growing is a running feature, and the panel
+// shows that delta instead of the milliseconds it cannot measure.
+// ---------------------------------------------------------------------------
+
+// Off = the setting says disabled (a request); Configured = enabled but nothing
+// built; Created = built but no frame observed yet; Running = a counter moved
+// inside the freshness window. Only the pipeline strip's NR box still needs all
+// four; the header dot answers for the whole pipeline instead (see Overall).
+enum class Stage { Off, Configured, Created, Running };
+
+// The header dot's conclusion (2026-10-29 request). It used to report NR alone, so a
+// deliberately disabled NR read as "everything is off" while SR was upscaling, and a
+// dead upscaler looked healthy as long as NR ran. The pipeline as a whole is in one
+// of three states:
+//   Running - some stage of it really produced a frame;
+//   Error   - an actual error code was recorded;
+//   Waiting - nothing has run a frame yet (menu, level load, feature not created).
+// NR being off is not an error and not a state of its own: SR can carry the frame.
+enum class Overall { Waiting, Running, Error };
+
+// Two seconds: two frames of staleness is a hitch, and a pause menu or a level load
+// must not read as "the feature died".
+constexpr double kLiveWindow = 2.0;
+
+double liveNow() { return static_cast<double>(ImGui::GetTime()); }
+
+// Watches a render-thread counter and answers one question: did it move inside the
+// freshness window? Primed on the first read, so merely opening the panel never counts
+// as movement.
+struct CounterWatch {
+    bool               primed{};
+    unsigned long long last{};
+    double             movedAt{};
+    bool               moved{};
+
+    void observe(unsigned long long value, double now) {
+        if (!primed) {
+            primed = true;
+            last   = value;
+            return;
+        }
+        // A counter that went backwards was reset (new session, new world): start over
+        // from there instead of treating it as movement or as an underflow.
+        if (value < last) {
+            last  = value;
+            moved = false;
+            return;
+        }
+        if (value == last) return;
+        last    = value;
+        movedAt = now;
+        moved   = true;
+    }
+
+    [[nodiscard]] bool fresh(double now) const { return moved && now - movedAt <= kLiveWindow; }
+};
+
+CounterWatch gNrEvals;
+CounterWatch gSrEvals;
+// Failure counters exist to explain a *current* problem, so they are observed rather
+// than read as a latch: a cumulative count that went up once must stop colouring the
+// header a minute later (2026-10-29 review).
+CounterWatch gNrFailures;
+CounterWatch gSrFailures;
+
+struct Live {
+    nr::PanelStats      stats{};
+    sr::Status          backend{};
+    nr::SrStats         srStats{};
+    vv::sr::Stats       vvStats{};
+    vv::dlss::SrState   dlss{};
+    Stage               nr{Stage::Off};
+    Stage               upscale{Stage::Off};
+    /// A failure counter moved inside the freshness window: an error *now*, not a
+    /// historical one.
+    bool                failureRecent{};
+    /// The feature could not be created at all (`lastError` recorded while NR is still
+    /// Configured). Only consulted when nothing runs, so a stale code from an earlier
+    /// attempt cannot pin the header red once frames flow again.
+    bool                createFailed{};
+};
+
+// Sampled once per frame: sr::status() carries hysteresis, so calling it twice in one
+// frame would advance its agreement counter twice.
+Live sampleLive() {
+    double const now = liveNow();
+
+    Live live;
+    live.stats   = nr::nrPanelStats();
+    live.backend = sr::status();
+    live.srStats = nr::srPanelStats();
+    live.vvStats = vv::sr::stats();
+    live.dlss    = vv::dlss::srState();
+
+    gNrEvals.observe(live.stats.evalCount, now);
+    gSrEvals.observe(live.srStats.evalCount, now);
+    gNrFailures.observe(live.stats.evalFailures, now);
+    gSrFailures.observe(live.srStats.evalFailures, now);
+
+    if (!config::get().nr.enabled) {
+        live.nr = Stage::Off;
+    } else if (!live.stats.featureCreated) {
+        live.nr = Stage::Configured;
+    } else {
+        live.nr = gNrEvals.fresh(now) ? Stage::Running : Stage::Created;
+    }
+
+    switch (live.backend.backend) {
+    case sr::Backend::EngineDlss:
+        // The engine's feature existing is not the same as it evaluating: its
+        // evaluation counter (or a measured frame) is what says it runs.
+        live.upscale = (gSrEvals.fresh(now) || live.stats.hasEngine) ? Stage::Running : Stage::Created;
+        break;
+    case sr::Backend::VvDlss:
+        // The backend label is sticky across a short transition; only its live
+        // observation may light the box. Otherwise it remains visibly configured.
+        live.upscale = live.backend.live ? Stage::Running : Stage::Configured;
+        break;
+    default:
+        // Nothing is upscaling.
+        live.upscale = (live.backend.vvConfigured || live.backend.vvSeen) ? Stage::Configured : Stage::Off;
+        break;
+    }
+
+    // A failure *now* is a counter that grew while the panel watched. The engine path's
+    // counter is only meaningful while the engine owns the upscaler.
+    live.failureRecent = gNrFailures.fresh(now)
+                      || (live.backend.backend == sr::Backend::EngineDlss && gSrFailures.fresh(now));
+    // "Creation failed" is a state, not an event: it only says something while the
+    // feature still does not exist.
+    live.createFailed = live.nr == Stage::Configured && live.stats.lastError != 0;
+    return live;
+}
+
+// Running > Error > Waiting. A frame that went through wins over any recorded failure
+// (a retried evaluation must not keep the pipeline red), and both error signals are
+// bounded: a counter movement inside the window, or "still not created after a failure".
+Overall overallState(Live const& live) {
+    if (live.nr == Stage::Running || live.upscale == Stage::Running) return Overall::Running;
+    if (live.failureRecent || live.createFailed) return Overall::Error;
+    return Overall::Waiting;
+}
+
+std::string stageName(Stage stage) {
+    switch (stage) {
+    case Stage::Running:
+        return "ui.state.running"_tr();
+    case Stage::Created:
+        return "ui.state.waiting"_tr();
+    case Stage::Configured:
+        return "ui.state.configured"_tr();
+    case Stage::Off:
+    default:
+        return "ui.state.off"_tr();
+    }
+}
+
+std::string overallName(Overall state) {
+    switch (state) {
+    case Overall::Running:
+        return "ui.state.running"_tr();
+    case Overall::Error:
+        return "ui.state.error"_tr();
+    case Overall::Waiting:
+    default:
+        return "ui.state.waitingFrame"_tr();
+    }
+}
+
+ImU32 overallColor(Overall state) {
+    switch (state) {
+    case Overall::Running:
+        return kGreen;
+    case Overall::Error:
+        return kRed;
+    case Overall::Waiting:
+    default:
+        return kAmber;
+    }
+}
+
+// What is upscaling the picture this second (docs/specs/ui.md §3). Shared by the
+// pipeline strip, the left column and the SR page so the three cannot disagree.
+// Only a backend that really carries the frame gets the accent; TAAU is the engine
+// doing its own thing, so it reads dim rather than competing with the substitute.
+std::string backendName(Live const& live, ImU32* tint = nullptr) {
+    bool const substituting =
+        live.backend.backend == sr::Backend::VvDlss && vv::sr::enabled() && live.vvStats.recorded;
+
+    std::string name  = "ui.sr.backendNone"_tr();
+    // No upscaler is a normal state (main menu, 100% native), not an error.
+    ImU32       color = kTextDim;
+    if (live.backend.backend == sr::Backend::EngineDlss) {
+        name  = "ui.sr.backendEngine"_tr();
+        color = kAccent;
+    } else if (substituting) {
+        name  = "ui.sr.backendVv"_tr();
+        color = kAccent;
+    } else if (live.backend.backend == sr::Backend::VvDlss || live.backend.vvConfigured || live.backend.vvSeen) {
+        // The engine's own TAAU: a fact, not an achievement of ours.
+        name  = "ui.sr.backendTauu"_tr();
+        color = kTextDim;
+    }
+    if (tint) *tint = color;
+    return name;
+}
+
 // Staging starts from what is configured (the overlay runs the same parse, so the
 // draft starts out identical to the live bindings). An empty stored array is a real
 // value: "unbound", not "no record".
@@ -130,53 +388,8 @@ bool mappedCombo(char const* label, int* value, char const* const* items, int co
     return true;
 }
 
-std::string replaceName(int mode) {
-    switch (mode) {
-    case 0:
-        return "ui.replace.0"_tr();
-    case 5:
-        return "ui.replace.5"_tr();
-    case 6:
-        return "ui.replace.6"_tr();
-    default:
-        return "ui.replace.other"_tr();
-    }
-}
-
-std::string replaceHint(int mode) {
-    switch (mode) {
-    case 5:
-        return "ui.replace.hint5"_tr();
-    case 6:
-        return "ui.replace.hint6"_tr();
-    default:
-        return "ui.replace.hint6"_tr();
-    }
-}
-
-// DLSS quality slot (the engine writes PerfQualityValue at create) and the network
-// preset hint. Values are the measured ones from docs/I §10: 0..5 = MaxPerf /
-// Balanced / MaxQuality / UltraPerf / UltraQuality (rejected by NGX) / DLAA, and
-// the preset hint carries 0x80000000 | (5=E, 6=F, 10=J, 11=K, 12=L, 13=M).
-std::string qualityName(unsigned quality) {
-    switch (quality) {
-    case 0:
-        return "MaxPerf";
-    case 1:
-        return "Balanced";
-    case 2:
-        return "MaxQuality";
-    case 3:
-        return "UltraPerf";
-    case 4:
-        return "UltraQuality";
-    case 5:
-        return "DLAA";
-    default:
-        return "-";
-    }
-}
-
+// DLSS model-preset naming. Values are the measured ones from docs/I §10: the preset
+// hint carries 0x80000000 | (5=E, 6=F, 10=J, 11=K, 12=L, 13=M).
 std::string presetName(unsigned hint) {
     unsigned const preset = hint & 0x7FFFFFFFu;
     switch (preset) {
@@ -202,30 +415,18 @@ std::string presetName(unsigned hint) {
     }
 }
 
-// DXGI format of the engine's Color, as a name when it is one we have actually
-// seen (docs/D §2: R16G16B16A16_FLOAT) and as a number otherwise - the panel's job
-// here is to show a change, not to catalogue every format.
-std::string formatName(unsigned format) {
-    switch (format) {
-    case 2:
-        return "R32G32B32A32_FLOAT";
-    case 10:
-        return "R16G16B16A16_FLOAT";
-    case 11:
-        return "R16G16B16A16_UNORM";
-    case 24:
-        return "R10G10B10A2_UNORM";
-    case 28:
-        return "R8G8B8A8_UNORM";
-    case 87:
-        return "B8G8R8A8_UNORM";
-    case 91:
-        return "B8G8R8A8_UNORM_SRGB";
-    default:
-        break;
-    }
-    char buffer[32]{};
-    std::snprintf(buffer, sizeof(buffer), "DXGI %u", format);
+// Render size as a percentage of the presented size: the one number that says
+// whether the ratio control actually landed in the frame. "-" until the engine has
+// published a pair of extents (no world frame yet).
+std::string ratioName(unsigned renderWidth, unsigned displayWidth) {
+    if (renderWidth == 0 || displayWidth == 0) return "-";
+    char buffer[16]{};
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%d%%",
+        static_cast<int>(std::lround(100.0 * static_cast<double>(renderWidth) / static_cast<double>(displayWidth)))
+    );
     return buffer;
 }
 
@@ -292,11 +493,14 @@ Layout computeLayout(ImVec2 pos, ImVec2 size) {
 }
 
 // Header (title strip; the whole strip is the drag handle) -------------------
+//
+// The dot is a conclusion about the pipeline as a whole, and it is built from what
+// actually ran: a feature that exists but has not produced a frame reads "waiting",
+// not "healthy", and a deliberately disabled NR does not read as "off".
 
-void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
-    auto*       drawList = ImGui::GetWindowDrawList();
-    auto const  s        = layout.scale;
-    auto const& live     = config::get().nr;
+void drawHeader(Layout const& layout, Live const& live) {
+    auto*      drawList = ImGui::GetWindowDrawList();
+    auto const s        = layout.scale;
 
     ImVec2 const titlePos{layout.pos.x + layout.pad, layout.pos.y + layout.pad * 0.42f};
 
@@ -315,19 +519,10 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
     float const button = 20.0f * s;
     float const gap    = 5.0f * s;
 
-    std::string stateText;
-    ImU32       stateColor = kGreen;
-    if (!stats.featureCreated) {
-        stateText  = "ui.state.notReady"_tr();
-        stateColor = stats.lastError ? kRed : kAmber;
-    } else if (!live.enabled) {
-        stateText  = "ui.state.off"_tr();
-        stateColor = kTextDim;
-    } else {
-        // Every reachable mode now composites (the "evaluate only" mode is gone), so a
-        // created feature that is enabled is always on screen.
-        stateText = "ui.state.healthy"_tr();
-    }
+    // One dot for the whole pipeline, not for NR alone (see Overall): an NR the user
+    // turned off on purpose cannot turn this into "off" or "error" while SR runs.
+    std::string const stateText  = overallName(overallState(live));
+    ImU32 const       stateColor = overallColor(overallState(live));
 
     auto const  stateSize  = ImGui::CalcTextSize(stateText.c_str());
     auto const  stateWidth = stateSize.x + 20.0f * s;
@@ -350,14 +545,14 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
         drawList->AddCircleFilled(ImVec2(stateX + dotRadius, (itemMin.y + itemMax.y) * 0.5f), dotRadius, stateColor);
     }
 
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f * s, 1.0f * s));
+    // The zoom buttons are the same widget as every other button; only their size is
+    // smaller, so the padding is dropped instead of being pushed by hand.
     at(ImVec2(zoomX, zoomY));
-    if (ImGui::Button("-##zoomOut", ImVec2(button, button))) theme::setUserScale(theme::userScale() - 0.05f);
+    if (menuButton("-##zoomOut", ImVec2(button, button))) theme::setUserScale(theme::userScale() - 0.05f);
     at(ImVec2(zoomX + button + gap, zoomY + 2.0f * s));
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", zoomText);
     at(ImVec2(zoomX + button + gap + zoomWidth + gap, zoomY));
-    if (ImGui::Button("+##zoomIn", ImVec2(button, button))) theme::setUserScale(theme::userScale() + 0.05f);
-    ImGui::PopStyleVar();
+    if (menuButton("+##zoomIn", ImVec2(button, button))) theme::setUserScale(theme::userScale() + 0.05f);
 
     float const ruleY = layout.pos.y + layout.pad + layout.headerHeight - 10.0f * s;
     drawList->AddLine(
@@ -369,10 +564,15 @@ void drawHeader(Layout const& layout, nr::PanelStats const& stats) {
 }
 
 // Pipeline strip ------------------------------------------------------------
+//
+// Four boxes, and each one only claims what its own read-back proves: the world and
+// output boxes need published sizes, the NR box needs its evaluation counter to
+// move, the upscaler box needs a live backend. A box that is merely configured is
+// drawn dim with the state spelled out - that is the difference between "it is on in
+// config.json" and "it ran a frame".
 
-void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
-    auto const  s    = layout.scale;
-    auto const& live = config::get().nr;
+void drawPipeline(Layout const& layout, Live const& live) {
+    auto const s = layout.scale;
 
     float const top    = layout.pos.y + layout.pad + layout.headerHeight;
     float const height = layout.pipelineHeight - 18.0f * s;
@@ -383,35 +583,62 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
     float const   arrowWidth = 30.0f * s;
     float const   nodeWidth  = (width - static_cast<float>(kArrows) * arrowWidth) / 4.0f;
 
+    // Sizes come from `sr::status()`, not from the RT-only PanelStats: it normalises per
+    // backend (the ray-traced branch maps the same PanelStats, the VV branch reports the
+    // engine's TAAU declaration sizes), so the strip shows real numbers under Vibrant
+    // Visuals too (2026-10-29 report: VV had GPU time but no sizes).
     char render[48]{};
     char output[48]{};
-    std::snprintf(render, sizeof(render), "%u x %u", stats.renderWidth, stats.renderHeight);
-    std::snprintf(output, sizeof(output), "%u x %u", stats.outputWidth, stats.outputHeight);
+    std::snprintf(render, sizeof(render), "%u x %u", live.backend.renderWidth, live.backend.renderHeight);
+    std::snprintf(output, sizeof(output), "%u x %u", live.backend.displayWidth, live.backend.displayHeight);
 
-    char nrLine[64]{};
-    if (!live.enabled) {
-        std::snprintf(nrLine, sizeof(nrLine), "%s", "ui.pipeline.off"_tr().c_str());
-    } else if (!stats.stampsActive) {
-        std::snprintf(nrLine, sizeof(nrLine), "%s", "ui.diag.timingOff"_tr().c_str());
-    } else if (stats.hasNr) {
-        std::snprintf(nrLine, sizeof(nrLine), "%.2f ms", stats.nrMs);
-    } else {
-        std::snprintf(nrLine, sizeof(nrLine), "%s", "ui.pipeline.waiting"_tr().c_str());
+    // NR box: where the feature actually runs, and what state it is in. The placement is
+    // read back from the render thread's own record (`PanelStats.placement`) - an after
+    // side that was refused reports the before side it really ran. A feature that was
+    // never created has no placement, so the first line stays empty instead of inventing
+    // one, and the state line carries the "not created yet" answer. Numbers (GPU ms,
+    // counters) live in the LIVE column; this box answers "where" and "in what state".
+    std::string nrPlacement;
+    if (live.nr != Stage::Off && live.nr != Stage::Configured) {
+        bool const after = live.stats.placement == 1 && !live.stats.afterFallback;
+        nrPlacement      = after ? "ui.pipeline.nrAfter"_tr() : "ui.pipeline.nrBefore"_tr();
     }
+    std::string const nrState = stageName(live.nr);
 
-    char dlssLine[64]{};
-    if (!stats.stampsActive) {
-        std::snprintf(dlssLine, sizeof(dlssLine), "%s", "ui.diag.timingOff"_tr().c_str());
-    } else if (stats.hasEngine) {
-        std::snprintf(dlssLine, sizeof(dlssLine), "%.2f ms", stats.engineMs);
-    } else {
-        std::snprintf(dlssLine, sizeof(dlssLine), "%s", "ui.pipeline.waiting"_tr().c_str());
+    // Upscaler: who does it, which preset its feature was created with, and the ratio
+    // the frame is *actually* rendered at (render / display, not the setting). The
+    // preset is read back from the feature itself - the engine's parameter object on
+    // RT, our own CreateFeature value on VV - so a control that did not take shows up
+    // here instead of echoing the config. TAAU has no preset and says so. No frame
+    // counts: the box answers "what" and "how much", not "how many".
+    std::string upName;
+    std::string upLine;
+    bool        upActive = live.upscale == Stage::Running;
+    switch (live.backend.backend) {
+    case sr::Backend::EngineDlss:
+        upName = "ui.pipeline.upEngine"_tr();
+        upLine = presetName(live.srStats.preset) + " · "
+               + ratioName(live.backend.renderWidth, live.backend.displayWidth);
+        break;
+    case sr::Backend::VvDlss: {
+        bool const substituting = vv::sr::enabled() && live.vvStats.recorded;
+        upName                  = substituting ? "ui.pipeline.upVv"_tr() : "ui.pipeline.upTauu"_tr();
+        if (substituting) {
+            upLine = presetName(static_cast<unsigned>(live.dlss.preset)) + " · "
+                   + ratioName(live.backend.renderWidth, live.backend.displayWidth);
+        } else {
+            upLine = "ui.pipeline.noPreset"_tr() + " · "
+                   + ratioName(live.backend.renderWidth, live.backend.displayWidth);
+        }
+        break;
     }
-
-    bool const nrActive   = live.enabled;
-    // The upscaler is part of the engine and keeps running with NR off, so its node
-    // lights up whenever its cost is actually being measured.
-    bool const dlssActive = stats.stampsActive || stats.hasEngine;
+    default:
+        // Nothing is upscaling. A VV-configured engine at 100% is real but invisible
+        // to observation, so the left column carries the explanation.
+        upName   = "ui.pipeline.upNone"_tr();
+        upActive = false;
+        break;
+    }
 
     std::string const titles[4] = {
         "ui.pipeline.world"_tr(),
@@ -419,10 +646,13 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
         "ui.pipeline.upscale"_tr(),
         "ui.pipeline.output"_tr(),
     };
-    std::string const nrTitle    = live.enabled ? "ui.pipeline.nrRunning"_tr() : "ui.pipeline.nrOff"_tr();
-    std::string const outSub     = "ui.pipeline.outputSub"_tr();
-    std::string const upscaleSub = "ui.pipeline.upscaleSub"_tr();
-    std::string const rasterSub  = "ui.pipeline.raster"_tr();
+    std::string const outSub    = "ui.pipeline.outputSub"_tr();
+    std::string const rasterSub = "ui.pipeline.raster"_tr();
+
+    // A size is the evidence for the two outer boxes: no extent for the live backend
+    // means it has not handed us a frame yet (same source as the text above).
+    bool const worldActive = live.backend.renderWidth != 0 && live.backend.renderHeight != 0;
+    bool const outActive   = live.backend.displayWidth != 0 && live.backend.displayHeight != 0;
 
     struct Node {
         char const* title{};
@@ -431,10 +661,10 @@ void drawPipeline(Layout const& layout, nr::PanelStats const& stats) {
         bool        active{};
     };
     Node const nodes[4] = {
-        {titles[0].c_str(), render,             rasterSub.c_str(), true      },
-        {titles[1].c_str(), nrTitle.c_str(),    nrLine,            nrActive  },
-        {titles[2].c_str(), upscaleSub.c_str(), dlssLine,          dlssActive},
-        {titles[3].c_str(), output,             outSub.c_str(),    true      },
+        {titles[0].c_str(), render,              rasterSub.c_str(), worldActive                   },
+        {titles[1].c_str(), nrPlacement.c_str(), nrState.c_str(),   live.nr == Stage::Running     },
+        {titles[2].c_str(), upName.c_str(),      upLine.c_str(),    upActive                      },
+        {titles[3].c_str(), output,              outSub.c_str(),    outActive                     },
     };
 
     for (int index = 0; index < 4; ++index) {
@@ -484,59 +714,73 @@ void drawTabs(Layout const& layout) {
 }
 
 // Stats column --------------------------------------------------------------
+//
+// Read-back only: nothing here may read gDraft (the panel's staging copy) or a config
+// flag as if it were a result. What is left is what a player asks the panel: is it
+// running, what is upscaling, at which sizes, at what frame rate and GPU cost. The
+// per-feature counters moved to the diagnostics page (and most of them were deleted,
+// 2026-10-29).
 
-void drawStatsColumn(Layout const& layout, nr::PanelStats const& stats) {
-    auto const  s       = layout.scale;
-    auto const  frame   = Overlay::getInstance().frameStats();
-    auto const  history = Overlay::getInstance().recentFrameMs();
-    auto const& live    = config::get().nr;
+void drawStatsColumn(Layout const& layout, Live const& live) {
+    auto const s       = layout.scale;
+    auto const frame   = Overlay::getInstance().frameStats();
+    auto const history = Overlay::getInstance().recentFrameMs();
+
+    columnCaption("ui.live.header"_tr().c_str());
+    ImGui::Spacing();
 
     widgets::sectionHeader("ui.stats.frames"_tr().c_str());
 
-    char buffer[64]{};
+    char buffer[96]{};
     std::snprintf(buffer, sizeof(buffer), "%.1f fps", frame.fps);
     widgets::statRow("ui.stats.fps"_tr().c_str(), buffer);
     std::snprintf(buffer, sizeof(buffer), "%.2f ms", frame.frameMs);
     widgets::statRow("ui.stats.frameTime"_tr().c_str(), buffer);
 
-    ImVec2 const graphSize{ImGui::GetContentRegionAvail().x, 56.0f * s};
+    ImVec2 const graphSize{ImGui::GetContentRegionAvail().x, 48.0f * s};
     auto const   graphPos = ImGui::GetCursorScreenPos();
     widgets::frameGraph(graphPos, graphSize, history, autoGraphMax(history));
     ImGui::Dummy(ImVec2(graphSize.x, graphSize.y + 4.0f * s));
 
-    widgets::sectionHeader("ui.tab.neural"_tr().c_str());
+    widgets::sectionHeader("ui.stats.pipeline"_tr().c_str());
 
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", stats.renderWidth, stats.renderHeight);
+    // The column's one conclusion: the pipeline as a whole (see Overall), so NR being
+    // off on purpose does not read as "the mod is off".
+    Overall const state = overallState(live);
+    widgets::statRow("ui.stats.status"_tr().c_str(), overallName(state).c_str(), overallColor(state));
+
+    // Which stage is upscaling the picture right now - the same answer the strip and
+    // the SR page use.
+    ImU32             tint = 0;
+    std::string const up   = backendName(live, &tint);
+    widgets::statRow("ui.sr.backendNow"_tr().c_str(), up.c_str(), tint);
+
+    // Sizes come from the normalised backend snapshot (same as the strip): the RT branch
+    // maps PanelStats, the VV branch reports the engine's TAAU declaration sizes.
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", live.backend.renderWidth, live.backend.renderHeight);
     widgets::statRow("ui.stats.renderSize"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", stats.outputWidth, stats.outputHeight);
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", live.backend.displayWidth, live.backend.displayHeight);
     widgets::statRow("ui.stats.outputSize"_tr().c_str(), buffer);
 
-    // "Off" is a deliberate state, not "not ready yet": with the feature unloaded the
-    // sizes above still come from the engine, so only the NR-specific rows change.
-    std::string const statusText = !live.enabled ? "ui.stats.disabled"_tr()
-                                  : stats.featureCreated ? "ui.stats.created"_tr()
-                                                         : "ui.stats.notCreated"_tr();
-    ImU32 const statusColor = !live.enabled ? kTextDim : (stats.featureCreated ? kGreen : kRed);
-    widgets::statRow("ui.stats.status"_tr().c_str(), statusText.c_str(), statusColor);
-    widgets::statRow("ui.stats.replace"_tr().c_str(), replaceName(live.replace).c_str());
-
-    if (!stats.stampsActive) {
+    // What the two stages cost, in the panel's normal text colour. A measured time is
+    // a measurement, not an alarm: NR and SR read the same white, and only "no
+    // sample" is dimmed.
+    widgets::sectionHeader("ui.stats.gpu"_tr().c_str());
+    if (!live.stats.stampsActive) {
         widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
-        widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
+        widgets::statRow("ui.stats.srGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
     } else {
-        if (!live.enabled) {
-            widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.stats.disabled"_tr().c_str(), kTextDim);
-        } else if (stats.hasNr) {
-            std::snprintf(buffer, sizeof(buffer), "%.2f ms", stats.nrMs);
-            widgets::statRow("ui.stats.nrGpu"_tr().c_str(), buffer, kAccent);
+        if (live.stats.hasNr) {
+            std::snprintf(buffer, sizeof(buffer), "%.2f ms", live.stats.nrMs);
+            widgets::statRow("ui.stats.nrGpu"_tr().c_str(), buffer);
         } else {
             widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
         }
-        if (stats.hasEngine) {
-            std::snprintf(buffer, sizeof(buffer), "%.2f ms", stats.engineMs);
-            widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), buffer);
+        if (live.stats.hasEngine) {
+            std::snprintf(buffer, sizeof(buffer), "%.2f ms", live.stats.engineMs);
+            widgets::statRow("ui.stats.srGpu"_tr().c_str(), buffer);
         } else {
-            widgets::statRow("ui.stats.dlssGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+            widgets::statRow("ui.stats.srGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
         }
     }
 }
@@ -544,15 +788,23 @@ void drawStatsColumn(Layout const& layout, nr::PanelStats const& stats) {
 // Settings columns ----------------------------------------------------------
 
 void drawTabNeural() {
+    // One composite, no choice: TRP's Ratio resolve is the only one that ships
+    // (2026-10-29). The gain composite's controls are gone with it, so the draft is
+    // pinned here instead of in applyDraft - everything else applyDraft writes keeps
+    // its old meaning.
+    gDraft.replace = 6;
+
     widgets::sectionHeader("ui.neural.enableSection"_tr().c_str());
 
     if (widgets::toggle("ui.neural.enable"_tr().c_str(), &gDraft.enabled)) markDirty();
+    // A state, not an explanation: while this is off everything below is grey and the
+    // reason has to be visible without hovering anything.
     if (!gDraft.enabled) widgets::hint("ui.neural.disabledHint"_tr().c_str());
 
     if (!gDraft.enabled) ImGui::BeginDisabled();
 
-    // Position axis (docs/N): the two sides are exclusive. The hint carries the cost
-    // difference so nobody mistakes the after side's ~9.6 ms for a regression.
+    // Position axis (docs/N): the two sides are exclusive, and the cost difference
+    // belongs in the hint (the after side's ~9.6 ms is not a regression).
     widgets::sectionHeader("ui.neural.placementSection"_tr().c_str());
     gDraft.placement = gDraft.placement == 1 ? 1 : 0;
     {
@@ -575,27 +827,9 @@ void drawTabNeural() {
     widgets::hint(
         gDraft.placement == 1 ? "ui.neural.placementAfterHint"_tr().c_str() : "ui.neural.placementHint"_tr().c_str()
     );
+    // The fallback is a fact about this session, so it stays inline next to it.
     if (gDraft.placement == 1 && nr::nrAfterFallback()) {
         widgets::hint("ui.neural.afterFallbackHint"_tr().c_str());
-    }
-
-    // Only the two on-screen composites are offered: "evaluate only" (0) is a
-    // diagnostic mode with no entrance any more (docs/L), and the config loader maps a
-    // stale 0 to 6. The panel is a staging area, so a draft can never be 0 either.
-    std::string const replaceItems[2] = {
-        "ui.replace.item6"_tr(),
-        "ui.replace.item5"_tr(),
-    };
-    char const* itemPointers[2]  = {replaceItems[0].c_str(), replaceItems[1].c_str()};
-    int const   replaceValues[2] = {6, 5};
-    if (gDraft.replace != 5 && gDraft.replace != 6) gDraft.replace = 6;
-    if (mappedCombo("ui.neural.replace"_tr().c_str(), &gDraft.replace, itemPointers, replaceValues, 2)) markDirty();
-    widgets::hint(replaceHint(gDraft.replace).c_str());
-
-    // The gain boost only exists in the bounded-gain composite; hiding it in the ratio
-    // mode keeps the default screen free of knobs that do nothing.
-    if (gDraft.replace == 5) {
-        if (widgets::slider("ui.neural.gain"_tr().c_str(), &gDraft.gainBoost, 0.5f, 8.0f, "%.2f", "x")) markDirty();
     }
 
     if (!gDraft.enabled) ImGui::EndDisabled();
@@ -638,7 +872,6 @@ void drawTabNeural() {
         gDraft.mvecScale = autoMvec ? -1.0f : 0.0f;
         markDirty();
     }
-    widgets::hint("ui.neural.mvHint"_tr().c_str());
     if (!autoMvec) {
         if (widgets::slider("ui.neural.mv"_tr().c_str(), &gDraft.mvecScale, 1.0f, 2048.0f, "%.0f")) markDirty();
     }
@@ -702,33 +935,6 @@ void drawTabNeural() {
     }
 
     ImGui::Spacing();
-    widgets::sectionHeader("ui.neural.encode"_tr().c_str());
-
-    std::string const encodeItems[3] = {
-        "ui.neural.encodeAuto"_tr(),
-        "ui.neural.encodeReinhard"_tr(),
-        "ui.neural.encodeTrp"_tr(),
-    };
-    char const* encodePointers[3] = {encodeItems[0].c_str(), encodeItems[1].c_str(), encodeItems[2].c_str()};
-    int const   encodeValues[3]   = {-1, 0, 3};
-    if (mappedCombo("ui.neural.encode"_tr().c_str(), &gDraft.nrEncode, encodePointers, encodeValues, 3)) markDirty();
-    widgets::hint("ui.neural.encodeHint"_tr().c_str());
-
-    // Network preset is read at CreateFeature only, so the hint has to say that a
-    // change needs a restart - offering a switch that silently does nothing is the
-    // class of bug this batch exists to remove (docs/L 1.4).
-    std::string const networkItems[2] = {
-        "ui.neural.networkDefault"_tr(),
-        "ui.neural.networkPrevious"_tr(),
-    };
-    char const* networkPointers[2] = {networkItems[0].c_str(), networkItems[1].c_str()};
-    int const   networkValues[2]   = {0, 1};
-    if (mappedCombo("ui.neural.network"_tr().c_str(), &gDraft.networkPreset, networkPointers, networkValues, 2)) {
-        markDirty();
-    }
-    widgets::hint("ui.neural.networkHint"_tr().c_str());
-
-    ImGui::Spacing();
     widgets::sectionHeader("ui.neural.ratio"_tr().c_str());
     if (widgets::slider("ui.neural.white"_tr().c_str(), &gDraft.whitePoint, 0.05f, 4.0f, "%.3f")) markDirty();
     if (widgets::slider("ui.neural.transfer"_tr().c_str(), &gDraft.transferStrength, 0.0f, 2.0f, "%.2f")) markDirty();
@@ -740,37 +946,22 @@ void drawTabNeural() {
     widgets::hint("ui.neural.toneHint"_tr().c_str());
 
     // Adaptive exposure (docs/L 3.2): the white point comes from the scene instead of
-    // the constant above. Only Replace=6 normalises against it in the resolve; both
-    // encoders read it.
+    // the constant above. Only Replace=6 normalises against it in the resolve.
     if (widgets::toggle("ui.neural.adaptiveExposure"_tr().c_str(), &gDraft.adaptiveExposure)) markDirty();
     if (gDraft.adaptiveExposure) {
         if (widgets::slider("ui.neural.exposureBias"_tr().c_str(), &gDraft.exposureBias, -2.0f, 2.0f, "%+.2f", "EV")) {
             markDirty();
         }
     }
-    widgets::hint("ui.neural.exposureHint"_tr().c_str());
-
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.neural.compare"_tr().c_str());
-    bool compare = gDraft.compare != 0;
-    if (widgets::toggle("ui.neural.compareToggle"_tr().c_str(), &compare)) {
-        gDraft.compare = compare ? 1 : 0;
-        markDirty();
-    }
-    if (gDraft.compare != 0) {
-        if (widgets::slider("ui.neural.compareSplit"_tr().c_str(), &gDraft.compareSplit, 0.05f, 0.95f, "%.2f")) {
-            markDirty();
-        }
-    }
-    widgets::hint("ui.neural.compareHint"_tr().c_str());
 }
 
-void drawTabSr() {
+void drawTabSr(Live const& live) {
     // Which upscaler is actually running decides what this page can offer: the RT path
     // owns the engine's DLSS feature, the VV path owns ours, and with neither there is
     // nothing to control (docs/specs/ui.md §3). Detection is observation - a settings
-    // value cannot tell "TAAU at 100%" from "TAAU running" (EXP-0081).
-    auto const backend = sr::status();
+    // value cannot tell "TAAU at 100%" from "TAAU running" (EXP-0081). The status comes
+    // from the frame sample, so this page and the left column can never disagree.
+    auto const& backend = live.backend;
     // Not `rt`/`vv`: `vv` is a namespace here (`vv::sr`, `vv::dlss`), and a local of
     // that name hides it in this scope.
     bool const enginePath = backend.backend == sr::Backend::EngineDlss;
@@ -780,34 +971,24 @@ void drawTabSr() {
     // 100% the upscaler is gone, so the control must stay reachable - and the engine's
     // own setting is what says this machine is a VV machine even then.
     bool const ratioEditable = any || backend.vvConfigured || backend.vvSeen;
+    // Everything that only exists on our own pipeline (the master switch, its ratio,
+    // the DLSS-side jitter) shares this gate: on the ray-traced path the engine owns
+    // DLSS, so offering them there would be a control with no effect.
+    bool const vvMode = vvPath || (!enginePath && (backend.vvConfigured || backend.vvSeen));
 
-    auto const sr      = nr::srPanelStats();
-    auto const ps      = nr::nrPanelStats();
-    auto const vvStats = vv::sr::stats();
-    auto const vvDlss  = vv::dlss::srState();
+    auto const sr     = live.srStats;
+    auto const ps     = live.stats;
+    auto const vvDlss = live.dlss;
 
     char buffer[128]{};
 
     widgets::sectionHeader("ui.sr.backend"_tr().c_str());
     {
         // The badge answers "what is upscaling the picture right now", not "which path
-        // could be substituted". Under VV with the switch off the image is the engine's
-        // TAAU, so that is what it says; only a frame that our pipeline actually
-        // recorded counts as "DLSS".
-        bool const substituting = vvPath && vv::sr::enabled() && vvStats.recorded;
-        std::string name = "ui.sr.backendNone"_tr();
-        int         tint = kRed;
-        if (enginePath) {
-            name = "ui.sr.backendEngine"_tr();
-            tint = kAccent;
-        } else if (substituting) {
-            name = "ui.sr.backendVv"_tr();
-            tint = kAccent;
-        } else if (vvPath || backend.vvConfigured || backend.vvSeen) {
-            name = "ui.sr.backendTauu"_tr();
-            tint = 0;
-        }
-        widgets::statRow("ui.sr.backendNow"_tr().c_str(), name.c_str(), tint);
+        // could be substituted" - the same shared answer the left column shows.
+        ImU32             tint = 0;
+        std::string const up   = backendName(live, &tint);
+        widgets::statRow("ui.sr.backendNow"_tr().c_str(), up.c_str(), tint);
         if (!any) {
             if (backend.vvConfigured) {
                 // Observation cannot explain this one; the engine's own setting can.
@@ -829,17 +1010,15 @@ void drawTabSr() {
     // The resolution row is deliberately outside the disabled block below: it is the
     // only way back from the state where nothing runs (100% = no upscaler), so it gets
     // its own gate. Everything else is a write into a feature that does not exist
-    // without a backend; the counters stay visible (dimmed) so "why is this grey" is
-    // answerable from the same screen.
+    // without a backend.
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.internal"_tr().c_str());
-    if (vvPath || (!enginePath && (backend.vvConfigured || backend.vvSeen))) {
+    if (vvMode) {
         // The master switch: under VV the engine's upscaler is TAAU, so "enabled" means
         // our DLSS writes TAAU's output and the engine's TAAU draw is skipped.
         if (widgets::toggle("ui.sr.vvEnable"_tr().c_str(), &gDraftSr.vvEnabled)) {
             markDirty();
         }
-        widgets::hint("ui.sr.vvEnableHint"_tr().c_str());
         ImGui::Spacing();
         // VV: the render thread writes UpscalingData.factor before the camera build
         // (probe/VvUpscaling.cpp), so this is a real control and the engine option is
@@ -904,28 +1083,21 @@ void drawTabSr() {
         }
         widgets::hint("ui.sr.scaleHint"_tr().c_str());
     }
-    // What the write actually produced: scene render rect -> upscale target. This is the
-    // pair that proves the override landed, so it sits under the control that moves it.
+    // What the write actually produced: scene render rect -> upscale target, with the
+    // ratio those two imply. This is the pair that proves the override landed, so it
+    // sits under the control that moves it.
     if (backend.renderWidth != 0 && backend.displayWidth != 0) {
         std::snprintf(
             buffer,
             sizeof(buffer),
-            "%u x %u → %u x %u（%.1f%%）",
+            "%u x %u → %u x %u（%s）",
             backend.renderWidth,
             backend.renderHeight,
             backend.displayWidth,
             backend.displayHeight,
-            100.0 * static_cast<double>(backend.renderWidth) / static_cast<double>(backend.displayWidth)
+            ratioName(backend.renderWidth, backend.displayWidth).c_str()
         );
         widgets::statRow("ui.sr.currentSize"_tr().c_str(), buffer);
-    }
-    if (enginePath) {
-        // Read back from the engine's CreateFeature parameter object, not from the
-        // draft: this is how a "the preset did not take" report is distinguished from
-        // "the panel did not save it" without reading the log.
-        std::string const slot =
-            sr.rebuilding ? "ui.sr.rebuilding"_tr() : qualityName(sr.quality);
-        widgets::statRow("ui.sr.quality"_tr().c_str(), slot.c_str(), sr.rebuilding ? kTextDim : 0);
     }
 
     if (!any) {
@@ -962,12 +1134,44 @@ void drawTabSr() {
         // feature's CreateFeature value on VV (VvDlssSr.h stores it for exactly this).
         std::string preset;
         if (vvPath) {
-            preset = vvDlss.ready ? presetName(vvDlss.preset) : "ui.sr.rebuilding"_tr();
+            preset = vvDlss.ready ? presetName(static_cast<unsigned>(vvDlss.preset)) : "ui.sr.rebuilding"_tr();
         } else {
             preset = sr.rebuilding ? "ui.sr.rebuilding"_tr() : presetName(sr.preset);
         }
         bool const dim = (vvPath && !vvDlss.ready) || (enginePath && sr.rebuilding);
         widgets::statRow("ui.sr.preset"_tr().c_str(), preset.c_str(), dim ? kTextDim : 0);
+    }
+
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.jitterSection"_tr().c_str());
+    {
+        // The sub-pixel offset handed to DLSS. Default Zero: the world frame is not
+        // rendered with the TAA context's offset, so feeding it shifted the input every
+        // frame (a visible wobble, EXP-0098). Engine follows the engine's current frame
+        // - the A/B described in research/2026-10-29-taau-jitter-dlss-contract.md.
+        //
+        // Only our own DLSS has an offset we can choose; on the ray-traced path the
+        // engine feeds its feature, so the control is greyed out there instead of
+        // pretending to do something (2026-10-29 review).
+        //
+        // Staged like every other control: the combo only moves the draft, and
+        // applyDraft() is what writes vv::sr. It has no config entry, so Apply affects
+        // this run and "Save as default" does not carry it over.
+        std::string const jitterItems[2] = {
+            "ui.sr.jitterZero"_tr(),
+            "ui.sr.jitterEngine"_tr(),
+        };
+        char const* jitterPointers[2] = {jitterItems[0].c_str(), jitterItems[1].c_str()};
+        int const   jitterValues[2]   = {
+            static_cast<int>(vv::sr::JitterSource::Zero),
+            static_cast<int>(vv::sr::JitterSource::Engine),
+        };
+        if (!vvMode) ImGui::BeginDisabled();
+        if (mappedCombo("ui.sr.jitterSource"_tr().c_str(), &gDraftJitter, jitterPointers, jitterValues, 2)) {
+            markDirty();
+        }
+        if (!vvMode) ImGui::EndDisabled();
+        widgets::hint(vvMode ? "ui.sr.jitterHint"_tr().c_str() : "ui.sr.jitterRtHint"_tr().c_str());
     }
 
     ImGui::Spacing();
@@ -997,164 +1201,17 @@ void drawTabSr() {
         widgets::hint(enginePath ? "ui.sr.sharpHint"_tr().c_str() : "ui.sr.sharpHintVv"_tr().c_str());
 
         // Read-back (docs/L §0.7): what the render thread actually recorded, not
-        // what the draft says. "Applied" is dim until a frame has gone through.
+        // what the draft says. Its GPU time reads in the same white as every other
+        // timing in the panel.
         if (sharp.enabled && sharp.strength > 0.0f) {
-            std::snprintf(buffer, sizeof(buffer), "%.3f", static_cast<double>(sharp.strength));
-            widgets::statRow("ui.sr.sharpApplied"_tr().c_str(), buffer, sharp.active ? kAccent : kTextDim);
-            std::snprintf(buffer, sizeof(buffer), "%u", sharp.frames);
-            widgets::statRow("ui.sr.sharpFrames"_tr().c_str(), buffer);
             if (ps.hasRcas) {
                 std::snprintf(buffer, sizeof(buffer), "%.3f ms", ps.rcasMs);
                 widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), buffer);
             } else {
                 widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
             }
-            if (sharp.failures != 0) {
-                std::snprintf(buffer, sizeof(buffer), "%u", sharp.failures);
-                widgets::statRow("ui.sr.sharpFailures"_tr().c_str(), buffer, kRed);
-            }
         } else {
             widgets::hint(sharp.enabled ? "ui.sr.sharpZeroHint"_tr().c_str() : "ui.sr.sharpOffHint"_tr().c_str());
-        }
-    }
-
-    if (enginePath) {
-        ImGui::Spacing();
-        widgets::sectionHeader("ui.sr.ctx"_tr().c_str());
-        auto const eng = nr::srEngineStats();
-        if (eng.valid) {
-            std::snprintf(
-                buffer,
-                sizeof(buffer),
-                "%u / %.3f",
-                eng.ctxQuality,
-                static_cast<double>(eng.ctxFactor)
-            );
-            widgets::statRow("ui.sr.ctxCtx"_tr().c_str(), buffer);
-            std::snprintf(
-                buffer,
-                sizeof(buffer),
-                "%u / %.3f",
-                eng.requestedQ,
-                static_cast<double>(eng.requestedF)
-            );
-            widgets::statRow("ui.sr.ctxEngine"_tr().c_str(), buffer);
-            std::snprintf(buffer, sizeof(buffer), "%u x %u", eng.renderW, eng.renderH);
-            widgets::statRow("ui.sr.ctxRender"_tr().c_str(), buffer);
-            std::snprintf(buffer, sizeof(buffer), "%.3f", static_cast<double>(eng.ctxExtra));
-            widgets::statRow("ui.sr.ctxExtra"_tr().c_str(), buffer);
-        } else {
-            widgets::hint("ui.sr.ctxNone"_tr().c_str());
-        }
-
-        ImGui::Spacing();
-        widgets::sectionHeader("ui.sr.callback"_tr().c_str());
-
-        std::snprintf(buffer, sizeof(buffer), "%u", sr.callbackCount);
-        widgets::statRow("ui.sr.cbCount"_tr().c_str(), buffer);
-        if (sr.callbackCount != 0) {
-            std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbDisplayW, sr.cbDisplayH);
-            widgets::statRow("ui.sr.cbDisplay"_tr().c_str(), buffer);
-            std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbRenderW, sr.cbRenderH);
-            widgets::statRow("ui.sr.cbRender"_tr().c_str(), buffer);
-            std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(sr.cbSharpness));
-            widgets::statRow("ui.sr.cbSharpness"_tr().c_str(), buffer);
-            if (sr.dynMinW != 0) {
-                std::snprintf(
-                    buffer,
-                    sizeof(buffer),
-                    "%u x %u .. %u x %u",
-                    sr.dynMinW,
-                    sr.dynMinH,
-                    sr.dynMaxW,
-                    sr.dynMaxH
-                );
-                widgets::statRow("ui.sr.dynamic"_tr().c_str(), buffer);
-            }
-        } else {
-            widgets::hint("ui.sr.cbNone"_tr().c_str());
-        }
-        // Create flags (IsHDR|MVLowRes = 0x3) come from the same parameter object as the
-        // optimal-settings answer, so they live here rather than in a separate block.
-        std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
-        widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
-        widgets::hint("ui.sr.cbHint"_tr().c_str());
-
-        // Self-check + telemetry (docs/I §7 risk register, docs/K §2.2 ③). The four
-        // check rows answer "is SR wired up at all" after a game update; the rows below
-        // answer "is the engine actually running it" without reading the log.
-        ImGui::Spacing();
-        widgets::sectionHeader("ui.sr.selfCheck"_tr().c_str());
-        auto const checkRow = [](char const* label, bool ok) {
-            widgets::statRow(
-                label,
-                ok ? "ui.sr.checkOk"_tr().c_str() : "ui.sr.checkFailed"_tr().c_str(),
-                ok ? 0 : kRed
-            );
-        };
-        checkRow("ui.sr.checkCallback"_tr().c_str(), sr.callbackWrapped);
-        checkRow("ui.sr.checkFrameCtx"_tr().c_str(), sr.frameContextHook);
-        checkRow("ui.sr.checkFactorTable"_tr().c_str(), sr.factorTable);
-        checkRow("ui.sr.checkCreate"_tr().c_str(), sr.createOverridesRan);
-        widgets::hint("ui.sr.checkHint"_tr().c_str());
-
-        std::snprintf(buffer, sizeof(buffer), "%u", sr.evalCount);
-        widgets::statRow("ui.sr.evalCount"_tr().c_str(), buffer);
-        std::snprintf(buffer, sizeof(buffer), "%u", sr.evalFailures);
-        widgets::statRow("ui.sr.evalFailures"_tr().c_str(), buffer, sr.evalFailures != 0 ? kRed : 0);
-        widgets::statRow(
-            "ui.sr.inputFormat"_tr().c_str(),
-            sr.inputFormatValid ? formatName(sr.inputFormat).c_str() : "-"
-        );
-        widgets::statRow(
-            "ui.sr.inputHdr"_tr().c_str(),
-            sr.flags == 0 ? "-" : ((sr.flags & 1u) != 0u ? "HDR" : "SDR")
-        );
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%.2f / %.2f",
-            static_cast<double>(sr.jitterX),
-            static_cast<double>(sr.jitterY)
-        );
-        widgets::statRow("ui.sr.jitter"_tr().c_str(), buffer);
-    } else if (vvPath || backend.vvSeen) {
-        // VV: what this page can honestly report is our own pipeline, not the
-        // engine's - there is no engine DLSS feature on this path at all.
-        ImGui::Spacing();
-        widgets::sectionHeader("ui.sr.vvSection"_tr().c_str());
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%s  %u x %u → %u x %u",
-            vvStats.pipelineReady ? "ui.sr.vvReady"_tr().c_str() : "ui.sr.vvNotBuilt"_tr().c_str(),
-            vvStats.renderWidth,
-            vvStats.renderHeight,
-            vvStats.displayWidth,
-            vvStats.displayHeight
-        );
-        widgets::statRow("ui.sr.vvPipeline"_tr().c_str(), buffer, vvStats.pipelineReady ? 0 : kTextDim);
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "feature=%d create=0x%08X eval=0x%08X",
-            vvStats.dlssReady ? 1 : 0,
-            static_cast<unsigned>(vvStats.dlssCreateRet),
-            static_cast<unsigned>(vvStats.dlssEvaluateRet)
-        );
-        widgets::statRow("ui.sr.vvFeature"_tr().c_str(), buffer, vvStats.dlssReady ? kAccent : kTextDim);
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "colour=%u depth=%u mv=%u",
-            vvStats.colorFormat,
-            vvStats.depthFormat,
-            vvStats.mvFormat
-        );
-        widgets::statRow("ui.sr.vvInputs"_tr().c_str(), buffer, vvStats.mvSource ? 0 : kRed);
-        if (vvStats.lastError != 0) {
-            std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(vvStats.lastError));
-            widgets::statRow("ui.sr.vvError"_tr().c_str(), buffer, kRed);
         }
     }
 
@@ -1162,7 +1219,7 @@ void drawTabSr() {
     widgets::sectionHeader("ui.sr.actions"_tr().c_str());
     std::string resetLabel = "ui.sr.reset"_tr();
     resetLabel += "##srReset";
-    if (ImGui::Button(resetLabel.c_str())) {
+    if (menuButton(resetLabel.c_str())) {
         if (vvPath) {
             vv::sr::requestReset();
         } else {
@@ -1176,482 +1233,14 @@ void drawTabSr() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// VV injection experiment (docs/specs/vv.md §12 A)
-//
-// The engine submits a whole frame in one ExecuteCommandLists call; the probe can
-// cut it at a list boundary and clear the back buffer in between. The panel only
-// picks the boundary - everything else happens on the render thread - and the
-// answers are read off the screen, not out of a number:
-//
-//   clear colour + UI still drawn  -> the cut is before the UI
-//   the whole screen is clear colour -> the cut is after the UI
-//   nothing changed                -> a later list overwrote the buffer (too early)
-// ---------------------------------------------------------------------------
-
-std::string skipReasonText(probe::vv::inject::SkipReason reason) {
-    switch (reason) {
-    case probe::vv::inject::SkipReason::NoDevice:
-        return "ui.diag.vvReasonDevice"_tr();
-    case probe::vv::inject::SkipReason::NoSwapChain:
-        return "ui.diag.vvReasonChain"_tr();
-    case probe::vv::inject::SkipReason::FenceBusy:
-        return "ui.diag.vvReasonFence"_tr();
-    case probe::vv::inject::SkipReason::NoBackBuffer:
-        return "ui.diag.vvReasonBuffer"_tr();
-    case probe::vv::inject::SkipReason::PipelineFailed:
-        return "ui.diag.vvReasonPipeline"_tr();
-    case probe::vv::inject::SkipReason::RecordFailed:
-        return "ui.diag.vvReasonRecord"_tr();
-    case probe::vv::inject::SkipReason::NoBoundary:
-        return "no pre-HUD boundary; TAAU restored";
-    default:
-        return {};
-    }
-}
-
-#ifdef TEST
-// B0 probe controls (docs/specs/vv.md §13.4). TEST-only and deliberately not
-// translated: this is a developer switch, not a user feature. The delay lets the
-// player click, close the panel and start walking before the 24 frames begin.
-void drawB0Probe() {
-    widgets::sectionHeader("VV B0 (TEST)");
-    widgets::hint("Press F11 once after entering the world so the engine rebuilds its render graph.");
-    if (ImGui::Button("Dump now (stand still, then F2)")) {
-        probe::vv::requestDumpNow();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Sample 24 frames in 2 s (then walk)")) {
-        probe::vv::requestContextSample(24, 2000);
-    }
-
-    // B1a: self-built NGX session probe. Creates and releases DLSS feature 1 on
-    // the game's device; it does not evaluate and does not touch a frame.
-    widgets::sectionHeader("VV DLSS B1a (TEST)");
-    if (ImGui::Button("Probe self-init NGX + CreateFeature(1)")) {
-        vv::dlss::requestProbe();
-    }
-    auto const ngx = vv::dlss::probeState();
-    char       buffer[256]{};
-    std::snprintf(buffer, sizeof(buffer), "%s", ngx.done ? "done" : "idle");
-    widgets::statRow("B1a state", buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "init=0x%08X caps=0x%08X create=0x%08X",
-        static_cast<unsigned>(ngx.initRet),
-        static_cast<unsigned>(ngx.capsRet),
-        static_cast<unsigned>(ngx.createRet)
-    );
-    widgets::statRow("B1a NGX returns", buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "%ux%u -> %ux%u  core=%d session=%d",
-        ngx.renderWidth,
-        ngx.renderHeight,
-        ngx.displayWidth,
-        ngx.displayHeight,
-        ngx.coreLoaded ? 1 : 0,
-        ngx.initialized ? 1 : 0
-    );
-    widgets::statRow("B1a sizes", buffer);
-
-    // B1c: cut capture. One pass over tail k = 1..8, one picture per boundary, no
-    // pixel changed. The pictures answer "what does each of the last lists draw"
-    // (the first one that shows the HUD is the UI block) and give the offline tool
-    // TAAU's own output as the reference for colour / tone fitting.
-    widgets::sectionHeader("VV B1c cut capture (TEST)");
-    if (ImGui::Button("Capture at content boundary (1 frame)")) {
-        // The self-check for the new anchor: with the boundary taken from the first
-        // back-buffer writer, the picture must never contain the HUD or the hand -
-        // whatever the frame's list count is.
-        vv::capture::start();
-        probe::vv::inject::setAction(probe::vv::inject::Action::Capture);
-        probe::vv::inject::setUseBackBuffer(true);
-        // If the probe has not seen a writer yet, fall back to the last measured
-        // boundary instead of capturing the top of the frame (k=1 is useless there).
-        probe::vv::inject::setFromTail(true);
-        probe::vv::inject::setK(4);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Capture sweep: tail k=1..8 (one pass)")) {
-        vv::capture::start();
-        probe::vv::inject::setAction(probe::vv::inject::Action::Capture);
-        probe::vv::inject::setUseBackBuffer(false);
-        probe::vv::inject::setFromTail(true);
-        // One frame per boundary: the capture is the only action, so a "hold" of one
-        // frame gives exactly one picture per tail k instead of three identical ones.
-        probe::vv::inject::setHoldFrames(1);
-        probe::vv::inject::setSweepDepth(8);
-        probe::vv::inject::setK(1);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Sweep);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Stop capture")) {
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
-    }
-    widgets::hint("Stand still. After a capture, press \"Dump now\" (B0) at once: the pictures and the");
-    widgets::hint("candidates must describe the same frame. F11 first, or the dump finds no textures.");
-    auto const cut = vv::capture::stats();
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "captured=%u skipped=%u pending=%u",
-        cut.captured,
-        cut.skipped,
-        cut.pending
-    );
-    widgets::statRow("B1c frames", buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "tail=%u split=%u/%u  %ux%u",
-        cut.tail,
-        cut.split,
-        cut.listCount,
-        cut.width,
-        cut.height
-    );
-    widgets::statRow("B1c last cut", buffer);
-    if (cut.lastFile[0]) {
-        int const needed = ::WideCharToMultiByte(CP_UTF8, 0, cut.lastFile, -1, buffer, sizeof(buffer), nullptr, nullptr);
-        widgets::statRow("B1c last file", needed > 0 ? buffer : "?");
-    }
-
-    // R3 inputs: which colour/depth candidate is picked, plus the explicit dump trigger.
-    // The old B2 back-buffer path (depth/motion views through encode + white point) is
-    // gone; arg10 is the only output (docs/specs/vv.md §35.4).
-    widgets::sectionHeader("VV R3 inputs (TEST)");
-    if (ImGui::Button("Next SR colour")) {
-        vv::sr::cycleColor();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Next SR depth")) {
-        vv::sr::cycleDepth();
-    }
-    if (ImGui::Button("Dump SR inputs")) {
-        vv::sr::dumpInputs();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Capture TAAU ref (F2)")) {
-        vv::sr::captureTaaRef();
-    }
-    // TEST: the hotkey path, so a pair can be taken while the panel is closed and the
-    // player keeps turning the camera (EXP-0027).
-    widgets::hint("F7 (TEST): two input dumps 2 s apart - keep turning; the menu may stay closed.");
-    auto const sr = vv::sr::stats();
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "%s  %ux%u -> %ux%u",
-        sr.pipelineReady ? "ready" : "not built",
-        sr.renderWidth,
-        sr.renderHeight,
-        sr.displayWidth,
-        sr.displayHeight
-    );
-    widgets::statRow("R3 pipeline", buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "feature=%d create=0x%08X eval=0x%08X",
-        sr.dlssReady ? 1 : 0,
-        static_cast<unsigned>(sr.dlssCreateRet),
-        static_cast<unsigned>(sr.dlssEvaluateRet)
-    );
-    widgets::statRow("R3 DLSS", buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "colour=%p/%u (%d/%u)  depth=%p/%u (%d/%u)  rec=%d",
-        sr.colorSource,
-        sr.colorFormat,
-        static_cast<int>(sr.colorChoice) % (sr.colorCandidates ? static_cast<int>(sr.colorCandidates) : 1),
-        sr.colorCandidates,
-        sr.depthSource,
-        sr.depthFormat,
-        static_cast<int>(sr.depthChoice) % (sr.depthCandidates ? static_cast<int>(sr.depthCandidates) : 1),
-        sr.depthCandidates,
-        sr.recorded ? 1 : 0
-    );
-    widgets::statRow("R3 inputs", buffer);
-    if (sr.lastError) {
-        std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(sr.lastError));
-        widgets::statRow("R3 last error", buffer);
-    }
-    // DLSS jitter. Default: zero - the world frame is not rendered with the TAA
-    // context's sub-pixel offset, so feeding it shifted the input by that offset every
-    // frame (a visible wobble; EXP-0098 A/B, same mechanism as the menu judder in
-    // EXP-0073). The other three entries are the discrimination from
-    // research/2026-10-29-taau-jitter-dlss-contract.md §7.
-    {
-        static char const* const kNames[4] = {
-            "0 (default)",
-            "engine j(n)",
-            "-engine -j(n)",
-            "previous j(n-1)",
-        };
-        int index = static_cast<int>(vv::sr::jitterSource());
-        if (widgets::combo("SR jitter (diagnostic)", &index, kNames, 4)) {
-            vv::sr::setJitterSource(static_cast<vv::sr::JitterSource>(index));
-        }
-        widgets::hint(
-            "§7: -j(n) wobbling twice as hard => the frame does carry this jitter (value/sign right); "
-            "about the same => it does not, and only 0 is truthful; j(n-1) steady => the context value "
-            "runs one frame ahead of the render."
-        );
-    }
-
-    // R3 stage A (docs/specs/vv.md §35.1): write magenta into the engine's TAAU
-    // output (arg10) after the list that wrote it. TAAU still runs; only the output
-    // is replaced, and a missing writer stays a skip.
-    widgets::sectionHeader("VV R3 stage A (TEST)");
-    if (ImGui::Button(probe::vv::productArmed() ? "Disarm arg10 solid" : "Write solid arg10")) {
-        bool const arm = !probe::vv::productArmed();
-        probe::vv::setProductArmed(arm);
-        probe::vv::inject::setUseArg10(arm);
-        probe::vv::inject::setUseBackBuffer(false);
-        probe::vv::inject::setFromTail(false);
-        probe::vv::inject::setAction(probe::vv::inject::Action::SolidArg10);
-        probe::vv::inject::setMode(arm ? probe::vv::inject::Mode::Fixed : probe::vv::inject::Mode::Off);
-    }
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "armed=%d writer=%u list=%p target=%p",
-        probe::vv::productArmed() ? 1 : 0,
-        probe::vv::arg10WriterSplit(),
-        probe::vv::arg10WriterList(),
-        probe::vv::arg10Target()
-    );
-    widgets::statRow("R3 A arg10", buffer);
-
-    // R3 stage B (docs/specs/vv.md §35.2): the same cut, but the DLSS output is
-    // written into arg10 instead of the solid colour - no encode, no white point.
-    widgets::sectionHeader("VV R3 stage B (TEST)");
-    if (ImGui::Button("DLSS -> arg10 (stage B)")) {
-        probe::vv::setProductArmed(true);
-        probe::vv::inject::setUseArg10(true);
-        probe::vv::inject::setUseBackBuffer(false);
-        probe::vv::inject::setFromTail(false);
-        probe::vv::inject::setAction(probe::vv::inject::Action::DlssArg10);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Stop arg10")) {
-        probe::vv::setProductArmed(false);
-        probe::vv::inject::setUseArg10(false);
-        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
-    }
-    auto const srStats = vv::sr::stats();
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "dlss=%d eval=0x%X %ux%u",
-        srStats.dlssReady ? 1 : 0,
-        static_cast<unsigned>(srStats.dlssEvaluateRet),
-        srStats.displayWidth,
-        srStats.displayHeight
-    );
-    widgets::statRow("R3 B arg10", buffer);
-
-    // R3 stage D probe (docs/specs/vv.md §35.4): answers what survives suppressing the
-    // TAAU draw before any suppress implementation is written. Suppress skips the draw
-    // callback for N frames and restores itself; the other two only log.
-    widgets::sectionHeader("VV R3 stage D probe (TEST)");
-    if (ImGui::Button("Suppress callback x8")) {
-        probe::vv::setSuppressProbeFrames(8);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Draw tag probe x300")) {
-        probe::vv::setDrawTagProbeFrames(300);
-    }
-    if (ImGui::Button("Chain probe x1")) {
-        probe::vv::setChainProbeFrames(1);
-    }
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "suppress=%u draw=%u chain=%u",
-        probe::vv::suppressProbeFrames(),
-        probe::vv::drawTagProbeFrames(),
-        probe::vv::chainProbeFrames()
-    );
-    widgets::statRow("R3 D probe", buffer);
-
-    // R3 stage D draw-level suppress: only the TAAU quad is skipped, the callback and
-    // its material binds stay. Needs the stage B arm above (the draw tag comes from
-    // arg10's bind-time proof); a frame whose injection failed restores TAAU itself.
-    widgets::sectionHeader("VV R3 stage D suppress (TEST)");
-    if (ImGui::Button(probe::vv::drawSuppressArmed() ? "Restore TAAU draw" : "Suppress TAAU draw")) {
-        probe::vv::setDrawSuppress(!probe::vv::drawSuppressArmed());
-    }
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "armed=%d skips=%u",
-        probe::vv::drawSuppressArmed() ? 1 : 0,
-        probe::vv::drawSuppressSkips()
-    );
-    widgets::statRow("R3 D draw", buffer);
-    widgets::hint("Arm stage B first; the TAAU quad is skipped only after a frame that injected.");
-
-    // The SR page's badge is a conclusion; these are the counters behind it, kept here
-    // because a product page should not read like a counter dump (2026-10-29 request).
-    // `declared` advances even while the draw is skipped - that is what says "VV is
-    // running"; `skipped / forwarded / missed` is what says whether TAAU really ran.
-    widgets::sectionHeader("SR backend counters (TEST)");
-    {
-        auto const draw = probe::vv::taauDrawStats();
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "declared=%llu dlssEvals=%u",
-            static_cast<unsigned long long>(draw.declared),
-            nr::srPanelStats().evalCount
-        );
-        widgets::statRow("backend", buffer);
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "skipped=%llu forwarded=%llu missed=%llu",
-            static_cast<unsigned long long>(draw.suppressed),
-            static_cast<unsigned long long>(draw.forwarded),
-            static_cast<unsigned long long>(draw.missed)
-        );
-        widgets::statRow("taau draw", buffer, draw.missed != 0 ? kRed : 0);
-    }
-
-    // Engine option writes (docs/specs/vv.md §17). `upscaling_percentage` is the knob
-    // that decides the VV render size, so this answers whether the SR panel can ever
-    // own "internal resolution" under VV - or whether that row has to stay read-only.
-    // Three fixed values are enough: the question is "does a runtime write reach the
-    // frame", not which ratio looks best.
-    widgets::sectionHeader("VV options (TEST)");
-    struct RatioChoice {
-        char const* label;
-        char const* value;
-    };
-    RatioChoice const ratios[3] = {{"50%", "50"}, {"66%", "66"}, {"100%", "100"}};
-    for (int index = 0; index < 3; ++index) {
-        if (index != 0) {
-            ImGui::SameLine();
-        }
-        if (ImGui::Button(ratios[index].label)) {
-            probe::options::requestWrite(
-                probe::options::Known::UpscalingPercentage,
-                ratios[index].value
-            );
-        }
-    }
-    auto const write = probe::options::lastWrite();
-    widgets::statRow(
-        "options last write",
-        write.text[0] ? write.text : "(none)",
-        write.attempted ? (write.ok ? kAccent : kRed) : kTextDim
-    );
-    widgets::hint("Writes the engine option, not config.json; the value lands on the next level tick.");
-}
-#endif
-
-void drawVvInjection() {
-    widgets::sectionHeader("ui.diag.vv"_tr().c_str());
-
-    // Read the live mode on the first draw and show it. This page used to initialise
-    // its own copy to Off with an "applied" sentinel of -1, so merely opening the tab
-    // wrote Mode::Off - which silently stopped the product's injection while the draw
-    // suppress stayed armed, i.e. a frozen picture (2026-10-29). The mode is now read,
-    // not assumed, and the controls are locked while the product owns the injection.
-    static int  mode     = -1;
-    static int  boundary = 1;
-    static int  hold     = 20;
-    static int  applied  = -1;
-    static bool tail     = false;
-    if (mode < 0) {
-        mode    = static_cast<int>(probe::vv::inject::mode());
-        applied = mode;
-    }
-
-    bool const productOwns = probe::vv::productArmed();
-    if (productOwns) {
-        ImGui::BeginDisabled();
-    }
-
-    std::string const names[3] = {
-        "ui.diag.vvOff"_tr(),
-        "ui.diag.vvFixed"_tr(),
-        "ui.diag.vvSweep"_tr(),
-    };
-    char const* items[3] = {names[0].c_str(), names[1].c_str(), names[2].c_str()};
-    widgets::combo("ui.diag.vvMode"_tr().c_str(), &mode, items, 3);
-    if (mode != applied) {
-        probe::vv::inject::setMode(static_cast<probe::vv::inject::Mode>(mode));
-        applied = mode;
-    }
-
-    // The engine's list count is not constant (a world frame is 48-51 lists, the
-    // main-menu dressing room 69, and single frames reach 74/81/107), so a boundary
-    // counted from the head moves whenever the frame changes shape. Counting from the
-    // tail is the only way to ask "is the UI always the last list?" without the number
-    // drifting underneath the experiment.
-    if (widgets::toggle("ui.diag.vvTail"_tr().c_str(), &tail)) {
-        probe::vv::inject::setFromTail(tail);
-        boundary = 1;
-    }
-
-    auto const stats = probe::vv::inject::stats();
-    char       buffer[96]{};
-
-    if (mode == static_cast<int>(probe::vv::inject::Mode::Fixed)) {
-        int const limit = tail ? 16 : 128;
-        if (widgets::sliderInt("ui.diag.vvK"_tr().c_str(), &boundary, 1, limit)) {
-            probe::vv::inject::setK(static_cast<unsigned>(boundary));
-        }
-    } else if (mode == static_cast<int>(probe::vv::inject::Mode::Sweep)) {
-        if (widgets::sliderInt("ui.diag.vvHold"_tr().c_str(), &hold, 1, 60)) {
-            probe::vv::inject::setHoldFrames(static_cast<unsigned>(hold));
-        }
-    }
-    if (productOwns) {
-        ImGui::EndDisabled();
-        widgets::hint("ui.diag.vvLocked"_tr().c_str());
-    }
-    if (mode != static_cast<int>(probe::vv::inject::Mode::Off)) {
-        std::snprintf(buffer, sizeof(buffer), "%u / %u", stats.split, stats.listsPerSubmit);
-        widgets::statRow("ui.diag.vvAt"_tr().c_str(), buffer);
-    }
-    if (stats.minLists) {
-        std::snprintf(buffer, sizeof(buffer), "%u .. %u", stats.minLists, stats.maxLists);
-        widgets::statRow("ui.diag.vvRange"_tr().c_str(), buffer);
-    }
-
-    if (!stats.ready) {
-        widgets::statRow("ui.diag.vvState"_tr().c_str(), "ui.diag.vvNotReady"_tr().c_str(), kTextDim);
-    } else if (stats.reason != probe::vv::inject::SkipReason::None) {
-        widgets::statRow("ui.diag.vvState"_tr().c_str(), skipReasonText(stats.reason).c_str(), kAmber);
-    } else {
-        widgets::statRow("ui.diag.vvState"_tr().c_str(), "ui.diag.vvRunning"_tr().c_str(), kAccent);
-    }
-
-    std::snprintf(buffer, sizeof(buffer), "%u", stats.listsPerSubmit);
-    widgets::statRow("ui.diag.vvLists"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u", stats.injected);
-    widgets::statRow("ui.diag.vvInjected"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u", stats.skipped);
-    widgets::statRow("ui.diag.vvSkipped"_tr().c_str(), buffer, stats.skipped ? kAmber : kTextDim);
-    std::snprintf(buffer, sizeof(buffer), "%u", stats.sweeps);
-    widgets::statRow("ui.diag.vvPass"_tr().c_str(), buffer);
-    widgets::hint("ui.diag.vvHint"_tr().c_str());
-}
-
 void drawTabDiagnostics() {
+    // What the two stages cost, plus the sharpening pass while it is on. Nothing on
+    // this page is a conclusion, and the block that used to be here (feature flags,
+    // return codes, input formats, the per-frame parameter dump, the VV boundary
+    // experiments and the history-reset switches) answered questions only a developer
+    // asks (2026-10-29 requests).
     auto const stats = nr::nrPanelStats();
+    auto const sharp = neurodragon::sr::sharpStats();
 
     widgets::sectionHeader("ui.diag.gpu"_tr().c_str());
 
@@ -1660,162 +1249,38 @@ void drawTabDiagnostics() {
         widgets::statRow("ui.diag.nr"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
         widgets::statRow("ui.diag.dlss"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
     } else {
+        // Same white for NR and SR: a measured time is not an alarm.
         if (stats.hasNr) {
-            std::snprintf(
-                buffer,
-                sizeof(buffer),
-                "%.3f ms  %s",
-                stats.nrMs,
-                "ui.diag.sample"_tr(stats.nrSamples).c_str()
-            );
-            widgets::statRow("ui.diag.nr"_tr().c_str(), buffer, kAccent);
+            std::snprintf(buffer, sizeof(buffer), "%.3f ms", stats.nrMs);
+            widgets::statRow("ui.diag.nr"_tr().c_str(), buffer);
         } else {
             widgets::statRow("ui.diag.nr"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
         }
         if (stats.hasEngine) {
-            std::snprintf(
-                buffer,
-                sizeof(buffer),
-                "%.3f ms  %s",
-                stats.engineMs,
-                "ui.diag.sample"_tr(stats.engineSamples).c_str()
-            );
+            std::snprintf(buffer, sizeof(buffer), "%.3f ms", stats.engineMs);
             widgets::statRow("ui.diag.dlss"_tr().c_str(), buffer);
         } else {
             widgets::statRow("ui.diag.dlss"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
         }
     }
-    if (stats.lastError != 0) {
-        std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(stats.lastError));
-        widgets::statRow("ui.diag.lastError"_tr().c_str(), buffer, kRed);
-    }
-    // Telemetry (docs/L 3.3): a failed evaluation is skipped by the composite, so a
-    // rising counter explains "NR stopped affecting some frames" without digging logs.
-    std::snprintf(buffer, sizeof(buffer), "%u", stats.evalFailures);
-    widgets::statRow("ui.diag.evalFailures"_tr().c_str(), buffer, stats.evalFailures ? kAmber : kTextDim);
-    std::string clearLabel  = "ui.diag.clear"_tr();
-    clearLabel             += "##clearSamples";
-    if (ImGui::Button(clearLabel.c_str())) nr::nrStampClearReported();
-    widgets::hint("ui.diag.hint"_tr().c_str());
-
-    // Stage split (docs/L 1.7): measured on the same frames as the NR row above, so
-    // encode + evaluate + composite should add up to roughly that number. A stage
-    // that reads 0.000 with samples is a real measurement, not "timing off".
-    auto stageRow = [&](std::string const& label, bool has, double ms, unsigned samples) {
-        char value[96]{};
-        if (!stats.stampsActive) {
-            widgets::statRow(label.c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
-        } else if (has) {
-            std::snprintf(value, sizeof(value), "%.3f ms  %s", ms, "ui.diag.sample"_tr(samples).c_str());
-            widgets::statRow(label.c_str(), value);
+    if (sharp.enabled && sharp.strength > 0.0f) {
+        if (stats.hasRcas) {
+            std::snprintf(buffer, sizeof(buffer), "%.3f ms", stats.rcasMs);
+            widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), buffer);
         } else {
-            widgets::statRow(label.c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
+            widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
         }
-    };
-    stageRow("ui.diag.encode"_tr(), stats.hasEncode, stats.encodeMs, stats.encodeSamples);
-    stageRow("ui.diag.evaluate"_tr(), stats.hasEvaluate, stats.evaluateMs, stats.evaluateSamples);
-    stageRow("ui.diag.composite"_tr(), stats.hasComposite, stats.compositeMs, stats.compositeSamples);
+    }
 
+    // Clearing the published samples is the one readout control left: it answers "did
+    // that number come from now, or from before I changed anything". The two
+    // "reset history every frame" switches that used to sit below it are gone: they
+    // only existed to break the picture on purpose (2026-10-29 review).
     ImGui::Spacing();
-    widgets::sectionHeader("ui.diag.switches"_tr().c_str());
-    if (widgets::toggle("ui.diag.resetNr"_tr().c_str(), &gDraft.resetEveryFrame)) markDirty();
-    if (widgets::toggle("ui.diag.resetSr"_tr().c_str(), &gDraft.srResetEveryFrame)) markDirty();
-#ifdef TEST
-    // The parameter trace only exists in a TEST build (src/neurodragon/Test.h),
-    // so the release panel must not offer a switch that would do nothing.
-    if (widgets::toggle("ui.diag.paramLog"_tr().c_str(), &gDraft.paramLog)) markDirty();
-#endif
-    widgets::hint("ui.diag.warnHint"_tr().c_str());
-
-    ImGui::Spacing();
-    drawVvInjection();
-#ifdef TEST
-    ImGui::Spacing();
-    drawB0Probe();
-#endif
-
-    // What the last evaluation actually wrote (docs/L 1.2). This is the answer to
-    // "did my change reach the runtime": the numbers come from the same variables
-    // the parameter writes used, not from the draft in the panel.
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.diag.written"_tr().c_str());
-    auto const written = nr::nrFrameParams();
-    if (!written.valid) {
-        widgets::hint("ui.diag.writtenNone"_tr().c_str());
-        return;
-    }
-    std::snprintf(buffer, sizeof(buffer), "%d", written.replace);
-    widgets::statRow("ui.diag.wReplace"_tr().c_str(), buffer);
-    std::string placementName;
-    if (written.placement == 1) {
-        placementName = "ui.diag.placementAfter"_tr();
-    } else if (written.afterFallback) {
-        placementName = "ui.diag.placementFallback"_tr();
-    } else {
-        placementName = "ui.diag.placementBefore"_tr();
-    }
-    widgets::statRow("ui.diag.wPlacement"_tr().c_str(), placementName.c_str());
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", written.domainWidth, written.domainHeight);
-    widgets::statRow("ui.diag.wDomain"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", written.guideWidth, written.guideHeight);
-    widgets::statRow("ui.diag.wGuide"_tr().c_str(), buffer);
-    std::string const compositeName = (written.compositeMode == 4 || written.compositeMode == 6) ? "ui.diag.modeRatio"_tr()
-                                      : (written.compositeMode == 2 || written.compositeMode == 5) ? "ui.diag.modeGain"_tr()
-                                                                                                    : "ui.diag.modeOff"_tr();
-    widgets::statRow("ui.diag.wComposite"_tr().c_str(), compositeName.c_str());
-    if (written.encodeMode < 0) {
-        widgets::statRow("ui.diag.wEncode"_tr().c_str(), "ui.diag.modeRaw"_tr().c_str());
-    } else if (written.encodeMode == 3) {
-        widgets::statRow("ui.diag.wEncode"_tr().c_str(), "ui.neural.encodeTrp"_tr().c_str());
-    } else if (written.encodeMode == 0) {
-        widgets::statRow("ui.diag.wEncode"_tr().c_str(), "ui.neural.encodeReinhard"_tr().c_str());
-    } else {
-        std::snprintf(buffer, sizeof(buffer), "#%d", written.encodeMode);
-        widgets::statRow("ui.diag.wEncode"_tr().c_str(), buffer);
-    }
-    std::snprintf(buffer, sizeof(buffer), "%d", written.style);
-    widgets::statRow("ui.diag.wStyle"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%d", written.networkPreset);
-    widgets::statRow("ui.diag.wPreset"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(written.intensity));
-    widgets::statRow("ui.diag.wIntensity"_tr().c_str(), buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "%.2f / %.2f",
-        static_cast<double>(written.localTone),
-        static_cast<double>(written.localStructure)
-    );
-    widgets::statRow("ui.diag.wLocal"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(written.skinStructure));
-    widgets::statRow("ui.diag.wSkin"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%d", written.reset);
-    widgets::statRow("ui.diag.wReset"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%.0f x %.0f", static_cast<double>(written.mvScaleX), static_cast<double>(written.mvScaleY));
-    widgets::statRow("ui.diag.wMv"_tr().c_str(), buffer);
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "%d%%  %u x %u",
-        written.inputPercent,
-        written.featureWidth,
-        written.featureHeight
-    );
-    widgets::statRow("ui.diag.wScale"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%.2f / %.2f", static_cast<double>(written.broad), static_cast<double>(written.detail));
-    widgets::statRow("ui.diag.wTone"_tr().c_str(), buffer);
-    if (written.adaptiveExposure) {
-        std::snprintf(buffer, sizeof(buffer), "%+.2f EV", static_cast<double>(written.exposureBias));
-        widgets::statRow("ui.diag.wExposure"_tr().c_str(), buffer);
-    } else {
-        widgets::statRow("ui.diag.wExposure"_tr().c_str(), "ui.diag.modeOff"_tr().c_str());
-    }
-    if (written.compare) {
-        std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(written.compareSplit));
-        widgets::statRow("ui.diag.wCompare"_tr().c_str(), buffer);
-    } else {
-        widgets::statRow("ui.diag.wCompare"_tr().c_str(), "ui.diag.modeOff"_tr().c_str());
-    }
+    std::string clearLabel = "ui.diag.clear"_tr();
+    clearLabel += "##clearSamples";
+    if (menuButton(clearLabel.c_str())) nr::nrStampClearReported();
+    widgets::hint("ui.diag.hint"_tr().c_str());
 }
 
 void drawTabAdvanced() {
@@ -1877,8 +1342,8 @@ void drawTabAdvanced() {
 
         auto const& style      = ImGui::GetStyle();
         auto const  resetText  = "ui.adv.reset"_tr();
-        auto const  resetWidth = ImGui::CalcTextSize(resetText.c_str()).x + style.FramePadding.x * 2.0f;
-        auto const  keyWidth   = ImGui::CalcTextSize(text.c_str()).x + style.FramePadding.x * 2.0f;
+        auto const  resetWidth = widgets::buttonWidth(resetText.c_str());
+        auto const  keyWidth   = widgets::buttonWidth(text.c_str());
         // No reset button while capturing: the row should stay quiet (the preview
         // text is still growing).
         auto const totalWidth = capturing ? keyWidth : keyWidth + style.ItemInnerSpacing.x + resetWidth;
@@ -1888,17 +1353,19 @@ void drawTabAdvanced() {
 
         bool const  conflicted = !capturing && severity != input::ConflictSeverity::None;
         ImU32 const border     = severity == input::ConflictSeverity::Exact ? kRed : kAmber;
-        if (conflicted) {
-            ImGui::PushStyleColor(ImGuiCol_Border, border);
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, std::max(1.0f, theme::scale()));
-        }
         // The visible text cannot be the id: two rows can show the same text (both
         // "-", or the same key twice), and ImGui would then share one id between them.
         std::string const id      = text + "##hotkey" + std::to_string(index);
-        bool const        clicked = ImGui::Button(id.c_str());
+        bool const        clicked = menuButton(id.c_str());
         if (conflicted) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
+            ImGui::GetWindowDrawList()->AddRect(
+                ImGui::GetItemRectMin(),
+                ImGui::GetItemRectMax(),
+                border,
+                4.0f * theme::scale(),
+                0,
+                std::max(1.0f, theme::scale())
+            );
         }
 
         if (clicked) {
@@ -1925,12 +1392,15 @@ void drawTabAdvanced() {
         // row does not change width between the two states.
         bool const canReset = !row.keys->equals(defaultKeys(row.hotkey));
         if (!canReset) ImGui::BeginDisabled();
-        bool const reset = ImGui::Button((resetText + "##reset" + std::to_string(index)).c_str());
+        bool const reset = menuButton((resetText + "##reset" + std::to_string(index)).c_str());
         if (!canReset) ImGui::EndDisabled();
 
         if (reset) {
             *row.keys = defaultKeys(row.hotkey);
             markDirty();
+#ifdef TEST
+            log::write(3, "[ui] hotkey reset: " + row.label + " -> " + row.keys->display());
+#endif
         }
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             ImGui::SetTooltip("%s", "ui.adv.resetHint"_tr().c_str());
@@ -1941,6 +1411,11 @@ void drawTabAdvanced() {
     // (still capturing, or cancelled); engaged-and-empty = the player pressed Esc, an
     // explicit unbind; engaged-and-non-empty = the new combination.
     if (auto captured = overlay.takeCapturedKeys()) {
+#ifdef TEST
+        // TEST: every binding the capture path produces, including the explicit unbind,
+        // so a "the hotkey does nothing" report can be settled from the log.
+        log::write(3, "[ui] hotkey captured: " + captured->display());
+#endif
         int const slot = gPendingKeySlot;
         if (slot >= 0 && slot < static_cast<int>(rows.size())) {
             auto& keys = *rows[static_cast<size_t>(slot)].keys;
@@ -1962,10 +1437,6 @@ void drawTabAdvanced() {
     ImGui::Spacing();
     widgets::sectionHeader("ui.adv.config"_tr().c_str());
     widgets::hint("ui.adv.configHint"_tr().c_str());
-
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.adv.about"_tr().c_str());
-    widgets::statRow("ui.adv.version"_tr().c_str(), "0.0.0");
 }
 
 // Footer --------------------------------------------------------------------
@@ -1981,6 +1452,12 @@ void applyDraft(bool persist) {
     config::get().ui.screenshotKeys = gDraftScreenshotKeys.keys();
     Overlay::getInstance().refreshKeys();
     gDirty = false;
+
+    // SR jitter is the one staged value without a config entry, so this write *is* its
+    // persistence: it reaches the render thread here and survives only this run.
+    // setJitterSource() is a no-op when the value did not change (no history wipe), so
+    // every Apply can write it unconditionally.
+    vv::sr::setJitterSource(static_cast<vv::sr::JitterSource>(gDraftJitter));
 
     // A model preset is only read at CreateFeature, so applying a new one has to
     // make the feature rebuild. Each backend owns its own feature: the engine's on the
@@ -2030,30 +1507,41 @@ void drawFooter(Layout const& layout) {
     at(ImVec2(layout.pos.x + layout.pad, top + 7.0f * s));
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(gDirty ? kAccent : kTextDim), "%s", status.c_str());
 
-    float const buttonHeight = 28.0f * s;
-    float const buttonWidth  = 96.0f * s;
-    float const gap          = 7.0f * s;
-    float       x            = layout.pos.x + layout.size.x - layout.pad - buttonWidth;
+    float const      buttonHeight = 28.0f * s;
+    std::string const saveLabel   = "ui.footer.saveDefault"_tr();
+    float const      buttonWidth  = std::max(96.0f * s, widgets::buttonWidth(saveLabel.c_str()) + 4.0f * s);
+    // The three buttons are one group, so the gap is the panel's normal control
+    // spacing. It was widened while each button carried a `!` marker; the markers are
+    // gone (2026-10-29), and the wider gap then read as three unrelated buttons.
+    float const gap      = 12.0f * s;
+    float const rightX   = layout.pos.x + layout.size.x - layout.pad;
+    float const saveX    = rightX - buttonWidth;
+    float const applyX   = saveX - gap - buttonWidth;
+    float const discardX = applyX - gap - buttonWidth;
 
-    at(ImVec2(x, top));
-    if (widgets::footerButton("ui.footer.saveDefault"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), true)) {
-        applyDraft(true);
+    // Left to right: discard, apply, save-as-default - the order the panel shipped with.
+    // "Save as default" is the primary (filled) button on the right: it is the one that
+    // writes config/config.json and therefore the strongest promise; "Apply" stays the
+    // outlined secondary even though it is pressed more often. Both behaviours are
+    // unchanged - only the position and the emphasis follow the original design again.
+    at(ImVec2(discardX, top));
+    if (menuButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight))) {
+        gDraft   = sanitizedNr(config::get().nr);
+        gDraftSr = sanitizedSr(config::get().sr);
+        reloadKeyDrafts();
+        stageJitterDraft();
+        gDirty = false;
+        setStatus("ui.footer.discarded"_tr());
     }
 
-    x -= buttonWidth + gap;
-    at(ImVec2(x, top));
-    if (widgets::footerButton("ui.footer.apply"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), false)) {
+    at(ImVec2(applyX, top));
+    if (menuButton("ui.footer.apply"_tr().c_str(), ImVec2(buttonWidth, buttonHeight))) {
         applyDraft(false);
     }
 
-    x -= buttonWidth + gap;
-    at(ImVec2(x, top));
-    if (widgets::footerButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), false)) {
-        gDraft   = config::get().nr;
-        gDraftSr = sanitizedSr(config::get().sr);
-        reloadKeyDrafts();
-        gDirty = false;
-        setStatus("ui.footer.discarded"_tr());
+    at(ImVec2(saveX, top));
+    if (menuButton(saveLabel.c_str(), ImVec2(buttonWidth, buttonHeight), true)) {
+        applyDraft(true);
     }
 }
 
@@ -2109,13 +1597,13 @@ void render() {
         ImVec2 const size = ImGui::GetWindowSize();
 
         auto const layout = computeLayout(gPos, size);
-        auto const stats  = nr::nrPanelStats();
+        auto const live   = sampleLive();
 
         auto* drawList = ImGui::GetWindowDrawList();
         drawList->AddRectFilled(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kPanel, 6.0f * s);
         drawList->AddRect(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kBorder, 6.0f * s, 0, std::max(1.0f, s));
 
-        drawHeader(layout, stats);
+        drawHeader(layout, live);
 
         // Drag affordance: the title strip, minus anything interactive on it (the
         // zoom buttons). Checked after the header so IsAnyItemHovered() already
@@ -2125,7 +1613,7 @@ void render() {
         if (overStrip && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) gDragging = true;
         if (overStrip || gDragging) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
 
-        drawPipeline(layout, stats);
+        drawPipeline(layout, live);
         drawTabs(layout);
 
         float const leftX  = gPos.x + layout.pad;
@@ -2150,7 +1638,7 @@ void render() {
                 ImVec2(layout.leftWidth, layout.bodyHeight),
                 ImGuiChildFlags_AlwaysUseWindowPadding
             )) {
-            drawStatsColumn(layout, stats);
+            drawStatsColumn(layout, live);
         }
         ImGui::EndChild();
 
@@ -2160,12 +1648,18 @@ void render() {
                 ImVec2(rightW, layout.bodyHeight),
                 ImGuiChildFlags_AlwaysUseWindowPadding
             )) {
+            // The two columns are different things, and the panel says so: the left one
+            // reads the renderer, this one stages changes for it.
+            columnCaption("ui.controls.header"_tr().c_str());
+            widgets::hint("ui.controls.hint"_tr().c_str());
+            ImGui::Spacing();
+
             switch (gActiveTab) {
             case 0:
                 drawTabNeural();
                 break;
             case 1:
-                drawTabSr();
+                drawTabSr(live);
                 break;
             case 2:
                 drawTabDiagnostics();
@@ -2187,13 +1681,20 @@ void render() {
 void onOpened() {
     // Start from what is running right now. Nothing is read from disk here: the
     // file is an import at load, and the panel is a staging area over the live
-    // values.
-    gDraft   = config::get().nr;
+    // values. Jitter has no config entry to import, so its running value is the only
+    // source.
+    gDraft   = sanitizedNr(config::get().nr);
     gDraftSr = sanitizedSr(config::get().sr);
+    stageJitterDraft();
     reloadKeyDrafts();
     gModelFiles = utils::listNrModelFiles();
     gDirty      = false;
     gStatus.clear();
+
+    // Counters are re-primed so "growth since the panel was opened" starts at zero
+    // instead of inheriting the previous session's numbers.
+    gNrEvals = CounterWatch{};
+    gSrEvals = CounterWatch{};
 }
 
 void onClosed() {

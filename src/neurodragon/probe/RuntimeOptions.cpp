@@ -209,11 +209,11 @@ void applyPending() {
     }
 
     WriteResult const result = write(client->getOptions(), option, value);
-    utils::logger().info(
-        "[vv] options: write {} {}",
-        result.ok ? "ok" : "failed",
-        result.text
-    );
+    if (result.ok) {
+        ND_DEBUG("[vv] options: write ok {}", result.text);
+    } else {
+        utils::logger().warn("[vv] options: write failed {}", result.text);
+    }
     {
         auto& state = pending();
         std::lock_guard lock(state.mutex);
@@ -269,7 +269,7 @@ void refreshKnownValues(bool force) {
 }
 
 void requestBilinear() {
-    utils::logger().info("[vv] options: bilinear switch requested at load time");
+    ND_DEBUG("[vv] options: bilinear switch requested at load time");
     requestWrite(Known::UpscalingMode, "1");
 }
 

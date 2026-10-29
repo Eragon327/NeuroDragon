@@ -1,0 +1,17 @@
+{
+  "name": "taau-timing",
+  "tier": "L1",
+  "timeout_s": 180,
+  "why": "VV observation is active from the first real TAAU draw even before the product switch is toggled: the timestamp ring publishes a measured TAAU GPU median without opening the panel.",
+  "requires": [
+    "\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)": 1
+  }
+}

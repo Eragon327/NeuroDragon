@@ -187,17 +187,18 @@ Style 3–7（310.x 上 ≥2 全等于 Cinematic）。
 引擎 Color (linear HDR, 峰值 ~69)
   └─ 编码 pass：Reinhard(x/(1+x)) + gamma 2.2 → 私有 encoded 纹理
        └─ NR evaluate（core feature，cmdlist = 引擎的）
-            └─ 合成 pass：gain (replace=5) 或 TRP Ratio (replace=6，默认)
+            └─ 合成 pass：TRP Ratio（唯一合成）
                  └─ 把引擎参数对象的 Color 指向我方纹理 → 引擎 DLSS 放大 → 调色 → UI
 ```
 
 - **编码是必须的**：HDR 直接喂 LDR 特征会"发蓝、发灰"，主体来自**域不匹配**；编码后
   `|NR − 输入|` 平均绝对差从 4.11% 降到 1.48%。
-- **Ratio 合成**（默认）：取比例/增益再合成，四个旋钮 `whitePoint / transferStrength /
+- **Ratio 合成**：取比例/增益再合成，四个旋钮 `whitePoint / transferStrength /
   colourStrength / maxRatio`；`broad / detail` 是宽域/局部变化的分档（1.0/1.0 = 不改）。
-- **增益合成**（`replace=5`）：`gainBoost` 可放大增益，只用于判断。
-- 模式收敛到两个：`5 = 增益`、`6 = TRP Ratio（默认）`；**任何不是 5 的值都按 6 处理**，
-  旧的「只求值 0」已删除且不做配置迁移。
+  亮部永远取自原图，不取网络输出，所以不会被压平。
+- **只有这一种合成**：早期的「增益合成」（`replace=5`，按 `NR_out/NR_in` 乘回原始线性 HDR，
+  带 `gainBoost` 放大）已随代码一起删除；「只求值 0」更早删除。`nr.replace` 这个键保留只为
+  兼容旧文件 —— 载入时任何值都归一到 6（`config::loadOrCreate()`），渲染侧不再有分支。
 
 ### 5.2 后档（After upscaling）见 §7
 
@@ -228,16 +229,17 @@ Style 3–7（310.x 上 ≥2 全等于 Cinematic）。
 
 ## 6. 配置与面板
 
-`<模组目录>/config/config.json`，`ll::config`，聚合 struct + `version`（当前 3），
+`<模组目录>/config/config.json`，`ll::config`，聚合 struct + `version`（当前 6），
 文件缺失/缺键/版本不符 → 自动补默认并回写；写坏 → 记 error 后重写默认，不崩。
+载入后 `config::loadOrCreate()` 还会归一化已删除的取值：`replace` 一律 6、
+`nrEncode` 只保留 0/1/3（其余 → 3），`compare` 清零（会话内诊断）。
 **只在启动时导入**，运行期不读文件（面板的「应用」写内存，「保存为默认」才落盘）。
 
 | 键 | 默认 | 说明 |
 |---|---|---|
 | `nr.enabled` | `false` | 总开关（面板「神经渲染 → 启用神经渲染」） |
 | `nr.placement` | `0` | 0 = 放大前，1 = 放大后；切档重建 feature |
-| `nr.replace` | `6` | 5 = 增益合成，6 = TRP Ratio；其余值按 6 |
-| `nr.gainBoost` | `1.0` | 增益合成专用 |
+| `nr.replace` | `6` | 只有 TRP Ratio 一种合成；键保留兼容旧文件，载入时任何值归一到 6 |
 | `nr.style` / `intensity` / `localToneStrength` / `localStructureStrength` | 0 / 1 / 1 / 1 | 网络风格与强度 |
 | `nr.skinStructure` | `1.0` | `-1..2`；MC 内容上无可辨差异，正式版面板不提供，TEST 保留 |
 | `nr.inputPercent` | `100` | NR 工作尺寸 = 渲染尺寸 × 50/66/100，guide 仍全分辨率 |
@@ -247,9 +249,9 @@ Style 3–7（310.x 上 ≥2 全等于 Cinematic）。
 | `nr.adaptiveExposure` / `exposureBias` | false / 0 | 自适应白点 + EV 偏置 |
 | `nr.broad` / `detail` | 1 / 1 | Ratio 合成的宽域/局部分档 |
 | `nr.whitePoint` / `transferStrength` / `colourStrength` / `maxRatio` | 1 / 1 / 1 / 2 | Ratio 合成旋钮 |
-| `nr.mvecScale` / `nrEncode` | `-1` / `-1` | <0 = 自动（MV 用 guide 尺寸 / 按 Replace 选编码） |
+| `nr.mvecScale` / `nrEncode` | `-1` / `-1` | <0 = 自动（MV 用 guide 尺寸 / TRP 的 sRGB+肩部编码 3）；`nrEncode` 只认 0/1/3，其余载入时归一到 3 |
 | `nr.depthInverted` | `-1` | -1 = 跟随引擎 |
-| `nr.sweep` | 0 | TEST 探针：1 = Style 轮换，2 = Enabled 冻结测试 |
+| `nr.sweep` | 0 | TEST 探针：1 = Style 轮换，2 = Enabled 冻结测试，3 = SkinStructure −1/0/1；release 构建把这些分支编译掉（手改也不触发） |
 | `nr.resetEveryFrame` / `srResetEveryFrame` | false | 诊断用，每帧清历史 |
 | `nr.paramLog` | false | TEST 构建才有效：记录引擎 NGX 参数写入 |
 
@@ -388,7 +390,7 @@ EXP-0085 又暴露两条 NR 侧问题（均已修）：
 | P2 | 网络预设 0/1 是否真换网络 | 是。默认网络 evaluate 中位数 3.18/3.47 ms，上一版 5.85/5.84 ms（**慢 80%**）；默认仍 0 |
 | P3 | 分屏对比两半是否公平 | 左半与引擎原图**逐字节相同**（max=0），右半 mean 2.6/255、36% 像素变化；w0 是加载帧（全黑）不能当结论 |
 | P4 | 引擎是否每帧重写 `Color` | 是。整局没有出现"Color 仍是我方纹理"的 warn；加载帧参数对象给的是引擎自己的资源 ⇒ 合成不形成反馈环 |
-| P5 | `Replace=6` 与 5 的画面差异 | 用户拍板默认 **6（TRP Ratio）**；删除「只求值」模式，不做配置迁移 |
+| P5 | `Replace=6` 与 5 的画面差异 | 用户拍板默认 **6（TRP Ratio）**；删除「只求值」模式，不做配置迁移。2026-10-29 追加：用户拍板「增益合成删了，只留 TRP」，`replace=5` 与 `gainBoost` 一起从代码里删除，旧文件在载入时归一到 6 |
 | P6 | 小 feature + 全分辨率 guide | 实机四条验收通过：创建日志/诊断回读/三行计时/画面正常 |
 | P7 | 自适应曝光是否让室内外一致 | 用户反馈肉眼无差异；结构性原因见 §8.2，**搁置**，等白点回读探针 |
 

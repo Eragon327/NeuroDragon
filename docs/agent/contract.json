@@ -1,66 +1,31 @@
 {
-  "goal": "在 MCBE VV（Vibrant Visuals）渲染路径里，用 NeuroDragon 自己的 DLSS-SR 替换引擎的 TAAU 上采样，并把 NR（NGX feature 0x12）接入同一条管线作为 DLSS 的输入；HUD / 手 / 准星与切场景行为保持不变。",
+  "goal": "完善实时面板与上采样观测：NR 顶格显示实际位置，恢复页脚原顺序，VV/RT 从游戏首批帧持续读取分辨率与 TAAU/引擎 DLSS GPU 时间",
   "criteria": [
     {
-      "id": "S1",
-      "stage": 1,
-      "kind": "stage",
-      "text": "最终目标、验收条件、阶段划分、出界事项已写明并经用户确认"
-    },
-    {
-      "id": "S2",
+      "id": "UI3-S2",
       "stage": 2,
       "kind": "stage",
-      "text": "静态检查（flow.py gate build）与构建通过，且没有任何未申请豁免的错误"
+      "text": "flow.py verify、TEST 构建与 release 构建通过，字图集同步"
     },
     {
-      "id": "S3",
-      "stage": 3,
-      "kind": "stage",
-      "text": "核心功能在真实运行环境里实际执行成功：NGX EvaluateFeature 返回 1（日志 [eval] ... ret=0x00000001）"
-    },
-    {
-      "id": "S4",
-      "stage": 4,
-      "kind": "stage",
-      "text": "输出路径与用户可见结果：DLSS 画面确实上屏，且 HUD / 手 / 准星仍在"
-    },
-    {
-      "id": "S5",
-      "stage": 5,
-      "kind": "stage",
-      "text": "目标语义：TAAU 不再执行（提交里被跳过或替换），而不是 TAAU 照跑后覆盖"
-    },
-    {
-      "id": "S6",
-      "stage": 6,
-      "kind": "stage",
-      "text": "回归：暂停菜单 / 背包 / 切场景 / 窗口尺寸变化不崩，帧时间有记录"
-    },
-    {
-      "id": "F1",
+      "id": "UI3-F1",
       "stage": 6,
       "kind": "final",
-      "text": "TAAU 的每帧 1 次 draw 不再出现在提交里（有日志或注入统计作为原始证据）"
+      "text": "顶部 NR 格显示实际放大前/放大后与状态，NR GPU 时间在 Live 栏；页脚恢复放弃、应用、保存为默认的原顺序与主按钮"
     },
     {
-      "id": "F2",
+      "id": "UI3-F2",
       "stage": 6,
       "kind": "final",
-      "text": "同一帧对比：DLSS 输出与切点参考图无整体偏色，差异只来自细节/锐化（离线差分数值）"
-    },
-    {
-      "id": "F3",
-      "stage": 6,
-      "kind": "final",
-      "text": "HUD、手、准星、UI 面板全部保留；DLSS 开关可来回切且不崩"
+      "text": "VV 与 RT 从首批实际上采样帧开始观测，不受 NR/SR 开关或面板是否打开影响：分辨率持续可读，实际 TAAU/引擎 DLSS draw 使用同一时间戳环计时；跳过 TAAU 时不伪造样本"
     }
   ],
   "out_of_scope": [
-    "FG（帧生成）与 RR（光线重建）",
-    "RT 路径的 SR/NR 行为",
-    "VV 里的 NR 位置轴（固定放大前）与 NR 画质调参"
+    "改变 DLSS 替换 TAAU 的产品开关语义",
+    "为了计时强制执行本应跳过的 TAAU draw",
+    "配置暂存与保存规则的其他变更",
+    "渲染画质算法调整"
   ],
   "stage": 6,
-  "updated": "2026-10-29T11:19:06.020+08:00"
+  "updated": "2026-10-29T21:15:28.917+08:00"
 }

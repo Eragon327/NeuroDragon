@@ -213,8 +213,8 @@ void nrSetGameQueue(void* queue);
 
 // Records one evaluation on the game's command list. Handles every resource
 // state transition around the NGX call. `engineParams` (may be null) is the
-// engine's own NGX parameter object: when config.json asks for Replace=5/6 it is
-// pointed at our gain-composited texture (docs/D §6.16).
+// engine's own NGX parameter object: it is pointed at our ratio-resolved texture
+// after the composite (docs/D §6.16).
 //
 // NR stays 1:1 at the render resolution; it never upscales.
 //
@@ -330,10 +330,10 @@ struct PanelStats {
 // nothing is visible immediately.
 struct NrFrameParams {
     bool  valid        = false;
-    int   replace      = 0;  // config value used for this frame
-    int   compositeMode = -1; // 2/4 = gain/ratio at native size, 5/6 = the same when
-                              // the network ran at a smaller extent, -1 = no composite
-    int   encodeMode   = -1;  // 0/1/2/3, -1 = raw linear HDR (no encode)
+    int   replace      = 0;  // 6 for every frame now: the ratio resolve is the only composite
+    int   compositeMode = -1; // 4 = ratio resolve at native size, 6 = the same when the
+                              // network ran at a smaller extent, -1 = no composite
+    int   encodeMode   = -1;  // 0/1/3, -1 = raw linear HDR (no encode)
     int   style        = 0;
     int   networkPreset = 0; // 0 = default network, 1 = previous (P2 probe)
     float intensity    = 0.0f;

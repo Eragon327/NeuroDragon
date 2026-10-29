@@ -30,6 +30,21 @@
 > `Bloom`（两次）、`LocalExposure`；采样帧内两条 copy 路径均无命中（无 GPU 纹理复制）。
 > 证据：`docs/agent/evidence/arg10-list-binding-EXP-0055.log`、
 > `docs/agent/evidence/arg10-downstream-EXP-0056.log`。
+>
+> **2026-10-29 清理（本文的「现行 / 历史」分界）**：release 只保留一条产品路径 ——
+> **注入切点 = 本帧 `arg10` writer，动作 = `Fixed + DlssArg10`（DLSS 写 `arg10`），
+> draw 级 suppress 跳过 TAAU 的那一个 6×1 draw**。下列机制已从代码里删除，
+> 本文里描述它们的段落只作历史证据，**不再有入口、不再有热键、不再有面板按钮**：
+> B0 语义/上下文 dump（`F9`/`F8`/`V`、`vv_dump_now.txt`、`vv_ctx_now.txt`）、
+> B1a 自建 NGX 会话探针（面板按钮）、B1c 切点抓帧 `vv::capture`（`sweep tail k=1..8`、`F7` 双抓）、
+> B1d 后缓冲内容边界（`useBackBuffer` / `backBufferWriterSplit`）、
+> 手动注入实验（`Clear` / `SolidArg10` / `Sweep` / `fromTail` + `k`）、
+> callback 级替换（`setTaauDrawReplacement`）、`d-probe`（suppress/draw-tag/chain 三种窗口）、
+> A2 相机探针 `probe::vv::camera`。删掉的实现见 `git log`（本轮 commit 的 subject 带 `vv:`）。
+> 现行代码的入口只有：`sr.vvEnabled`（＝Fixed + DlssArg10 + drawSuppress）、
+> `sr.vvPercent`（引擎 `upscaling_percentage`）、`sr.preset`/`sr.sharpening`、
+> `sr::requestReset()`（面板「重置历史」）、`setJitterSource`（面板只给 `0` / `Engine` 两档，
+> 默认 0）。
 
 ## 0. 一句话
 
@@ -395,6 +410,12 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 
 #### A 的实现（2026-10-24，待实机验收）
 
+> **历史（2026-10-29 已删除）**：这一小节描述的面板控件（模式 `关/固定/扫描`、边界 `k`、
+> 「从尾部数」、`Sweep` 的每档帧数、读数行）与它们的入口都已从代码移除；
+> `probe/VvInject` 现在只有 `Mode::Fixed` + `Action::DlssArg10` + `useArg10`。
+> 保留本节是为了 `ExecuteCommandLists` 拆分本身的证据（后缓冲引用必须当场 `Release`、
+> allocator 必须用 self-fence 复用 —— 这两条产品仍在遵守）。
+
 代码：`probe/VvInject.{h,cpp}`；接线在 `ui/Overlay.cpp` 的 `executeCommandListsHook`。
 
 - **只切引擎整帧**：`listCount > 8`、队列类型必须是 `DIRECT`、且只认第一次注入的那个队列
@@ -407,9 +428,10 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 - **不污染探针读数**：`Close` 钩子会看到我们自己的 list，`isOwnList()` 把它排除，§3 的「每帧 49 次 Close」
   仍然是引擎的数字。
 
-面板「诊断 → VV 注入」：模式 `关 / 固定 / 扫描`、边界 `k`、扫描的每档帧数（默认 20）、
+面板「诊断 → VV 注入」（**历史，已删除**）：模式 `关 / 固定 / 扫描`、边界 `k`、扫描的每档帧数（默认 20）、
 **「从尾部数」开关**、读数（当前边界 / list 数范围 / 每帧 list 数 / 已注入帧 / 跳过 / 完成扫描轮）。
-**关掉面板注入仍在继续**，要停就切回「关」（或重启游戏）。
+**关掉面板注入仍在继续**，要停就切回「关」（或重启游戏）。这段行为不再存在，
+今天「注入是否在跑」只看 `sr.vvEnabled` 与 `sr enabled (TAAU draw skipped)` 一行日志。
 
 - **k 有两种数法**：默认从头部数（k = 「第 k 个 list 之后」）；打开「从尾部数」后 k=1 表示
   「整帧之后」、k=2「最后一个 list 之前」，依此类推。**引擎每帧的 list 数不是常数**
@@ -494,6 +516,9 @@ B 步要确认的就是：倒 4 这条 list 里画的是不是 TAAU、它写的�
 ## 13. M6：DLSS-SR 替换 TAAU（2026-10-25 拍板）
 
 > **状态**：B0 已收口（2026-10-25 03:44）；B1–B4 未开工。
+> **2026-10-29 注**：本节的 B0 探针（BMP/上下文 dump、`F7/F8/F9/F10/V` 热键、文件标记）
+> 与 B1a 自建会话按钮**已从代码删除**；下面保留的是当时的判据、实现与结果，
+> 只作历史证据，不能再照着操作。现行的产品路径见本文开头 2026-10-29 的清理说明。
 > 规划按用户 2026-10-25 的「按推荐走」确定：B0 先锁三个未知；第一版 TAAU 照跑 +
 > DLSS 覆盖；**HDR 路径用 ACES + gamma 2.2**（B0 实测；Reinhard 差 4 倍多）；A/B 热键 `F8`；
 > 「跳过 TAAU」放到 M6-4，可选、后置。
@@ -529,6 +554,10 @@ B0 的 P0.4 按「两个对象、整窗采样」重新定位，不再假设偏�
 
 ### 13.3 B0 探针（一次 TEST 构建、一次会话）
 
+> **历史（2026-10-29 已删除）**：P0.1 的 `[vv] session` 日志、P0.2/P0.3 的
+> `vv_dump_now.txt` → BMP/NDRW dump、P0.4 的 `vv_ctx_now.txt` 采样与 `ctxm` 行全部已移除。
+> 下表是当时的探针与判据，留作证据索引。
+
 | 探针 | 做法 | 判据 |
 |---|---|---|
 | P0.1 会话 | 日志 `[vv] session`：`_nvngx.dll` / `nvngx.dll` / `nvngx_dlss.dll` / `D3D12Core.dll` 是否加载；引擎 Init 是否被抓到（appId/dataPath）；**只在抓到 Init 后**调 `GetCapabilityParameters`，并记录五个导出是否存在 | `ret==1 && params!=null` → 复用；模块在但未 Init → 单独评估自 Init；模块不在 → stop/go |
@@ -538,6 +567,12 @@ B0 的 P0.4 按「两个对象、整窗采样」重新定位，不再假设偏�
 | P0.5 MV 公式 | 用 P0.4 的矩阵 + 一帧深度（优先 `R32_FLOAT` 候选）离线跑 reprojection：reversed-Z、像素单位、符号、far（w=0） | 静止 MV≈0；走动径向、转视角切向；否则先改公式，不写 shader |
 
 ### 13.4 B0 实现（2026-10-25）
+
+> **历史（2026-10-29 已删除）**：本节的实现细节（`logNgxSession()`、`vv_dump_now.txt` /
+> `vv_ctx_now.txt`、`dumpSemantics`、`gHeld`/`gSeen` 清单的开头钩子、`F7/F8/F9/F10/V` 热键、
+> 面板 `诊断 → VV B0 (TEST)`）都已从代码中移除，`probe/VvProbe.cpp` 现在只保留产品所需的
+> `taauDetour` / `SetTextureHook` / arg10 writer 解析 / draw 级 suppress。
+> 下面保留当时的实现与现场记录，作为 P0 结论的证据来源。
 
 代码（只读，不建 feature、不写任何引擎资源）：
 
@@ -571,14 +606,15 @@ B0 的 P0.4 按「两个对象、整窗采样」重新定位，不再假设偏�
   2. `gTextures` 对会话内**所有**纹理 AddRef（数千张，含 1024 图集）→ 显存与重建压力；
      现在只保留重建后的**前 96 张**，并在 `onSwapChainResize()` 里先释放；
   3. 「进世界 3 秒后自动 dump」被关闭：同步 GPU 拷贝不能与 F11 重建并发（§9 的 22:58 驱动 AV）。
-- **B0 热键（TEST）**：`F9` = 立刻 dump（站定后按，再按 `F2` 截图）；`F8` / `F10` / `V` 任意一个 =
-  2 秒后开始连续 24 帧上下文采样（按下后可以立刻走动/转视角）。`F8` 在部分笔记本上会被 Fn 锁成
-  媒体键，所以准备了 `F10` 与 `V`；面板「诊断 → VV B0 (TEST)」也有两个按钮，完全不依赖热键。
-- **dump 前先按一次 `F11`**：引擎的渲染图在模组的创建钩子装好之前就可能建好，那次启动的
+- **B0 热键（TEST，2026-10-29 已删除）**：当时的绑定是 `F9` = 立刻 dump、`F8` / `F10` / `V` =
+  2 秒后开始连续 24 帧上下文采样（`F8` 在部分笔记本上会被 Fn 锁成媒体键，所以准备了三键），
+  面板「诊断 → VV B0 (TEST)」另有等价按钮。**这些热键与按钮现在都不存在**，按下去不会触发
+  任何采样；需要重开 B0 类取证时先按本节重新加回（`git log` 里是本轮删除的 commit）。
+- **dump 前先按一次 `F11`**（历史）：引擎的渲染图在模组的创建钩子装好之前就可能建好，那次启动的
   渲染分辨率纹理不在清单里（2026-10-25 03:02 实测：0 个 dump 命中）。`F11` 一次让引擎重建资源，
-  之后 `F9` 才有货；日志会给出同样的提示。
+  之后 dump 才有货。这条现在只剩 §17.6 的 render-size fallback 还在用同一现象。
 
-**一次会话的采集顺序**（TEST 构建，VV，进世界）：
+**一次会话的采集顺序（历史，TEST 构建，VV，进世界）**：
 
 1. 进世界后等 3 秒，**按一次 `F11`**（窗口 resize 不会重建渲染图；2026-10-25 03:23 已证）。
    新构建修了三处引用问题，若这次仍崩就停止，不再重试；
@@ -635,6 +671,11 @@ RTV 在 resize 钩子之前创建，已由 `gHeld` 修复。
 - **计时口径**：TAAU 仍跑时 A/B 的差值是 **DLSS 增量成本**，不是替换收益；净收益只在 B4 量。
 
 ### 13.7 B1a：自建 NGX 会话探针（2026-10-25 已实现，待实机）
+
+> **历史（2026-10-29 已删除）**：`vv::dlss::requestProbe()` / `runPending()` / `ProbeState`
+> 与面板按钮 `诊断 → VV DLSS B1a (TEST)` 已从代码里移除；`VvDlssSr` 现在只剩产品用的
+> `ensureSrFeature` / `evaluateSr` / `srState` / `requestFeatureRebuild` / `releaseSr`。
+> 下面是当时的实现与结果，作为「VV 下可自建 NGX 会话」的证据（产品至今依赖这一结论）。
 
 **目的**：只验证「VV 里能自建 NGX 会话并建出 DLSS-SR feature 1」，不 evaluate、不碰任何引擎纹理、
 不改变画面。离线 `ngx_probe --sr` 已证路径可行；这一步是在**游戏自己的设备**上重复一遍。
@@ -814,6 +855,12 @@ vtable 顺序，本项目**已经实测对得上**的：`Close=9`（每帧 49 �
 
 ### 14.4 计划
 
+> **历史（2026-10-29 已删除）**：B1c 的切点抓帧（`vv/VvCapture.{h,cpp}`、`Action::Capture`、
+> `setSweepDepth` / `setFromTail` / `setK`、`capture::poll()`、`writeBmpRgba8`）与 B1d 的
+> 后缓冲内容边界（`setUseBackBuffer` / `backBufferWriterSplit`）都已从代码删除，
+> 面板上对应的 capture / sweep / 「从尾部数」控件也不存在了。下表的批次、做法与判据保留为
+> 历史证据（B1c 的结论今天仍是产品的「切在世界合成之后」的依据，只是切点改由 arg10 writer 认）。
+
 | 批次 | 内容 | 成本 | 退出条件（用户可见） |
 |---|---|---|---|
 | **B1c** 切点取证 | 一个构建：注入时把**后缓冲**拷进自有 readback、fence 完成后写 BMP；`Sweep` 对尾部 k=1..8 各截一帧；同帧 dump 候选 + 深度 + taau 参数 | 4–6 h 代码 + **1 次开机**（约 10 分钟）+ 1–2 h 离线 | 8 张切点图（哪张有 HUD / 手臂）+ 一张「参考 vs 最佳候选」对比图 + 面板上的 colour 指针与 LUT 残差 |
@@ -897,6 +944,10 @@ device 的 `CreateGraphicsPipelineState=10`（存 bytecode）、list 的 `SetPip
 
 **落地**：
 
+> **历史（2026-10-29）**：`vv/VvBypass.cpp` / `vv/VvTone.h` 随「写后缓冲」路线一起删除
+> （R3 改成 DLSS 直接写 `arg10`，见 §35.2），面板上的 `Cycle encode` 也不存在了。
+> 下面列的是当时落地的文件与离线工具。
+
 - `vv/VvTone.h`：把测得的编码存成 3×33 表（二次网格，暗部密），以两个 root-constant 块
   （64 + 35 floats）交给 shader；`vv/VvBypass.cpp` 用它替换 ACES（面板「Cycle encode」可切
   table / gamma / ACES+g 对照）。
@@ -911,6 +962,13 @@ device 的 `CreateGraphicsPipelineState=10`（存 bytecode）、list 的 `SetPip
 2. 编码曲线只在**白天**两个场景验过。夜间/洞穴/强曝光差异下要再抓一帧复验（同一条工具链）。
 
 ### 14.6 内容边界（B1d，2026-10-25）：按「谁写了后缓冲」认，不数尾巴
+
+> **历史（2026-10-29 已删除）**：这一节实现的后缓冲内容边界（`OMSetRenderTargets` 的后缓冲句柄比对、
+> `gMarks` 的 bound/drew 计数、`RSSetViewports` 兜底、`[vv] content boundary` / `[vv] frame` 行、
+> 面板的 `B1b boundary` / `B1d writer` 读数、`setUseBackBuffer`）已整块移除。
+> **产品现在用同一思路的另一把锚**：`arg10` 的 writer list（`arg10WriterSplit()`），
+> 也就是「本帧 `OMSetRenderTargets` 绑定过 `arg10` 的那一个 list」，见 §35.2。
+> 下面保留的是当时的推理与两次实机现场，作为「为什么不再数尾巴」的证据。
 
 **问题**：`tail 4` 只在 70 个 list 的那一帧对。世界内的帧形会在 69/81 之间变，暂停界面又是另一种；
 2026-10-25 04:22 的旁路就是把 HUD 冲掉了。**计数天生会漂**——它描述的是「离结尾多远」，
@@ -1031,6 +1089,10 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 它们能上屏之后，接 NGX 就只剩「参数表 + 求值」这一件未知。
 
 ### 15.3 下一步
+
+> **历史（2026-10-29）**：这一段是 2026-10-25 的下一步清单，其中自建 MV（第 1 条）在
+> §35.3 被引擎 arg11 取代、"F8 A/B"与 `SR motion view` 等调试视图也都不在了。
+> 保留是为了说明当时为什么按那个顺序走。
 
 1. **MV**：用 `TAAContext+0x200/+0x240`（未抖动 VP）、`+0x280/+0x28c`（相机位置）与深度重建；
    用 `SR motion view` 验「静止为 0」。`DepthInverted=1`。
@@ -1163,6 +1225,10 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 
 ### 17.4 相机对象能拿到什么、拿不到什么
 
+> **历史（2026-10-29）**：取这张表的探针 `probe/VvCamera.{h,cpp}`（A2：进世界后每 10 秒打一次
+> 相机 basis / 矩阵 / 原始窗口）已删除；相机自建 MV 也在 §35.3（阶段 C）被引擎 arg11 取代。
+> 下表是当时的实测记录，作为「`mce::Camera` 里有什么」的知识保留。
+
 `ClientInstance::getCamera()` → `mce::Camera`（`mc/deps/renderer/Camera.h`）：
 
 | 字段 | 实测（EXP-0021/0022） |
@@ -1207,7 +1273,10 @@ TEST 构建 `01aac5bf…` 已热替换到本工作区。
 - 现场手段已备：`vv_sr_spatial.txt`（纯空间 A/B：零 MV/jitter、每帧 Reset）、
   `vv_dump_sr.txt`（移动中 dump，含 dlssout/mv/depth）。下一步用 F2 那一帧对齐同帧 dump 再比。
 
-### 17.8 dump 的一个坑
+### 17.8 dump 的一个坑（历史）
+
+> **历史（2026-10-29）**：`dumpTextureRawAs` / `DumpState` / 全部 dump 入口随 B0/B1c 一起删除；
+> 这条只是一条「按错状态拷纹理会读到 stale 字节」的经验记录。
 
 我们自己的纹理在写回后处于 `NON_PIXEL_SHADER_RESOURCE`。用 `DumpState::Common` 去拷会读到
 stale 字节（MV 全 0、depth 全 1.0），看起来像"MV 坏了"。`dumpTextureRawAs` 必须传对应状态；
@@ -1490,6 +1559,10 @@ picked `idx=0` 且三次同指针（`colour 0x29717e82680` / `depth 0x29716e4338
 - 结论：§19.4 的等值判定表自此被相对阈值取代 —— 稀疏写入下 25 B 就能让哈希不等。
 
 ### 20.2 本轮操作与逐批日志
+
+> **历史（2026-10-29 已删除）**：下面的 `F7` 双抓热键与 `[vvsr] sr dump ...` 行随 B1c/`VvCapture`
+> 一起移除，`sr.dumpInputs()` / `dumpRuns()` 也不存在了。本节保留原始操作与日志口径，
+> 因为 EXP-0027 的结论（等值判据太脆 → 改相对阈值）仍是后面几轮的依据。
 
 F7（TEST 热键，present 线程轮询，边沿触发；一对还在跑时拒绝并 `F7 ignored`；不占用 F8/F10/V 的采样）：
 
@@ -2093,6 +2166,12 @@ TAAU list 25  ──写──>  Color0 / arg10 (2560x1440 R11G11B10, 双缓冲)
 
 ### 35.1 阶段 A：纯色写入验证（只回答 V3/V5）
 
+> **历史（2026-10-29 已删除）**：阶段 A 的实验动作 `Action::SolidArg10`
+> （每帧把 `arg10` 清成品红）与面板 `VV R3 stage A` 的两个按钮已从代码移除；
+> `setArg10Solid()` 这个名字也不存在（现在由 `setProductArmed` 统一驱动的 arm 代次刷新
+> RTV 记录）。保留本节是因为 A1/A2/A3 的结论定义了产品今天仍在遵守的两条约束：
+> **切点与目标必须当帧现取**、**写 `arg10` 后保持 RT 状态不发 barrier**。
+
 目标：证明运行时**真的控制了下游所读的那张 `arg10`**，并且写它不出状态错。
 
 `arg10` 的下游已经被 EXP-0056 证到「共享帧图节点引用 + 三个后处理消费者」，所以阶段 A 不再论证
@@ -2299,6 +2378,14 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
 
 ### 35.4 阶段 D：回归后再 suppress
 
+> **现行 / 历史分界（2026-10-29）**：**draw 级 suppress 就是产品路径**
+> （`setDrawSuppress` + `productArmed` + 上一帧注入成功门 + generation 门，代码在
+> `VvProbe.cpp` 的 `drawIndexedInstancedDetour`），本节描述的这条判定链原样保留。
+> 已删除的是它周围的取证工具：`suppress/draw-tag/chain` 三种 probe 窗口、
+> callback 级替换（`setTaauDrawReplacement`）、F2 的同帧 `taauRef` + `sr_taauref_*.bin`、
+> 以及面板上 `Stop arg10` / `Restore TAAU draw` / `Write solid arg10` 这些手开关。
+> 今天开关只有一个：`sr.vvEnabled`（＝注入 arm + 跳 draw）。
+
 先在**不 suppress**下过 F11、切世界、Stop/Start，确认没有亮暗漂移和错代输出。之后才做第二阶段：
 
 - 输入角色通道**不得依赖被 suppress 的 TAAU draw**；
@@ -2340,6 +2427,13 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
 - 实现：`VvProbe` 的 draw 级开关（默认关）+ 上一帧注入成功门；命中条件 = 该 list 已绑定当帧
   `arg10`（bind-time exact）+ 该 list 第一条 draw + 6 索引/1 实例 + arg11 非空。命中时只跳过
   这一条 draw，回调、材质绑定（MV 通道）与 arg10 的 RTV 绑定全部保留。
+- **TAAU 计时（2026-10-29）**：同一条识别（`inArg10WriterList(list, true)`）现在也驱动计时，
+  与产品/开关无关：识别到就 `nrEnsureStamps(list)`（时间戳对象在第一次真实 TAAU draw 时创建），
+  只在**这一条 draw 真的要转发**时 `nrStampBegin/End(list, gTaauHits, 1)` + `nrStampTick`。
+  被 skip 的帧不写样本（TAAU 没有跑，写了就是假数）；产品替换时的上采样成本由 evaluate detour
+  的 id1 记录（`RenderProbe::ngxEvaluateDetour`，每次求值都打点）。面板的「超分 GPU」行因此
+  在两种后端下都有数，且不依赖 NR/SR 开关或面板是否打开。
+  一次性断言（TEST）：首个中位数出现时打 `[vv] TAAU timing available: … ms (… samples)`。
 - 结果：约 30 s 内 `skipped TAAU draw` #1→#2400+（每帧一条），`inject fixed` 从 840 继续到 3480、
   `skipped` 保持 1，`sr arg10` #600→#3600 全程 `eval=1 mv=engine`，UI 帧形 87/109 也连续；
   Restore 后跳停；Stop→Start 重新 arm 后从 #1 恢复（补上 EXP-0065 的缺口）。无 D3D12 错误/崩溃。
@@ -2380,6 +2474,10 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
   `r3-f11-hardening-EXP-0076.log`、`s6-regression-EXP-0076.log`。
 
 ### 35.5 现在这一刀（immediate next）
+
+> **已过时（2026-10-29）**：阶段 A 的纯色写入在 EXP-0058 就通过了，B/C/D 也已在 EXP-0061/0067
+> 之后落地；这一段当时写的「只做阶段 A，A1–A3 任一不成立就停」已经没有后续动作。
+> 现行状态见 §36/§37 与本文开头的清理说明。
 
 **只做阶段 A 的纯色 `arg10` 实写**：A1–A3 任一不成立就停。通过后就以 §35.2 为下一步，
 不再回到反编译论证 R3。
@@ -2545,7 +2643,8 @@ VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution
 - `-j(n)` 幅度不变 ⇒ 这一帧确实没按它渲染 ⇒ 只能喂 0；想要亚像素采样增益就得在渲染侧自己施加 jitter（另一个工程）；
 - `j(n-1)` 稳 ⇒ 引擎 ctx 的 jitter 领先渲染一帧，属相位 bug，修 source。
 
-**顺序**：产品侧维持 jitter = 0（`VvSr` 默认；四档诊断只剩 `0 / j(n) / -j(n) / j(n-1)` 供复查）。
-若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`（直写 factor 的同一个钩子）里**自己抖投影**，
-再把同一个值交给 DLSS —— 这是新工程，不在本轮。depth 语义（`near/(1-d)` 与 `DepthInverted=1`）仍待收口：
-它影响的是重投影精度，与 jitter 是否喂值相互独立。
+**顺序**：产品侧维持 jitter = 0（`VvSr` 默认）。**2026-10-29 清理**：面板与 `JitterSource` 现在只保留
+`0 / j(n)` 两档（`-j(n)` 与 `j(n-1)` 在本次判别里已经答完、没有入口，分支随枚举一起删除；
+需要复查时按本节表格临时加回）。若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`
+（直写 factor 的同一个钩子）里**自己抖投影**，再把同一个值交给 DLSS —— 这是新工程，不在本轮。
+depth 语义（`near/(1-d)` 与 `DepthInverted=1`）仍待收口：它影响的是重投影精度，与 jitter 是否喂值相互独立。

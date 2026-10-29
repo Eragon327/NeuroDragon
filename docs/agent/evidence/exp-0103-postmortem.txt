@@ -1,0 +1,16 @@
+EXP-0103 postmortem (2026-10-29)
+
+Original smoke evidence: docs/agent/evidence/smoke-taau-timing-EXP-0103.log
+Deployed DLL sha256: 51a67185c12c4ed3
+Result: no TAAU timing assertion after 180 s.
+
+Checks after failure:
+- .xmake/windows/x64/xmake.conf again contains test = false after a plain `xmake -y` invocation.
+- Binary scan of bin/NeuroDragon/NeuroDragon.dll: [input] absent and TAAU timing available absent.
+- Thus the smoke ran a release DLL without the TEST assertion, same build-configuration failure as EXP-0101; it is not evidence against the Menu.cpp data-source change.
+
+Correction:
+- All further TEST builds must use an explicit configure immediately before rebuilding:
+  xmake f -p windows -a x64 -m release --test=y -y
+  xmake -r -y
+- Do not deploy unless the DLL contains both [input] and TAAU timing available markers.

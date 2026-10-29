@@ -773,15 +773,19 @@ UINT gEncodeStride = 0;
 bool gEncodedIsSrv = false;
 bool gDecodedIsSrv = false;
 
-// One shader, four jobs (docs/D §6.16). Modes 0/1 are the early experiments and
-// stay for A/B; modes 3/4 are Theo's Render Pipeline's actual contract
-// (src/FrameGen/SourceDLSSGNeuralResolveShader.h in TRP, MIT):
-//   mode 3 = TRP encode: Colour / WhitePoint, RGB shoulder bound, then sRGB.
-//   mode 4 = TRP "Ratio" resolve: rebase the network's *result* onto the original's
-//            luminance (ratio = by<ay ? by/ay : (by-ay+ny)/ny), transfer chroma in
-//            OkLab, then blend by TransferStrength / ColourStrength and clamp to
-//            base * MaxRatio. Highlights come from the original, never from the
-//            network, so nothing is flattened.
+// One shader, several jobs (docs/D §6.16). Modes 0/1 are the early encode
+// experiments and stay for A/B; modes 3/4 are Theo's Render Pipeline's actual
+// contract (src/FrameGen/SourceDLSSGNeuralResolveShader.h in TRP, MIT):
+//   mode 3  = TRP encode: Colour / WhitePoint, RGB shoulder bound, then sRGB.
+//   mode 4  = TRP "Ratio" resolve: rebase the network's *result* onto the original's
+//             luminance (ratio = by<ay ? by/ay : (by-ay+ny)/ny), transfer chroma in
+//             OkLab, then blend by TransferStrength / ColourStrength and clamp to
+//             base * MaxRatio. Highlights come from the original, never from the
+//             network, so nothing is flattened.
+//   10 / 13 = the same two encodes for a feature extent smaller than the render size.
+//   6       = mode 4 when the network ran at that smaller extent.
+//   30      = adaptive exposure (see below). The bounded-gain composite (modes 2/5)
+//             was removed with the gain path: the ratio resolve is the only one.
 constexpr char const* kEncodeHlsl = R"hlsl(
 Texture2D<float4> baseTex  : register(t0); // original linear HDR colour
 Texture2D<float4> inputTex : register(t1); // what the network was fed (encoded)
@@ -950,7 +954,7 @@ void main(uint3 id : SV_DispatchThreadID) {
     // by both scaled modes to sample their source at the right place.
     float2 uv    = (float2(p) + 0.5) / max(float2(width, height), float2(1.0, 1.0));
     float3 baseC = max(baseTex.Load(int3(p, 0)).rgb, 0.0);
-    bool   lowRes = (mode == 5 || mode == 6);
+    bool   lowRes = (mode == 6);
     float3 outC;
     if (mode == 10) {
         // Scaled encode, Reinhard: downsample in linear light first (a plain
@@ -972,12 +976,6 @@ void main(uint3 id : SV_DispatchThreadID) {
         c = pow(saturate(c), 2.2);
         c = c / max(1.0 - c, 1.0 / 255.0);
         outC = c;
-    } else if (mode == 2 || mode == 5) {
-        float3 base  = baseC;
-        float3 inp   = max(lowRes ? Bilinear(inputTex, uv, float2(lowW, lowH)) : inputTex.Load(int3(p, 0)).rgb, 1e-4);
-        float3 nr    = lowRes ? Bilinear(nrTex, uv, float2(lowW, lowH)) : max(nrTex.Load(int3(p, 0)).rgb, 0.0);
-        float3 ratio = clamp(nr / inp, 0.5, 2.0);
-        outC = min(base * clamp(1.0 + (ratio - 1.0) * transferStrength, 0.25, 4.0), 64.0);
     } else if (mode == 3) {
         // TRP encode: the producer's linear RGB normalised by its white point.
         float3 c = baseC;
@@ -2578,7 +2576,7 @@ bool nrEnsureRenderSize(
 
 void nrShutdown() {
     // Teardown on this path is what killed Windows (bugcheck 0x6
-    // when the game exited with Replace=5 active): releasing the NGX feature (which
+    // when the game exited with the composite active): releasing the NGX feature (which
     // unloads the 264 MB model inside the driver) and our textures/PSO/heap while
     // the GPU may still be executing command lists that reference them is a
     // use-after-free on the GPU. Objects are deliberately leaked instead - the
@@ -2710,17 +2708,13 @@ namespace {
 //
 // NR stays 1:1 at the render resolution (1485x835); the engine's DLSS does the
 // real upscaling to 2560x1440.
-// Route A / Replace=5 (docs/D §6.16): the network's *relative* change, applied to
-// the engine's original linear HDR Colour. Feeding the network's output straight
-// to DLSS flattens HDR (its output saturates near 1.0, a 0.99 display value is 65
-// linear), which is what made the picture grey and soft. Here:
-//     gain = NR_out / NR_in        (both display-referred, clamped)
-//     out  = original_linear * gain
-// Where the network agrees with its input the gain is 1, so highlights survive and
-// the frame is otherwise untouched; where it changed something, the change carries
-// over into linear space. Uses the *previous* frame's NR result so this pass runs
-// before our own evaluate - the same window as the encode pass.
-void compositeGain(
+//
+// The composite itself is TRP's Ratio resolve (docs/D §6.16): the network's result
+// is rebased onto the original's luminance and its chroma transferred in OkLab, so
+// highlights keep coming from the original linear HDR frame instead of the network's
+// display-referred output (feeding that output straight to DLSS is what made the
+// picture grey and soft). This pass runs after our own evaluate, in the same frame.
+void compositeRatio(
     ID3D12GraphicsCommandList* cmd,
     ID3D12Resource*            color,
     D3D12_RESOURCE_STATES      colorState,
@@ -2737,23 +2731,18 @@ void compositeGain(
     }
     // Fade the effect in over the first frames of the process, and again after every
     // rebuild. Switching the upscaler's input in one step leaves the previous frame
-    // burned into DLSS's history ("第一帧轮廓残留", ); starting at gain = 1 lets the
+    // burned into DLSS's history ("第一帧轮廓残留", ); starting at "no change" lets the
     // history converge instead of being overwritten.
     float const ramp = gCompositeRamp >= 24u ? 1.0f : static_cast<float>(gCompositeRamp) / 24.0f;
     if (gCompositeRamp < 24u) {
         ++gCompositeRamp;
     }
-    // Only two composites exist: the ratio resolve (default) and the bounded-gain
-    // experiment. Anything that is not 5 is the ratio mode - no migration, no other
-    // modes. When the network ran at a smaller extent (docs/L 2.1) the composite still
-    // writes the full-resolution picture from the low-resolution result: modes 5/6.
-    bool const     gainMode       = config::get().nr.replace == 5;
+    // One composite, two constants: 4 at native size, 6 when the network ran at a
+    // smaller extent (docs/L 2.1) - the pass then writes the full-resolution picture
+    // from the low-resolution result.
     bool const     scaled         = featureW != renderW || featureH != renderH;
-    unsigned const mode           = gainMode ? (scaled ? 5u : 2u) : (scaled ? 6u : 4u);
-    float const    strength       = gainMode
-                                      ? (config::get().nr.gainBoost > 0.0f ? config::get().nr.gainBoost : 1.0f)
-                                      : config::get().nr.transferStrength;
-    float const    strengthRamped = strength * ramp;
+    unsigned const mode           = scaled ? 6u : 4u;
+    float const    strengthRamped = config::get().nr.transferStrength * ramp;
     bool const     compare        = config::get().nr.compare != 0;
     bool const     adaptive       = adaptiveExposureOn();
     float          splitFraction  = config::get().nr.compareSplit;
@@ -2881,10 +2870,8 @@ void compositeGain(
     if (!logged) {
         logged = true;
         NR_DEBUG(
-            "[nr] Replace=%d placement=%s 生效：%s（strength=%.2f white=%.2f colour=%.2f maxRatio=%.2f）",
-            config::get().nr.replace,
+            "[nr] Replace=6 placement=%s 生效：TRP Ratio 合成（strength=%.2f white=%.2f colour=%.2f maxRatio=%.2f）",
             gNr.placement == 1 ? "after" : "before",
-            mode == 4u ? "TRP Ratio 合成" : "增益合成",
             static_cast<double>(strengthRamped),
             static_cast<double>(config::get().nr.whitePoint),
             static_cast<double>(config::get().nr.colourStrength),
@@ -2950,11 +2937,11 @@ bool nrRecord(
 
     // Encode mode actually used when the encoder is available (-1 = the network is
     // fed the raw linear HDR colour, no encode). One variable, because the encode
-    // pass and the parameter read-back must agree on it. The gain mode keeps the
-    // earlier Reinhard encode, the ratio mode uses TRP's sRGB+shoulder proxy.
-    int const configuredEncode = config::get().nr.nrEncode >= 0
-                                   ? config::get().nr.nrEncode
-                                   : (config::get().nr.replace == 5 ? 0 : 3);
+    // pass and the parameter read-back must agree on it. Auto is TRP's sRGB+shoulder
+    // proxy (3), the domain the ratio resolve is written against; 0/1 select the
+    // earlier Reinhard encodes for an explicit A/B. config::loadOrCreate() already
+    // folded every other value, so this is the only place the id becomes a shader mode.
+    int const configuredEncode = config::get().nr.nrEncode >= 0 ? config::get().nr.nrEncode : 3;
     bool const useEncoded = gEncodePso && gEncodedColor;
     // Before upscaling only: remember the engine's own Color before our first swap,
     // so it can be handed back when NR turns off. (After upscaling never swaps the
@@ -3048,7 +3035,7 @@ bool nrRecord(
         if (mvScaleX != lastX || mvScaleY != lastY) {
             lastX = mvScaleX;
             lastY = mvScaleY;
-            nrLog(1, "[nr] MV scale %.3f,%.3f (guide %ux%u)", mvScaleX, mvScaleY, guideWidth, guideHeight);
+            NR_DEBUG("[nr] MV scale %.3f,%.3f (guide %ux%u)", mvScaleX, mvScaleY, guideWidth, guideHeight);
         }
     }
     // Deliberately NOT touching Width/Height/OutWidth/OutHeight here: if this
@@ -3058,17 +3045,24 @@ bool nrRecord(
     paramSetU32(params, "Width", guideWidth);
     paramSetU32(params, "Height", guideHeight);
     int style = config::get().nr.style >= 0 ? config::get().nr.style : 0;
+#ifdef TEST
+    // Sweep=1 (docs/L P1): cycle Style 0..2 per diagnostic window. A TEST-only probe -
+    // a hand-edited release config must not be able to drive it.
     if (config::get().nr.sweep == 1) {
         style = (gWindowIndex >= 0 ? gWindowIndex : 0) % 3;
     }
+#endif
     paramSetU32(params, "DLSSNR.Style", static_cast<std::uint32_t>(style));
 
     // Freeze test: with Enabled=0 the feature must not touch the output, so the
     // dump keeps the previous window's content. No stateless "filter" can do that.
+    // TEST-only, like the other two sweep probes.
     int enabled = 1;
+#ifdef TEST
     if (config::get().nr.sweep == 2) {
         enabled = ((gWindowIndex >= 0 ? gWindowIndex : 0) % 2 == 0) ? 1 : 0;
     }
+#endif
     paramSetI32(params, "DLSSNR.Enabled", enabled);
     paramSetI32(params, "DLSSNR.UseAutoMask", 0);
     paramSetI32(params, "DLSSNR.UICorrection", 0);
@@ -3091,11 +3085,14 @@ bool nrRecord(
     );
     // 310.x reads -1 as "follow LocalStructureStrength" (TRP's sentinel). Whether
     // this runtime honours it is answered by Sweep=3, which cycles -1/0/1 through
-    // the measurement windows instead of being assumed (docs/L P1).
+    // the measurement windows instead of being assumed (docs/L P1) - TEST only, so a
+    // hand-edited release config cannot turn the knob into a per-window cycle.
     float skinStructure = config::get().nr.skinStructure;
+#ifdef TEST
     if (config::get().nr.sweep == 3) {
         skinStructure = static_cast<float>((gWindowIndex >= 0 ? gWindowIndex : 0) % 3) - 1.0f;
     }
+#endif
     skinStructure = skinStructure < -1.0f ? -1.0f : (skinStructure > 2.0f ? 2.0f : skinStructure);
     paramSetF32(params, "DLSSNR.SkinStructureStrength", skinStructure);
 
@@ -3104,14 +3101,13 @@ bool nrRecord(
     if (loggedWindow != gWindowIndex) {
         loggedWindow = gWindowIndex;
         NR_DEBUG(
-            "[nr] 本窗参数 Style=%d Enabled=%d Intensity=%.2f Skin=%.2f DepthInverted=%d Replace=%d "
+            "[nr] 本窗参数 Style=%d Enabled=%d Intensity=%.2f Skin=%.2f DepthInverted=%d Replace=6 "
             "NrEncode=%d NRReset=%d（窗口 #%d）",
             style,
             enabled,
             static_cast<double>(config::get().nr.intensity >= 0.0f ? config::get().nr.intensity : 1.0f),
             static_cast<double>(skinStructure),
             inverted,
-            config::get().nr.replace,
             useEncoded ? configuredEncode : -1,
             config::get().nr.resetEveryFrame,
             gWindowIndex
@@ -3258,9 +3254,8 @@ bool nrRecord(
             cmd->SetComputeRootSignature(gEncodeRoot);
             cmd->SetPipelineState(gEncodePso);
             cmd->SetComputeRootDescriptorTable(0, gpuTable(6));
-            // Replace=6 feeds the network TRP's encoded proxy (sRGB + shoulder);
-            // the other modes keep the earlier Reinhard encode for A/B. NrEncode
-            // overrides both so the input domain can be tested on any mode.
+            // The network is fed TRP's encoded proxy (sRGB + shoulder) by default; a
+            // hand-set NrEncode 0/1 keeps the earlier Reinhard encode for A/B.
             // Scaled input (docs/L 2.1): the encode writes the feature extent while the
             // source is the full render size, so the shader needs both.
             bool const     scaledEncode = w != gNr.domainWidth || h != gNr.domainHeight;
@@ -3381,12 +3376,10 @@ bool nrRecord(
     gNr.outputWasSrv = true;
 
     // Same frame: composite this frame's NR result onto this frame's Color, then
-    // let the engine's own DLSS upscale it. Replace=5 is the bounded-gain composite,
-    // everything else is the TRP Ratio resolve (the default). Both share this block:
-    // until 2026-10-24 the whole pass was gated on replace == 5, so the ratio mode left
-    // the picture untouched and made the four Ratio knobs dead (docs/L 1.1). There is no
-    // "evaluate only" gate any more - no migration, no mode that skips the picture.
-    bool const gainMode      = config::get().nr.replace == 5;
+    // let the engine's own DLSS upscale it. The ratio resolve is the only composite
+    // (the bounded-gain one is gone) and it always runs - there is no mode that skips
+    // the picture, which is what made the four Ratio knobs dead before 2026-10-24
+    // (docs/L 1.1).
     bool const wantComposite = engineParams != nullptr;
     bool       composited    = false;
     if (wantComposite) {
@@ -3417,7 +3410,7 @@ bool nrRecord(
     // level (the empty-first-evaluation case is already covered by evalCount > 2).
     if (wantComposite && evaluateRet == 1 && gEncodePso && gEncodedColor && gDecodedColor && gNr.evalCount > 2) {
         nrStampBegin(cmd, frame, 4);
-        compositeGain(
+        compositeRatio(
             cmd,
             static_cast<ID3D12Resource*>(color),
             // Both encode paths restore Color to ALL_SHADER_RESOURCE before this
@@ -3436,16 +3429,14 @@ bool nrRecord(
         composited = true;
     }
 
-    // Published for the panel's "this frame" block (docs/L 1.2): these are the
-    // values that were actually written, so a knob that changes nothing shows up as
-    // an unchanged row instead of a mystery.
+    // Read-back shows the mode that actually ran, not a raw config value: there is one
+    // composite now, so `replace` always reports 6 and `compositeMode` 4 (native) or
+    // 6 (network ran at a smaller extent).
     NrFrameParams snapshot{};
     snapshot.valid          = true;
-    // Read-back shows the mode that actually ran, not a raw config value: anything but
-    // 5 behaves as the ratio resolve, so the panel reports 6 for it.
-    snapshot.replace        = gainMode ? 5 : 6;
+    snapshot.replace        = 6;
     bool const scaledInput  = w != gNr.domainWidth || h != gNr.domainHeight;
-    snapshot.compositeMode  = composited ? (gainMode ? (scaledInput ? 5 : 2) : (scaledInput ? 6 : 4)) : -1;
+    snapshot.compositeMode  = composited ? (scaledInput ? 6 : 4) : -1;
     snapshot.encodeMode     = useEncoded ? configuredEncode : -1;
     snapshot.style          = style;
     snapshot.networkPreset  = config::get().nr.networkPreset == 1 ? 1 : 0;

@@ -548,7 +548,8 @@ bool dumpTextureRawAs(
         barrier.Transition.pResource   = res;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         // COMMON is the only state that can be entered without knowing what the engine
-        // left behind (docs/specs/vv.md §12 A uses the same trick for the injection).
+        // left behind (docs/specs/vv.md §12 A carries the same lesson from the early
+        // boundary experiment).
         barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(state);
         barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
         list->ResourceBarrier(1, &barrier);

@@ -14,6 +14,7 @@ struct InputGuardStatus {
     bool mouseHookInstalled{};
     bool keyDownHookInstalled{};
     bool keyUpHookInstalled{};
+    bool textInputHookInstalled{};
 };
 
 // True while the panel owns the keyboard/mouse, plus a short tail after closing so

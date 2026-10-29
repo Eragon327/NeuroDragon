@@ -7,7 +7,6 @@
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/utils/Utils.h"
-#include "neurodragon/vv/VvCapture.h"
 #include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/vv/VvSr.h"
 
@@ -163,14 +162,13 @@ bool NeuroDragon::disable() {
     // Take the panel down first: it owns the window procedure and hooks Present,
     // both of which must be in their original state before the NR hooks are dropped.
     ui::Overlay::getInstance().uninstall();
-    vv::capture::release();
     // Stop the product action first: the render thread may still be recording an
     // injected list, and vv::sr::release() waits for that record before freeing the
     // textures/PSO. Releasing first left the DLSS evaluate reading a dead colorHalf at
     // exit (EXP-0085 crash inside nvwgf2umx).
     vv::sr::setEnabled(false);
     vv::sr::release();
-    vv::dlss::release();
+    vv::dlss::releaseSr();
     probe::vv::uninstall();
     probe::uninstall();
     return true;

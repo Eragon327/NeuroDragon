@@ -150,7 +150,7 @@ LL_AUTO_STATIC_HOOK(
         *reinterpret_cast<float*>(data + 0x4) = branch;
         static std::atomic<float> loggedBranch{-1.0f};
         if (loggedBranch.exchange(branch, std::memory_order_relaxed) != branch) {
-            utils::logger().info(
+            ND_DEBUG(
                 "[vv] native render: camera 1.000, branch {:.4f} (dynamic off, option untouched)",
                 branch
             );
@@ -161,7 +161,7 @@ LL_AUTO_STATIC_HOOK(
         gHits.fetch_add(1, std::memory_order_relaxed);
         static std::atomic<float> logged{-1.0f};
         if (logged.exchange(target, std::memory_order_relaxed) != target) {
-            utils::logger().info(
+            ND_DEBUG(
                 "[vv] direct factor {:.4f} -> {:.4f} (dynamic off, option untouched)",
                 before,
                 target

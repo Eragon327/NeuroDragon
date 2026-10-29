@@ -24,13 +24,11 @@ struct Nr {
     // exclusive: one evaluation per frame. Switching rebuilds the feature.
     int placement = 0;
 
-    // 5 = gain composite onto the engine's DLSS input, 6 = TRP ratio resolve (default:
-    // the one that reaches the screen with highlights taken from the original).
-    // No other value has a meaning any more (the old "evaluate only" 0 is gone): the
-    // renderer treats everything except 5 as 6, deliberately without a config migration.
+    // Only one composite exists: 6 = TRP Ratio resolve (highlights come from the
+    // original, never from the network). The key stays so an old hand-edited file
+    // loads; loadOrCreate() folds any other value to 6 at the config boundary
+    // (the gain composite that used to be 5, and the "evaluate only" 0, are gone).
     int replace = 6;
-
-    float gainBoost = 1.0f; // exaggerate the network's gain, for judging only
 
     int   style           = 0;
     float intensity       = 1.0f;
@@ -67,10 +65,12 @@ struct Nr {
     int   compare         = 0;
     float compareSplit    = 0.5f; // 0..1 of the width that stays original
 
-    int sweep = 0; // 1 = cycle Style 0..2 per window, 2 = Enabled freeze test
+    int sweep = 0; // TEST builds only: 1 = cycle Style 0..2 per window, 2 = Enabled
+                   // freeze test, 3 = SkinStructure -1/0/1. A release build compiles the
+                   // branches out, so a hand-edited value does nothing there.
 
     float mvecScale = -1.0f; // < 0 = derive from the render size (recommended)
-    int   nrEncode  = -1;    // < 0 = per Replace mode (0 = Reinhard, 3 = TRP)
+    int   nrEncode  = -1;    // < 0 = TRP's encode (3); 0/1 = the earlier Reinhard A/B
 
     // TRP's reconstruction knobs (docs/D §6.16, "ratio resolve").
     float whitePoint       = 1.0f;
@@ -79,7 +79,7 @@ struct Nr {
     float maxRatio         = 2.0f;
     // TRP's "broad / detail" split of NR's change (in stops): the wide part of the
     // change and its local contrast can be scaled independently. 1.0 / 1.0 leaves the
-    // result unchanged; only Replace=6 (ratio resolve) uses them.
+    // result unchanged; only the ratio resolve uses them.
     float broad            = 1.0f;
     float detail           = 1.0f;
     // Adaptive exposure (docs/L 3.2): derive the white point from the scene's geometric
@@ -166,7 +166,7 @@ struct Ui {
 };
 
 struct Config {
-    int version = 5;
+    int version = 6;
     Nr  nr{};
     Sr  sr{};
     Ui  ui{};

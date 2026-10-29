@@ -1,0 +1,69 @@
+# agentflow smoke taau-timing on EXP-0103
+# started 2026-10-29T21:51:50.281+08:00  verdict=FAIL elapsed=180s
+# tree 7ae1581317c18cb2  head df7155b8
+# dll 51a67185c12c4ed3
+# profile scripts\agentflow\smoke\taau-timing.json
+# requires=['\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)']
+# missing=['\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)', '\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\) x0/1']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 1580760 -> 1588241
+[2026-10-29 21:52:04.772 IFO][LeviLamina]                                                                       
+[2026-10-29 21:52:04.772 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-29 21:52:04.772 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-29 21:52:04.772 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-29 21:52:04.772 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-29 21:52:04.772 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-29 21:52:04.772 IFO][LeviLamina]                                                                       
+[2026-10-29 21:52:04.772 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-29 21:52:04.772 IFO][LeviLamina]                                                                       
+[2026-10-29 21:52:04.772 IFO][LeviLamina]                                                                       
+[2026-10-29 21:52:04.772 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-29 21:52:04.772 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-29 21:52:04.787 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-29 21:52:04.788 IFO][LeviLamina] 正在加载模组……
+[2026-10-29 21:52:04.789 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-29 21:52:04.822 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-29 21:52:04.822 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-29 21:52:07.323 WRN][Server] <LVL|2470970768> Migration started
+[2026-10-29 21:52:07.326 WRN][Server] <LVL|2470970768> Migration completed in 0.003000 seconds
+[2026-10-29 21:52:20.145 WRN][Server] <LVL|2283372656> Time played notifier not required for 'zh_CN'
+[2026-10-29 21:52:20.253 IFO][LeviLamina] 正在启用模组……
+[2026-10-29 21:52:20.253 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-29 21:52:20.253 IFO][NeuroDragon] NR 已启用（config/config.json：nr.enabled = true）
+[2026-10-29 21:52:21.002 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-29 21:52:21.997 IFO][NeuroDragon] 安装游戏内面板：完成，用时 995 ms
+[2026-10-29 21:52:21.997 IFO][LeviLamina] 已在 1.7 秒内启用 1 个模组
+[2026-10-29 21:52:21.997 IFO][NeuroDragon] [sr] DLSS runtime: E:\LeviLauncher\versions\1.26.51.01\nvngx_dlss.dll (58956912 bytes)
+[2026-10-29 21:52:22.167 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+[2026-10-29 21:52:22.168 IFO][NeuroDragon] [sr] ctx call #1 engine=00000174AB36C040 ctx=000001749E633DC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=1 rq=1 af=-1.000 rf=-1.000 render=1485x835 tail=1.000 valid=1
+[2026-10-29 21:52:22.172 IFO][NeuroDragon] [sr] req q=1->2 (active q=1 f=-1.000)
+[2026-10-29 21:52:22.172 IFO][NeuroDragon] [sr] fb factor table_rva=0xe9776e0 index=1 current=0.580
+[2026-10-29 21:52:22.556 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：开始…
+[2026-10-29 21:52:23.021 IFO][NeuroDragon] [nr] encode shader compile diagnostics: E:\LeviLauncher\versions\1.26.51.01\nr_encode(176,16-32): warning X3571: pow(f, e) will not work for negative f, use abs(f) or conditionally handle negative values if you expect them
+E:\LeviLauncher\versions\1.26.51.01\nr_encode(92,5): warning X4000: use of potentially uninitialized variable (HueGuard)
+
+[2026-10-29 21:52:23.453 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：完成，用时 897 ms
+[2026-10-29 21:52:23.480 IFO][NeuroDragon] [sr] RCAS 就绪：cs_5_1 编译 + 根签名 + PSO 用时 31 ms（只在第一次启用时发生）
+[2026-10-29 21:52:23.739 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:52:23.739 WRN][NeuroDragon] [vv] inject skipped (1): no arg10 writer in this submission; TAAU restored
+[2026-10-29 21:52:23.833 IFO][NeuroDragon] [sr] ctx call #2 engine=00000174AB36C040 ctx=000001749F4B4780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=1 rq=2 af=-1.000 rf=-1.000 render=1485x835 tail=1.000 valid=1
+[2026-10-29 21:52:24.136 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:52:24.136 WRN][NeuroDragon] [vv] inject skipped (2): no arg10 writer in this submission; TAAU restored
+[2026-10-29 21:52:24.223 WRN][Server] <LVL|2222778512> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-29 21:52:24.223 WRN][Server] <LVL|2222778512> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-29 21:52:25.015 WRN][Server] <LVL|2255077808> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect
+[2026-10-29 21:52:25.050 IFO][NeuroDragon] [sr] ctx call #3 engine=00000174AB36C040 ctx=000001749E633DC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:25.059 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:52:25.059 WRN][NeuroDragon] [vv] inject skipped (3): no arg10 writer in this submission; TAAU restored
+[2026-10-29 21:52:25.061 IFO][NeuroDragon] [sr] ctx call #4 engine=00000174AB36C040 ctx=000001749F4B4780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:25.318 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:52:25.320 IFO][NeuroDragon] [sr] ctx call #5 engine=00000174AB36C040 ctx=000001749E633DC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:25.511 IFO][NeuroDragon] [sr] ctx call #6 engine=00000174AB36C040 ctx=000001749F4B4780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:25.727 IFO][NeuroDragon] [sr] ctx call #7 engine=00000174AB36C040 ctx=000001749E633DC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:26.015 IFO][NeuroDragon] [sr] ctx call #8 engine=00000174AB36C040 ctx=000001749F4B4780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:26.096 IFO][NeuroDragon] [sr] ctx call #9 engine=00000174AB36C040 ctx=000001749E633DC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:26.280 IFO][NeuroDragon] [sr] ctx call #10 engine=00000174AB36C040 ctx=000001749F4B4780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:52:26.839 IFO][NeuroDragon] [sr] RCAS 锐化目标 2560x1440（格式 10）
+[2026-10-29 21:52:26.840 IFO][NeuroDragon] [sr] RCAS 锐化已启用：强度 0.672（增量 2.69 倍），2560x1440（HDR→Reinhard 域，在显示变换与 UI 之前）
+[2026-10-29 21:53:18.649 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:53:59.346 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:54:36.540 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)

@@ -1,6 +1,7 @@
 #include "neurodragon/ui/Widgets.h"
 
 #include "neurodragon/ui/Theme.h"
+#include "neurodragon/utils/Utils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,6 +19,21 @@ float gRowRight{};
 
 ImVec4 toColor(ImU32 value) { return ImGui::ColorConvertU32ToFloat4(value); }
 
+// Blend two palette entries. ImGui wants one colour per interaction state and
+// Theme.h names a single accent, so hover/active steps are mixed from entries that
+// are already in the palette rather than introducing new ones.
+ImU32 mix(ImU32 from, ImU32 to, float amount) {
+    ImVec4 const a   = ImGui::ColorConvertU32ToFloat4(from);
+    ImVec4 const b   = ImGui::ColorConvertU32ToFloat4(to);
+    ImVec4 const out{
+        a.x + (b.x - a.x) * amount,
+        a.y + (b.y - a.y) * amount,
+        a.z + (b.z - a.z) * amount,
+        a.w + (b.w - a.w) * amount,
+    };
+    return ImGui::ColorConvertFloat4ToU32(out);
+}
+
 float lineHeight() { return ImGui::GetTextLineHeight(); }
 
 float scaled(float value) { return value * theme::scale(); }
@@ -25,6 +41,30 @@ float scaled(float value) { return value * theme::scale(); }
 // Rows stop growing at this width even when the column is wider: a slider that
 // spans a whole 1440p panel is impossible to aim at.
 float rowLimit() { return scaled(440.0f); }
+
+// Button and marker metrics, logical units like every other size in this file.
+constexpr float kButtonPadX     = 12.0f; // horizontal padding of an auto-width button
+constexpr float kButtonPadY     = 6.0f;  // vertical padding; one line + 2x this is the default height
+constexpr float kButtonInsetX   = 2.0f;  // padding of an explicitly sized button: clip inset only
+constexpr float kButtonRounding = 4.0f;  // same radius as the panel's boxes and frames
+constexpr float kTipGap         = 6.0f;  // space between an element and its "!" marker
+constexpr float kTipMinSize     = 14.0f; // hit box of the marker when the line is shorter
+constexpr float kTipWrap        = 280.0f; // text width of the hint box; the box adds kTipPadX on both sides
+constexpr float kTipPadX        = 10.0f; // hint box padding: the 10 / 8 the first version drew with
+constexpr float kTipPadY        = 8.0f;
+constexpr float kTipMargin      = 4.0f;  // least distance between the hint box and the display edge
+constexpr float kTipOffsetX     = 12.0f; // the box sits this far right of the cursor ...
+constexpr float kTipOffsetY     = 16.0f; // ... and this far below it
+
+// The visible part of an ImGui label: everything before "##". TEST-only, because a
+// release build's ND_DEBUG does not evaluate its arguments.
+#ifdef TEST
+std::string_view visibleLabel(char const* label) {
+    std::string_view const text = label ? label : "";
+    auto const             hash = text.find("##");
+    return hash == std::string_view::npos ? text : text.substr(0, hash);
+}
+#endif
 
 // Shorten a label so it can never run into the right-aligned value.
 //
@@ -132,21 +172,33 @@ bool toggle(char const* label, bool* value) {
     ImVec2 const boxMax{pos.x + box, centerY + box * 0.5f};
 
     if (*value) {
-        drawList->AddRectFilled(boxMin, boxMax, kAccent, scaled(3.0f));
+        drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(toColor(kAccent)), scaled(3.0f));
         // Hand-drawn tick: ImGui::RenderCheckMark lives in imgui_internal.h, and the
         // panel has no reason to depend on internal headers.
         float const  stroke = std::max(1.5f, s * 2.0f);
         ImVec2 const a{boxMin.x + box * 0.26f, boxMin.y + box * 0.52f};
         ImVec2 const b{boxMin.x + box * 0.44f, boxMin.y + box * 0.72f};
         ImVec2 const c{boxMin.x + box * 0.76f, boxMin.y + box * 0.28f};
-        drawList->AddLine(a, b, kAccentText, stroke);
-        drawList->AddLine(b, c, kAccentText, stroke);
+        auto const   tick = ImGui::GetColorU32(toColor(kAccentText));
+        drawList->AddLine(a, b, tick, stroke);
+        drawList->AddLine(b, c, tick, stroke);
     } else {
-        drawList->AddRectFilled(boxMin, boxMax, kFrame, scaled(3.0f));
-        drawList->AddRect(boxMin, boxMax, kBorder, scaled(3.0f), 0, std::max(1.0f, s));
+        drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(toColor(kFrame)), scaled(3.0f));
+        drawList->AddRect(
+            boxMin,
+            boxMax,
+            ImGui::GetColorU32(toColor(kBorder)),
+            scaled(3.0f),
+            0,
+            std::max(1.0f, s)
+        );
     }
 
-    drawList->AddText(ImVec2(boxMax.x + gap, centerY - lineHeight() * 0.5f), kText, label);
+    drawList->AddText(
+        ImVec2(boxMax.x + gap, centerY - lineHeight() * 0.5f),
+        ImGui::GetColorU32(toColor(kText)),
+        label
+    );
 
     ImGui::PopID();
     return changed;
@@ -211,14 +263,14 @@ bool slider(
     drawList->AddRectFilled(
         ImVec2(pos.x, centerY - trackHeight * 0.5f),
         ImVec2(pos.x + width, centerY + trackHeight * 0.5f),
-        enabled ? kFrame : kBorderSoft,
+        ImGui::GetColorU32(toColor(enabled ? kFrame : kBorderSoft)),
         trackHeight * 0.5f
     );
     if (fraction > 0.0f) {
         drawList->AddRectFilled(
             ImVec2(pos.x, centerY - trackHeight * 0.5f),
             ImVec2(pos.x + width * fraction, centerY + trackHeight * 0.5f),
-            enabled ? kAccentSoft : kBorder,
+            ImGui::GetColorU32(toColor(enabled ? kAccentSoft : kBorder)),
             trackHeight * 0.5f
         );
     }
@@ -230,7 +282,7 @@ bool slider(
     drawList->AddRectFilled(
         ImVec2(handleX - handleWidth * 0.5f, centerY - handleHeight * 0.5f),
         ImVec2(handleX + handleWidth * 0.5f, centerY + handleHeight * 0.5f),
-        enabled ? (ImGui::IsItemActive() ? kText : kAccent) : kTextFaint,
+        ImGui::GetColorU32(toColor(enabled ? (ImGui::IsItemActive() ? kText : kAccent) : kTextFaint)),
         scaled(3.0f)
     );
 
@@ -353,27 +405,185 @@ void frameGraph(ImVec2 pos, ImVec2 size, std::vector<float> const& values, float
     drawList->AddPolyline(points.Data, points.Size, kAccent, 0, std::max(1.0f, s * 1.2f));
 }
 
-bool footerButton(char const* label, ImVec2 size, bool primary) {
-    auto const& style = ImGui::GetStyle();
+float buttonWidth(char const* label) {
+    // Mirrors what ImGui::Button computes for an automatic width: the text before
+    // "##" plus this button's own horizontal padding.
+    return ImGui::CalcTextSize(label ? label : "", nullptr, true).x + 2.0f * scaled(kButtonPadX);
+}
 
+bool button(char const* label, ImVec2 size, bool primary) {
+    if (!label) return false;
+
+    auto const  s      = theme::scale();
+    float const height = size.y > 0.0f ? size.y : lineHeight() + 2.0f * scaled(kButtonPadY);
+
+    // The label is centred inside (rect - FramePadding). A button shorter than one
+    // line of text - the title strip's 20 px zoom boxes are - would then get its
+    // glyphs clipped top and bottom, so the vertical padding follows the button and
+    // never the style.
+    float const padY = std::clamp((height - lineHeight()) * 0.5f, 0.0f, scaled(kButtonPadY));
+    // An explicit width means the caller sized the box; a wide inset would only eat
+    // the label, so there it shrinks to the border's breathing room.
+    float const padX     = size.x > 0.0f ? scaled(kButtonInsetX) : scaled(kButtonPadX);
+    float const border   = std::max(1.0f, std::round(s));
+    float const rounding = scaled(kButtonRounding);
+
+    ImU32 fill{};
+    ImU32 hovered{};
+    ImU32 active{};
+    ImU32 labelColor{};
+    ImU32 edge{};
     if (primary) {
-        ImGui::PushStyleColor(ImGuiCol_Button, toColor(kAccent));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.72f, 0.35f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.90f, 0.58f, 0.20f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_Text, toColor(kAccentText));
+        // Filled accent. Hover brightens toward the label colour, press darkens
+        // toward the panel: 1.4:1 of movement in either direction is enough to read
+        // at a glance without leaving the accent's hue.
+        fill       = kAccent;
+        hovered    = mix(kAccent, kText, 0.16f);
+        active     = mix(kAccent, kPanelDeep, 0.22f);
+        labelColor = kAccentText;
+        edge       = mix(kAccent, kPanelDeep, 0.30f);
     } else {
-        ImGui::PushStyleColor(ImGuiCol_Button, toColor(kPanelDeep));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, toColor(kFrame));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, toColor(kFrameHover));
-        ImGui::PushStyleColor(ImGuiCol_Text, toColor(kText));
+        // Outlined secondary: recessed fill plus a 1 px grey border. Hover lifts the
+        // fill one step, press washes it with the accent at low alpha - a state the
+        // palette can express without a second accent colour.
+        fill       = kPanelDeep;
+        hovered    = kFrame;
+        active     = kAccentSoft;
+        labelColor = kText;
+        edge       = kBorder;
     }
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, (size.y - lineHeight()) * 0.5f));
 
-    bool const pressed = ImGui::Button(label, size);
+    ImGui::PushStyleColor(ImGuiCol_Button, toColor(fill));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, toColor(hovered));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, toColor(active));
+    ImGui::PushStyleColor(ImGuiCol_Text, toColor(labelColor));
+    ImGui::PushStyleColor(ImGuiCol_Border, toColor(edge));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, border);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, rounding);
 
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor(4);
+    bool const pressed = ImGui::Button(label, ImVec2(size.x, height));
+
+    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor(5);
+
+    // ImGui has one border colour for every state, so the "this is live" edge is
+    // stroked on top while hovered. A disabled item does not report hover, which is
+    // exactly the behaviour wanted: no accent edge on something that cannot be used.
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        ImGui::GetWindowDrawList()->AddRect(
+            ImGui::GetItemRectMin(),
+            ImGui::GetItemRectMax(),
+            primary ? mix(kAccent, kText, 0.45f) : kAccent,
+            rounding,
+            0,
+            border
+        );
+    }
+
+    // TEST: one line per activation, whether it came from the mouse or from a key.
+    if (pressed) ND_DEBUG("ui: button \"{}\" {}", visibleLabel(label), primary ? "primary" : "secondary");
     return pressed;
 }
+
+void tip(char const* text) {
+    if (!text || !*text) return;
+
+    ImVec2 const prevMin = ImGui::GetItemRectMin();
+    ImVec2 const prevMax = ImGui::GetItemRectMax();
+    if (prevMax.x <= prevMin.x || prevMax.y <= prevMin.y) return; // nothing submitted before
+
+    auto const  s   = theme::scale();
+    float const box = std::max(lineHeight(), scaled(kTipMinSize));
+
+    ImGui::SameLine(0.0f, scaled(kTipGap));
+    // SameLine puts the cursor back on the *top* of the line, so a marker shorter
+    // than the element it belongs to (a 28 px footer button, a hotkey capture) would
+    // sit visibly high. Centre it on that element instead.
+    ImVec2 const lineStart = ImGui::GetCursorScreenPos();
+    float const  centerY   = (prevMin.y + prevMax.y) * 0.5f;
+    ImGui::SetCursorScreenPos(ImVec2(lineStart.x, centerY - box * 0.5f));
+
+    // The id comes from where the marker sits, so several hints in one window cannot
+    // collide and each keeps a stable id from frame to frame.
+    ImGui::PushID(static_cast<int>(std::lround(prevMin.y)));
+    ImGui::PushID(static_cast<int>(std::lround(prevMin.x)));
+    ImGui::InvisibleButton("##tip", ImVec2(box, box));
+    bool const hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
+    ImGui::PopID();
+    ImGui::PopID();
+
+    auto*        drawList = ImGui::GetWindowDrawList();
+    ImVec2 const center{lineStart.x + box * 0.5f, centerY};
+    if (hovered) drawList->AddCircleFilled(center, box * 0.5f, kAccentSoft);
+    // The glyph comes from the font rather than from hand-built rectangles, so the
+    // marker keeps the same weight as the labels around it.
+    ImVec2 const glyph = ImGui::CalcTextSize("!");
+    drawList->AddText(ImVec2(center.x - glyph.x * 0.5f, center.y - glyph.y * 0.5f), kAccent, "!");
+
+    if (!hovered) return;
+
+    // Size the box here, before Begin(), from the text itself.
+    //
+    // Leaving the size to ImGui's auto-resize is what used to squeeze the box into a
+    // vertical strip: TextWrapped wraps at the window's content width, an auto-resizing
+    // window starts out one item wide, and the narrow result then becomes the next
+    // frame's wrap width. The wrapped height is a pure function of the text and the
+    // wrap width, so measuring it up front makes the first frame already correct - no
+    // frame of auto-resize to learn the width from.
+    //
+    // The position is fixed here too, for the same reason: moving a window after its
+    // content has been appended to (ImGui::SetWindowPos, which the first version did to
+    // nudge the box back on screen) smears the text, because the glyphs are already in
+    // the draw list at absolute coordinates.
+    float const padX     = scaled(kTipPadX);
+    float const padY     = scaled(kTipPadY);
+    float const textWrap = scaled(kTipWrap);
+    // A width that never depends on the text keeps the box from jumping around when a
+    // hint quotes a number; only the height follows the paragraph.
+    float const width      = std::ceil(textWrap + padX * 2.0f);
+    float const textHeight = ImGui::CalcTextSize(text, nullptr, false, textWrap).y;
+    // ceil(): a wrapped line can end on a fraction of a pixel and clip its last glyphs.
+    float const height = std::ceil(textHeight) + padY * 2.0f;
+
+    // Beside the cursor, flipped to the other side when that would not fit, then kept
+    // inside the display - a marker near the right or bottom edge would otherwise put
+    // the box outside the screen, where there is nothing to scroll it back.
+    ImVec2 const mouse   = ImGui::GetIO().MousePos;
+    ImVec2 const display = ImGui::GetIO().DisplaySize;
+    float const  margin  = scaled(kTipMargin);
+
+    float x = mouse.x + scaled(kTipOffsetX);
+    if (x + width + margin > display.x) x = mouse.x - scaled(kTipOffsetX) - width;
+    float y = mouse.y + scaled(kTipOffsetY);
+    if (y + height + margin > display.y) y = mouse.y - scaled(kTipOffsetY) - height;
+
+    x = std::clamp(x, margin, std::max(margin, display.x - width - margin));
+    y = std::clamp(y, margin, std::max(margin, display.y - height - margin));
+
+    constexpr ImGuiWindowFlags kTipFlags = ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoTitleBar
+                                         | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                                         | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings
+                                         | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoFocusOnAppearing;
+
+    ImGui::SetNextWindowPos(ImVec2(x, y));
+    ImGui::SetNextWindowSize(ImVec2(width, height));
+
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, toColor(kPanelDeep));
+    ImGui::PushStyleColor(ImGuiCol_Border, toColor(kBorder));
+    ImGui::PushStyleColor(ImGuiCol_Text, toColor(kText));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, std::max(1.0f, std::round(s)));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, scaled(kButtonRounding));
+
+    if (ImGui::Begin("##widgetTip", nullptr, kTipFlags)) ImGui::TextWrapped("%s", text);
+    ImGui::End();
+
+    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor(3);
+}
+
+bool footerButton(char const* label, ImVec2 size, bool primary) { return button(label, size, primary); }
 
 } // namespace neurodragon::ui::widgets

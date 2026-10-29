@@ -2,10 +2,11 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
+#include "neurodragon/Test.h"
+#include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
-#include "neurodragon/vv/VvCapture.h"
 #include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/ui/GameNotice.h"
 #include "neurodragon/ui/InputGuard.h"
@@ -397,6 +398,222 @@ struct PressedKey {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Input diagnostics (TEST builds only)
+// ---------------------------------------------------------------------------
+//
+// Everything in these two blocks is a formatter, never a decision: no return value,
+// no held-key bit and no hotkey match may depend on it. Every line carries
+// GetTickCount64 so a log can be lined up with the game's own timeline, and every
+// format string is a literal - key names and typed characters are arguments, so text
+// the player types can never become a format string or re-format the log it lands in.
+//
+//   [input] t=812345 key msg=WM_KEYDOWN vk=0x58(88) name="X" state=down repeat=0 ...
+//   [input] t=812345 char msg=WM_CHAR cp=U+000D <control> ...
+//   [input] t=812345 dispatch consume msg=WM_KEYDOWN vk=0x58(88) reason=hotkey panel=0
+//   [input] t=812345 shortcut action=TogglePanel combo="X + C" held="X + C" panel=0
+//   [input] t=812345 capture press vk=0x58(88) name="X" repeat=0 candidate="X"
+//   [input] t=812345 panel visible=1
+//
+// A key produces one `key` line and one `dispatch` line saying where it went, so
+// "the game never saw my key" is answerable from the log alone: `consume` plus the
+// reason names the early return that took it.
+#ifdef TEST
+
+// Only messages that carry a key or a character are traced per dispatch: WM_MOUSEMOVE,
+// WM_INPUT and the rest arrive hundreds of times per second and would bury them.
+[[nodiscard]] bool isCharMessage(UINT message) {
+    if (message == WM_CHAR || message == WM_SYSCHAR || message == WM_IME_CHAR) return true;
+#ifdef WM_UNICHAR
+    if (message == WM_UNICHAR) return true;
+#endif
+    return false;
+}
+
+[[nodiscard]] std::string messageName(UINT message) {
+    switch (message) {
+    case WM_KEYDOWN:
+        return "WM_KEYDOWN";
+    case WM_KEYUP:
+        return "WM_KEYUP";
+    case WM_SYSKEYDOWN:
+        return "WM_SYSKEYDOWN";
+    case WM_SYSKEYUP:
+        return "WM_SYSKEYUP";
+    case WM_CHAR:
+        return "WM_CHAR";
+    case WM_SYSCHAR:
+        return "WM_SYSCHAR";
+    case WM_IME_CHAR:
+        return "WM_IME_CHAR";
+#ifdef WM_UNICHAR
+    case WM_UNICHAR:
+        return "WM_UNICHAR";
+#endif
+    case WM_LBUTTONDOWN:
+        return "WM_LBUTTONDOWN";
+    case WM_LBUTTONUP:
+        return "WM_LBUTTONUP";
+    case WM_LBUTTONDBLCLK:
+        return "WM_LBUTTONDBLCLK";
+    case WM_RBUTTONDOWN:
+        return "WM_RBUTTONDOWN";
+    case WM_RBUTTONUP:
+        return "WM_RBUTTONUP";
+    case WM_RBUTTONDBLCLK:
+        return "WM_RBUTTONDBLCLK";
+    case WM_MBUTTONDOWN:
+        return "WM_MBUTTONDOWN";
+    case WM_MBUTTONUP:
+        return "WM_MBUTTONUP";
+    case WM_MBUTTONDBLCLK:
+        return "WM_MBUTTONDBLCLK";
+    case WM_XBUTTONDOWN:
+        return "WM_XBUTTONDOWN";
+    case WM_XBUTTONUP:
+        return "WM_XBUTTONUP";
+    case WM_XBUTTONDBLCLK:
+        return "WM_XBUTTONDBLCLK";
+    default:
+        return fmt::format("0x{:04X}", message);
+    }
+}
+
+// A typed character as UTF-8, with the ones that would break the log line spelled
+// out instead: a newline, a tab or an escape byte in latest.log must not be able to
+// re-format the file it is written to, and a lone surrogate has no UTF-8 form at all
+// (WM_CHAR delivers a surrogate pair as two messages).
+[[nodiscard]] std::string charTraceText(UINT message, WPARAM wParam) {
+#ifdef WM_UNICHAR
+    // 0xFFFF is User32 asking "do you handle WM_UNICHAR at all?", not typed text.
+    if (message == WM_UNICHAR && wParam == UNICODE_NOCHAR) return "<UNICODE_NOCHAR probe>";
+#endif
+
+    auto const code = static_cast<unsigned int>(wParam);
+    if (code >= 0xD800 && code <= 0xDFFF) return fmt::format("U+{:04X} <lone surrogate>", code);
+    if (code > 0x10FFFF) return fmt::format("U+{:04X} <out of range>", code);
+    if (code < 0x20 || code == 0x7F || (code >= 0x80 && code <= 0x9F) || code == 0x2028 || code == 0x2029) {
+        return fmt::format("U+{:04X} <control>", code);
+    }
+
+    std::string utf8;
+    if (code < 0x80) {
+        utf8.push_back(static_cast<char>(code));
+    } else if (code < 0x800) {
+        utf8.push_back(static_cast<char>(0xC0 | (code >> 6)));
+        utf8.push_back(static_cast<char>(0x80 | (code & 0x3F)));
+    } else if (code < 0x10000) {
+        utf8.push_back(static_cast<char>(0xE0 | (code >> 12)));
+        utf8.push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
+        utf8.push_back(static_cast<char>(0x80 | (code & 0x3F)));
+    } else {
+        utf8.push_back(static_cast<char>(0xF0 | (code >> 18)));
+        utf8.push_back(static_cast<char>(0x80 | ((code >> 12) & 0x3F)));
+        utf8.push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
+        utf8.push_back(static_cast<char>(0x80 | (code & 0x3F)));
+    }
+
+    std::string escaped;
+    escaped.reserve(utf8.size());
+    for (char unit : utf8) {
+        if (unit == '"' || unit == '\\') escaped.push_back('\\');
+        escaped.push_back(unit);
+    }
+    return fmt::format("U+{:04X} \"{}\"", code, escaped);
+}
+
+// Everything the window thread currently sees held, as "Ctrl + Shift + C". The
+// matching rule is "every key of the combination is held", so a shortcut line without
+// this cannot explain why another binding did not fire.
+[[nodiscard]] std::string heldKeysText() {
+    std::vector<int> held;
+    for (size_t key = 0; key < gHeldKeys.size(); ++key) {
+        if (gHeldKeys[key]) held.push_back(static_cast<int>(key));
+    }
+    return input::formatCombo(held);
+}
+
+// The event line for one window message, written before any branch can return: a key
+// that a hotkey, the rebinding capture or the panel swallows is still in the log, and
+// `repeat` is the state before this message was allowed to change it.
+void traceInputEvent(UINT message, WPARAM wParam) {
+    auto const [code, down] = decodePressedKey(message, wParam);
+    bool const capturing    = gCapturingKey.load(std::memory_order_acquire);
+
+    if (code != 0) {
+        bool repeat{};
+        if (down && input::isValidKey(code)) {
+            if (capturing) {
+                // The window thread's held array is not updated while a capture owns
+                // the keys; the capture's own press list answers "already down" there.
+                auto const preview = Overlay::getInstance().capturePreview();
+                repeat             = std::ranges::find(preview, code) != preview.end();
+            } else {
+                repeat = gHeldKeys[static_cast<size_t>(code)];
+            }
+        }
+        logger().debug(
+            "[input] t={} key msg={} vk=0x{:02X}({}) name=\"{}\" state={} repeat={} held=\"{}\" panel={} imgui={} capture={}",
+            GetTickCount64(),
+            messageName(message),
+            static_cast<unsigned>(code),
+            code,
+            input::keyName(code),
+            down ? "down" : "up",
+            repeat ? 1 : 0,
+            heldKeysText(),
+            Overlay::getInstance().isVisible() ? 1 : 0,
+            gImGuiReady.load(std::memory_order_acquire) ? 1 : 0,
+            capturing ? 1 : 0
+        );
+        return;
+    }
+
+    if (isCharMessage(message)) {
+        logger().debug(
+            "[input] t={} char msg={} cp={} panel={} imgui={} capture={}",
+            GetTickCount64(),
+            messageName(message),
+            charTraceText(message, wParam),
+            Overlay::getInstance().isVisible() ? 1 : 0,
+            gImGuiReady.load(std::memory_order_acquire) ? 1 : 0,
+            capturing ? 1 : 0
+        );
+    }
+}
+
+// Where a message went: "forward" means the game sees it, "consume" means it was
+// swallowed. Written at the early returns of windowProc, non key/char messages stay
+// silent so the log keeps one line per real input.
+void traceDispatch(UINT message, WPARAM wParam, char const* verb, char const* reason) {
+    auto const code = decodePressedKey(message, wParam).code;
+    if (code == 0 && !isCharMessage(message)) return;
+
+    if (code == 0) {
+        logger().debug(
+            "[input] t={} dispatch {} msg={} reason={} panel={}",
+            GetTickCount64(),
+            verb,
+            messageName(message),
+            reason,
+            Overlay::getInstance().isVisible() ? 1 : 0
+        );
+        return;
+    }
+    logger().debug(
+        "[input] t={} dispatch {} msg={} vk=0x{:02X}({}) reason={} panel={}",
+        GetTickCount64(),
+        verb,
+        messageName(message),
+        static_cast<unsigned>(code),
+        code,
+        reason,
+        Overlay::getInstance().isVisible() ? 1 : 0
+    );
+}
+
+#endif
+
 [[nodiscard]] KeyBindings keyBindingsSnapshot() {
     std::lock_guard lock(gKeysMutex);
     return gKeys;
@@ -464,6 +681,58 @@ void performHotkeyAction(HWND window, HotkeyAction action) {
     }
 }
 
+#ifdef TEST
+// The shortcut lines print the action name and the combination that actually fired,
+// which is what separates "the hotkey did not match" from "the hotkey matched but the
+// action did nothing". Both tables below mirror matchHotkey's candidate list; an
+// action has exactly one binding, so the lookup is unambiguous.
+[[nodiscard]] char const* hotkeyActionName(HotkeyAction action) {
+    switch (action) {
+    case HotkeyAction::TogglePanel:
+        return "TogglePanel";
+    case HotkeyAction::NrToggle:
+        return "NrToggle";
+    case HotkeyAction::NrReset:
+        return "NrReset";
+    case HotkeyAction::Screenshot:
+        return "Screenshot";
+    case HotkeyAction::None:
+        break;
+    }
+    return "None";
+}
+
+[[nodiscard]] input::KeyBind const* bindingForAction(KeyBindings const& keys, HotkeyAction action) {
+    switch (action) {
+    case HotkeyAction::TogglePanel:
+        return &keys.toggle;
+    case HotkeyAction::NrToggle:
+        return &keys.nrToggle;
+    case HotkeyAction::NrReset:
+        return &keys.nrReset;
+    case HotkeyAction::Screenshot:
+        return &keys.screenshot;
+    case HotkeyAction::None:
+        break;
+    }
+    return nullptr;
+}
+
+// 'panelOpen' is the state the match was decided on, i.e. before the action itself
+// could change it; the panel line (or the dispatch line) right after it shows the
+// state the action left behind.
+void traceShortcut(char const* action, std::string const& combo, bool panelOpen) {
+    logger().debug(
+        "[input] t={} shortcut action={} combo=\"{}\" held=\"{}\" panel={}",
+        GetTickCount64(),
+        action,
+        combo,
+        heldKeysText(),
+        panelOpen ? 1 : 0
+    );
+}
+#endif
+
 // ---------------------------------------------------------------------------
 // Rebinding capture
 // ---------------------------------------------------------------------------
@@ -477,10 +746,27 @@ void clearCaptureState() {
 // Publishes the result and ends the capture. Called from the window thread; the
 // panel picks the value up with takeCapturedKeys().
 void finishCapture(std::optional<input::KeyBind> result) {
-    std::lock_guard lock(gCaptureMutex);
-    if (!gCapturingKey.exchange(false, std::memory_order_acq_rel)) return;
-    gCapturedKeys = std::move(result);
-    clearCaptureState();
+#ifdef TEST
+    std::string trace; // formatted under the lock, written after it
+#endif
+    {
+        std::lock_guard lock(gCaptureMutex);
+        if (!gCapturingKey.exchange(false, std::memory_order_acq_rel)) return;
+        gCapturedKeys = std::move(result);
+        clearCaptureState();
+#ifdef TEST
+        if (!gCapturedKeys) {
+            trace = "cancel";
+        } else if (gCapturedKeys->empty()) {
+            trace = "unbind (empty combination)";
+        } else {
+            trace = fmt::format("commit combo=\"{}\"", gCapturedKeys->display());
+        }
+#endif
+    }
+#ifdef TEST
+    logger().debug("[input] t={} capture end: {}", GetTickCount64(), trace);
+#endif
 }
 
 // @returns whether the message belonged to the capture and must reach neither the
@@ -488,7 +774,18 @@ void finishCapture(std::optional<input::KeyBind> result) {
 bool handleCaptureMessage(UINT message, WPARAM wParam) {
     auto const [code, down] = decodePressedKey(message, wParam);
     if (code == 0) return false;
-    if (!input::isValidKey(code)) return true; // outside the VK range: swallow, ignore
+    if (!input::isValidKey(code)) {
+#ifdef TEST
+        logger().debug(
+            "[input] t={} capture swallow msg={} vk=0x{:02X}({}) note=outside-vk-range",
+            GetTickCount64(),
+            messageName(message),
+            static_cast<unsigned>(code),
+            code
+        );
+#endif
+        return true; // outside the VK range: swallow, ignore
+    }
 
     auto const index = static_cast<size_t>(code);
 
@@ -516,6 +813,19 @@ bool handleCaptureMessage(UINT message, WPARAM wParam) {
                 if (allReleased && hasNormalKey) confirmed = input::KeyBind::make(gCaptureCandidate);
             }
         }
+#ifdef TEST
+        // Logged while the candidate is still intact: finishCapture() clears it.
+        logger().debug(
+            "[input] t={} capture release msg={} vk=0x{:02X}({}) name=\"{}\" candidate=\"{}\" commit={}",
+            GetTickCount64(),
+            messageName(message),
+            static_cast<unsigned>(code),
+            code,
+            input::keyName(code),
+            input::formatCombo(Overlay::getInstance().capturePreview()),
+            confirmed ? 1 : 0
+        );
+#endif
         if (confirmed) finishCapture(std::move(confirmed));
         return true;
     }
@@ -523,10 +833,16 @@ bool handleCaptureMessage(UINT message, WPARAM wParam) {
     if (code == VK_ESCAPE) {
         // Esc is "unbind", not "cancel": the commit is an empty combination. The real
         // cancel (panel closed, overlay uninstalled) goes through cancelKeyCapture().
+#ifdef TEST
+        logger().debug("[input] t={} capture: Esc means unbind, not cancel", GetTickCount64());
+#endif
         finishCapture(input::KeyBind{});
         return true;
     }
 
+#ifdef TEST
+    bool const wasPressed = gCaptureDown[index];
+#endif
     if (!gCaptureDown[index]) {
         std::lock_guard lock(gCaptureMutex);
         if (std::ranges::find(gCaptureCandidate, code) == gCaptureCandidate.end()) {
@@ -534,10 +850,28 @@ bool handleCaptureMessage(UINT message, WPARAM wParam) {
         }
     }
     gCaptureDown[index] = true;
+#ifdef TEST
+    logger().debug(
+        "[input] t={} capture press msg={} vk=0x{:02X}({}) name=\"{}\" repeat={} candidate=\"{}\"",
+        GetTickCount64(),
+        messageName(message),
+        static_cast<unsigned>(code),
+        code,
+        input::keyName(code),
+        wasPressed ? 1 : 0,
+        input::formatCombo(Overlay::getInstance().capturePreview())
+    );
+#endif
     return true;
 }
 
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+#ifdef TEST
+    // First statement in the dispatcher on purpose: whatever branch below returns
+    // early, the key or character that entered is in the log before any of them runs.
+    traceInputEvent(message, wParam);
+#endif
+
     if (message == kMsgRestoreGameMouse) {
         ::SetCursor(::LoadCursorW(nullptr, IDC_ARROW));
         confineCursorToClientCenter(window);
@@ -552,15 +886,32 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         gConsumeEscapeRelease = false;
         ClipCursor(nullptr);
         Overlay::getInstance().cancelKeyCapture();
+#ifdef TEST
+        logger().debug(
+            "[input] t={} focus lost msg={}: held keys and any running capture were dropped",
+            GetTickCount64(),
+            messageName(message)
+        );
+#endif
     }
 
     auto const imguiReady = gImGuiReady.load(std::memory_order_acquire);
-    if (!imguiReady) return forwardToGame(window, message, wParam, lParam);
+    if (!imguiReady) {
+#ifdef TEST
+        traceDispatch(message, wParam, "forward", "imgui-not-ready");
+#endif
+        return forwardToGame(window, message, wParam, lParam);
+    }
 
     // 0) Rebinding capture owns every key and mouse button until it commits. Runs
     //    before everything else, so captured keys leak into neither ImGui nor the
     //    game.
-    if (gCapturingKey.load(std::memory_order_acquire) && handleCaptureMessage(message, wParam)) return 1;
+    if (gCapturingKey.load(std::memory_order_acquire) && handleCaptureMessage(message, wParam)) {
+#ifdef TEST
+        traceDispatch(message, wParam, "consume", "rebinding-capture");
+#endif
+        return 1;
+    }
 
     bool const panelOpen = Overlay::getInstance().isVisible();
 
@@ -572,13 +923,29 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         auto const index = static_cast<size_t>(pressed.code);
         if (pressed.down) {
             if (gHeldKeys[index]) {
-                if (gConsumedKeyReleases[index]) return 1; // auto-repeat of a swallowed trigger
+                if (gConsumedKeyReleases[index]) {
+#ifdef TEST
+                    traceDispatch(message, wParam, "consume", "auto-repeat-of-swallowed-hotkey");
+#endif
+                    return 1; // auto-repeat of a swallowed trigger
+                }
             } else {
                 gHeldKeys[index]  = true;
                 auto const action = matchHotkey(pressed.code, keyBindingsSnapshot(), panelOpen);
                 if (action != HotkeyAction::None) {
                     gConsumedKeyReleases[index] = true;
+#ifdef TEST
+                    // A second snapshot, only for the log: the combination that fired
+                    // is what separates "no binding matched" from "the wrong one did".
+                    auto const logKeys = keyBindingsSnapshot();
+                    if (auto const* binding = bindingForAction(logKeys, action)) {
+                        traceShortcut(hotkeyActionName(action), binding->display(), panelOpen);
+                    }
+#endif
                     performHotkeyAction(window, action);
+#ifdef TEST
+                    traceDispatch(message, wParam, "consume", "hotkey");
+#endif
                     return 1;
                 }
             }
@@ -586,6 +953,9 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             gHeldKeys[index] = false;
             if (gConsumedKeyReleases[index]) {
                 gConsumedKeyReleases[index] = false;
+#ifdef TEST
+                traceDispatch(message, wParam, "consume", "release-of-swallowed-hotkey");
+#endif
                 return 1;
             }
         }
@@ -597,9 +967,15 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         if (gConsumeEscapeRelease && (message == WM_KEYUP || message == WM_SYSKEYUP) && wParam == VK_ESCAPE) {
             gConsumeEscapeRelease = false;
             ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam);
+#ifdef TEST
+            traceDispatch(message, wParam, "consume", "escape-release-after-panel-close");
+#endif
             return 1;
         }
 
+#ifdef TEST
+        traceDispatch(message, wParam, "forward", "panel-closed");
+#endif
         return forwardToGame(window, message, wParam, lParam);
     }
 
@@ -611,7 +987,12 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     // current resolution, F11 must stay available.
     bool const keyMessage =
         message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP;
-    if (keyMessage && wParam == VK_F11) return forwardToGame(window, message, wParam, lParam);
+    if (keyMessage && wParam == VK_F11) {
+#ifdef TEST
+        traceDispatch(message, wParam, "forward", "f11-stays-available");
+#endif
+        return forwardToGame(window, message, wParam, lParam);
+    }
 
     ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam);
 
@@ -619,12 +1000,29 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         // Only state here: the cursor hand-back is a window-thread action and is
         // posted from setVisible(), so it runs after this dispatch returns.
         gConsumeEscapeRelease = true;
+#ifdef TEST
+        // Esc is the panel's built-in shortcut, not one of the four bindings; the
+        // shortcut line records it like any other so the log does not show a key
+        // that vanished.
+        traceShortcut("ClosePanel", input::keyName(VK_ESCAPE), panelOpen);
+#endif
         Overlay::getInstance().setVisible(false);
+#ifdef TEST
+        traceDispatch(message, wParam, "consume", "esc-closes-panel");
+#endif
         return 1;
     }
 
-    if (isMenuInputMessage(message)) return consumeMenuInputMessage(window, message, wParam, lParam);
+    if (isMenuInputMessage(message)) {
+#ifdef TEST
+        traceDispatch(message, wParam, "consume", "panel-open-input");
+#endif
+        return consumeMenuInputMessage(window, message, wParam, lParam);
+    }
 
+#ifdef TEST
+    traceDispatch(message, wParam, "forward", "panel-open-other");
+#endif
     return forwardToGame(window, message, wParam, lParam);
 }
 
@@ -758,7 +1156,7 @@ bool initializeGraphics(IDXGISwapChain* swapChain) {
         gOriginalWndProc =
             reinterpret_cast<WNDPROC>(SetWindowLongPtrW(gWindow, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(windowProc)));
         gImGuiReady.store(true, std::memory_order_release);
-        logger().debug("overlay: ImGui context created on window {}", static_cast<void*>(gWindow));
+        ND_DEBUG("overlay: ImGui context created on window {}", static_cast<void*>(gWindow));
     }
 
     if (!ImGui_ImplDX11_Init(gDevice, gDeviceContext)) {
@@ -1328,7 +1726,7 @@ void logSwapChainChange(IDXGISwapChain* swapChain) {
     lastWidth   = desc.BufferDesc.Width;
     lastHeight  = desc.BufferDesc.Height;
     lastFlags   = desc.Flags;
-    logger().info(
+    ND_DEBUG(
         "[vv] chain: now buffers={} {}x{} fmt={} flags=0x{:x} effect={} usage=0x{:x}",
         desc.BufferCount,
         desc.BufferDesc.Width,
@@ -1343,19 +1741,14 @@ void logSwapChainChange(IDXGISwapChain* swapChain) {
 HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT flags) {
     logSwapChainChange(swapChain);
     probe::vv::noteSwapChain(swapChain);
-    neurodragon::vv::dlss::runPending();
     probe::vv::onPresent();
-    // B1c: map the cut captures whose fence has passed and save them as BMPs.
-    neurodragon::vv::capture::poll();
     render(swapChain);
     return gOriginalPresent(swapChain, interval, flags);
 }
 
 HRESULT __stdcall
 present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT_PARAMETERS const* parameters) {
-    neurodragon::vv::dlss::runPending();
     probe::vv::onPresent();
-    neurodragon::vv::capture::poll();
     render(static_cast<IDXGISwapChain*>(swapChain));
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
@@ -1369,7 +1762,7 @@ void logResizeRequest(char const* which, IDXGISwapChain* swapChain, UINT count, 
                       DXGI_FORMAT format, UINT flags) {
     DXGI_SWAP_CHAIN_DESC desc{};
     if (SUCCEEDED(swapChain->GetDesc(&desc))) {
-        logger().info(
+        ND_DEBUG(
             "[vv] resize: {} req buffers={} {}x{} fmt={} flags=0x{:x} | chain buffers={} {}x{} fmt={} flags=0x{:x} effect={} usage=0x{:x}",
             which,
             count,
@@ -1386,7 +1779,7 @@ void logResizeRequest(char const* which, IDXGISwapChain* swapChain, UINT count, 
             desc.BufferUsage
         );
     } else {
-        logger().info(
+        ND_DEBUG(
             "[vv] resize: {} req buffers={} {}x{} fmt={} flags=0x{:x} | GetDesc failed",
             which,
             count,
@@ -1410,7 +1803,7 @@ void logBackBufferRefs(char const* when, IDXGISwapChain* swapChain) {
         unsigned const held = buffer->AddRef();
         buffer->Release();
         buffer->Release();
-        logger().info("[vv] resize: {} back buffer {} other refs={}", when, i, held >= 2 ? held - 2 : 0);
+        ND_DEBUG("[vv] resize: {} back buffer {} other refs={}", when, i, held >= 2 ? held - 2 : 0);
     }
 }
 
@@ -1429,7 +1822,7 @@ resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height
     logResizeRequest("ResizeBuffers", swapChain, count, width, height, format, flags);
     logBackBufferRefs("forward", swapChain);
     HRESULT const result = gOriginalResizeBuffers(swapChain, count, width, height, format, flags);
-    logger().info("[vv] resize: ResizeBuffers -> hr=0x{:08X}", static_cast<unsigned>(result));
+    ND_DEBUG("[vv] resize: ResizeBuffers -> hr=0x{:08X}", static_cast<unsigned>(result));
     return result;
 }
 
@@ -1449,7 +1842,7 @@ HRESULT __stdcall resizeBuffers1Hook(
     releaseGraphics();
     lock.unlock();
     logResizeRequest("ResizeBuffers1", swapChain, count, width, height, format, flags);
-    logger().info(
+    ND_DEBUG(
         "[vv] resize: ResizeBuffers1 nodeMask={:#x} presentQueue={:#x}",
         creationNodeMask ? *creationNodeMask : 0u,
         reinterpret_cast<std::uintptr_t>(presentQueue)
@@ -1457,7 +1850,7 @@ HRESULT __stdcall resizeBuffers1Hook(
     logBackBufferRefs("forward", swapChain);
     HRESULT const result =
         gOriginalResizeBuffers1(swapChain, count, width, height, format, flags, creationNodeMask, presentQueue);
-    logger().info("[vv] resize: ResizeBuffers1 -> hr=0x{:08X}", static_cast<unsigned>(result));
+    ND_DEBUG("[vv] resize: ResizeBuffers1 -> hr=0x{:08X}", static_cast<unsigned>(result));
     return result;
 }
 
@@ -1472,12 +1865,14 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     probe::vv::setGameQueue(queue);
     probe::vv::onExecuteCommandLists(reinterpret_cast<void* const*>(lists), count);
 
-    // Boundary experiment (docs/specs/vv.md §12 A): cut the engine's single
-    // per-frame submission into "prefix + our clear + suffix" on the same queue. The
-    // order of the three calls is the frame's order - a command queue executes
-    // submissions in the order they arrive - so this is exactly "insert GPU work
-    // between two passes". Off by default; prepare() returns 0 and the call below
-    // forwards everything unchanged.
+    // Product injection (docs/specs/vv.md §35.2): cut the engine's single per-frame
+    // submission at the list that wrote this frame's arg10 into "prefix + our DLSS
+    // write + suffix" on the same queue. The order of the three calls is the frame's
+    // order - a command queue executes submissions in the order they arrive - so our
+    // list runs after TAAU's writer and before whatever consumes arg10 downstream.
+    // Off by default; prepare() returns 0 and the call below forwards everything
+    // unchanged. It also returns 0 for every submission that must not be cut (not the
+    // engine's direct queue, no arg10 writer in this frame, fence still busy).
     unsigned const splitAt = probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
     if (splitAt != 0 && splitAt <= count) {
         if (ID3D12CommandList* const ours = static_cast<ID3D12CommandList*>(probe::vv::inject::list())) {
@@ -1489,7 +1884,7 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
             if (count > splitAt) {
                 gOriginalExecuteCommandLists(queue, count - splitAt, lists + splitAt);
             }
-            probe::vv::inject::submitted(splitAt, count);
+            probe::vv::inject::submitted();
             return;
         }
     }
@@ -1549,12 +1944,15 @@ bool Overlay::install() {
     if (!guard.mouseHookInstalled) logger().warn("overlay: mouse input guard failed");
     if (!guard.keyDownHookInstalled) logger().warn("overlay: key-down guard failed");
     if (!guard.keyUpHookInstalled) logger().warn("overlay: key-up guard failed");
+#ifdef TEST
+    if (!guard.textInputHookInstalled) logger().warn("overlay: text-input trace hook failed");
+#endif
 
     gInstalled.store(true, std::memory_order_release);
     if (auto const toggle = keyBindingsSnapshot().toggle; toggle.empty()) {
-        logger().debug("overlay: ready (no panel hotkey bound)");
+        ND_DEBUG("overlay: ready (no panel hotkey bound)");
     } else {
-        logger().debug("overlay: ready ({} opens the panel)", toggle.display());
+        ND_DEBUG("overlay: ready ({} opens the panel)", toggle.display());
     }
     return true;
 }
@@ -1617,13 +2015,19 @@ void Overlay::uninstall() {
     gGameMouseButtonsDown.fill(false);
 
     gInstalled.store(false, std::memory_order_release);
-    if (wasInstalled) logger().debug("overlay: uninstalled");
+    if (wasInstalled) ND_DEBUG("overlay: uninstalled");
 }
 
 bool Overlay::isVisible() const { return gVisible.load(std::memory_order_acquire); }
 
 void Overlay::setVisible(bool visible) {
     if (gVisible.exchange(visible, std::memory_order_acq_rel) == visible) return;
+
+#ifdef TEST
+    // Only real transitions reach here, so this is one line per open/close and the
+    // tick matches the shortcut line that caused it.
+    logger().debug("[input] t={} panel visible={}", GetTickCount64(), visible ? 1 : 0);
+#endif
 
     if (visible) menu::onOpened();
     else menu::onClosed();
@@ -1708,15 +2112,33 @@ void Overlay::beginKeyCapture() {
         clearCaptureState();
     }
     gCapturingKey.store(true, std::memory_order_release);
+#ifdef TEST
+    logger().debug(
+        "[input] t={} capture begin: the panel's key row asked for a combination; every key and mouse button is "
+        "consumed until all of them are released",
+        GetTickCount64()
+    );
+#endif
 }
 
 void Overlay::cancelKeyCapture() {
+#ifdef TEST
+    bool const wasCapturing = gCapturingKey.load(std::memory_order_acquire);
+#endif
     {
         std::lock_guard lock(gCaptureMutex);
         clearCaptureState();
         gCapturedKeys.reset();
     }
     gCapturingKey.store(false, std::memory_order_release);
+#ifdef TEST
+    if (wasCapturing) {
+        logger().debug(
+            "[input] t={} capture cancel: nothing committed (panel closing, focus lost or uninstall)",
+            GetTickCount64()
+        );
+    }
+#endif
 }
 
 bool Overlay::isCapturingKey() const { return gCapturingKey.load(std::memory_order_acquire); }
@@ -1729,9 +2151,23 @@ std::vector<int> Overlay::capturePreview() const {
 }
 
 std::optional<input::KeyBind> Overlay::takeCapturedKeys() {
-    std::lock_guard lock(gCaptureMutex);
-    auto result = std::move(gCapturedKeys);
-    gCapturedKeys.reset();
+    std::optional<input::KeyBind> result;
+    {
+        std::lock_guard lock(gCaptureMutex);
+        result = std::move(gCapturedKeys);
+        gCapturedKeys.reset();
+    }
+#ifdef TEST
+    // Only an engaged result is worth a line: the panel polls this every frame while
+    // it waits for the capture to finish.
+    if (result) {
+        logger().debug(
+            "[input] t={} capture result taken by the panel: {}",
+            GetTickCount64(),
+            result->empty() ? std::string{"unbind"} : fmt::format("combo=\"{}\"", result->display())
+        );
+    }
+#endif
     return result;
 }
 

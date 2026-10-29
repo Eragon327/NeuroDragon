@@ -47,9 +47,6 @@ Texture2D<float4>   EngineMv : register(t7);
 RWTexture2D<float4> OutColor : register(u0);
 RWTexture2D<float>  OutDepth : register(u1);
 RWTexture2D<float2> OutMv    : register(u2);
-// Diagnostics: arg11's four channels, copied verbatim at prep time so a dump shows what
-// the engine actually wrote, not what a transient target holds at present.
-RWTexture2D<float4> OutMvRaw : register(u5);
 
 [numthreads(8, 8, 1)]
 void main(uint3 id : SV_DispatchThreadID)
@@ -63,7 +60,6 @@ void main(uint3 id : SV_DispatchThreadID)
     OutDepth[id.xy] = d;
 
     float4 engineMv = EngineMv.Load(int3(id.xy, 0));
-    OutMvRaw[id.xy] = engineMv;
     float2 stored = ((Mode & 2u) != 0u) ? engineMv.zw : engineMv.xy;
     // {z, -w} is the velocity (current - previous). DLSS wants the map current ->
     // previous in render pixels: negate x, keep y.
@@ -109,8 +105,7 @@ enum : unsigned {
     kSlotMvUav       = 10,
     kSlotFinalUav    = 11,
     kSlotExposureUav = 12,
-    kSlotMvRawUav    = 13, ///< R3 stage C: arg11's four channels, copied at prep time
-    kSlotCount       = 14,
+    kSlotCount       = 13,
 };
 
 struct Pipeline {
@@ -127,17 +122,13 @@ struct Pipeline {
     ID3D12Resource*             colorHalf{};
     ID3D12Resource*             depthR32{};
     ID3D12Resource*             mvRg32{}; ///< R16G16_FLOAT: DLSS accepts this, not RG32F
-    ID3D12Resource*             mvRaw{};  ///< RGBA16F copy of arg11's four channels (diagnostic)
     ID3D12Resource*             dlssOut{};
     ID3D12Resource*             sharpOut{}; ///< RCAS result, sampled by the arg10 PS
-    ID3D12Resource*             taauRef{}; ///< R11G11B10 copy of arg10 before our PS write (F2)
     D3D12_RESOURCE_STATES       colorState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       depthState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       mvState{D3D12_RESOURCE_STATE_COMMON};
-    D3D12_RESOURCE_STATES       mvRawState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       dlssState{D3D12_RESOURCE_STATE_COMMON};
     D3D12_RESOURCE_STATES       sharpState{D3D12_RESOURCE_STATE_COMMON};
-    D3D12_RESOURCE_STATES       taauRefState{D3D12_RESOURCE_STATE_COMMON};
     unsigned                    renderWidth{};
     unsigned                    renderHeight{};
     unsigned                    displayWidth{};
@@ -147,12 +138,6 @@ struct Pipeline {
 std::mutex       gMutex;
 Pipeline         gPipeline{};
 Stats            gStats{};
-std::atomic<int> gColorChoice{0};
-std::atomic<int> gDepthChoice{0};
-// One number per dump so a repeated trigger (panel button, file marker, F7 pair) keeps
-// every frame instead of overwriting the previous one. File scope because the TEST
-// hotkey path has to be able to name the run it just triggered.
-std::atomic<unsigned> gDumpNo{0};
 // Frames of forced Reset requested from the panel. Two, not one: the first frame after
 // a rebuild may still be the one the engine had already recorded before the request.
 std::atomic<unsigned> gManualReset{0};
@@ -164,9 +149,6 @@ std::atomic<unsigned> gManualReset{0};
 // rendered with it", "the sign is flipped in our hand-off" or "the context value is one
 // frame ahead of the render" is true.
 std::atomic<int> gJitterSource{static_cast<int>(JitterSource::Zero)};
-// Last frame's context jitter, so the Previous mode can feed it.
-float gPrevJitterX = 0.0f;
-float gPrevJitterY = 0.0f;
 // The product switch's current state (config `sr.vvEnabled`), so syncConfig() only acts
 // on a change instead of re-arming every frame.
 std::atomic<bool> gEnabled{false};
@@ -182,10 +164,6 @@ std::atomic<bool> gLive{false};
 // a later frame refuses to start.
 std::mutex       gRecordMutex;
 std::atomic<bool> gReleased{false};
-// F2: copy this frame's TAAU output (arg10, before our PS write) into taauRef, so the
-// engine's result and the DLSS result of the *same* frame can be compared offline.
-std::atomic<bool> gCaptureTaaRef{false};
-std::atomic<bool> gTaaRefFresh{false};
 unsigned         gColorCandidates = 0;
 unsigned         gDepthCandidates = 0;
 
@@ -206,7 +184,14 @@ void setError(HRESULT hr, char const* where) {
     std::lock_guard lock(gMutex);
     gStats.lastError = static_cast<int>(hr);
     if (FAILED(hr)) {
-        utils::logger().warn("[vvsr] sr {} failed hr=0x{:08X}", where, static_cast<unsigned>(hr));
+        // A failing step is retried on the next injection attempt, so the same HRESULT
+        // would otherwise be one line per frame. The first few name the step; the count
+        // in `Stats::lastError` keeps answering after that.
+        static std::atomic<unsigned> failures{0};
+        unsigned const               n = failures.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 3) {
+            utils::logger().warn("[vvsr] sr {} failed hr=0x{:08X}", where, static_cast<unsigned>(hr));
+        }
     }
 }
 
@@ -274,8 +259,7 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
         return true;
     }
     for (ID3D12Resource** resource :
-         {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.mvRaw, &gPipeline.dlssOut,
-          &gPipeline.sharpOut, &gPipeline.taauRef}) {
+         {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.dlssOut, &gPipeline.sharpOut}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
@@ -284,32 +268,26 @@ bool ensureResources(ID3D12Device* device, unsigned renderWidth, unsigned render
     gPipeline.colorHalf   = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     gPipeline.depthR32    = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R32_FLOAT);
     gPipeline.mvRg32      = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16_FLOAT);
-    gPipeline.mvRaw       = createTexture(device, renderWidth, renderHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     gPipeline.dlssOut     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
     // RCAS lands here when sr.sharpening is on; the arg10 write then samples this
     // instead of dlssOut. Same format as the DLSS output so the compute pass reads
     // and writes one domain (docs/specs/sr.md §8).
     gPipeline.sharpOut    = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
-    // Same format as arg10 (fmt 26) so CopyResource is a straight texel copy; display
-    // size, used only by the explicit F2 pair dump.
-    gPipeline.taauRef     = createTexture(device, displayWidth, displayHeight, DXGI_FORMAT_R11G11B10_FLOAT);
-    if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.mvRaw
-        || !gPipeline.dlssOut || !gPipeline.sharpOut || !gPipeline.taauRef) {
+    if (!gPipeline.colorHalf || !gPipeline.depthR32 || !gPipeline.mvRg32 || !gPipeline.dlssOut
+        || !gPipeline.sharpOut) {
         setError(E_OUTOFMEMORY, "CreateCommittedResource");
         return false;
     }
     gPipeline.colorState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.depthState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.mvState       = D3D12_RESOURCE_STATE_COMMON;
-    gPipeline.mvRawState    = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.dlssState     = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.sharpState    = D3D12_RESOURCE_STATE_COMMON;
-    gPipeline.taauRefState  = D3D12_RESOURCE_STATE_COMMON;
     gPipeline.renderWidth   = renderWidth;
     gPipeline.renderHeight  = renderHeight;
     gPipeline.displayWidth  = displayWidth;
     gPipeline.displayHeight = displayHeight;
-    utils::logger().info("[vvsr] sr buffers {}x{} -> {}x{}", renderWidth, renderHeight, displayWidth, displayHeight);
+    ND_DEBUG("[vvsr] sr buffers {}x{} -> {}x{}", renderWidth, renderHeight, displayWidth, displayHeight);
     return true;
 }
 
@@ -508,7 +486,7 @@ bool ensurePipeline(ID3D12Device* device) {
 
     std::lock_guard lock(gMutex);
     gStats.pipelineReady = true;
-    utils::logger().info("[vvsr] sr pipeline ready (prep + DLSS -> arg10)");
+    ND_DEBUG("[vvsr] sr pipeline ready (prep + DLSS -> arg10)");
     return true;
 }
 
@@ -546,22 +524,8 @@ bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigne
     }
     gColorCandidates = colorsCount;
     if (colorsCount) {
-        unsigned const choice = static_cast<unsigned>(gColorChoice.load(std::memory_order_relaxed)) % colorsCount;
-        *colorOut    = colors[choice].resource;
-        *colorFormat = colors[choice].format;
-        static std::atomic<unsigned> logged{0};
-        if (logged.fetch_add(1) < 3) {
-            for (unsigned i = 0; i < colorsCount; ++i) {
-                utils::logger().info(
-                    "[vvsr] sr colour[{}]={:#x} {}x{} fmt={}",
-                    i,
-                    reinterpret_cast<std::uintptr_t>(colors[i].resource),
-                    colors[i].width,
-                    colors[i].height,
-                    colors[i].format
-                );
-            }
-        }
+        *colorOut    = colors[0].resource;
+        *colorFormat = colors[0].format;
     }
 
     auto const semantic = probe::vv::inputFinalColorTarget();
@@ -569,16 +533,6 @@ bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigne
         && semantic.height == probe::vv::renderHeight()) {
         *colorOut    = semantic.resource;
         *colorFormat = semantic.format;
-        static std::atomic<unsigned> loggedSemantic{0};
-        if (loggedSemantic.fetch_add(1) < 6) {
-            utils::logger().info(
-                "[vvsr] sr semantic colour={:#x} {}x{} fmt={} (arg9 InputFinalColor)",
-                reinterpret_cast<std::uintptr_t>(semantic.resource),
-                semantic.width,
-                semantic.height,
-                semantic.format
-            );
-        }
     }
 
     unsigned const depthCount = probe::vv::depthTargets(targets, 48, 64);
@@ -589,7 +543,7 @@ bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigne
         // can be 1689x903 while the views are still 1689x950).
         static std::atomic<unsigned> diag{0};
         if (diag.fetch_add(1, std::memory_order_relaxed) < 5) {
-            utils::logger().info(
+            ND_DEBUG(
                 "[vvsr] sr pick: render={}x{} colourTargets={} fmt26={} depthTargets={}",
                 probe::vv::renderWidth(),
                 probe::vv::renderHeight(),
@@ -608,56 +562,32 @@ bool pickInputs(void** colorOut, unsigned* colorFormat, void** depthOut, unsigne
     }
     gDepthCandidates = depthsCount;
     if (depthsCount) {
-        unsigned const choice = static_cast<unsigned>(gDepthChoice.load(std::memory_order_relaxed)) % depthsCount;
-        *depthOut    = depths[choice].resource;
-        *depthFormat = depths[choice].format;
-        static std::atomic<unsigned> loggedD{0};
-        if (loggedD.fetch_add(1) < 3) {
-            for (unsigned i = 0; i < depthsCount; ++i) {
-                utils::logger().info(
-                    "[vvsr] sr depth[{}]={:#x} {}x{} fmt={}",
-                    i,
-                    reinterpret_cast<std::uintptr_t>(depths[i].resource),
-                    depths[i].width,
-                    depths[i].height,
-                    depths[i].format
-                );
-            }
-        }
+        *depthOut    = depths[0].resource;
+        *depthFormat = depths[0].format;
     }
     return *colorOut && *depthOut;
 }
 
 } // namespace
 
-void cycleColor() {
-    int const next = gColorChoice.fetch_add(1, std::memory_order_relaxed) + 1;
-    utils::logger().info("[vvsr] sr colour choice -> {}", next);
-}
-void cycleDepth() {
-    int const next = gDepthChoice.fetch_add(1, std::memory_order_relaxed) + 1;
-    utils::logger().info("[vvsr] sr depth choice -> {}", next);
-}
-
 void requestReset() {
     gManualReset.store(2, std::memory_order_relaxed);
-    utils::logger().info("[vvsr] sr reset requested (two frames)");
+    ND_DEBUG("[vvsr] sr reset requested (two frames)");
 }
 
 void setJitterSource(JitterSource source) {
-    int const value    = static_cast<int>(source);
+    // Two values only (Zero / Engine); anything else folds to Zero so a stale panel
+    // draft cannot leave the pipeline on a mode that no longer has a branch.
+    int const value    = source == JitterSource::Engine ? static_cast<int>(JitterSource::Engine)
+                                                       : static_cast<int>(JitterSource::Zero);
     int const previous = gJitterSource.exchange(value, std::memory_order_relaxed);
     if (previous == value) {
         return;
     }
-    // One history wipe on both edges: the modes accumulate differently, and carrying
-    // samples across the switch would show up as a smear on the frame after.
+    // One history wipe on both edges: the two modes accumulate differently, and
+    // carrying samples across the switch would show up as a smear on the frame after.
     gManualReset.store(2, std::memory_order_relaxed);
-    static char const* const kNames[] = {"0", "engine j(n)", "-engine -j(n)", "previous j(n-1)"};
-    utils::logger().info(
-        "[vvsr] sr jitter source={} (diagnostic; see research/2026-10-29-taau-jitter-dlss-contract.md §7)",
-        value >= 0 && value < 4 ? kNames[value] : "?"
-    );
+    ND_DEBUG("[vvsr] sr jitter source={}", value);
 }
 
 JitterSource jitterSource() {
@@ -675,8 +605,6 @@ void setEnabled(bool wantEnabled) {
         // frame that has no replacement yet.
         probe::vv::setProductArmed(true);
         probe::vv::inject::setUseArg10(true);
-        probe::vv::inject::setUseBackBuffer(false);
-        probe::vv::inject::setFromTail(false);
         probe::vv::inject::setAction(probe::vv::inject::Action::DlssArg10);
         probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
         probe::vv::setDrawSuppress(true);
@@ -688,8 +616,8 @@ void setEnabled(bool wantEnabled) {
         probe::vv::setProductArmed(false);
         probe::vv::inject::setUseArg10(false);
         probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
-        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
     }
+    // The one line the product prints about itself: a user-visible switch flipping.
     utils::logger().info(
         "[vvsr] sr {} (TAAU draw {})",
         wantEnabled ? "enabled" : "disabled",
@@ -727,303 +655,6 @@ struct MvFrame {
 };
 
 MvFrame decodeMvFrame();
-
-unsigned dumpRuns() { return gDumpNo.load(std::memory_order_relaxed); }
-
-void captureTaaRef() {
-    gCaptureTaaRef.store(true, std::memory_order_release);
-    utils::logger().info("[vvsr] sr f2: TAAU reference capture armed (next injected frame)");
-}
-
-bool dumpInputs() {
-    auto* const device = static_cast<ID3D12Device*>(probe::vv::engineDevice());
-    auto* const queue  = static_cast<ID3D12CommandQueue*>(probe::vv::gameQueue());
-    Stats const snapshot = stats();
-    if (!device || !queue || !snapshot.colorSource || !snapshot.depthSource) {
-        return false;
-    }
-    unsigned const run = gDumpNo.fetch_add(1, std::memory_order_relaxed) + 1;
-    utils::logger().info(
-        "[vvsr] sr dump #{} frame={} dlssReady={} start", run, snapshot.frame, snapshot.dlssReady ? 1 : 0
-    );
-    // Per-batch motion state. A pair of dumps is only evidence if the two frames can be
-    // told apart, and the camera delta is the part the user cannot fake by reporting
-    // "I kept turning". No throttle: every batch gets its own line.
-    MvFrame const mv = decodeMvFrame();
-    utils::logger().info(
-        "[vvsr] sr dump #{} frame={} mv valid={} prev_same={} delta=({:+.4f},{:+.4f},{:+.4f}) jitter=({:+.4f},{:+.4f})",
-        run,
-        snapshot.frame,
-        mv.valid ? 1 : 0,
-        mv.prevSame ? 1 : 0,
-        mv.delta[0],
-        mv.delta[1],
-        mv.delta[2],
-        mv.jitterX,
-        mv.jitterY
-    );
-    std::wstring const directory = utils::applicationDirectory();
-    wchar_t            name[192]{};
-    // The run number is in every name, the picked pair included: the open question is
-    // answered by comparing two dumps taken from two camera positions, and a name
-    // without it lets the second batch overwrite the first.
-    std::swprintf(
-        name,
-        std::size(name),
-        L"sr_colour_%u_p%llX_%ux%u_fmt%u.bin",
-        run,
-        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(snapshot.colorSource)),
-        snapshot.renderWidth,
-        snapshot.renderHeight,
-        snapshot.colorFormat
-    );
-    bool const colorOk = probe::vv::dumpTextureRaw(device, queue, snapshot.colorSource, (directory + L"\\" + name).c_str());
-    std::swprintf(
-        name,
-        std::size(name),
-        L"sr_depth_%u_p%llX_%ux%u_fmt%u.bin",
-        run,
-        static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(snapshot.depthSource)),
-        snapshot.renderWidth,
-        snapshot.renderHeight,
-        snapshot.depthFormat
-    );
-    bool const depthOk = probe::vv::dumpTextureRaw(device, queue, snapshot.depthSource, (directory + L"\\" + name).c_str());
-    void* const semanticColor = probe::vv::inputFinalColorResource();
-    bool        semanticOk    = false;
-    if (semanticColor) {
-        std::swprintf(
-            name,
-            std::size(name),
-            L"sr_semantic_%u_p%llX.bin",
-            run,
-            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(semanticColor))
-        );
-        semanticOk = probe::vv::dumpTextureRaw(device, queue, semanticColor, (directory + L"\\" + name).c_str());
-    }
-    utils::logger().info(
-        "[vvsr] sr dump #{} semantic colour={:#x} ok={}",
-        run,
-        reinterpret_cast<std::uintptr_t>(semanticColor),
-        semanticOk ? 1 : 0
-    );
-    bool midOk      = false;
-    bool mvOk       = false;
-    bool depthR32Ok = false;
-    bool dlssOk     = false;
-    // Our own textures are left in NON_PIXEL_SHADER_RESOURCE by the record path; the
-    // 2026-10-26 dump read the MV as all zeros and the depth as all 1.0 with the
-    // Common hint, which is the stale-byte failure the DumpState comment describes.
-    auto const state = probe::vv::DumpState::NonPixelShaderResource;
-    if (gPipeline.colorHalf) {
-        std::swprintf(name, std::size(name), L"sr_mid_colourhalf_%u.bin", run);
-        midOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.colorHalf, (directory + L"\\" + name).c_str(), state);
-    }
-    // The three textures that decide the reprojection: the prepared motion vectors
-    // (RG16F), the prepared linear depth (R32F) and DLSS's own output. A localised
-    // seam is either a bad value in one of them or the frame is clean and the problem
-    // is elsewhere - this dump is what tells those apart.
-    if (gPipeline.mvRg32) {
-        std::swprintf(name, std::size(name), L"sr_mv_rg32_%ux%u_%u.bin", snapshot.renderWidth, snapshot.renderHeight, run);
-        mvOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.mvRg32, (directory + L"\\" + name).c_str(), state);
-    }
-    if (gPipeline.depthR32) {
-        std::swprintf(name, std::size(name), L"sr_depth_r32_%ux%u_%u.bin", snapshot.renderWidth, snapshot.renderHeight, run);
-        depthR32Ok = probe::vv::dumpTextureRawAs(device, queue, gPipeline.depthR32, (directory + L"\\" + name).c_str(), state);
-    }
-    if (gPipeline.dlssOut) {
-        std::swprintf(
-            name,
-            std::size(name),
-            L"sr_dlssout_%ux%u_%u.bin",
-            snapshot.displayWidth,
-            snapshot.displayHeight,
-            run
-        );
-        dlssOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.dlssOut, (directory + L"\\" + name).c_str(), state);
-    }
-    // The RCAS result of the same pipeline (only meaningful while sr.sharpening is
-    // on). Paired with sr_dlssout_*, the offline diff is the pass's evidence: it must
-    // be concentrated on edges and average well under one 8-bit level.
-    bool sharpOk = false;
-    if (gPipeline.sharpOut) {
-        std::swprintf(
-            name,
-            std::size(name),
-            L"sr_sharp_%ux%u_%u.bin",
-            snapshot.displayWidth,
-            snapshot.displayHeight,
-            run
-        );
-        sharpOk = probe::vv::dumpTextureRawAs(
-            device,
-            queue,
-            gPipeline.sharpOut,
-            (directory + L"\\" + name).c_str(),
-            probe::vv::DumpState::ShaderResource
-        );
-    }
-    // F2: the TAAU output of the frame the explicit capture was armed on (arg10 before
-    // our PS write). Present only after that button was pressed; one dump per capture.
-    bool taaurefOk = false;
-    if (gPipeline.taauRef && gTaaRefFresh.exchange(false, std::memory_order_acq_rel)) {
-        std::swprintf(
-            name,
-            std::size(name),
-            L"sr_taauref_%ux%u_%u.bin",
-            snapshot.displayWidth,
-            snapshot.displayHeight,
-            run
-        );
-        taaurefOk = probe::vv::dumpTextureRawAs(device, queue, gPipeline.taauRef, (directory + L"\\" + name).c_str(), state);
-    }
-    utils::logger().info(
-        "[vvsr] sr dump #{} inputs colour={} depth={} mid={} mv={} depth32={} dlss={} sharp={} taauref={}",
-        run,
-        colorOk ? 1 : 0,
-        depthOk ? 1 : 0,
-        midOk ? 1 : 0,
-        mvOk ? 1 : 0,
-        depthR32Ok ? 1 : 0,
-        dlssOk ? 1 : 0,
-        sharpOk ? 1 : 0,
-        taaurefOk ? 1 : 0
-    );
-    // Every candidate the pick path can see, not just the picked one (EXP-0026). The
-    // only open question is whether the picked colour stops changing once the engine's
-    // TAAU draw is suppressed, and that is answered by comparing two batches taken from
-    // two camera positions. The picked pointer alone cannot separate "this texture is
-    // stale" from "pickInputs chose the wrong texture" - EXP-0025 had 15 live fmt26
-    // candidates and kept one of them. tolerance=64 is pickInputs' own value, so the
-    // picked texture is guaranteed to be inside the batch (and its index is logged);
-    // the pick behaviour itself is untouched.
-    probe::vv::RenderTargetInfo targets[48]{};
-    probe::vv::RenderTargetInfo colours[16]{};
-    probe::vv::RenderTargetInfo depths[16]{};
-    unsigned const targetCount = probe::vv::renderTargets(targets, 48, 64);
-    unsigned       colourCount = 0;
-    for (unsigned i = 0; i < targetCount && colourCount < 16; ++i) {
-        if (targets[i].format == 26) {
-            colours[colourCount++] = targets[i];
-        }
-    }
-    unsigned const targetDepthCount = probe::vv::depthTargets(targets, 48, 64);
-    unsigned       depthCount       = 0;
-    for (unsigned i = 0; i < targetDepthCount && depthCount < 16; ++i) {
-        unsigned const format = targets[i].format;
-        // The same format set pickInputs accepts, so index i is the candidate the
-        // panel's depth choice would walk.
-        if (format == 43 || format == 44 || format == 45 || format == 40 || format == 39 || format == 54
-            || format == 41) {
-            depths[depthCount++] = targets[i];
-        }
-    }
-    // Which candidate the SR pass actually read. -1 means the pick is not in this
-    // batch (capped at 16, or the inventory changed between the record and the dump) -
-    // that has to be read as "cannot compare this batch", not as a stale colour.
-    int pickedColourIndex = -1;
-    for (unsigned i = 0; i < colourCount; ++i) {
-        if (colours[i].resource == snapshot.colorSource) {
-            pickedColourIndex = static_cast<int>(i);
-            break;
-        }
-    }
-    int pickedDepthIndex = -1;
-    for (unsigned i = 0; i < depthCount; ++i) {
-        if (depths[i].resource == snapshot.depthSource) {
-            pickedDepthIndex = static_cast<int>(i);
-            break;
-        }
-    }
-    unsigned colourDumped = 0;
-    for (unsigned i = 0; i < colourCount; ++i) {
-        std::swprintf(
-            name,
-            std::size(name),
-            L"sr_cand_%u_colour_%u_p%llX_%ux%u_fmt%u.bin",
-            run,
-            i,
-            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(colours[i].resource)),
-            colours[i].width,
-            colours[i].height,
-            colours[i].format
-        );
-        bool const ok = probe::vv::dumpTextureRaw(device, queue, colours[i].resource, (directory + L"\\" + name).c_str());
-        colourDumped += ok ? 1U : 0U;
-        utils::logger().info(
-            "[vvsr] sr dump #{} cand colour[{}]={:#x} {}x{} fmt={} ok={}",
-            run,
-            i,
-            reinterpret_cast<std::uintptr_t>(colours[i].resource),
-            colours[i].width,
-            colours[i].height,
-            colours[i].format,
-            ok ? 1 : 0
-        );
-    }
-    unsigned depthDumped = 0;
-    for (unsigned i = 0; i < depthCount; ++i) {
-        std::swprintf(
-            name,
-            std::size(name),
-            L"sr_cand_%u_depth_%u_p%llX_%ux%u_fmt%u.bin",
-            run,
-            i,
-            static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(depths[i].resource)),
-            depths[i].width,
-            depths[i].height,
-            depths[i].format
-        );
-        bool const ok = probe::vv::dumpTextureRaw(device, queue, depths[i].resource, (directory + L"\\" + name).c_str());
-        depthDumped += ok ? 1U : 0U;
-        utils::logger().info(
-            "[vvsr] sr dump #{} cand depth[{}]={:#x} {}x{} fmt={} ok={}",
-            run,
-            i,
-            reinterpret_cast<std::uintptr_t>(depths[i].resource),
-            depths[i].width,
-            depths[i].height,
-            depths[i].format,
-            ok ? 1 : 0
-        );
-    }
-    utils::logger().info(
-        "[vvsr] sr dump #{} frame={} cand summary colour ok={}/{} depth ok={}/{}"
-        " pickedColour={:#x} idx={} pickedDepth={:#x} idx={}",
-        run,
-        snapshot.frame,
-        colourDumped,
-        colourCount,
-        depthDumped,
-        depthCount,
-        reinterpret_cast<std::uintptr_t>(snapshot.colorSource),
-        pickedColourIndex,
-        reinterpret_cast<std::uintptr_t>(snapshot.depthSource),
-        pickedDepthIndex
-    );
-    return colorOk && depthOk;
-}
-
-std::atomic<int>      gLastLevel{-1};
-std::atomic<unsigned> gLevelLoggedAt{0};
-
-// World presence for the SR gate. Event-driven (see VvProbe::worldLoaded): a poll of
-// ll::service::getLevel() looked right for the first world but stayed empty after
-// leaving and entering another one, so a gate built on it never reopened.
-bool inWorld() {
-    bool const     present = probe::vv::worldLoaded();
-    int const      now     = present ? 1 : 0;
-    unsigned const tick    = ::GetTickCount();
-    int const      last    = gLastLevel.load(std::memory_order_relaxed);
-    unsigned const at      = gLevelLoggedAt.load(std::memory_order_relaxed);
-    bool const     changed = last != now;
-    if (changed || tick - at >= 1000) {
-        gLevelLoggedAt.store(tick, std::memory_order_relaxed);
-        gLastLevel.store(now, std::memory_order_relaxed);
-        utils::logger().info("[vvsr] world: getLevel()={} changed={}", now, changed ? 1 : 0);
-    }
-    return present;
-}
 
 // The per-frame parameters that still come from the TAAContext: the sub-pixel jitter
 // fed to DLSS, plus the camera-origin delta kept for the evidence lines. The motion
@@ -1063,18 +694,9 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     if (!list || !arg10 || !device) {
         return false;
     }
-    // World presence used to gate recording (an empty list outside the world): a failed
-    // record could kill the SR action after the world came back (2026-10-25). The
-    // Close fix (EXP-0065) removed that hazard, and the user asked for the original VV
-    // behaviour back: keep running DLSS after leaving a save, so the menu background
-    // is processed by the same pipeline instead of falling back to TAAU. The call is
-    // kept for its once-per-second world log; its result no longer decides anything.
-    (void)inWorld();
-    // Step 2 groundwork: the motion-vector pass needs the engine's current/previous
-    // view-projection pair, the camera origins and the sub-pixel jitter. The layout is
-    // documented (docs/specs/vv.md §6) but the packing convention is not, so one frame
-    // after the camera has settled logs the raw numbers; the reprojection is written
-    // against what that frame shows.
+    // World presence is deliberately not a gate: since the user's 2026-10-28 decision the
+    // pipeline keeps running after leaving a save, so the menu background is processed by
+    // the same DLSS -> arg10 path instead of falling back to TAAU.
     static std::atomic<unsigned> srFrames{0};
     unsigned const frameNo = srFrames.fetch_add(1, std::memory_order_relaxed) + 1;
     // TEST: `vv_sr_spatial.txt` in the game directory forces a purely spatial
@@ -1082,6 +704,8 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     // only with SR+DLSS and only in motion, while every single dumped frame (engine
     // colour, DLSS output, final write-back) is clean - so it lives in the temporal
     // path. This toggles that path off at runtime, from the agent side.
+    bool spatial = false;
+#ifdef TEST
     static std::atomic<bool> spatialMode{false};
     if (frameNo % 30 == 1) {
         std::error_code error;
@@ -1093,52 +717,8 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             std::memory_order_relaxed
         );
     }
-    bool const spatial = spatialMode.load(std::memory_order_relaxed);
-    // Three labelled in-world windows: a single still frame cannot separate a
-    // row-vector layout from a column-vector one (cur == prev), so the camera has to
-    // move between samples (walk / look around during the first ~15 s).
-    if (frameNo == 300 || frameNo == 900 || frameNo == 1500) {
-        utils::logger().info("[vvsr] mv sample at frame {}", frameNo);
-        probe::vv::dumpTaaContextWindows();
-    }
-    if (frameNo == 60) {
-        MvFrame const probeFrame = decodeMvFrame();
-        utils::logger().info(
-            "[vvsr] mv decode valid={} prev_same={} jitter=({:+.4f},{:+.4f}) delta=({:+.4f},{:+.4f},{:+.4f})",
-            probeFrame.valid ? 1 : 0,
-            probeFrame.prevSame ? 1 : 0,
-            probeFrame.jitterX,
-            probeFrame.jitterY,
-            probeFrame.delta[0],
-            probeFrame.delta[1],
-            probeFrame.delta[2]
-        );
-    }
-    if (frameNo == 30) {
-        float cur[16]{};
-        float prev[16]{};
-        float cam[6]{};
-        float jitter[2]{};
-        if (probe::vv::taaMatrices(cur, prev, cam, jitter)) {
-            auto const text = [](float const* m) {
-                std::string out;
-                char        one[32]{};
-                for (int i = 0; i < 16; ++i) {
-                    std::snprintf(one, sizeof(one), " %+.5f", m[i]);
-                    out += one;
-                }
-                return out;
-            };
-            utils::logger().info(
-                "[vvsr] mv cam=({:+.4f},{:+.4f},{:+.4f}) prevCam=({:+.4f},{:+.4f},{:+.4f}) jitter=({:+.4f},{:+.4f})",
-                cam[0], cam[1], cam[2], cam[3], cam[4], cam[5], jitter[0], jitter[1]
-            );
-            utils::logger().info("[vvsr] mv cur=[{}]", text(cur));
-            utils::logger().info("[vvsr] mv prev=[{}]", text(prev));
-        } else {
-            utils::logger().warn("[vvsr] mv: no TAAContext captured yet");
-        }
-    }
+    spatial = spatialMode.load(std::memory_order_relaxed);
+#endif
     unsigned       renderWidth  = probe::vv::renderWidth();
     unsigned       renderHeight = probe::vv::renderHeight();
     D3D12_RESOURCE_DESC const sizeDesc = arg10->GetDesc();
@@ -1153,7 +733,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             probe::vv::latchRenderSize(renderWidth, renderHeight);
             static std::atomic<bool> logged{false};
             if (!logged.exchange(true, std::memory_order_relaxed)) {
-                utils::logger().info(
+                ND_DEBUG(
                     "[vvsr] sr: TAAU is not running; render size from the inventory = {}x{}",
                     renderWidth,
                     renderHeight
@@ -1173,8 +753,8 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     unsigned depthFormat = 0;
     if (!pickInputs(&color, &colorFormat, &depth, &depthFormat)) {
         // The engine creates its render graph before the mod loads, so the RTV
-        // inventory is empty until it rebuilds once (F11 / fullscreen toggle) - the
-        // same reason the B0 dumps ask for F11 first. Say it instead of failing mute.
+        // inventory is empty until it rebuilds once (F11 / fullscreen toggle). Say it
+        // instead of failing mute.
         static std::atomic<unsigned> warned{0};
         if (warned.fetch_add(1) < 3) {
             utils::logger().warn(
@@ -1236,9 +816,9 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     {
         static std::atomic<unsigned> mvLogs{0};
         unsigned const               n = mvLogs.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (n <= 3 || n % 600 == 0) {
+        if (n <= 3) {
             if (prepMode) {
-                utils::logger().info(
+                ND_DEBUG(
                     "[vvsr] sr mv: engine arg11={:#x} fmt={} layout={} ({}x{}, pixels current->previous)",
                     reinterpret_cast<std::uintptr_t>(mvResource),
                     mvFormat,
@@ -1247,7 +827,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                     renderHeight
                 );
             } else {
-                utils::logger().warn(
+                ND_DEBUG(
                     "[vvsr] sr mv: arg11={:#x} fmt={} unusable at {}x{}",
                     reinterpret_cast<std::uintptr_t>(mvResource),
                     mvFormat,
@@ -1266,7 +846,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     if (prepMode == 0) {
         static std::atomic<unsigned> skippedMv{0};
         unsigned const               n = skippedMv.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (n <= 3 || n % 120 == 0) {
+        if (n <= 3) {
             utils::logger().warn(
                 "[vvsr] sr mv: no usable arg11 for {}x{} (native={:#x} fmt={}); frame skipped",
                 renderWidth,
@@ -1301,18 +881,14 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     device->CreateUnorderedAccessView(gPipeline.depthR32, nullptr, &uav, cpuAt(kSlotDepthUav));
     uav.Format = DXGI_FORMAT_R16G16_FLOAT;
     device->CreateUnorderedAccessView(gPipeline.mvRg32, nullptr, &uav, cpuAt(kSlotMvUav));
-    uav.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    device->CreateUnorderedAccessView(gPipeline.mvRaw, nullptr, &uav, cpuAt(kSlotMvRawUav));
 
-    // --- prep: engine colour + depth -> RGBA16F / R32F / RG32F -------------
+    // --- prep: engine colour + depth -> RGBA16F / R32F / RG16F -------------
     transition(list, gPipeline.colorHalf, gPipeline.colorState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     gPipeline.colorState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     transition(list, gPipeline.depthR32, gPipeline.depthState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     gPipeline.depthState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     transition(list, gPipeline.mvRg32, gPipeline.mvState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     gPipeline.mvState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    transition(list, gPipeline.mvRaw, gPipeline.mvRawState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    gPipeline.mvRawState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
     ID3D12DescriptorHeap* heaps[1] = {gPipeline.heap};
     list->SetDescriptorHeaps(1, heaps);
@@ -1323,21 +899,6 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     unsigned const prepParams[4] = {renderWidth, renderHeight, prepMode | (spatial ? 4u : 0u), 0};
     list->SetComputeRoot32BitConstants(0, 4, prepParams, 0);
     MvFrame mv = decodeMvFrame();
-    // One-shot proof that the draw-time snapshot is doing its job: with a moving camera
-    // the previous half differs from the current one. The post-frame read this replaced
-    // could never log this line (prev==cur both halves), so it doubles as a regression.
-    {
-        static std::atomic<bool> logged{false};
-        if (mv.valid && !mv.prevSame && !logged.exchange(true, std::memory_order_relaxed)) {
-            utils::logger().info(
-                "[vvsr] mv snapshot: previous VP differs from current at frame {} (delta=({:+.4f},{:+.4f},{:+.4f}))",
-                frameNo,
-                mv.delta[0],
-                mv.delta[1],
-                mv.delta[2]
-            );
-        }
-    }
     list->Dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
     // The DLSS evaluate reads the prepared buffers, so they become SRVs here. The
@@ -1352,8 +913,6 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     gPipeline.depthState = srInputState;
     transition(list, gPipeline.mvRg32, gPipeline.mvState, srInputState);
     gPipeline.mvState = srInputState;
-    transition(list, gPipeline.mvRaw, gPipeline.mvRawState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    gPipeline.mvRawState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
     bool dlssEvaluated = false;
     bool sharpened     = false;
@@ -1402,29 +961,14 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // feature 0x12 on this same command list, and points Color at its
             // composite before the original evaluate runs. The VV side only has to
             // leave the prepared inputs in ALL_SHADER_RESOURCE (above).
-            // Jitter handed to DLSS. Default 0 (see gJitterSource); the other three
-            // modes exist only for the §7 discrimination.
+            // Jitter handed to DLSS. Default 0; `Engine` is the one A/B the panel still
+            // offers (§7's negated/previous probes answered and are gone).
             float jitterX = 0.0f;
             float jitterY = 0.0f;
-            if (world) {
-                switch (gJitterSource.load(std::memory_order_relaxed)) {
-                case static_cast<int>(JitterSource::Engine):
-                    jitterX = mv.jitterX;
-                    jitterY = mv.jitterY;
-                    break;
-                case static_cast<int>(JitterSource::Negated):
-                    jitterX = -mv.jitterX;
-                    jitterY = -mv.jitterY;
-                    break;
-                case static_cast<int>(JitterSource::Previous):
-                    jitterX = gPrevJitterX;
-                    jitterY = gPrevJitterY;
-                    break;
-                default: break;
-                }
+            if (world && gJitterSource.load(std::memory_order_relaxed) == static_cast<int>(JitterSource::Engine)) {
+                jitterX = mv.jitterX;
+                jitterY = mv.jitterY;
             }
-            gPrevJitterX = mv.jitterX;
-            gPrevJitterY = mv.jitterY;
             dlssEvaluated = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,
@@ -1503,24 +1047,6 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             }
             return false;
         }
-        if (gCaptureTaaRef.exchange(false, std::memory_order_acq_rel) && gPipeline.taauRef) {
-            // F2: arg10 still holds this frame's TAAU result (the writer list ran before
-            // our injected list); copy it aside before the PS below overwrites it with
-            // DLSS. Same frame, same inputs -> the two outputs are directly comparable.
-            transition(list, arg10, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
-            transition(list, gPipeline.taauRef, gPipeline.taauRefState, D3D12_RESOURCE_STATE_COPY_DEST);
-            gPipeline.taauRefState = D3D12_RESOURCE_STATE_COPY_DEST;
-            list->CopyResource(gPipeline.taauRef, arg10);
-            transition(list, gPipeline.taauRef, gPipeline.taauRefState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-            gPipeline.taauRefState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-            transition(list, arg10, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
-            gTaaRefFresh.store(true, std::memory_order_release);
-            utils::logger().info(
-                "[vvsr] sr f2: captured TAAU arg10 {}x{} before the DLSS write",
-                static_cast<unsigned>(targetDesc.Width),
-                targetDesc.Height
-            );
-        }
         // Stage A proved arg10 is left in RENDER_TARGET by its writer list, so this
         // pass only binds it and leaves the state alone. The source texture was last
         // in a compute-read state; a pixel shader needs its own - except when RCAS
@@ -1576,13 +1102,11 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         gStats.mvFormat        = prepMode ? mvFormat : 0;
         gStats.colorCandidates = gColorCandidates;
         gStats.depthCandidates = gDepthCandidates;
-        gStats.colorChoice     = gColorChoice.load(std::memory_order_relaxed);
-        gStats.depthChoice     = gDepthChoice.load(std::memory_order_relaxed);
         gStats.lastError       = 0;
         static std::atomic<unsigned> frames{0};
         unsigned const               n = frames.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (n <= 3 || n % 600 == 0) {
-            utils::logger().info(
+        if (n <= 3) {
+            ND_DEBUG(
                 "[vvsr] sr arg10 #{}: {}x{} fmt={} eval={} mv={} sharp={}",
                 n,
                 displayWidth,
@@ -1617,12 +1141,7 @@ void release() {
     std::lock_guard recordLock(gRecordMutex);
     std::lock_guard lock(gMutex);
     for (ID3D12Resource** resource :
-         {&gPipeline.colorHalf,
-          &gPipeline.depthR32,
-          &gPipeline.mvRg32,
-          &gPipeline.mvRaw,
-          &gPipeline.dlssOut,
-          &gPipeline.sharpOut}) {
+         {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.dlssOut, &gPipeline.sharpOut}) {
         if (*resource) {
             (*resource)->Release();
             *resource = nullptr;
@@ -1631,6 +1150,8 @@ void release() {
     if (gPipeline.heap) gPipeline.heap->Release();
     if (gPipeline.prep) gPipeline.prep->Release();
     if (gPipeline.root) gPipeline.root->Release();
+    if (gPipeline.arg10Ps) gPipeline.arg10Ps->Release();
+    if (gPipeline.rtvHeap) gPipeline.rtvHeap->Release();
     gPipeline = Pipeline{};
     gStats    = Stats{};
 }

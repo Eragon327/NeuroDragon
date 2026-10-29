@@ -163,8 +163,8 @@ patch 表项（`.rdata` 用 `VirtualProtect` 包一次）→ 场景按该比例�
   最大值」的无过冲变体。
 - 分屏对比（`sr.compare`）**已删除**：分屏只保留「神经渲染」页判断 NR 的那一个（两个都开会出现
   两条缝、四段画面）；锐化的 A/B 用整帧开关。
-- 每累计 120 帧自动写一对 dump（强度变化后重新计时）：`dump/sharp_before_<强度>.bmp` /
-  `sharp_after_<强度>.bmp`，日志给两者 max。
+- 每累计 120 帧自动写一对 dump（**TEST 构建**，强度变化后重新计时）：`dump/sharp_before_<强度>.bmp` /
+  `sharp_after_<强度>.bmp`，日志给两者 max。release 构建里这段代码不编译。
 
 ### 7.1 VV 路径（2026-10-29，EXP-0096）
 
@@ -198,9 +198,10 @@ vv DLSS 输出 (dlssOut, RGBA16F, 显示尺寸) → RCAS → sharpOut → 写 ar
 - **运行时（EXP-0096，dll `d846ec24`）**：`sharp=off` 三帧 → 打开后 `[sr] RCAS 就绪/已启用` →
   `sr arg10` 到 #1200 都是 `sharp=on` 且 `eval=1`，100% 原生保活态同样如此；正常退出、无 crash。
   证据 `docs/agent/evidence/vv-sharpen-EXP-0096.log`。
-- **仍未取到**：同帧 GPU 对（`sr_sharp_*` / `sr_dlssout_*`）。日志里没有 `[vvsr] sr dump`，
-  说明 F7 没被按下；取法是面板开着锐化时按一次 F7，或往游戏根目录放 `vv_dump_sr.txt` 标记。
-  `dumpInputs()` 已经会顺带写 `sr_sharp_*`（`DumpState::ShaderResource`）。
+- **仍未取到（入口已在 2026-10-29 删除，取不到了）**：同帧 GPU 对（`sr_sharp_*` / `sr_dlssout_*`）。
+  原先的取法是「按 `F7`，或往游戏根目录放 `vv_dump_sr.txt`」，两者都已随 B1c 抓帧删除，
+  `sr.dumpInputs()` / `dumpRuns()` 不再存在。真要复现这一对，只能重新加一个 dump 入口
+  （`git log` 是本轮删除的 commit），或者用 TEST 构建里锐化自带的 `sharp_before/after_*.bmp` 顶替。
 
 ## 8. 成品帧截图
 

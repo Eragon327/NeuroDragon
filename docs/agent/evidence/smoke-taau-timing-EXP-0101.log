@@ -1,0 +1,48 @@
+# agentflow smoke taau-timing on EXP-0101
+# started 2026-10-29T21:25:01.142+08:00  verdict=FAIL elapsed=180s
+# tree b5cc22c3a6804e0b  head df7155b8
+# dll 8e4e8ecf449b2e6c
+# profile scripts\agentflow\smoke\taau-timing.json
+# requires=['\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)']
+# missing=['\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)', '\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\) x0/1']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 1517552 -> 1522720
+[2026-10-29 21:25:10.862 IFO][LeviLamina]                                                                       
+[2026-10-29 21:25:10.862 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-29 21:25:10.862 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-29 21:25:10.862 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-29 21:25:10.862 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-29 21:25:10.862 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-29 21:25:10.862 IFO][LeviLamina]                                                                       
+[2026-10-29 21:25:10.862 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-29 21:25:10.862 IFO][LeviLamina]                                                                       
+[2026-10-29 21:25:10.862 IFO][LeviLamina]                                                                       
+[2026-10-29 21:25:10.862 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-29 21:25:10.862 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-29 21:25:10.876 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-29 21:25:10.876 IFO][LeviLamina] 正在加载模组……
+[2026-10-29 21:25:10.877 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-29 21:25:10.912 WRN][NeuroDragon] config.json is incomplete, saving defaults
+[2026-10-29 21:25:10.913 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-29 21:25:10.913 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-29 21:25:13.140 WRN][Server] <LVL|1139409904> Migration started
+[2026-10-29 21:25:13.143 WRN][Server] <LVL|1139409904> Migration completed in 0.002000 seconds
+[2026-10-29 21:25:15.935 WRN][Server] <LVL|58750256> Time played notifier not required for 'zh_CN'
+[2026-10-29 21:25:15.950 IFO][LeviLamina] 正在启用模组……
+[2026-10-29 21:25:15.950 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-29 21:25:15.950 IFO][NeuroDragon] NR 未启用：config/config.json 里 nr.enabled = false
+[2026-10-29 21:25:16.558 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-29 21:25:17.295 IFO][NeuroDragon] 安装游戏内面板：完成，用时 736 ms
+[2026-10-29 21:25:17.295 IFO][LeviLamina] 已在 1.3 秒内启用 1 个模组
+[2026-10-29 21:25:17.356 IFO][NeuroDragon] [sr] ctx call #1 engine=0000015A5C98F040 ctx=0000015A50A74780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.772 IFO][NeuroDragon] [sr] ctx call #2 engine=0000015A5C98F040 ctx=0000015A4FBF3DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.873 IFO][NeuroDragon] [sr] ctx call #3 engine=0000015A5C98F040 ctx=0000015A50A74780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.886 IFO][NeuroDragon] [sr] ctx call #4 engine=0000015A5C98F040 ctx=0000015A4FBF3DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.895 IFO][NeuroDragon] [sr] ctx call #5 engine=0000015A5C98F040 ctx=0000015A50A74780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.905 IFO][NeuroDragon] [sr] ctx call #6 engine=0000015A5C98F040 ctx=0000015A4FBF3DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.914 IFO][NeuroDragon] [sr] ctx call #7 engine=0000015A5C98F040 ctx=0000015A50A74780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.923 IFO][NeuroDragon] [sr] ctx call #8 engine=0000015A5C98F040 ctx=0000015A4FBF3DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.929 IFO][NeuroDragon] [sr] ctx call #9 engine=0000015A5C98F040 ctx=0000015A50A74780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:17.939 IFO][NeuroDragon] [sr] ctx call #10 engine=0000015A5C98F040 ctx=0000015A4FBF3DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-29 21:25:18.411 WRN][Server] <LVL|4139364848> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-29 21:25:18.411 WRN][Server] <LVL|4139364848> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-29 21:25:18.993 WRN][Server] <LVL|4122874704> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect

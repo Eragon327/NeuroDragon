@@ -616,7 +616,7 @@ std::size_t probeFrameBuilderFactor(void* fb) {
     auto* vt     = *reinterpret_cast<std::uintptr_t**>(fb);
     auto* module = reinterpret_cast<std::uint8_t*>(::GetModuleHandleW(nullptr));
     if (!vt || !module) {
-        utils::logger().info("[sr] fb factor table: no vtable");
+        utils::logger().warn("[sr] fb factor table: no vtable (internal-resolution control unavailable)");
         return 0;
     }
     auto*      dos   = reinterpret_cast<IMAGE_DOS_HEADER*>(module);
@@ -626,7 +626,7 @@ std::size_t probeFrameBuilderFactor(void* fb) {
     auto*      fn    = reinterpret_cast<std::uint8_t*>(vt[83]);
     auto const addr  = reinterpret_cast<std::uintptr_t>(fn);
     if (addr < begin || addr >= end) {
-        utils::logger().info("[sr] fb factor table: slot 83 outside image");
+        utils::logger().warn("[sr] fb factor table: slot 83 outside image (internal-resolution control unavailable)");
         return 0;
     }
     // 48 8D 0D disp32 = lea rcx,[rip+disp]; the displacement points at the table.
@@ -660,7 +660,7 @@ std::size_t probeFrameBuilderFactor(void* fb) {
         );
         return 0x57c;
     }
-    utils::logger().info("[sr] fb factor table: lea not found");
+    utils::logger().warn("[sr] fb factor table: lea not found (internal-resolution control unavailable)");
     return 0;
 }
 
@@ -721,7 +721,7 @@ void driveFrameBuilderFactor() {
                 DWORD ignored    = 0;
                 ::VirtualProtect(&table[patched], sizeof(float), oldProtect, &ignored);
                 gFbPatchedIndex.store(0xFFFFFFFFu, std::memory_order_relaxed);
-                utils::logger().info(
+                ND_DEBUG(
                     "[sr] fb factor table[{}] restored {:.3f}",
                     patched,
                     static_cast<double>(orig)
@@ -753,7 +753,7 @@ void driveFrameBuilderFactor() {
     std::uint64_t const               now  = GetTickCount64();
     std::uint64_t                     prev = lastLog.load(std::memory_order_relaxed);
     if (now - prev >= 1000 && lastLog.compare_exchange_strong(prev, now)) {
-        utils::logger().info(
+        ND_DEBUG(
             "[sr] fb factor table[{}] {:.3f} -> {:.3f} ({}%)",
             index,
             static_cast<double>(before),
@@ -763,19 +763,28 @@ void driveFrameBuilderFactor() {
     }
 }
 
+// Called every evaluation. Two different jobs:
+//   * locate the factor table once (probeFrameBuilderFactor) - that is what makes
+//     sr.scalePercent able to move the scene factor at all, so it must run in a
+//     release build too. It is idempotent after the first success.
+//   * report the frame builder's own numbers - a per-second developer line, so it
+//     is compiled out of a release build together with its log line.
 void logFrameBuilderState() {
+    auto* fb = ::renderDragonFrameBuilder();
+    if (!fb) {
+#ifdef TEST
+        utils::logger().info("[sr] frame builder = null");
+#endif
+        return;
+    }
+    probeFrameBuilderFactor(fb);
+#ifdef TEST
     static std::atomic<std::uint64_t> last{0};
     std::uint64_t const               now  = GetTickCount64();
     std::uint64_t                     prev = last.load(std::memory_order_relaxed);
     if (now - prev < 1000 || !last.compare_exchange_strong(prev, now)) {
         return;
     }
-    auto* fb = ::renderDragonFrameBuilder();
-    if (!fb) {
-        utils::logger().info("[sr] frame builder = null");
-        return;
-    }
-    probeFrameBuilderFactor(fb);
     auto const res = fb->getRenderResolution();
     utils::logger().info(
         "[sr] fb render={}x{} factor={:.3f} enabled={} info={}",
@@ -785,6 +794,7 @@ void logFrameBuilderState() {
         fb->isUpscalingEnabled(),
         std::string(fb->getUpscalingInfo())
     );
+#endif
 }
 
 NgxEvalFn   gNgxEvalOriginal   = nullptr;
@@ -1169,21 +1179,20 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         }
     }
 
-    // The engine's DLSS runs whether NR does or not, and the panel shows its cost, so
-    // measure it whenever a number can be seen: an NR window, Replace mode, or the
-    // panel being open (the only place the numbers are displayed).
-    bool const measureBaseline = nrInWindow || nrReplace || ui::Overlay::getInstance().isVisible();
-    if (measureBaseline) {
-        nr::nrStampBegin(cmdList, n, 1);
-    }
+    // The upscaler's cost is a measurement, not a diagnostic: stamp every evaluation
+    // this detour forwards, from the first frames after the world loads - no NR window,
+    // no Replace mode and no open panel required (the numbers exist whether or not
+    // anyone is looking at them). In VV this same detour is the only NGX evaluate in the
+    // process: the call it sees there is our own DLSS-SR evaluate (sr::OwnEvaluateScope),
+    // which *is* the upscaler on that backend; TAAU stamps itself in
+    // VvProbe::drawIndexedInstancedDetour whenever TAAU is the one that ran.
+    nr::nrStampBegin(cmdList, n, 1);
     int const result = gNgxEvalOriginal ? gNgxEvalOriginal(cmdList, handle, params, callback, userData) : 0;
     // Engine SR health (docs/K §2.2 ③): the panel counts evaluations and failures,
     // so "SR stopped running" has a number behind it instead of a log hunt.
     nr::srReportEvaluation(result);
     // The engine's own DLSS timing ends before anything of ours is recorded after it.
-    if (measureBaseline) {
-        nr::nrStampEnd(cmdList, n, 1);
-    }
+    nr::nrStampEnd(cmdList, n, 1);
     // After placement (docs/N): the engine's DLSS just wrote the display-sized
     // Output, so this is the only correct point for NR to read it. Before
     // placement already recorded inside the block above, ahead of this call.
@@ -1447,7 +1456,7 @@ bool installSrFrameContextHook() {
         nr::srSetFrameContextHook(false);
         return false;
     }
-    utils::logger().info("[sr] frame-context hook @ {:#x}", reinterpret_cast<std::uintptr_t>(target));
+    ND_DEBUG("[sr] frame-context hook @ {:#x}", reinterpret_cast<std::uintptr_t>(target));
     nr::srSetFrameContextHook(true);
     return true;
 }

@@ -1,0 +1,17 @@
+{
+  "name": "vv-resolution-ui",
+  "tier": "L1",
+  "timeout_s": 300,
+  "why": "The VV panel's input/output dimensions must come from actual TAAU declarations in a VV world, not from RT-only PanelStats zeros.",
+  "requires": [
+    "\\[vv\\] taau #\\d+ viewport=[1-9]\\d*x[1-9]\\d*\\+\\d+,\\d+ .*factor=0\\.[0-9]+"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] taau #\\d+ viewport=[1-9]\\d*x[1-9]\\d*\\+\\d+,\\d+ .*factor=0\\.[0-9]+": 1
+  }
+}

@@ -1,5 +1,9 @@
 #include "neurodragon/ui/InputGuard.h"
 
+#include "neurodragon/Test.h"
+#include "neurodragon/input/KeyBind.h"
+#include "neurodragon/utils/Utils.h"
+
 #include "ll/api/memory/Hook.h"
 
 #include "mc/deps/input/Keyboard.h"
@@ -10,6 +14,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <string>
 
 namespace neurodragon::ui {
 namespace {
@@ -30,6 +35,27 @@ bool menuOwnsGameInput() {
     return GetTickCount64() <= gCaptureUntil.load(std::memory_order_acquire);
 }
 
+#ifdef TEST
+std::string textForLog(std::string const& text) {
+    constexpr char kHex[] = "0123456789ABCDEF";
+    std::string    escaped;
+    escaped.reserve(text.size());
+    for (unsigned char const unit : text) {
+        if (unit == '"' || unit == '\\') {
+            escaped.push_back('\\');
+            escaped.push_back(static_cast<char>(unit));
+        } else if (unit < 0x20 || unit == 0x7F) {
+            escaped += "\\x";
+            escaped.push_back(kHex[unit >> 4]);
+            escaped.push_back(kHex[unit & 0x0F]);
+        } else {
+            escaped.push_back(static_cast<char>(unit));
+        }
+    }
+    return escaped;
+}
+#endif
+
 LL_TYPE_INSTANCE_HOOK(
     GuardMouseHook,
     ll::memory::HookPriority::Highest,
@@ -44,7 +70,19 @@ LL_TYPE_INSTANCE_HOOK(
     short dy,
     bool  forceMotionlessPointer
 ) {
-    if (menuOwnsGameInput()) return;
+    bool const owned = menuOwnsGameInput();
+#ifdef TEST
+    if (actionButtonId != 0) {
+        ND_DEBUG(
+            "[input] t={} hid mouse button={} data={} action={}",
+            GetTickCount64(),
+            static_cast<int>(actionButtonId),
+            static_cast<int>(buttonData),
+            owned ? "eaten" : "forwarded"
+        );
+    }
+#endif
+    if (owned) return;
     origin(actionButtonId, buttonData, x, y, dx, dy, forceMotionlessPointer);
 }
 
@@ -57,9 +95,20 @@ LL_TYPE_INSTANCE_HOOK(
     int                                                 keyCode,
     Bedrock::Input::KeyboardEventProcessor::InputOrigin originType
 ) {
+    bool const owned = menuOwnsGameInput();
+    bool const eaten = owned && keyCode != Keyboard::F11;
+    ND_DEBUG(
+        "[input] t={} hid vk=0x{:02X}({}) name=\"{}\" state=down origin={} action={}",
+        GetTickCount64(),
+        static_cast<unsigned>(keyCode),
+        keyCode,
+        input::keyName(keyCode),
+        static_cast<int>(originType),
+        eaten ? "eaten" : "forwarded"
+    );
     // F11 (toggle fullscreen) is a window action: while the panel is open it is the
     // only way out of a bad resolution, so it must never be eaten.
-    if (menuOwnsGameInput() && keyCode != Keyboard::F11) return;
+    if (eaten) return;
     origin(keyCode, originType);
 }
 
@@ -71,9 +120,38 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     int keyCode
 ) {
-    if (menuOwnsGameInput() && keyCode != Keyboard::F11) return;
+    bool const owned = menuOwnsGameInput();
+    bool const eaten = owned && keyCode != Keyboard::F11;
+    ND_DEBUG(
+        "[input] t={} hid vk=0x{:02X}({}) name=\"{}\" state=up action={}",
+        GetTickCount64(),
+        static_cast<unsigned>(keyCode),
+        keyCode,
+        input::keyName(keyCode),
+        eaten ? "eaten" : "forwarded"
+    );
+    if (eaten) return;
     origin(keyCode);
 }
+
+#ifdef TEST
+LL_TYPE_INSTANCE_HOOK(
+    GuardTextInputHook,
+    ll::memory::HookPriority::Highest,
+    HIDControllerGameCoreDesktop,
+    &HIDControllerGameCoreDesktop::$onTextInput,
+    void,
+    std::string const& utf8Text
+) {
+    ND_DEBUG(
+        "[input] t={} hid text=\"{}\" owned={}",
+        GetTickCount64(),
+        textForLog(utf8Text),
+        menuOwnsGameInput() ? 1 : 0
+    );
+    origin(utf8Text);
+}
+#endif
 
 } // namespace
 
@@ -92,6 +170,9 @@ InputGuardStatus installInputGuard() {
     if (!gStatus.mouseHookInstalled) gStatus.mouseHookInstalled = GuardMouseHook::hook() == 0;
     if (!gStatus.keyDownHookInstalled) gStatus.keyDownHookInstalled = GuardKeyDownHook::hook() == 0;
     if (!gStatus.keyUpHookInstalled) gStatus.keyUpHookInstalled = GuardKeyUpHook::hook() == 0;
+#ifdef TEST
+    if (!gStatus.textInputHookInstalled) gStatus.textInputHookInstalled = GuardTextInputHook::hook() == 0;
+#endif
     return gStatus;
 }
 
@@ -108,6 +189,12 @@ void uninstallInputGuard() {
         GuardKeyUpHook::unhook();
         gStatus.keyUpHookInstalled = false;
     }
+#ifdef TEST
+    if (gStatus.textInputHookInstalled) {
+        GuardTextInputHook::unhook();
+        gStatus.textInputHookInstalled = false;
+    }
+#endif
 
     gHandoffDepth = 0;
     gCaptureActive.store(false, std::memory_order_release);

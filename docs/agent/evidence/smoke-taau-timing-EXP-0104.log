@@ -1,0 +1,1781 @@
+# agentflow smoke taau-timing on EXP-0104
+# started 2026-10-29T21:58:28.858+08:00  verdict=FAIL elapsed=180s
+# tree 7ae1581317c18cb2  head df7155b8
+# dll 41913207b0c1b567
+# profile scripts\agentflow\smoke\taau-timing.json
+# requires=['\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)']
+# missing=['\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\)', '\\[vv\\] TAAU timing available: [0-9.]+ ms \\([1-9]\\d* samples\\) x0/1']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 1588793 -> 1766830
+[2026-10-29 21:58:41.054 IFO][LeviLamina]                                                                       
+[2026-10-29 21:58:41.054 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-29 21:58:41.054 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-29 21:58:41.054 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-29 21:58:41.054 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-29 21:58:41.054 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-29 21:58:41.054 IFO][LeviLamina]                                                                       
+[2026-10-29 21:58:41.054 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-29 21:58:41.054 IFO][LeviLamina]                                                                       
+[2026-10-29 21:58:41.054 IFO][LeviLamina]                                                                       
+[2026-10-29 21:58:41.054 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-29 21:58:41.054 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-29 21:58:41.073 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-29 21:58:41.073 IFO][LeviLamina] 正在加载模组……
+[2026-10-29 21:58:41.075 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-29 21:58:41.483 DBG][NeuroDragon] NR model already in place, skipping (E:\LeviLauncher\versions\1.26.51.01\nvngx_dlssnr.dll , 254 MB)
+[2026-10-29 21:58:41.483 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-29 21:58:41.483 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-29 21:58:43.098 WRN][Server] <LVL|2058689088> Migration started
+[2026-10-29 21:58:43.101 WRN][Server] <LVL|2058689088> Migration completed in 0.003000 seconds
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] Width f=0 = 2560
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] Height f=0 = 1440
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] CreationNodeMask f=0 = 1
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] VisibilityNodeMask f=0 = 1
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] Width f=0 = 1485
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] Height f=0 = 835
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] OutWidth f=0 = 2560
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] OutHeight f=0 = 1440
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] DLSS.Hint.Render.Preset.DLAA f=0 = 2147483659
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] DLSS.Hint.Render.Preset.Quality f=0 = 2147483659
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] DLSS.Hint.Render.Preset.Balanced f=0 = 2147483659
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] DLSS.Hint.Render.Preset.Performance f=0 = 2147483661
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] DLSS.Hint.Render.Preset.UltraQuality f=0 = 2147483659
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] DLSS.Hint.Render.Preset.UltraPerformance f=0 = 2147483660
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] RayReconstruction.Hint.Render.Preset.DLAA f=0 = 2147483652
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] RayReconstruction.Hint.Render.Preset.Quality f=0 = 2147483652
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] RayReconstruction.Hint.Render.Preset.Balanced f=0 = 2147483652
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] RayReconstruction.Hint.Render.Preset.Performance f=0 = 2147483652
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] RayReconstruction.Hint.Render.Preset.UltraQuality f=0 = 2147483652
+[2026-10-29 21:58:52.048 IFO][NeuroDragon] [param4] RayReconstruction.Hint.Render.Preset.UltraPerformance f=0 = 2147483652
+[2026-10-29 21:58:52.216 DBG][NeuroDragon] [create] feature=1 params=0x245e92b5a70 ret=0x1 handle=0x2470ae4f390
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=36436 = 0x245e9857f30
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=36436 = 0x245e9ff8db0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=36436 = 0x245e96bcd70
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=36436 = 0x245e96b8a80
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=36436 = 0x0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:52.356 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=9152 = 0x245e9857f30
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=9152 = 0x245e9ffb3f0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=9152 = 0x245e96bcd70
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=9152 = 0x245e96b8a80
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=9152 = 0x0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:53.208 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:53.209 WRN][Server] <LVL|3806022880> Time played notifier not required for 'zh_CN'
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=19188 = 0x245e9857f30
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=19188 = 0x245e9ff8db0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=19188 = 0x245e96bcd70
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=19188 = 0x245e96b8a80
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=19188 = 0x0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:53.816 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=9152 = 0x245e9857f30
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=9152 = 0x245e9ffb3f0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=9152 = 0x245e96bcd70
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=9152 = 0x245e96b8a80
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=9152 = 0x0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:54.507 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=9152 = 0x245e9857f30
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=9152 = 0x245e9ff8db0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=9152 = 0x245e96bcd70
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=9152 = 0x245e96b8a80
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=9152 = 0x0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:55.281 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:55.282 IFO][LeviLamina] 正在启用模组……
+[2026-10-29 21:58:55.282 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-29 21:58:55.282 DBG][NeuroDragon] [probe] 模块已 PIN（禁用后仍需重启游戏才能彻底卸载）
+[2026-10-29 21:58:55.282 IFO][NeuroDragon] NR 已启用（config/config.json：nr.enabled = true）
+[2026-10-29 21:58:55.417 DBG][NeuroDragon] [nr] level 监听 join=true exit=true
+[2026-10-29 21:58:55.506 DBG][NeuroDragon] [sr] frame-context hook @ 0x7ff6158653c0
+[2026-10-29 21:58:55.583 DBG][NeuroDragon] [vv] taau hooked at 0x7ff612fef860 (rva 0xb74f860)
+[2026-10-29 21:58:55.646 DBG][NeuroDragon] [vv] level listeners join=true exit=true tick=true
+[2026-10-29 21:58:55.725 DBG][NeuroDragon] [vv] taau draw hooked at 0x7ff612ff2820 (rva 0xb752820)
+[2026-10-29 21:58:55.725 DBG][NeuroDragon] [vv] texture table: layout ok (rva 0xdfa4214 -> global 0x12006060); ctx resolved on first sample
+[2026-10-29 21:58:55.790 DBG][NeuroDragon] [vv] material texture hooked at 0x7ff6158964e0 (rva 0xdff64e0)
+[2026-10-29 21:58:55.860 DBG][NeuroDragon] [vv] D3D12CreateDevice hooked
+[2026-10-29 21:58:55.860 IFO][NeuroDragon] [vv] options: marker './mods/NeuroDragon\config\force_bilinear.flag' present=0 (mod dir './mods/NeuroDragon'), 'E:\LeviLauncher\versions\1.26.51.01\force_bilinear.flag' present=0
+[2026-10-29 21:58:55.929 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-29 21:58:55.931 DBG][NeuroDragon] [vv] device created 0x24516b2ba30
+[2026-10-29 21:58:56.008 DBG][NeuroDragon] [vv] CreateRenderTargetView hooked on device 0x24516b2ba30 (target 0x7ff8f7c84700)
+[2026-10-29 21:58:56.090 DBG][NeuroDragon] [vv] CreateDepthStencilView hooked on device 0x24516b2ba30 (target 0x7ff8f7c91d90)
+[2026-10-29 21:58:56.913 DBG][NeuroDragon] overlay: ready (End opens the panel)
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] 安装游戏内面板：完成，用时 984 ms
+[2026-10-29 21:58:56.913 IFO][LeviLamina] 已在 1.6 秒内启用 1 个模组
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=9152 = 0x245e9857f30
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=9152 = 0x245e9ffb3f0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=9152 = 0x245e96bcd70
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=9152 = 0x245e96b8a80
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=9152 = 0x0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:56.913 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:56.913 DBG][NeuroDragon] [init] hooked NVSDK_NGX_D3D12_Init on _nvngx.dll
+[2026-10-29 21:58:56.914 DBG][NeuroDragon] [init] hooked NVSDK_NGX_D3D12_Init_Ext on _nvngx.dll
+[2026-10-29 21:58:56.914 DBG][NeuroDragon] [init] hooked NVSDK_NGX_D3D12_Init_ProjectID on _nvngx.dll
+[2026-10-29 21:58:56.914 DBG][NeuroDragon] [vv] submit #1 tid=27280 lists=21
+[2026-10-29 21:58:56.914 DBG][NeuroDragon] [vv] engine list vtable=0x7ff8f7f4a830 slot9=D3D12Core.dll+0x232dd0 slot12=D3D12Core.dll+0x234f30 slot13=D3D12Core.dll+0x234c80 slot25=D3D12Core.dll+0x238f50 slot28=D3D12Core.dll+0x238900
+[2026-10-29 21:58:56.914 DBG][NeuroDragon] [vv] engine device 0x24516b2ba30
+[2026-10-29 21:58:56.914 DBG][NeuroDragon] [vv] device created 0x24516b2ba30
+[2026-10-29 21:58:57.002 DBG][NeuroDragon] [vv] command list slot 12 (DrawInstanced) hooked
+[2026-10-29 21:58:57.079 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_EvaluateFeature @ 0x7ff8f7938740
+[2026-10-29 21:58:57.079 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_CreateFeature @ 0x7ff8f7938540
+[2026-10-29 21:58:57.079 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_GetCapabilityParameters @ 0x7ff8f79380f0
+[2026-10-29 21:58:57.079 DBG][NeuroDragon] [ngx] hooked NVSDK_NGX_D3D12_GetParameters @ 0x7ff8f7938350
+[2026-10-29 21:58:57.079 DBG][NeuroDragon] [ngx] originals create=0x7ff8b79202a0 eval=0x7ff8b7920240
+[2026-10-29 21:58:57.080 IFO][NeuroDragon] [sr] DLSS runtime: E:\LeviLauncher\versions\1.26.51.01\nvngx_dlss.dll (58956912 bytes)
+[2026-10-29 21:58:57.081 DBG][NeuroDragon] [vv] command list slot 13 (DrawIndexedInstanced) hooked
+[2026-10-29 21:58:57.230 DBG][NeuroDragon] [vv] command list slot 46 (OMSetRenderTargets) hooked
+[2026-10-29 21:58:57.241 DBG][NeuroDragon] [vv] chain: now buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-29 21:58:57.241 DBG][NeuroDragon] [vv] 3 back buffer(s) excluded from the render-target inventory
+[2026-10-29 21:58:57.241 DBG][NeuroDragon] [vv] presents=1 submits=1 lists=21 maxListsPerSubmit=21 taau=0 draws=0 | submits/frame=1.00 lists/frame=21.00 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:58:57.241 DBG][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-29 21:58:57.241 DBG][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-29 21:58:57.241 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+[2026-10-29 21:58:57.378 DBG][NeuroDragon] [vv] rtv res=0x0 0x0 fmt=0
+[2026-10-29 21:58:57.410 DBG][NeuroDragon] overlay: ImGui context created on window 0x3120526
+[2026-10-29 21:58:57.555 DBG][NeuroDragon] [vv] submit #2 tid=27280 lists=1
+[2026-10-29 21:58:57.557 DBG][NeuroDragon] [vv] submit #3 tid=27280 lists=1
+[2026-10-29 21:58:57.558 DBG][NeuroDragon] [vv] rtv res=0x2475f81fe40 2560x1440 fmt=28
+[2026-10-29 21:58:57.558 DBG][NeuroDragon] [vv] dsv res=0x245e982cd30 2560x1440 fmt=39
+[2026-10-29 21:58:57.558 IFO][NeuroDragon] [sr] ctx call #1 engine=00000245124FA040 ctx=000002450579ADC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=1 rq=1 af=-1.000 rf=-1.000 render=1485x835 tail=1.000 valid=1
+[2026-10-29 21:58:57.558 IFO][NeuroDragon] [sr] ctx #1 q=1 f=-1.000 extra=1.000 flags=0x0 | engine aq=1 rq=1 af=-1.000 rf=-1.000 render=1485x835 tail=1.000
+[2026-10-29 21:58:57.882 DBG][NeuroDragon] [vv] om rt #1 list=0x245cff30100 count=1 single=1 handle0=0x245d5c4cea0 increment=32
+[2026-10-29 21:58:57.882 DBG][NeuroDragon] [vv] om rt #2 list=0x245cff30100 count=1 single=1 handle0=0x245d5c4cea0 increment=32
+[2026-10-29 21:58:57.882 DBG][NeuroDragon] [vv] slot13 raw #1 this=0x245cf3fb960 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.882 DBG][NeuroDragon] [vv] slot13 raw #2 this=0x245cf3fe930 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.882 DBG][NeuroDragon] [vv] slot13 raw #3 this=0x245cff32740 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [vv] slot13 raw #4 this=0x245cff2e450 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [vv] slot13 raw #7 this=0x245cf3fcc80 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [vv] slot13 raw #6 this=0x245cff31420 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [vv] slot13 raw #5 this=0x245cf3fa640 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [vv] slot13 raw #8 this=0x245cf3fdfa0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr Color f=0 tid=27280 = 0x245e9857f30
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr Output f=0 tid=27280 = 0x245e9ff8db0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr Depth f=0 tid=27280 = 0x245e96bcd70
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr MotionVectors f=0 tid=27280 = 0x245e96b8a80
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] TonemapperType f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=0 tid=27280 = 0x0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=0 = 0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=0 = 1485
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=0 = 835
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] Color f=1 p=0x245e9857f30 dev=0x24516b2ba30 fmt=10 2560x1440 arr=1 mips=1 flags=0x5
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] Color f=1 -> set
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] Depth f=1 p=0x245e96bcd70 dev=0x24516b2ba30 fmt=41 1485x836 arr=1 mips=1 flags=0x4
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] Depth f=1 -> set
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] MotionVectors f=1 p=0x245e96b8a80 dev=0x24516b2ba30 fmt=34 1485x836 arr=1 mips=1 flags=0x4
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] MotionVectors f=1 -> set
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] Output f=1 p=0x245e9ff8db0 dev=0x24516b2ba30 fmt=10 2560x1440 arr=1 mips=1 flags=0x4
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [res] Output f=1 -> set
+[2026-10-29 21:58:57.883 DBG][NeuroDragon] [sr] wrapped optimal-settings callback params=00000245E92B5A70 orig=00007FF8F003C1B0
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [sr] req q=1->2 (active q=1 f=-1.000)
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [sr] fb factor table_rva=0xe9776e0 index=1 current=0.580
+[2026-10-29 21:58:57.883 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.580 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:58:58.040 DBG][NeuroDragon] [nr] timestamp 频率 1000000000
+[2026-10-29 21:58:58.040 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：开始…
+[2026-10-29 21:58:58.042 DBG][NeuroDragon] [nr] create：placement=before 域 1485x835（guide 1485x835）→ 特征 1485x835（100%）
+[2026-10-29 21:58:58.390 IFO][NeuroDragon] [nr] encode shader compile diagnostics: E:\LeviLauncher\versions\1.26.51.01\nr_encode(176,16-32): warning X3571: pow(f, e) will not work for negative f, use abs(f) or conditionally handle negative values if you expect them
+E:\LeviLauncher\versions\1.26.51.01\nr_encode(92,5): warning X4000: use of potentially uninitialized variable (HueGuard)
+
+[2026-10-29 21:58:58.421 DBG][NeuroDragon] [nr] encode PSO ok (162060 bytes)
+[2026-10-29 21:58:58.425 DBG][NeuroDragon] [nr] HDR↔LDR shader 就绪（Reinhard + gamma 2.2 / 反变换）
+[2026-10-29 21:58:58.425 DBG][NeuroDragon] [nr] core module=00007FF8F78D0000
+[2026-10-29 21:58:58.429 DBG][NeuroDragon] [nr] core GetFeatureRequirements(0x12) ret=0x00000001 supported=0 (0=ok,1=check,2=driver,4=adapter,8=os,16=notimpl) minHW=0x1B0 minOS=10.0.0
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [nr] core GetFeatureRequirements(0x01) ret=0x00000001 supported=0 (0=ok,1=check,2=driver,4=adapter,8=os,16=notimpl) minHW=0x160 minOS=10.0.0
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [nr] 引擎初始化上下文 appId=0 dataPath=<none>（0/空 表示没抓到）
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [nr] runtime module=00007FF87AA50000（由 core 自己从应用目录加载）
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [sr] wrapped optimal-settings callback params=00000245E92CA170 orig=00007FF8F003C1B0
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [nr] params vtable ours=00007FF8F79859B8 engine=00007FF8F79859B8 same=1
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [nr] create: networkPreset=0 (0=默认, 1=上一版)
+[2026-10-29 21:58:58.432 DBG][NeuroDragon] [nr] 参数往返 DLSSNR.Width=1485 期望=1485
+[2026-10-29 21:58:58.717 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：完成，用时 677 ms
+[2026-10-29 21:58:58.717 DBG][NeuroDragon] [nr] 窗口 #0 开始 f=1..60，dump 于 31（每次求值都合成，窗口只影响计时/dump）
+[2026-10-29 21:58:58.717 DBG][NeuroDragon] [nr] placement 切换 → before（重建 + 双侧 Reset）
+[2026-10-29 21:58:58.717 DBG][NeuroDragon] [nr] MV scale 1485.000,835.000 (guide 1485x836)
+[2026-10-29 21:58:58.717 DBG][NeuroDragon] [nr] 本窗参数 Style=0 Enabled=1 Intensity=1.00 Skin=1.00 DepthInverted=1 Replace=6 NrEncode=3 NRReset=0（窗口 #0）
+[2026-10-29 21:58:58.717 DBG][NeuroDragon] [nr] 资源往返校验 DLSSNR.Color=00000247083E4190 写入=00000247083E4190 ok
+[2026-10-29 21:58:58.718 DBG][NeuroDragon] [nr] 一次性重置：给引擎 DLSS 发一次 Reset=1（进存档或热键）
+[2026-10-29 21:58:58.748 IFO][NeuroDragon] [sr] RCAS 就绪：cs_5_1 编译 + 根签名 + PSO 用时 31 ms（只在第一次启用时发生）
+[2026-10-29 21:58:58.748 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:58:58.748 DBG][NeuroDragon] [eval] f=1 tid=27280 cl=0x245cf3f9cb0 h=0x2470ae4f390 1485x835 c=0x245e9857f30 d=0x245e96bcd70 mv=0x245e96b8a80 o=0x245e9ff8db0 ret=0x1
+[2026-10-29 21:58:58.748 DBG][NeuroDragon] [vv] submit #4 tid=27280 lists=22
+[2026-10-29 21:58:58.748 DBG][NeuroDragon] [vv] inject pipeline ready
+[2026-10-29 21:58:58.748 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:58:58.748 WRN][NeuroDragon] [vv] inject skipped (1): no arg10 writer in this submission; TAAU restored
+[2026-10-29 21:58:58.753 DBG][NeuroDragon] [vv] presents=2 submits=4 lists=45 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.50 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:58:58.753 DBG][NeuroDragon] [vv] long frame 1511.2 ms at present #2
+[2026-10-29 21:58:58.753 DBG][NeuroDragon] [vv] submit #5 tid=27280 lists=1
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] ctx call #2 engine=00000245124FA040 ctx=000002450661B780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=1 rq=2 af=-1.000 rf=-1.000 render=1485x835 tail=1.000 valid=1
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=1 af=-1.000 render=1485x835)
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] ctx #2 q=2 f=-1.000 extra=1.000 flags=0x0 | engine aq=1 rq=2 af=-1.000 rf=-1.000 render=1485x835 tail=1.000
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] Width f=1 = 2560
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] Height f=1 = 1440
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] cb stack: exe+dfb606a exe+dfc545b exe+b725025 exe+b729ec8 exe+b727544 exe+bcad0fb
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] cb #1 display=2560x1440 q=2 -> render=1707x960 sharp=0.350 dyn[1280x720..2560x1440] ret=0x00000001
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] CreationNodeMask f=1 = 1
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] VisibilityNodeMask f=1 = 1
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] Width f=1 = 1707
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] Height f=1 = 960
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] OutWidth f=1 = 2560
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [param4] OutHeight f=1 = 1440
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] create stack: exe+30400eacd exe+e412d8b exe+30401206b exe+dfc7102 exe+dfb606a exe+dfc545b exe+b725025 exe+b729ec8
+[2026-10-29 21:58:58.754 IFO][NeuroDragon] [sr] create preset=13 (hint 0x8000000b -> 0x8000000d)
+[2026-10-29 21:58:58.799 DBG][NeuroDragon] [create-export] feature=1 ret=0x1 handle=0x245f213a3d0
+[2026-10-29 21:58:58.799 DBG][NeuroDragon] [create] feature=1 params=0x245e92b5a70 ret=0x1 handle=0x245f213a3d0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr Color f=1 tid=11912 = 0x245e9857f30
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr Output f=1 tid=11912 = 0x245e9ffb3f0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr Depth f=1 tid=11912 = 0x245e96bcd70
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr MotionVectors f=1 tid=11912 = 0x245e96b8a80
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] TonemapperType f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=1 tid=11912 = 0x0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=1 = 0
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=1 = 1707
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=1 = 960
+[2026-10-29 21:58:59.638 DBG][NeuroDragon] [sr] fb factor table[1] 0.580 -> 0.667 (66%)
+[2026-10-29 21:58:59.638 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:58:59.779 DBG][NeuroDragon] [nr] 特征 1485x835 → 1707x960（placement before，域 1707x960，guide 1707x960，100%，第 1 次重建）
+[2026-10-29 21:58:59.780 DBG][NeuroDragon] [nr] MV scale 1707.000,960.000 (guide 1485x836)
+[2026-10-29 21:58:59.780 DBG][NeuroDragon] [nr] 资源往返校验 DLSSNR.Color=00000247083E4190 写入=00000247083E4190 ok
+[2026-10-29 21:58:59.780 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:58:59.780 DBG][NeuroDragon] [eval] f=2 tid=11912 cl=0x245cff33a60 h=0x245f213a3d0 1707x960 c=0x245e9857f30 d=0x245e96bcd70 mv=0x245e96b8a80 o=0x245e9ffb3f0 ret=0x1
+[2026-10-29 21:58:59.781 DBG][NeuroDragon] [vv] submit #6 tid=27280 lists=22
+[2026-10-29 21:58:59.781 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:58:59.781 WRN][NeuroDragon] [vv] inject skipped (2): no arg10 writer in this submission; TAAU restored
+[2026-10-29 21:58:59.862 DBG][NeuroDragon] [vv] presents=3 submits=6 lists=68 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.67 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:58:59.862 DBG][NeuroDragon] [vv] long frame 1108.6 ms at present #3
+[2026-10-29 21:58:59.862 DBG][NeuroDragon] [vv] submit #7 tid=27280 lists=1
+[2026-10-29 21:58:59.864 WRN][Server] <LVL|3805852064> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-29 21:58:59.864 WRN][Server] <LVL|3805852064> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-29 21:59:00.277 DBG][NeuroDragon] [vv] dsv res=0x2476f0fbae0 2560x1440 fmt=39
+[2026-10-29 21:59:00.277 DBG][NeuroDragon] [vv] rtv res=0x2476f2dfd80 2560x1440 fmt=10
+[2026-10-29 21:59:00.277 IFO][NeuroDragon] [sr] ctx call #3 engine=00000245124FA040 ctx=000002450579ADC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:00.277 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:00.277 IFO][NeuroDragon] [sr] ctx #3 q=2 f=-1.000 extra=1.000 flags=0x0 | engine aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000
+[2026-10-29 21:59:00.328 WRN][Server] <LVL|4069752848> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr Color f=2 tid=28076 = 0x2476f2dfd80
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr Output f=2 tid=28076 = 0x2476e2996b0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr Depth f=2 tid=28076 = 0x2478b7b83e0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr MotionVectors f=2 tid=28076 = 0x2476f2e4a00
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] TonemapperType f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=2 tid=28076 = 0x0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=2 = 0
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=2 = 1707
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=2 = 960
+[2026-10-29 21:59:00.753 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:00.754 DBG][NeuroDragon] [nr] Replace=6 placement=before 生效：TRP Ratio 合成（strength=0.00 white=1.00 colour=1.00 maxRatio=2.00）
+[2026-10-29 21:59:00.756 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:00.756 DBG][NeuroDragon] [eval] f=3 tid=28076 cl=0x245d2a7d870 h=0x245f213a3d0 1707x960 c=0x2476f2dfd80 d=0x2478b7b83e0 mv=0x2476f2e4a00 o=0x2476e2996b0 ret=0x1
+[2026-10-29 21:59:00.756 DBG][NeuroDragon] [vv] submit #8 tid=27280 lists=22
+[2026-10-29 21:59:00.756 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:59:00.756 WRN][NeuroDragon] [vv] inject skipped (3): no arg10 writer in this submission; TAAU restored
+[2026-10-29 21:59:00.758 DBG][NeuroDragon] [vv] presents=4 submits=8 lists=91 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.75 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:00.758 DBG][NeuroDragon] [vv] long frame 896.8 ms at present #4
+[2026-10-29 21:59:00.758 DBG][NeuroDragon] [vv] submit #9 tid=27280 lists=1
+[2026-10-29 21:59:00.760 IFO][NeuroDragon] [sr] ctx call #4 engine=00000245124FA040 ctx=000002450661B780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:00.760 IFO][NeuroDragon] [sr] ctx #4 q=2 f=-1.000 extra=1.000 flags=0x0 | engine aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr Color f=3 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr Output f=3 tid=42716 = 0x24708480710
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr Depth f=3 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr MotionVectors f=3 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] TonemapperType f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=3 tid=42716 = 0x0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=3 = 0
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=3 = 1707
+[2026-10-29 21:59:01.598 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=3 = 960
+[2026-10-29 21:59:01.599 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:01.599 DBG][NeuroDragon] [vv] submit #10 tid=27280 lists=22
+[2026-10-29 21:59:01.599 WRN][NeuroDragon] [vv] inject: arg10 writer not found (split=0/22)
+[2026-10-29 21:59:01.601 DBG][NeuroDragon] [vv] presents=5 submits=10 lists=114 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.80 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:01.601 DBG][NeuroDragon] [vv] long frame 843.6 ms at present #5
+[2026-10-29 21:59:01.601 DBG][NeuroDragon] [vv] submit #11 tid=27280 lists=1
+[2026-10-29 21:59:01.658 IFO][NeuroDragon] [sr] ctx call #5 engine=00000245124FA040 ctx=000002450579ADC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:01.658 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:01.658 IFO][NeuroDragon] [sr] ctx #5 q=2 f=-1.000 extra=1.000 flags=0x0 | engine aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr Color f=4 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr Output f=4 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr Depth f=4 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr MotionVectors f=4 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] TonemapperType f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=4 tid=42716 = 0x0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.X f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Translucency.Subrect.Base.Y f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.X f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Input.Bias.Current.Color.Subrect.Base.Y f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.X f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Output.Subrect.Base.Y f=4 = 0
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Width f=4 = 1707
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [param4] DLSS.Render.Subrect.Dimensions.Height f=4 = 960
+[2026-10-29 21:59:02.604 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:02.606 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:02.608 DBG][NeuroDragon] [vv] submit #12 tid=27280 lists=22
+[2026-10-29 21:59:02.610 DBG][NeuroDragon] [vv] presents=6 submits=12 lists=137 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.83 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:02.610 DBG][NeuroDragon] [vv] long frame 1007.6 ms at present #6
+[2026-10-29 21:59:02.610 DBG][NeuroDragon] [vv] submit #13 tid=27280 lists=1
+[2026-10-29 21:59:02.610 IFO][NeuroDragon] [sr] ctx call #6 engine=00000245124FA040 ctx=000002450661B780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr Color f=5 tid=34708 = 0x2476f2dfd80
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr Output f=5 tid=34708 = 0x24708480710
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr Depth f=5 tid=34708 = 0x2478b7b83e0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr MotionVectors f=5 tid=34708 = 0x2476f2e4a00
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] TonemapperType f=5 = 0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=5 tid=34708 = 0x0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.X f=5 = 0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] DLSS.Input.Color.Subrect.Base.Y f=5 = 0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.X f=5 = 0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] DLSS.Input.Depth.Subrect.Base.Y f=5 = 0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.X f=5 = 0
+[2026-10-29 21:59:03.465 IFO][NeuroDragon] [param4] DLSS.Input.MV.Subrect.Base.Y f=5 = 0
+[2026-10-29 21:59:03.467 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:03.467 DBG][NeuroDragon] [vv] submit #14 tid=27280 lists=22
+[2026-10-29 21:59:03.469 DBG][NeuroDragon] [vv] presents=7 submits=14 lists=160 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.86 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:03.469 DBG][NeuroDragon] [vv] long frame 859.9 ms at present #7
+[2026-10-29 21:59:03.469 DBG][NeuroDragon] [vv] submit #15 tid=27280 lists=1
+[2026-10-29 21:59:03.471 IFO][NeuroDragon] [sr] ctx call #7 engine=00000245124FA040 ctx=000002450579ADC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:03.471 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr Color f=6 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr Output f=6 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr Depth f=6 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr MotionVectors f=6 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=6 tid=42716 = 0x0
+[2026-10-29 21:59:04.430 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:04.431 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:04.432 DBG][NeuroDragon] [vv] submit #16 tid=27280 lists=22
+[2026-10-29 21:59:04.433 DBG][NeuroDragon] [vv] presents=8 submits=16 lists=183 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.88 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:04.433 DBG][NeuroDragon] [vv] long frame 963.5 ms at present #8
+[2026-10-29 21:59:04.433 DBG][NeuroDragon] [vv] submit #17 tid=27280 lists=1
+[2026-10-29 21:59:04.434 IFO][NeuroDragon] [sr] ctx call #8 engine=00000245124FA040 ctx=000002450661B780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr Color f=7 tid=2800 = 0x2476f2dfd80
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr Output f=7 tid=2800 = 0x24708480710
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr Depth f=7 tid=2800 = 0x2478b7b83e0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr MotionVectors f=7 tid=2800 = 0x2476f2e4a00
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=7 tid=2800 = 0x0
+[2026-10-29 21:59:05.445 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:05.445 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:05.447 DBG][NeuroDragon] [vv] submit #18 tid=27280 lists=22
+[2026-10-29 21:59:05.448 DBG][NeuroDragon] [vv] presents=9 submits=18 lists=206 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.89 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:05.448 DBG][NeuroDragon] [vv] long frame 1015.1 ms at present #9
+[2026-10-29 21:59:05.448 DBG][NeuroDragon] [vv] submit #19 tid=11912 lists=1
+[2026-10-29 21:59:05.449 IFO][NeuroDragon] [sr] ctx call #9 engine=00000245124FA040 ctx=000002450579ADC0 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:05.449 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr Color f=8 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr Output f=8 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr Depth f=8 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr MotionVectors f=8 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.294 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=8 tid=42716 = 0x0
+[2026-10-29 21:59:06.295 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:06.296 DBG][NeuroDragon] [vv] submit #20 tid=11912 lists=22
+[2026-10-29 21:59:06.297 DBG][NeuroDragon] [vv] presents=10 submits=20 lists=229 maxListsPerSubmit=22 taau=0 draws=0 | submits/frame=2.00 lists/frame=22.90 taau/frame=0.00 draws/frame=0.00
+[2026-10-29 21:59:06.297 DBG][NeuroDragon] [vv] long frame 849.1 ms at present #10
+[2026-10-29 21:59:06.297 DBG][NeuroDragon] [vv] submit #21 tid=11912 lists=1
+[2026-10-29 21:59:06.300 IFO][NeuroDragon] [sr] ctx call #10 engine=00000245124FA040 ctx=000002450661B780 mode=0 q=1 flags=0x0 f=-1.000 extra=1.000 | aq=2 rq=2 af=-1.000 rf=-1.000 render=1707x960 tail=1.000 valid=1
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr Color f=9 tid=2800 = 0x2476f2dfd80
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr Output f=9 tid=2800 = 0x24708480710
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr Depth f=9 tid=2800 = 0x2478b7b83e0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr MotionVectors f=9 tid=2800 = 0x2476f2e4a00
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=9 tid=2800 = 0x0
+[2026-10-29 21:59:07.204 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:07.205 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:07.207 DBG][NeuroDragon] [vv] submit #22 tid=11912 lists=22
+[2026-10-29 21:59:07.208 DBG][NeuroDragon] [vv] long frame 912.2 ms at present #11
+[2026-10-29 21:59:07.209 DBG][NeuroDragon] [vv] submit #23 tid=27280 lists=1
+[2026-10-29 21:59:07.210 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr Color f=10 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr Output f=10 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr Depth f=10 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr MotionVectors f=10 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.154 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=10 tid=42716 = 0x0
+[2026-10-29 21:59:08.155 DBG][NeuroDragon] [sr] RCAS 等待尺寸稳定（0x0 → 2560x1440）
+[2026-10-29 21:59:08.156 DBG][NeuroDragon] [vv] submit #24 tid=27280 lists=22
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr Color f=11 tid=9152 = 0x2476f2dfd80
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr Output f=11 tid=9152 = 0x24708480710
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr Depth f=11 tid=9152 = 0x2478b7b83e0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr MotionVectors f=11 tid=9152 = 0x2476f2e4a00
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=11 tid=9152 = 0x0
+[2026-10-29 21:59:09.259 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:09.286 IFO][NeuroDragon] [sr] RCAS 锐化目标 2560x1440（格式 10）
+[2026-10-29 21:59:09.286 IFO][NeuroDragon] [sr] RCAS 锐化已启用：强度 0.672（增量 2.69 倍），2560x1440（HDR→Reinhard 域，在显示变换与 UI 之前）
+[2026-10-29 21:59:09.286 DBG][NeuroDragon] [sr] RCAS 第 1 帧（2560x1440，强度 0.672）
+[2026-10-29 21:59:09.289 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr Color f=12 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr Output f=12 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr Depth f=12 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr MotionVectors f=12 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.078 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=12 tid=42716 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr Color f=13 tid=36436 = 0x2476f2dfd80
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr Output f=13 tid=36436 = 0x24708480710
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr Depth f=13 tid=36436 = 0x2478b7b83e0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr MotionVectors f=13 tid=36436 = 0x2476f2e4a00
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=13 tid=36436 = 0x0
+[2026-10-29 21:59:10.959 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:10.963 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr Color f=14 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr Output f=14 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr Depth f=14 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr MotionVectors f=14 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=14 tid=42716 = 0x0
+[2026-10-29 21:59:11.834 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=14 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr Color f=15 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr Output f=15 tid=42716 = 0x24708480710
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr Depth f=15 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr MotionVectors f=15 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=15 tid=42716 = 0x0
+[2026-10-29 21:59:12.764 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:12.771 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr Color f=16 tid=9152 = 0x2476f2dfd80
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr Output f=16 tid=9152 = 0x2476e2996b0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr Depth f=16 tid=9152 = 0x2478b7b83e0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr MotionVectors f=16 tid=9152 = 0x2476f2e4a00
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=16 tid=9152 = 0x0
+[2026-10-29 21:59:13.549 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=16 tid=9152 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr Color f=17 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr Output f=17 tid=42716 = 0x24708480710
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr Depth f=17 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr MotionVectors f=17 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=17 tid=42716 = 0x0
+[2026-10-29 21:59:14.584 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:14.588 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr Color f=18 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr Output f=18 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr Depth f=18 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr MotionVectors f=18 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=18 tid=42716 = 0x0
+[2026-10-29 21:59:15.599 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:15.602 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr Color f=19 tid=9152 = 0x2476f2dfd80
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr Output f=19 tid=9152 = 0x24708480710
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr Depth f=19 tid=9152 = 0x2478b7b83e0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr MotionVectors f=19 tid=9152 = 0x2476f2e4a00
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=19 tid=9152 = 0x0
+[2026-10-29 21:59:16.649 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:16.652 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr Color f=20 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr Output f=20 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr Depth f=20 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr MotionVectors f=20 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=20 tid=42716 = 0x0
+[2026-10-29 21:59:17.584 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=20 tid=42716 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr Color f=21 tid=9152 = 0x2476f2dfd80
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr Output f=21 tid=9152 = 0x24708480710
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr Depth f=21 tid=9152 = 0x2478b7b83e0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr MotionVectors f=21 tid=9152 = 0x2476f2e4a00
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=21 tid=9152 = 0x0
+[2026-10-29 21:59:18.554 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:18.559 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr Color f=22 tid=44832 = 0x2476f2dfd80
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr Output f=22 tid=44832 = 0x2476e2996b0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr Depth f=22 tid=44832 = 0x2478b7b83e0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr MotionVectors f=22 tid=44832 = 0x2476f2e4a00
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=22 tid=44832 = 0x0
+[2026-10-29 21:59:19.450 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=22 tid=44832 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr Color f=23 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr Output f=23 tid=42716 = 0x24708480710
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr Depth f=23 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr MotionVectors f=23 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=23 tid=42716 = 0x0
+[2026-10-29 21:59:20.340 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:20.342 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr Color f=24 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr Output f=24 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr Depth f=24 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr MotionVectors f=24 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=24 tid=42716 = 0x0
+[2026-10-29 21:59:21.164 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=24 tid=42716 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr Color f=25 tid=19188 = 0x2476f2dfd80
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr Output f=25 tid=19188 = 0x24708480710
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr Depth f=25 tid=19188 = 0x2478b7b83e0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr MotionVectors f=25 tid=19188 = 0x2476f2e4a00
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=25 tid=19188 = 0x0
+[2026-10-29 21:59:22.070 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:22.073 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr Color f=26 tid=9152 = 0x2476f2dfd80
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr Output f=26 tid=9152 = 0x2476e2996b0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr Depth f=26 tid=9152 = 0x2478b7b83e0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr MotionVectors f=26 tid=9152 = 0x2476f2e4a00
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=26 tid=9152 = 0x0
+[2026-10-29 21:59:22.920 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=26 tid=9152 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr Color f=27 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr Output f=27 tid=42716 = 0x24708480710
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr Depth f=27 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr MotionVectors f=27 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=27 tid=42716 = 0x0
+[2026-10-29 21:59:23.845 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:23.848 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr Color f=28 tid=19188 = 0x2476f2dfd80
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr Output f=28 tid=19188 = 0x2476e2996b0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr Depth f=28 tid=19188 = 0x2478b7b83e0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr MotionVectors f=28 tid=19188 = 0x2476f2e4a00
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=28 tid=19188 = 0x0
+[2026-10-29 21:59:24.740 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=28 tid=19188 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr Color f=29 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr Output f=29 tid=42716 = 0x24708480710
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr Depth f=29 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr MotionVectors f=29 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=29 tid=42716 = 0x0
+[2026-10-29 21:59:25.750 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:25.755 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr Color f=30 tid=42716 = 0x2476f2dfd80
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr Output f=30 tid=42716 = 0x2476e2996b0
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr Depth f=30 tid=42716 = 0x2478b7b83e0
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr MotionVectors f=30 tid=42716 = 0x2476f2e4a00
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.904 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=30 tid=42716 = 0x0
+[2026-10-29 21:59:26.905 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:26.913 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr Color f=31 tid=19188 = 0x2476f2dfd80
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr Output f=31 tid=19188 = 0x24708480710
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr Depth f=31 tid=19188 = 0x2478b7b83e0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr MotionVectors f=31 tid=19188 = 0x2476f2e4a00
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr TransparencyMask f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr ExposureTexture f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr DLSS.Input.Bias.Current.Color.Mask f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Albedo f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Roughness f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Metallic f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Specular f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Subsurface f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Normals f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.ShadingModelId f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.MaterialId f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.8 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.9 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.10 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.11 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.12 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.13 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.14 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr GBuffer.Attrib.15 f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr MotionVectors3D f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr IsParticleMask f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr AnimatedTextureMask f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr DepthHighRes f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr Position.ViewSpace f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr RayTracingHitDistance f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=31 tid=19188 = 0x0
+[2026-10-29 21:59:27.905 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:28.821 DBG][NeuroDragon] [dump] nr_dump_w0.bmp domain=encoded max=0.503 mean=0.0102 above1=0.00%
+[2026-10-29 21:59:28.885 DBG][NeuroDragon] [nr] dump nr_dump_w0.bmp written max=0.50341797 nz=4941174
+[2026-10-29 21:59:28.911 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:29.875 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=33 tid=42716 = 0x0
+[2026-10-29 21:59:29.875 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:30.900 DBG][NeuroDragon] [nr] dump color_ref_w0.bmp written max=0 nz=1638720
+[2026-10-29 21:59:30.951 DBG][NeuroDragon] [dump] nr2_w0.bmp domain=encoded max=0.504 mean=0.0102 above1=0.00%
+[2026-10-29 21:59:31.007 DBG][NeuroDragon] [nr] dump nr2_w0.bmp written max=0.50390625 nz=4939573
+[2026-10-29 21:59:31.042 DBG][NeuroDragon] [nr] dump fed_w0.bmp written max=0 nz=1638720
+[2026-10-29 21:59:31.079 DBG][NeuroDragon] [nr] dump base_w0.bmp written max=0 nz=0
+[2026-10-29 21:59:31.086 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:31.821 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:32.950 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:32.991 DBG][NeuroDragon] [nr] dump out_after_w0.bmp written max=0 nz=3686400
+[2026-10-29 21:59:32.993 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:34.031 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:34.034 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:35.380 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:35.416 DBG][NeuroDragon] [nr] dump out_b_w0.bmp written max=0 nz=3686400
+[2026-10-29 21:59:35.419 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:36.571 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:36.575 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:37.606 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:37.609 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:39.396 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:39.400 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:41.172 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:41.176 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:42.961 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=53 tid=42716 = 0x0
+[2026-10-29 21:59:42.961 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:42.965 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:44.072 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:44.075 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:45.087 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:45.090 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:46.902 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:46.905 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:48.356 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:48.360 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:50.262 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:50.269 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:51.742 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:51.746 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] 窗口 #0 统计：
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] gpu nr ms median=118.850 mean=133.238 min=109.417 max=197.960 n=13 dropped=49
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] gpu engine-dlss ms median=134.225 mean=144.848 min=111.148 max=191.421 n=13 dropped=49
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] gpu encode ms median=0.040 mean=0.052 min=0.030 max=0.538 n=62 dropped=0
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] gpu evaluate ms median=118.696 mean=132.949 min=109.273 max=197.766 n=13 dropped=49
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] gpu composite ms median=0.130 mean=0.409 min=0.099 max=11.253 n=60 dropped=0
+[2026-10-29 21:59:52.373 DBG][NeuroDragon] [nr] gpu rcas ms median=0.268 mean=0.880 min=0.214 max=14.821 n=51 dropped=0
+[2026-10-29 21:59:53.122 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:53.127 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:54.512 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:54.515 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:56.037 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:56.041 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:57.553 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:57.557 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 21:59:59.137 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=73 tid=42716 = 0x0
+[2026-10-29 21:59:59.137 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 21:59:59.141 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:01.058 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:01.061 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:02.593 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:02.597 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:04.293 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:04.296 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:06.278 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:06.282 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:07.483 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:07.488 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:08.884 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:08.889 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:10.479 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:10.483 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:11.613 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:11.616 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:13.584 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:13.589 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:15.404 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:15.408 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:17.349 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=93 tid=42716 = 0x0
+[2026-10-29 22:00:17.349 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:17.354 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:18.858 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:18.861 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:20.255 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:20.258 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:21.769 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:21.772 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:22.869 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:22.874 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:24.714 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:24.718 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:26.420 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:26.424 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:27.474 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:27.477 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:29.186 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:29.189 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:31.115 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:31.119 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:32.760 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:32.764 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:34.165 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=113 tid=11912 = 0x0
+[2026-10-29 22:00:34.165 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:34.168 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:35.555 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:35.559 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:37.290 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:37.295 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:39.056 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:39.061 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:41.001 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:41.004 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:42.022 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:42.026 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:43.797 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:43.800 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:45.961 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:45.965 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:47.047 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:47.053 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:49.151 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:49.155 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:50.381 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:50.385 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:51.436 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:51.448 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:52.491 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:52.495 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:53.516 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=133 tid=42716 = 0x0
+[2026-10-29 22:00:53.517 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:53.520 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:55.557 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:55.560 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:57.182 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:57.186 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:00:58.186 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:00:59.124 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:00.247 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:00.250 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:01.342 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:01.345 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:02.972 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:02.976 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:04.498 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:04.500 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:05.737 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:05.740 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:07.202 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:07.204 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:08.482 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:08.486 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:10.333 IFO][NeuroDragon] [param] SetPtr MotionVectorsReflection f=153 tid=2800 = 0x0
+[2026-10-29 22:01:10.333 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:10.337 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:11.998 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:12.002 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:13.749 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:13.753 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:15.659 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:15.661 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:16.703 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:16.707 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:18.104 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:18.107 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:19.214 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:19.216 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:20.308 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:20.311 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:21.608 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:21.612 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:22.744 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:22.748 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:23.899 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:23.902 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:25.655 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:25.659 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:27.389 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:27.392 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)
+[2026-10-29 22:01:29.025 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=0.667 enabled=true info=Upscaling Mode: DLSS
+[2026-10-29 22:01:29.027 IFO][NeuroDragon] [sr] ctx write q=1->2 (engine aq=2 af=-1.000 render=1707x960)

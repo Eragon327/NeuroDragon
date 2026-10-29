@@ -1,0 +1,8 @@
+EXP-0104 postmortem (2026-10-29)
+
+The deployed DLL did contain TEST markers; the previous build-configuration issue was corrected.
+The smoke log still had no TAAU timing assertion because this run did not produce VV TAAU declarations at all:
+- [vvsr] sr enabled (TAAU draw skipped) was present.
+- The log contained RT/engine-side NGX activity and injection misses, but no `[vv] taau #... viewport=...` declaration.
+Therefore the taau-timing profile has the wrong runtime precondition for this run. It does not test the VV resolution UI.
+Next verification must enter a VV world and assert actual `[vv] taau # ... viewport=...` lines, then inspect the panel dimensions. Do not repeat the TAAU-only requirement for a run with replacement enabled or no VV world.

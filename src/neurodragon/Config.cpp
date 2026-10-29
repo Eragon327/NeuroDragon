@@ -23,7 +23,17 @@ std::filesystem::path configPath() {
 // (the whole struct is reflected), but a forgotten one would then be baked into every
 // frame of the next session with nothing on screen explaining it - so it is cleared
 // after load, the way TRP keeps its Compare out of its config. The position stays.
-void clearSessionOnly() { gConfig.nr.compare = 0; }
+//
+// The same pass folds values that no longer have a meaning to the one that does:
+// `replace` is the single composite now (TRP Ratio resolve = 6), and `nrEncode`
+// only has TRP's encode (3) and the two Reinhard A/B encodes (0/1).
+void normalizeOnLoad() {
+    gConfig.nr.compare  = 0;
+    gConfig.nr.replace  = 6;
+    if (gConfig.nr.nrEncode != 0 && gConfig.nr.nrEncode != 1 && gConfig.nr.nrEncode != 3) {
+        gConfig.nr.nrEncode = 3;
+    }
+}
 
 } // namespace
 
@@ -33,23 +43,24 @@ bool loadOrCreate() {
     auto const path = configPath();
 
     // A malformed file makes loadConfig throw (it parses json eagerly); keep the
-    // defaults and rewrite in that case instead of taking the mod down. There is no
-    // migration for old values: the renderer treats everything except 5 as the ratio
-    // resolve, so a stale config cannot silently leave NR off-screen.
+    // defaults and rewrite in that case instead of taking the mod down. Values that no
+    // longer exist (the gain composite's 5, an old encode id) are folded by
+    // normalizeOnLoad() before anything reads them, so a hand-edited file cannot put
+    // the renderer into a mode that no longer has code behind it.
     try {
         if (!ll::config::loadConfig(gConfig, path)) {
             utils::logger().warn("config.json is incomplete, saving defaults");
-            clearSessionOnly();
+            normalizeOnLoad();
             return ll::config::saveConfig(gConfig, path);
         }
-        clearSessionOnly();
+        normalizeOnLoad();
         return true;
     } catch (std::exception const& e) {
         utils::logger().error("config.json is malformed ({}), rewriting defaults", e.what());
     } catch (...) {
         utils::logger().error("config.json is malformed, rewriting defaults");
     }
-    clearSessionOnly();
+    normalizeOnLoad();
     return ll::config::saveConfig(gConfig, path);
 }
 

@@ -5,7 +5,7 @@
 namespace neurodragon::probe::vv {
 
 // ---------------------------------------------------------------------------
-// Vibrant Visuals reconnaissance (read-only)
+// Vibrant Visuals: TAAU observation and replacement
 // ---------------------------------------------------------------------------
 //
 // Vibrant Visuals (graphics_mode: deferred, no ray tracing) is the path whose
@@ -14,20 +14,19 @@ namespace neurodragon::probe::vv {
 // writes the display-resolution image that bloom / tone mapping / UI then use
 // (docs/A §2, §3; docs/I §5 M4).
 //
-// Making DLSS NR + SR replace it needs three things this probe starts to answer
-// without changing a single pixel:
+// Making DLSS NR + SR replace it needs three things this probe provides:
 //
 //   1. is the pass alive at all (it is skipped entirely when upscaling_mode is
 //      Bilinear - docs/A §7.4), and what numbers does it run with
-//      (viewport / mode / factor / dynamic-resolution scale / jitter index);
-//   2. what the four framebuffer dependencies look like, because they are the
-//      only handle to the colour, motion-vector, history and output textures;
+//      (viewport / mode / factor / jitter);
+//   2. which resources the pass reads and writes, because they are the only handle
+//      to our input colour, motion vectors and to TAAU's output (arg10);
 //   3. how many command lists the game submits per presented frame, which decides
-//      whether work can be injected between two passes at all.
+//      where our work is injected between two passes.
 //
-// By default the detours only copy POD fields and forward. The explicitly armed
-// DLSS replacement path suppresses just the original TAAU draw callback; all other
-// engine callbacks and command lists continue unchanged.
+// The detours only copy POD fields and forward. The explicitly armed DLSS
+// replacement path suppresses just the original TAAU draw; all other engine
+// callbacks and command lists continue unchanged.
 //
 // The two addresses are file offsets established offline from the shipped
 // executable (no PDB): the strings "InputFinalColor" / "InputBufferMotionVectors"
@@ -43,18 +42,16 @@ void uninstall();
 // per submission, with the list array and its size.
 void onExecuteCommandLists(void* const* lists, unsigned listCount);
 
-// Called from the overlay's Present detours: one call per presented frame. Used
-// only to turn the counters above into "per frame" numbers.
+// Called from the overlay's Present detours: one call per presented frame. Applies
+// the product switch (vv::sr::syncConfig) and keeps the per-frame counters.
 void onPresent();
 
-// Called when the game reports that a world was joined (PlayerJoinEvent). One semantic
-// dump is taken a few seconds later, which is the only point where the render-resolution
-// textures hold a real rendered world instead of the main-menu panorama.
+// Called when the game reports that a world was joined (PlayerJoinEvent). Bumps the
+// render generation so the DLSS history restarts across a level change.
 void noteWorldEntered();
 
 // Called once from the overlay's present hook: the swap chain is the only way to
-// learn which render targets are back buffers, and those must not be transitioned by
-// the BMP dump (they live in PRESENT, not COMMON).
+// learn the display size and which render targets are back buffers.
 void noteSwapChain(void* swapChain);
 
 // Called from the overlay's ResizeBuffers / ResizeBuffers1 hooks *before* the
@@ -65,26 +62,13 @@ void noteSwapChain(void* swapChain);
 void onSwapChainResize();
 
 // The game's D3D12 direct queue, captured by the overlay's ExecuteCommandLists hook.
-// Only used by the one-shot BMP dump.
 void setGameQueue(void* queue);
 
-// B0 diagnostic triggers (docs/specs/vv.md §13.3). TEST builds act on them; a
-// release build compiles the calls out, so the panel can stay wired either way.
-// `frames` / `delayMs` describe a context sample that starts after the delay -
-// the player presses once, then walks during the wait.
-void requestContextSample(unsigned frames, unsigned delayMs);
-
-// Runs one render-resolution dump synchronously (the same path F9 uses).
-void requestDumpNow();
-
-// Frame facts for the B1a NGX-session probe. `engineDevice`/`gameQueue` are the
-// objects the renderer submits through, latched by the existing hooks; the sizes
-// are the render resolution (viewport x factor) and the display viewport.
+// Frame facts for the SR pipeline. `engineDevice`/`gameQueue` are the objects the
+// renderer submits through, latched by the existing hooks; the sizes are the render
+// resolution (viewport x factor) and the display viewport.
 [[nodiscard]] void*    engineDevice();
 [[nodiscard]] void*    gameQueue();
-// Latest native resource resolved from InputFinalColor's bgfx handle. Borrowed pointer
-// for the explicit SR dump; null until the replacement path has sampled a declarator.
-[[nodiscard]] void*    inputFinalColorResource();
 [[nodiscard]] unsigned renderWidth();
 [[nodiscard]] unsigned renderHeight();
 [[nodiscard]] unsigned displayWidth();
@@ -99,9 +83,9 @@ bool renderSizeHint(unsigned displayWidth, unsigned displayHeight, unsigned* wid
 // one. onSwapChainResize() drops it again so the next record re-derives.
 void latchRenderSize(unsigned width, unsigned height);
 
-// B1b: the render-resolution textures the RTV inventory is holding references to,
-// newest first. Only resources whose size matches the current render resolution
-// are returned. `format` is the DXGI_FORMAT number (26 = R11G11B10, 44 = R24G8,
+// The render-resolution textures the RTV inventory is holding references to, newest
+// first. Only resources whose size matches the current render resolution are
+// returned. `format` is the DXGI_FORMAT number (26 = R11G11B10, 44 = R24G8,
 // 41 = R32F, ...). The references are owned by the probe inventory, so the caller
 // must not release them.
 struct RenderTargetInfo {
@@ -120,8 +104,8 @@ struct RenderTargetInfo {
 [[nodiscard]] unsigned depthTargets(RenderTargetInfo* out, unsigned max, unsigned tolerance = 2);
 
 // Bumped whenever the render graph may have been replaced (swap-chain resize,
-// world enter). The B1b bypass caches the selected colour texture and uses this
-// to drop the cache instead of holding a stale generation across a rebuild.
+// world enter). The SR record uses it to reset the DLSS history instead of
+// reprojecting across a rebuild.
 [[nodiscard]] unsigned renderGeneration();
 
 // Whether a level is loaded, maintained by LeviLamina's client join/exit events
@@ -138,44 +122,12 @@ struct RenderTargetInfo {
 bool taaMatrices(float* current, float* previous, float* camera, float* jitter);
 
 struct TaauDrawStats {
-    std::uint64_t declared{};
-    std::uint64_t callbacks{};
-    std::uint64_t forwarded{};
-    std::uint64_t suppressed{};
-    /// Times the gate was armed, the engine's TAAU draw was suppressed, and the frame
-    /// that should have come with it never injected (no boundary, no back buffer,
-    /// record failure). Those frames are restored on the next one; a non-zero, growing
-    /// number means suppression is outrunning the replacement instead of replacing it.
-    std::uint64_t missed{};
+    std::uint64_t declared{};  ///< the engine declared the pass (once per frame)
+    std::uint64_t callbacks{}; ///< the pass' draw callback ran
+    std::uint64_t forwarded{}; ///< the original draw callback was allowed through
 };
 
-// Arms replacement only after the injector has produced a valid DLSS frame and a
-// pre-HUD boundary. While armed, drawDetour still snapshots the context but does not
-// call the engine's draw callback. Disarming restores the original path directly.
-void setTaauDrawReplacement(bool armed);
-[[nodiscard]] bool taauDrawReplacementArmed();
 [[nodiscard]] TaauDrawStats taauDrawStats();
-
-// Called by the injector only when this submission *is* the engine's frame and the
-// armed gate could not be honoured (so it is about to be disarmed again). The overlay's
-// own small submissions and every non-engine queue must never call this: they do not
-// own the frame the suppression applies to.
-void noteTaauReplacementMiss();
-
-// TEST only: dumps the 0x300-byte float windows of the TAAU draw's context, the
-// execution context and the camera object, so the view-projection packing can be
-// settled offline from one labelled in-world frame (0x1e0..0x2a0 covers jitter,
-// the current/previous pair and the camera origins).
-void dumpTaaContextWindows();
-
-// Content boundary (B1d): the index of the list in the current frame after which
-// the world composite has just finished, i.e. the first list that bound a back
-// buffer and drew (1-based; 0 when no such list was seen). This is the anchor that
-// does not move with the frame's list count - see docs/specs/vv.md §14.5. The value
-// describes the submission that just arrived, so it must be read from the same
-// ExecuteCommandLists hook that computes it (inject::prepare does).
-[[nodiscard]] unsigned backBufferWriterSplit();
-[[nodiscard]] void*    backBufferWriterList();
 
 // The product switch, and the only one: "our DLSS writes arg10 and the engine's TAAU
 // draw is skipped". Everything that drives the product reads this flag, and every
@@ -208,18 +160,6 @@ void noteArg10Gap();
 // Null until a forwarded draw bound it. The caller reads the resource's own desc,
 // because the shader binds `.zw` per the material and the format decides the SRV family.
 [[nodiscard]] void* motionVectorResource();
-
-// R3 stage D probe (docs/specs/vv.md §35.4): read-only diagnostics that answer what
-// survives suppressing the TAAU draw *before* any suppress implementation exists.
-// All three are off by default and change no engine state except the first one, which
-// skips the draw callback for exactly N frames (the picture falls back to the last
-// arg10 contents for those frames and recovers on its own).
-void               setSuppressProbeFrames(unsigned frames);
-[[nodiscard]] unsigned suppressProbeFrames();
-void               setDrawTagProbeFrames(unsigned frames);
-[[nodiscard]] unsigned drawTagProbeFrames();
-void               setChainProbeFrames(unsigned frames);
-[[nodiscard]] unsigned chainProbeFrames();
 
 // R3 stage D draw-level suppress (docs/specs/vv.md §35.4): skip only the TAAU quad
 // (first DrawIndexedInstanced(6,1) of the list that already bound this frame's arg10),
