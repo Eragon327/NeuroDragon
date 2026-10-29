@@ -3407,11 +3407,53 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
 
 void onPresent() {
     auto const presents = gPresents.fetch_add(1, std::memory_order_relaxed) + 1;
+    // Frame time as the player sees it (present to present). Cheap enough per frame,
+    // and the contract's "frame time is recorded" (S6) needs a number, not a frame
+    // count. Values outside 0..1000 ms are alt-tab/loading hitches, not frames.
+    static LARGE_INTEGER gQpcFreq{};
+    static LARGE_INTEGER gQpcLast{};
+    static std::uint64_t gQpcFrames = 0;
+    static double        gQpcSumMs  = 0.0;
+    static double        gQpcMinMs  = 0.0;
+    static double        gQpcMaxMs  = 0.0;
+    LARGE_INTEGER        qpcNow{};
+    ::QueryPerformanceCounter(&qpcNow);
+    if (gQpcFreq.QuadPart == 0) {
+        ::QueryPerformanceFrequency(&gQpcFreq);
+        gQpcLast = qpcNow;
+    } else {
+        double const ms = static_cast<double>(qpcNow.QuadPart - gQpcLast.QuadPart) * 1000.0
+                          / static_cast<double>(gQpcFreq.QuadPart);
+        gQpcLast = qpcNow;
+        if (ms > 0.0 && ms < 1000.0) {
+            gQpcSumMs += ms;
+            if (gQpcFrames == 0 || ms < gQpcMinMs) {
+                gQpcMinMs = ms;
+            }
+            if (ms > gQpcMaxMs) {
+                gQpcMaxMs = ms;
+            }
+            ++gQpcFrames;
+        }
+    }
     // First ten frames and then one line every ~10 s at 60 fps: the first frames
     // show how the counters grow, the slow line shows them settle, and neither
     // turns latest.log into a counter dump over a long session.
     if (presents <= 10 || presents % 600 == 0) {
         logSubmitRate(presents);
+        if (gQpcFrames > 0) {
+            utils::logger().info(
+                "[vv] frame time: avg={:.2f} ms min={:.2f} max={:.2f} over {} presents",
+                gQpcSumMs / static_cast<double>(gQpcFrames),
+                gQpcMinMs,
+                gQpcMaxMs,
+                gQpcFrames
+            );
+            gQpcSumMs = 0.0;
+            gQpcMinMs = 0.0;
+            gQpcMaxMs = 0.0;
+            gQpcFrames = 0;
+        }
     }
     // The product switch (docs/specs/ui.md §3): `sr.vvEnabled` is a config value, but
     // the arming itself is four injector switches, so it is applied here - every frame,
