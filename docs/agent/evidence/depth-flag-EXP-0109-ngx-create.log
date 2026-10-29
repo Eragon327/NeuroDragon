@@ -1,0 +1,51 @@
+# excerpt: nvngx_dlss_310_5_3.log lines 1-50 (create block at 15:52:33, build deployed 15:40 / EXP-0100)
+[2026-10-29 15:52:32] [tid:26524][util::setLogFilename:257] Logging to requested file (C:\Users\Eragon\AppData\Local\Temp\NeuroDragon\NGX//nvngx_dlss_310_5_3.log) enabled successfully
+[2026-10-29 15:52:32] [tid:26524][NGXInitLog:225] App logging hooks successfully initialized
+[2026-10-29 15:52:32] [tid:26524][NGXInitLog:232] Built with APP_NAME = default
+[2026-10-29 15:52:32] [tid:26524][InitCommon:111] m_pDevice: 0x0000000000000000->0x000001FFC813ECD0
+[2026-10-29 15:52:32] [tid:26524][NGXCubinD3D12::Init:117] Enabling texmode_raw
+[2026-10-29 15:52:32] [tid:26524][NGXCubinD3D12::Init:122] Build - PRODUCTION
+[2026-10-29 15:52:32] [tid:26524][NGXCubinD3D12::Init:126] GPU nodes 1 - visible node mask 1
+[2026-10-29 15:52:32] [tid:26524][NGXCubinD3D12::Init:213] Driver supports Fatbins + PTX
+[2026-10-29 15:52:32] [tid:26524][NGXCubinKernelMap::InitCubins:45] Loading NGXCubin kernels
+[2026-10-29 15:52:32] [tid:26524][NGXCubinGeneric::SetGPUArch:377] SetGPUArch:: Gpu count = 1, luid: 0x1562c
+[2026-10-29 15:52:32] [tid:26524][NGXCubinGeneric::SetGPUArch:437] m_gpuArch = 0x1b0
+[2026-10-29 15:52:32] [tid:26524][NGXCubinGeneric::genericPostInit:148] Fast UAV clear: supported
+[2026-10-29 15:52:32] [tid:26524][DLSSCubinKernelMap::InitCubins:311] Setting DLAA Cubins
+[2026-10-29 15:52:32] [tid:26524][DLSSCubinKernelMap::InitCubins:311] Setting DLSS Debug Cubins
+[2026-10-29 15:52:32] [tid:26524][DLSSCubinKernelMap::InitCubins:311] Setting DLTSS Engine Cubins
+[2026-10-29 15:52:32] [tid:26524][DLSSCubinKernelMap::InitCubins:311] Setting DLTSS NW Cubins
+[2026-10-29 15:52:32] [tid:26524][DLSSCubinKernelMap::InitCubins:311] Setting DLTSS NW E5M3_SKIP Cubins
+[2026-10-29 15:52:32] [tid:26524][DLSSCubinKernelMap::InitCubins:311] Setting DLTSS NW Cubins
+[2026-10-29 15:52:32] [tid:26524][DldnCubinKernelMap::InitCubins:138] Setting DLDN Engine Pre / Post Cubins
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::Init:208] Device 0xc813ecd0
+[2026-10-29 15:52:33] [tid:26524][NgxRayReconstruction::FillCreationParams::<lambda_8a528f50776f2555a20e0d5222198f99>::operator ():1786] Info: (DLAA) Using Default Overriden Preset Preset_D
+[2026-10-29 15:52:33] [tid:26524][NgxRayReconstruction::FillCreationParams::<lambda_8a528f50776f2555a20e0d5222198f99>::operator ():1786] Info: (Quality) Using Default Overriden Preset Preset_D
+[2026-10-29 15:52:33] [tid:26524][NgxRayReconstruction::FillCreationParams::<lambda_8a528f50776f2555a20e0d5222198f99>::operator ():1786] Info: (Balanced) Using Default Overriden Preset Preset_D
+[2026-10-29 15:52:33] [tid:26524][NgxRayReconstruction::FillCreationParams::<lambda_8a528f50776f2555a20e0d5222198f99>::operator ():1786] Info: (Perf) Using Default Overriden Preset Preset_D
+[2026-10-29 15:52:33] [tid:26524][NgxRayReconstruction::FillCreationParams::<lambda_8a528f50776f2555a20e0d5222198f99>::operator ():1786] Info: (UltraPerf) Using Default Overriden Preset Preset_D
+[2026-10-29 15:52:33] [tid:26524][NgxRayReconstruction::FillCreationParams::<lambda_8a528f50776f2555a20e0d5222198f99>::operator ():1786] Info: (UltraQuality) Using Default Overriden Preset Preset_D
+[2026-10-29 15:52:33] [tid:26524][NgxDltss::FillCreationParams::<lambda_0d6acdcb596a82e230531f05651b2081>::operator ():2923] Info: (DLAA) App hint Preset Unspecified or Overridden, using title default Preset K
+[2026-10-29 15:52:33] [tid:26524][NgxDltss::FillCreationParams::<lambda_0d6acdcb596a82e230531f05651b2081>::operator ():2923] Info: (Quality) App hint Preset Unspecified or Overridden, using title default Preset K
+[2026-10-29 15:52:33] [tid:26524][NgxDltss::FillCreationParams::<lambda_0d6acdcb596a82e230531f05651b2081>::operator ():2923] Info: (Balanced) App hint Preset Unspecified or Overridden, using title default Preset K
+[2026-10-29 15:52:33] [tid:26524][NgxDltss::FillCreationParams::<lambda_0d6acdcb596a82e230531f05651b2081>::operator ():2923] Info: (Perf) App hint Preset Unspecified or Overridden, using title default Preset M
+[2026-10-29 15:52:33] [tid:26524][NgxDltss::FillCreationParams::<lambda_0d6acdcb596a82e230531f05651b2081>::operator ():2923] Info: (UltraPerf) App hint Preset Unspecified or Overridden, using title default Preset L
+[2026-10-29 15:52:33] [tid:26524][NgxDltss::FillCreationParams::<lambda_0d6acdcb596a82e230531f05651b2081>::operator ():2923] Info: (UltraQuality) App hint Preset Unspecified or Overridden, using title default Preset K
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2092] Info: Optimal settings not used. Custom dimensions (1706x960) overriding Optimal dimensions (853x480).
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2100] Info: Dynamic scaling capability is disabled for this combination of creation parameters.
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2126] InCreationTimeWidth 1706
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2127] InCreationTimeHeight 960
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2128] InDynamicMaxSetDims.Width 1706
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2129] InDynamicMaxSetDims.Height 960
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2130] InDynamicMinSetDims.Width 1706
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2131] InDynamicMinSetDims.Height 960
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2132] OutWidth 2560
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2133] OutHeight 1440
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2134] HDR 1
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2135] Motion Vectors LowRes 1
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2136] Motion Vectors Jittered 0
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2137] Depth Inverted 1
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2138] Do Sharpening 0
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2140] Alpha Upscaling Enabled 0
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2142] PerfQualityValue NVSDK_NGX_PerfQuality_Value_UltraPerformance (3)
+[2026-10-29 15:52:33] [tid:26524][NGXDLAA::CreateDlssInstance:2147] DLSS-D Mode NVSDK_NGX_DLSS_Denoise_Mode_Off (0)

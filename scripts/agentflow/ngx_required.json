@@ -43,10 +43,5 @@
     "name": "MV.Scale.Y",
     "level": "warn",
     "why": "the y half of MV.Scale"
-  },
-  {
-    "name": "DepthInverted",
-    "level": "warn",
-    "why": "VV depth is reversed-Z (near = 1.0); wrong or missing hint degrades quality rather than failing validation"
   }
 ]

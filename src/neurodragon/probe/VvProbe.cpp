@@ -1784,6 +1784,16 @@ void onPresent() {
     }
     LARGE_INTEGER now{};
     QueryPerformanceCounter(&now);
+#ifdef TEST
+    // Present-to-present average/min/max over ~10 s: the contract's "frame time is
+    // recorded" (S6) needs a number, not a frame count. Values outside 0..1000 ms are
+    // alt-tab or loading hitches, not frames. TEST only: the panel already shows
+    // fps/frame time, and a release log stays free of per-frame aggregation.
+    static std::uint64_t frames = 0;
+    static double        sumMs  = 0.0;
+    static double        minMs  = 0.0;
+    static double        maxMs  = 0.0;
+#endif
     if (frequency && lastPresent.QuadPart) {
         double const ms = 1000.0 * static_cast<double>(now.QuadPart - lastPresent.QuadPart)
                         / static_cast<double>(frequency);
@@ -1793,6 +1803,31 @@ void onPresent() {
                 ND_DEBUG("[vv] long frame {:.1f} ms at present #{}", ms, presents);
             }
         }
+#ifdef TEST
+        if (ms > 0.0 && ms < 1000.0) {
+            sumMs += ms;
+            if (frames == 0 || ms < minMs) {
+                minMs = ms;
+            }
+            if (ms > maxMs) {
+                maxMs = ms;
+            }
+            ++frames;
+        }
+        if (frames > 0 && (presents <= 10 || presents % 600 == 0)) {
+            utils::logger().info(
+                "[vv] frame time: avg={:.2f} ms min={:.2f} max={:.2f} over {} presents",
+                sumMs / static_cast<double>(frames),
+                minMs,
+                maxMs,
+                frames
+            );
+            sumMs  = 0.0;
+            minMs  = 0.0;
+            maxMs  = 0.0;
+            frames = 0;
+        }
+#endif
     }
     lastPresent = now;
 }

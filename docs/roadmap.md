@@ -6,7 +6,7 @@
 > **本文的效力范围**：只回答「先做什么、后做什么、每阶段到什么程度算完」。
 > 每阶段**怎么做**以各 spec 为准——NR → [specs/nr.md](specs/nr.md)，SR → [specs/sr.md](specs/sr.md)，
 > VV 路径 → [specs/vv.md](specs/vv.md)，RenderDragon 与接入点 → [specs/renderdragon.md](specs/renderdragon.md)，
-> TRP 对照与代价 → [specs/trp.md](specs/trp.md)。
+> FG → [specs/fg.md](specs/fg.md)，TRP 对照与代价 → [specs/trp.md](specs/trp.md)。
 > 与这些文档的做法/价格结论冲突时按它们的口径；与本文件的**顺序**冲突时以本文件为准。
 >
 > **记录说明**：本文只记路线与阶段状态，不描述未提交代码的细节，也不作为「代码已完成」的证据。
@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | 1 | NR 神经渲染 + SR 超分（RT 路线，复用引擎 DLSS） | 🟡 一半 | NR 批 1–4；SR 的 S1–S3 | [nr](specs/nr.md) / [sr](specs/sr.md) / [trp](specs/trp.md) |
 | 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 R3 阶段 A–D 与 F1–F3 均已通过（EXP-0058/0061/0062/0063/0065/0067/0068/0070/0073/0074/0076）：draw 级 suppress、旧路径清理、出存档继续 DLSS、同帧无偏色 | M4 → M5 → M6 停在覆盖后缓冲；2026-10-28 改走 **R3**（A 纯色 ✅ → B DLSS ✅ → C 引擎 MV ✅ → D 收口 ✅ → F1–F3 ✅） | [vv](specs/vv.md) §34–§35 |
-| 3 | FG 帧生成 | ⬜ 未开始（**排期变更**，见 §6） | 尚无里程碑，须先答 §4 的未知 | [renderdragon](specs/renderdragon.md) / [ui](specs/ui.md) |
+| 3 | FG 帧生成 | ⬜ 未开始；2026-10-29 选定 VV + DLSS-G 2x，UI 后 dispatch | F0：swapchain 创建时机与 pre-UI LDR hudless | [fg](specs/fg.md) |
 | 4 | RR 光线重建（尝试） | ⬜ 未开始，**可能不可做** | 先答 §5 的决定性问题 | [nr](specs/nr.md) §12 |
 
 ## 2. 阶段 1：NR + SR（用户判定：一半）
@@ -110,30 +110,19 @@ M7/M8 的收尾项挂起，等阶段 D 之后再回来。
 
 ## 4. 阶段 3：FG（帧生成）
 
-### 4.1 排期变更
+**2026-10-29 路线已定**：先做 **VV + DLSS-G 固定 2x + Streamline**，RT 线后排；
+FG dispatch 按用户决定放在全部游戏 UI 合成之后、原始 Present 之前。完整设计、外部代码契约、
+Mac/Windows 点位与 F0–F4 验收见 [specs/fg.md](specs/fg.md)。
 
-此前文档的结论是**不排期**，2026-10-24 改为第三阶段。「Bedrock 没有 FG」说的是**引擎自己不产出帧生成**，
-不等于**不能在呈现层自己接**。面板已经有 Present 侧的设施（`Present`/`Present1`/`ResizeBuffers` 钩子 +
-D3D11On12 设备，[ui §2](specs/ui.md)），而 RenderDragon 的 P3/P4/P6 本来就是按「UI 分层 → 帧末 → present」
-给 FG 留的位（[renderdragon §4](specs/renderdragon.md)）。
+开工前的 stop/go 只剩两个前置问题：
 
-### 4.2 现存事实（都可查，不新增假设）
+1. 模组能否在游戏创建 swapchain 之前装好 factory 钩子；不能事后用 Present/Resize 冒充创建。
+2. Windows 26.51 能否在 P3/P5 取得 tonemap 后、全部 UI 前的最终 LDR hudless；
+   VV 的 `arg10` 是 HDR 中间面，不能代替它。
 
-- 驱动目录里有 `nvngx_dlssg.dll`（与 `_nvngx.dll`、`nvngx.dll` 同级）——**运行时在**，但引擎是否
-  加载/创建 feature 未知（见 4.3 第 1 条）；
-- 呈现发生在 bgfx 内部（`flip()`），DXGI `Present` 在 bgfx 里（[renderdragon §5](specs/renderdragon.md)）；
-- UI 在 SR **之后**由引擎合成（[sr §3](specs/sr.md)），所以 FG 一定需要 hudless/UI 分层，
-  否则 UI 会被插帧一起处理。
-
-### 4.3 开工前必须先答的未知
-
-| # | 未知 | 判据 |
-|---|---|---|
-| 1 | Bedrock 是否已创建 DLSS-G feature（NGX feature 2） | 看引擎是否 `LoadLibrary` 了 `nvngx_dlssg.dll`、参数表里有没有 FG 相关键；没有则要走「自建 feature」——那与 SR 的「一个进程只能一个实例」风险同类，需单独评估（[nr §3](specs/nr.md)） |
-| 2 | 谁拥有 swapchain 与帧节奏 | bgfx 持有链；FG 要么钩 bgfx `flip`，要么在 `Present1` 前插入——两者都还没验证过 |
-| 3 | depth / MV 能否拿到 | 与阶段 2 的第 3 条同源；RT 路线可从引擎 NGX 参数表拿（[nr §3](specs/nr.md)），VV 路线要先做成阶段 2 的深度源 |
-| 4 | UI 分层怎么做 | P3/P5（`drawColorCorrectedUI` / `DefaultUIRendererCompositorStage::preRender`）是候选落点，未验证 |
-| 5 | 全屏/MPO/DWM、VRR 与输入延迟的表现 | 实机 A/B：帧生成开/关的帧时间、撕裂、延迟手感 |
+VV 的 Depth/MV 与 D3D12 注入链已经在阶段 2 打通，不再是未开工项。Streamline 运行时搜索路径、
+交换链包装、输入 fence 和 UI 后 Present 调度按 FG spec 的 F0–F4 顺序验证；每步失败都直通原始 Present，
+不影响已经完成的 SR。
 
 ### 4.4 明确不碰
 

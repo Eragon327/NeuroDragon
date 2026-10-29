@@ -146,6 +146,38 @@ bool validParamObj(void* p) {
     return vt && readable(vt, 17 * sizeof(void*));
 }
 
+// What depth convention does this parameter object declare? DLSS-SR has no
+// DepthInverted parameter - the runtime's string table does not contain the name -
+// so the answer has to come from what it does read: a per-frame key if some
+// producer writes one, then the create-time flag bit 3. Nothing readable means
+// non-inverted, which is what the engine's own SR (flags 3) and our VV feature
+// (flags 3) both declare for a d = 1 - near/z buffer with sky at 1.0.
+// `source` is for the window log: 0 = parameter key, 1 = create flag, 2 = default.
+int declaredDepthInverted(void* params, int* source = nullptr) {
+    if (source) {
+        *source = 2;
+    }
+    if (!validParamObj(params)) {
+        return 0;
+    }
+    NgxParamProbe            probe{params};
+    using GetU32 = int (*)(void*, char const*, unsigned*);
+    unsigned value = 0;
+    if (probe.slot<GetU32>(11)(params, "DepthInverted", &value) == 1) {
+        if (source) {
+            *source = 0;
+        }
+        return value != 0u ? 1 : 0;
+    }
+    if (probe.slot<GetU32>(11)(params, "DLSS.Feature.Create.Flags", &value) == 1) {
+        if (source) {
+            *source = 1;
+        }
+        return (value & 8u) != 0u ? 1 : 0; // NVSDK_NGX_DLSS_Feature_Flags_DepthInverted
+    }
+    return 0;
+}
+
 // ---------------------------------------------------------------------------
 // Resource reporting (TEST build only: [desc] / [res] diagnostics)
 // ---------------------------------------------------------------------------
@@ -926,6 +958,11 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             if (sx > 0.0f) mvScaleX = sx;
             if (sy > 0.0f) mvScaleY = sy;
         }
+        // NR's guide depth is the very buffer DLSS reads, so its DepthInverted has to
+        // be what this parameter object declares, not a literal. On the engine path
+        // (RT) the engine declares it; on VV our own create flags do.
+        int       nrDepthSource   = 2;
+        int const nrDepthInverted = declaredDepthInverted(const_cast<void*>(params), &nrDepthSource);
         [[maybe_unused]] bool const recorded = nr::nrRecord(
             cmdList,
             nrPlacement == 0 ? color : out,
@@ -935,7 +972,7 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             nrGuideH,
             mvScaleX,
             mvScaleY,
-            1,
+            nrDepthInverted,
             nrReset,
             nrReplace ? const_cast<void*>(params) : nullptr,
             const_cast<void*>(out),
@@ -944,9 +981,19 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         if (timed) {
             nr::nrStampEnd(cmdList, n, 0);
         }
-        if (nrReset) {
+        // Window-start snapshot: the sizes DLSS is about to read and the depth
+        // convention the parameter object declares. Diagnostic only (no value is
+        // written), so a release build compiles it out together with its lines.
+#ifdef TEST
+        // Keyed on the window index, not on `nrReset`: reset fires only on
+        // world/size changes, which is why EXP-0109 never printed it.
+        static int loggedWindow = -2;
+        if (gNrWindowIndex >= 0 && gNrWindowIndex != loggedWindow) {
+            loggedWindow = gNrWindowIndex;
+            static char const* const kDepthSource[] = {"param", "create-flag", "default"};
             ND_DEBUG(
-                "[nr] 窗口 #{} 首帧 f={} placement={} 指南={}x{} 引擎渲染={}x{} recorded={}（DepthInverted 暂按 1=反向 Z）",
+                "[nr] 窗口 #{} 首帧 f={} placement={} 指南={}x{} 引擎渲染={}x{} recorded={}"
+                "（depthInverted={} source={}）",
                 gNrWindowIndex,
                 n,
                 nrPlacement == 1 ? "after" : "before",
@@ -954,9 +1001,29 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 nrGuideH,
                 width,
                 height,
-                recorded
+                recorded,
+                nrDepthInverted,
+                kDepthSource[nrDepthSource < 0 || nrDepthSource > 2 ? 2 : nrDepthSource]
+            );
+            // What DLSS is about to sample: nrRecord pointed the parameter object's
+            // Color at NR's composed texture. That allocation is "grow only", so after
+            // a window shrink it can be larger than the guide (nr.md §7.6), and this
+            // path writes no subrect key at all - hence `subrect=none` (EXP-0110).
+            unsigned fedW      = 0;
+            unsigned fedH      = 0;
+            unsigned fedFormat = 0;
+            bool const fed     = nr::nrFedExtent(&fedW, &fedH, &fedFormat);
+            utils::logger().info(
+                "[nr] size: guide={}x{} fed={}x{} fmt={} oversized={} subrect=none",
+                nrGuideW,
+                nrGuideH,
+                fed ? fedW : 0u,
+                fed ? fedH : 0u,
+                fed ? fedFormat : 0u,
+                (fed && (fedW > nrGuideW || fedH > nrGuideH)) ? 1 : 0
             );
         }
+#endif
 
 #ifdef TEST
             if (nrInWindow && n == gNrDumpFrame) {
@@ -1135,12 +1202,18 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             nrInWindow = gNrWindowOpen && n >= gNrWindowStart && n < gNrWindowEnd;
             // No "evaluate only" mode any more: NR records every in-world frame so
             // the picture can be judged by eye; only timing/dump stay windowed.
-            nrReplace = nr::nrReplaceContinuous();
+            // The ladder's NoNr/EngineTaau rungs set the bypass: no composite, no
+            // rebuild, Color stays whatever the caller set.
+            bool const bypass = nr::nrBypass();
+            nrReplace          = !bypass && nr::nrReplaceContinuous();
+            if (bypass) {
+                nrInWindow = false;
+            }
             // Follow the engine's sizes and the configured placement before
             // recording. A window resize, an upscaling-quality change or a
             // placement switch rebuilds the feature here (no-op on ordinary frames).
             bool sizeOk = false;
-            if (nr::nrIsCreated()) {
+            if (nr::nrIsCreated() && !bypass) {
                 sizeOk =
                     nr::nrEnsureRenderSize(cmdList, color, width, height, out, config::get().nr.placement);
             }

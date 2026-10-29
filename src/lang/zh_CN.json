@@ -225,6 +225,7 @@
             "currentSize": "尺寸（实测）",
             "rebuilding": "重建中…",
             "vvEnable": "用 DLSS 替换 TAAU",
+            "vvRung": "有效档位",
             "model": "DLSS 模型（预设）",
             "presetAuto": "驱动默认",
             "presetDefault": "驱动默认",

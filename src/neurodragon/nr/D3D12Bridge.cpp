@@ -698,6 +698,19 @@ void* gFedResource = nullptr;
 int   gFedDomain   = 0; // 0 = linear HDR, 1 = display-encoded
 #endif
 
+// Extent the engine's DLSS was last pointed at. TEST-only: its only reader is the
+// window-start probe line, which is what tells a window shrink apart from a working
+// resize (docs/specs/nr.md §7.6 - the allocation is "grow only").
+#ifdef TEST
+unsigned gFedWidth  = 0;
+unsigned gFedHeight = 0;
+unsigned gFedFormat = 0;
+#endif
+
+// Ladder-owned switch: while set, the detour records no NR and leaves Color alone
+// (docs/specs/vv.md §38). Reset to false whenever the ladder returns to Full.
+std::atomic<bool> gBypass{false};
+
 // The engine writes "Color" into its parameter object ONCE (docs/D §6.16), so from
 // the first swap onwards the object keeps handing back OUR texture. Compositing
 // onto whatever the object currently says is therefore a feedback loop: every
@@ -2690,9 +2703,29 @@ void* nrEncodedColorResource() { return gEncodedColor; }
 bool nrParamLogEnabled() { return config::get().nr.paramLog != 0; }
 #endif
 
+#ifdef TEST
+bool nrFedExtent(unsigned* width, unsigned* height, unsigned* format) {
+    bool const fed = gFedWidth != 0 && gFedHeight != 0;
+    if (width) {
+        *width = gFedWidth;
+    }
+    if (height) {
+        *height = gFedHeight;
+    }
+    if (format) {
+        *format = gFedFormat;
+    }
+    return fed;
+}
+#endif
+
 // NR composites on every in-world frame: the old "evaluate only" mode is gone, so the
 // probe no longer needs a window schedule to decide when the picture updates.
 bool nrReplaceContinuous() { return true; }
+
+void nrSetBypass(bool bypass) { gBypass.store(bypass, std::memory_order_relaxed); }
+
+bool nrBypass() { return gBypass.load(std::memory_order_relaxed); }
 namespace {
 
 // Route A (docs/D §6.14): make the engine's own upscaler consume the NR result,
@@ -2860,6 +2893,14 @@ void compositeRatio(
         paramSetPtr(engineParams, "Color", gDecodedColor);
         gSwapParams   = engineParams;
         gColorSwapped = true;
+#ifdef TEST
+        if (gDecodedColor) {
+            D3D12_RESOURCE_DESC const fedDesc = gDecodedColor->GetDesc();
+            gFedWidth  = static_cast<unsigned>(fedDesc.Width);
+            gFedHeight = static_cast<unsigned>(fedDesc.Height);
+            gFedFormat = static_cast<unsigned>(fedDesc.Format);
+        }
+#endif
     }
 #ifdef TEST
     gFedResource = gDecodedColor;

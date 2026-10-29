@@ -67,6 +67,36 @@ void syncConfig();
 
 [[nodiscard]] Stats stats();
 
+// Feature-level fallback ladder (docs/specs/vv.md §38). The RT path degrades
+// runtime -> core -> after -> before -> percent; VV has a single feature, so the
+// only meaningful reductions are the optional input (NR), the extra pass (RCAS),
+// and finally giving the frame back to TAAU. Rungs are cumulative.
+enum class Rung : int { Full = 0, NoNr = 1, NoSharp = 2, EngineTaau = 3 };
+enum class RungReason : int { None = 0, Create = 1, Eval = 2, Retry = 3 };
+#ifdef TEST
+enum class Fault : int { None = 0, Create = 1, Eval = 2 }; // session-only, TEST panel
+#endif
+
+struct Fallback {
+    Rung       rung{};
+    RungReason reason{};
+    unsigned   createFails{}; ///< consecutive creation failures
+    unsigned   evalFails{};   ///< consecutive evaluation failures
+    unsigned   sinceFrame{};  ///< sr frame the current rung was entered
+};
+
+[[nodiscard]] Fallback fallback();
+[[nodiscard]] char const* rungName(Rung rung) noexcept;
+[[nodiscard]] char const* rungReasonName(RungReason reason) noexcept;
+
+/// TEST: pretend CreateFeature / EvaluateFeature failed, to walk the ladder on
+/// demand instead of waiting for a real failure. Session-only, not a config key;
+/// the frame is skipped exactly as a real failure would skip it.
+#ifdef TEST
+void setFault(Fault fault);
+[[nodiscard]] Fault fault();
+#endif
+
 /// True after a frame successfully wrote arg10, and latched until disable/release.
 /// The direct-factor hook defers the native 100% keepalive until this is true, then
 /// keeps the render size stable while the engine rebinds its native-size motion vectors.

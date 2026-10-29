@@ -13,7 +13,8 @@ docs/
 │   ├── nr.md
 │   ├── sr.md
 │   ├── trp.md
-│   └── vv.md
+│   ├── vv.md
+│   └── fg.md
 ├── decisions/         # ADR：稳定决策，少而精
 │   ├── 0001-taau-insertion-point.md
 │   ├── 0002-no-kernel-patching.md
@@ -42,6 +43,7 @@ docs/
 | [specs/sr.md](specs/sr.md) | SR | 引擎 DLSS 的三层分辨率、内部分辨率、模型预设与重建、RCAS 锐化、截图、读数与待办 |
 | [specs/ui.md](specs/ui.md) | UI / 设置 | Present 钩子 + D3D11On12 面板、输入吞噬、draft 配置语义、监控与拆分计划；§8.1 为 VV 线 UI 收口的短期清单 |
 | [specs/trp.md](specs/trp.md) | 对照与选型 | TRP 0.5.3 的 SR/NR 功能全表、我们已有/缺什么、代价、不做与原因 |
+| [specs/fg.md](specs/fg.md) | FG（阶段 3） | VV + DLSS-G 固定 2x；pre-UI 输入、UI 后 P6 dispatch、交换链与 F0–F4 实施验收 |
 | [decisions/0001-taau-insertion-point.md](decisions/0001-taau-insertion-point.md) | ADR | 接入点选「包住 `taau`」，不是「在帧图里找缝」 |
 | [decisions/0002-no-kernel-patching.md](decisions/0002-no-kernel-patching.md) | ADR | 不做 `.trpk` / INT8 / MFG 这类对驱动内核的逆向 patch |
 | [decisions/0003-docs-layout.md](decisions/0003-docs-layout.md) | ADR | 文档改版：specs / decisions / research / archive 与六条规则 |
@@ -66,8 +68,9 @@ docs/
 
 补充约定：
 
-- `specs/` 每个主题**最多 1 份**。主题固定为 `renderdragon` / `ui` / `nr` / `sr` / `trp` / `vv`，
-  新增主题要在这里登记，并说明为什么不能追加到已有主题。
+- `specs/` 每个主题**最多 1 份**。主题固定为 `renderdragon` / `ui` / `nr` / `sr` / `trp` / `vv` / `fg`，
+  新增主题要在这里登记，并说明为什么不能追加到已有主题。`fg` 独立是因为阶段 3 同时跨 VV、
+  RenderDragon 与 UI，且包含独立的 Streamline/交换链生命周期，不适合并入任一宿主主题。
 - `decisions/` 只记**稳定的决策**（"为什么这样定"），编号 `0001` 起递增；计划与待办不写这里。
 - `research/` 是**证据**：实测日志、地址、反汇编、探针记录。可以带日期、可以互相矛盾（保留现场），
   但不要把它当行动依据。

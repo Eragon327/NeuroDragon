@@ -1,6 +1,7 @@
 #include "neurodragon/vv/VvSr.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/probe/VvCalibrate.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
@@ -171,6 +172,98 @@ std::mutex       gRecordMutex;
 std::atomic<bool> gReleased{false};
 unsigned         gColorCandidates = 0;
 unsigned         gDepthCandidates = 0;
+
+// ---- feature-level fallback (docs/specs/vv.md §38) -------------------------
+// Three consecutive creation failures are not something the optional passes can
+// fix, so they jump straight to EngineTaau; evaluation failures walk one rung at a
+// time (drop NR first - it is the invasive input - then RCAS, then give up).
+constexpr unsigned kCreateFailLimit = 3;
+constexpr unsigned kEvalFailLimit   = 120;  // ~2 s at 60 fps
+constexpr unsigned kRetryFrames     = 600;  // ~10 s on TAAU, then try Full again
+
+std::atomic<int>      gRung{static_cast<int>(Rung::Full)};
+std::atomic<int>      gRungReason{static_cast<int>(RungReason::None)};
+std::atomic<unsigned> gCreateFails{0};
+std::atomic<unsigned> gEvalFails{0};
+std::atomic<unsigned> gRungSince{0};
+std::atomic<unsigned> gSuccessStreak{0};
+#ifdef TEST
+std::atomic<int>      gFault{static_cast<int>(Fault::None)};
+#endif
+
+// The bypass has to follow the rung even on frames nobody records, so it is applied
+// when the rung changes rather than read per frame.
+void setRung(Rung rung, RungReason reason, unsigned frame) {
+    gRung.store(static_cast<int>(rung), std::memory_order_relaxed);
+    gRungReason.store(static_cast<int>(reason), std::memory_order_relaxed);
+    gRungSince.store(frame, std::memory_order_relaxed);
+    gCreateFails.store(0, std::memory_order_relaxed);
+    gEvalFails.store(0, std::memory_order_relaxed);
+    gSuccessStreak.store(0, std::memory_order_relaxed);
+    nr::nrSetBypass(rung >= Rung::NoNr);
+    if (reason == RungReason::Retry) {
+        utils::logger().info(
+            "[vvsr] fallback: {} ({}) nr={} rcas={}",
+            rungName(rung),
+            rungReasonName(reason),
+            rung < Rung::NoNr ? 1 : 0,
+            rung < Rung::NoSharp ? 1 : 0
+        );
+    } else {
+        utils::logger().warn(
+            "[vvsr] fallback: {} ({}) nr={} rcas={}",
+            rungName(rung),
+            rungReasonName(reason),
+            rung < Rung::NoNr ? 1 : 0,
+            rung < Rung::NoSharp ? 1 : 0
+        );
+    }
+}
+
+void noteCreateFailure(unsigned frame) {
+    unsigned const n = gCreateFails.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (n < kCreateFailLimit) {
+        return;
+    }
+    if (static_cast<Rung>(gRung.load(std::memory_order_relaxed)) != Rung::EngineTaau) {
+        setRung(Rung::EngineTaau, RungReason::Create, frame);
+    } else {
+        gCreateFails.store(0, std::memory_order_relaxed);
+    }
+}
+
+void noteEvalFailure(unsigned frame) {
+    unsigned const n = gEvalFails.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (n < kEvalFailLimit) {
+        return;
+    }
+    Rung       next = Rung::EngineTaau;
+    Rung const now  = static_cast<Rung>(gRung.load(std::memory_order_relaxed));
+    if (now == Rung::Full) {
+        next = Rung::NoNr;
+    } else if (now == Rung::NoNr) {
+        next = Rung::NoSharp;
+    }
+    setRung(next, RungReason::Eval, frame);
+}
+
+void noteSuccess(unsigned frame) {
+    gCreateFails.store(0, std::memory_order_relaxed);
+    gEvalFails.store(0, std::memory_order_relaxed);
+    // A degraded rung that keeps succeeding is a transient failure, not a broken
+    // feature: step back up one rung after the same cooldown the TAAU retry uses.
+    unsigned const n = gSuccessStreak.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (n < kRetryFrames) {
+        return;
+    }
+    gSuccessStreak.store(0, std::memory_order_relaxed);
+    Rung const now = static_cast<Rung>(gRung.load(std::memory_order_relaxed));
+    if (now == Rung::NoNr) {
+        setRung(Rung::Full, RungReason::Retry, frame);
+    } else if (now == Rung::NoSharp) {
+        setRung(Rung::NoNr, RungReason::Retry, frame);
+    }
+}
 
 void transition(ID3D12GraphicsCommandList* list, ID3D12Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
     if (!resource || before == after) {
@@ -607,6 +700,12 @@ void setEnabled(bool wantEnabled) {
         return;
     }
     if (wantEnabled) {
+        // A fresh enable starts from Full: the user's action is the cheapest possible
+        // "retry now", and a rung latched from a previous failure would otherwise
+        // hide the feature behind a stale decision.
+        if (static_cast<Rung>(gRung.load(std::memory_order_relaxed)) != Rung::Full) {
+            setRung(Rung::Full, RungReason::Retry, 0);
+        }
         // Arm the injection first, then the draw skip: the suppress gate only fires on
         // a frame that really injected, so this order leaves TAAU running for the one
         // frame that has no replacement yet.
@@ -639,6 +738,55 @@ bool enabled() {
 bool live() {
     return gLive.load(std::memory_order_acquire);
 }
+
+char const* rungName(Rung rung) noexcept {
+    switch (rung) {
+    case Rung::Full:
+        return "Full";
+    case Rung::NoNr:
+        return "NoNr";
+    case Rung::NoSharp:
+        return "NoSharp";
+    case Rung::EngineTaau:
+        return "TAAU";
+    }
+    return "?";
+}
+
+char const* rungReasonName(RungReason reason) noexcept {
+    switch (reason) {
+    case RungReason::None:
+        return "none";
+    case RungReason::Create:
+        return "create";
+    case RungReason::Eval:
+        return "eval";
+    case RungReason::Retry:
+        return "retry";
+    }
+    return "?";
+}
+
+Fallback fallback() {
+    Fallback state{};
+    state.rung        = static_cast<Rung>(gRung.load(std::memory_order_relaxed));
+    state.reason      = static_cast<RungReason>(gRungReason.load(std::memory_order_relaxed));
+    state.createFails = gCreateFails.load(std::memory_order_relaxed);
+    state.evalFails   = gEvalFails.load(std::memory_order_relaxed);
+    state.sinceFrame  = gRungSince.load(std::memory_order_relaxed);
+    return state;
+}
+
+#ifdef TEST
+void setFault(Fault fault) {
+    gFault.store(static_cast<int>(fault), std::memory_order_relaxed);
+    utils::logger().info("[vvsr] fault injection -> {}", static_cast<int>(fault));
+}
+
+Fault fault() {
+    return static_cast<Fault>(gFault.load(std::memory_order_relaxed));
+}
+#endif
 
 void syncConfig() {
     bool const wanted = config::get().sr.vvEnabled;
@@ -706,6 +854,17 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     // the same DLSS -> arg10 path instead of falling back to TAAU.
     static std::atomic<unsigned> srFrames{0};
     unsigned const frameNo = srFrames.fetch_add(1, std::memory_order_relaxed) + 1;
+    // Feature-level ladder: EngineTaau means "give the frame back to TAAU". It is not
+    // a permanent state - after the cooldown one frame tries Full again, and a real
+    // success resets the counters (the rung itself only moves back on that retry, so
+    // a single good frame does not oscillate between TAAU and DLSS).
+    if (static_cast<Rung>(gRung.load(std::memory_order_relaxed)) == Rung::EngineTaau) {
+        unsigned const since = gRungSince.load(std::memory_order_relaxed);
+        if (frameNo - since < kRetryFrames) {
+            return false;
+        }
+        setRung(Rung::Full, RungReason::Retry, frameNo);
+    }
     // TEST: `vv_sr_spatial.txt` in the game directory forces a purely spatial
     // evaluate (zero jitter/motion, Reset every frame). The user's 2 px seam appears
     // only with SR+DLSS and only in motion, while every single dumped frame (engine
@@ -922,13 +1081,15 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     gPipeline.mvState = srInputState;
 
     bool dlssEvaluated = false;
+    bool featureReady  = false;
     bool sharpened     = false;
     int  dlssCreateRet = 0;
     int  dlssEvalRet   = 0;
     {
         // DLSS-SR: our prepared colour/depth/motion are already in a shader-readable
         // state above, which is what NGX expects of its inputs.
-        if (dlss::ensureSrFeature(device, list, renderWidth, renderHeight, displayWidth, displayHeight)) {
+        featureReady = dlss::ensureSrFeature(device, list, renderWidth, renderHeight, displayWidth, displayHeight);
+        if (featureReady) {
             transition(list, gPipeline.dlssOut, gPipeline.dlssState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             gPipeline.dlssState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
             // V1: no jitter, zero motion, Reset every frame -> spatially correct, no
@@ -1026,8 +1187,10 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // §8): both textures are ours, so the states are the ones this function
             // already tracks, and the engine-path entry point is skipped for this call
             // (see OwnEvaluateScope). A refused pass leaves dlssOut as the source, i.e.
-            // the frame is simply unsharpened.
-            if (dlssEvaluated) {
+            // the frame is simply unsharpened. The ladder's NoSharp rung takes the same
+            // path: the frame stays unsharpened without touching the config.
+            if (dlssEvaluated
+                && static_cast<Rung>(gRung.load(std::memory_order_relaxed)) < Rung::NoSharp) {
                 transition(
                     list,
                     gPipeline.sharpOut,
@@ -1061,6 +1224,29 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                 }
             }
         }
+    }
+    // Ladder accounting (docs/specs/vv.md §38). The TEST switch fakes the two NGX
+    // outcomes on the same path, so the escalation is exercised by the real code
+    // rather than by a parallel branch: a "failure" here also skips the arg10 write,
+    // which is exactly what the user sees when the feature really fails.
+#ifdef TEST
+    {
+        int const faultNow = gFault.load(std::memory_order_relaxed);
+        if (faultNow == static_cast<int>(Fault::Create) && featureReady) {
+            featureReady  = false;
+            dlssCreateRet = -1;
+        } else if (faultNow == static_cast<int>(Fault::Eval) && dlssEvaluated) {
+            dlssEvaluated = false;
+            dlssEvalRet   = 0;
+        }
+    }
+#endif
+    if (featureReady && dlssEvaluated) {
+        noteSuccess(frameNo);
+    } else if (!featureReady) {
+        noteCreateFailure(frameNo);
+    } else {
+        noteEvalFailure(frameNo);
     }
     if (arg10) {
         if (!dlssEvaluated) {

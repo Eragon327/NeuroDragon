@@ -299,8 +299,11 @@ hook `CreateCommittedResource` / `CreatePlacedResource` 之后，渲染分辨率
 > 96 字节常量缓冲里（只有 jitter / params / ratio / display / render 分辨率 6 个 float4）。
 > 证据：[research/2026-10-28-taau-decompiled.md](../research/2026-10-28-taau-decompiled.md) §3–§4、§7。
 >
-> **顺带暴露的未决项（本轮不猜）**：代码里 depth→view 的换算是 `near/(1-d)`（标准 Z：近 0 远 1），
-> 与 DLSS 的 `DepthInverted=1` 互相矛盾；需要一次判定（dump 一个已知距离的像素在两端的值）。
+> **已定案（2026-10-29，EXP-0109）**：`near/(1-d)` 是对的（标准 Z：近 0、远 1），矛盾出在"告诉
+> 运行时"的两处——VV 的 SR 创建标志写了 `11`，把 bit3（`DepthInverted`，1<<3）当成 AutoExposure
+> （1<<6）打开；NR 每帧参数也写死 1。而 DLSS-SR 根本不读每帧 `DepthInverted` 参数（runtime 字符串表
+> 没有该名），所以 EXP-0041 改键无效。现在 SR 创建标志=3、NR 取自参数对象的声明，判据是 NGX 创建
+> 日志 `Depth Inverted 1→0`。证据见 [nr.md §9 P8](nr.md) 与 `docs/agent/evidence/depth-flag-EXP-0109-*`。
 
 **已证伪的路子**（省得再走）：依赖对象 `+0x8` / `+0x10` 是**帧图节点**（带 vtable、带 pass 名字符串），
 不是资源也不是 bgfx handle；递归扫节点对象图 3 跳、与已知资源指针比对，命中的全是后缓冲，
@@ -2650,4 +2653,28 @@ VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution
 只在世界内生效——菜单全景没有按世界 jitter 渲染，喂回去就是 EXP-0073 的上下抖）。
 若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`
 （直写 factor 的同一个钩子）里**自己抖投影**，再把同一个值交给 DLSS —— 这是新工程，不在本轮。
-depth 语义（`near/(1-d)` 与 `DepthInverted=1`）仍待收口：它影响的是重投影精度，与 jitter 是否喂值相互独立。
+depth 语义已于 EXP-0109 定案（非反向：SR 创建标志的 bit3 清零，NR 读参数对象自己声明的约定），
+见 [nr.md §9 P8](nr.md) 与 §35 的说明，不再与 jitter 纠缠。
+
+## 38. feature 级回退梯子（EXP-0112，2026-10-29）
+
+RT 路径的失败是"创建策略降级"（core → runtime → after → before → percent）；VV 只有一个 feature，
+可选的东西只有 NR 输入、RCAS pass 和 feature 本身，所以梯子是：
+
+| 档 | 还在跑 | 触发 |
+|---|---|---|
+| `Full` | DLSS + NR + RCAS | — |
+| `NoNr` | DLSS + RCAS | eval 连续失败 120 帧 |
+| `NoSharp` | DLSS | 再连续 120 帧 |
+| `TAAU` | 引擎 TAAU | 再连续 120 帧，或 create 连续失败 3 次 |
+
+- 每档锁存，不来回跳。`NoNr` 由 `nr::nrSetBypass` 停掉 detour 的合成与重建（Color 保持调用方给的原样），
+  `NoSharp` 只是跳过 `recordSharpeningInto`；两者都不改用户配置。
+- 自愈：`TAAU` 停 600 sr 帧后重试 `Full`；处于 `NoNr`/`NoSharp` 时连续成功 600 帧就升一档。故障持续时
+  表现为"每 ~10 秒 probe 一次再退回 TAAU"，不是每帧 alloc。
+- 面板「有效档位」显示档位 + 原因（create/eval/retry）+ 连续失败计数。强制 create / eval 失败的
+  `vv::sr::setFault` 只在 TEST 构建里编译（主 UI 收口后没有面板入口），要复跑四档得在 TEST 面板里接回。
+- EXP-0112 实测：create → 3 次失败直接 TAAU；eval → NoNr(1.8 s) → NoSharp(1.4 s) → TAAU(1.4 s)；
+  清注入后 600 帧回 Full；TAAU 期间 `inject skipped` 连续出现、画面确由 TAAU 覆盖。证据：
+  `docs/agent/evidence/vv-fallback-EXP-0112-run.log`。
+- 已知：`NoNr` 档有轻微颜色变化（NR 合成被停），那是档位生效的标志，不是故障。

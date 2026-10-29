@@ -1,0 +1,9 @@
+# generated 2026-10-29; pairs sr_mid_colourhalf_N.bin (render size) with sr_dlssout_464x231_N.bin (display size)
+# from the 306x152 window (composite was 1689x950, no subrect written)
+
+run1: input 306x152 -> output 464x231
+  NCC(input upsampled, dlss output) = 0.9810
+  control (quarter crop, FOV-wrong hypothesis) = 0.3909
+run2: input 306x152 -> output 464x231
+  NCC(input upsampled, dlss output) = 0.9812
+  control (quarter crop, FOV-wrong hypothesis) = 0.3918

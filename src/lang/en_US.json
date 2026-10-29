@@ -225,6 +225,7 @@
             "currentSize": "Size (measured)",
             "rebuilding": "rebuilding…",
             "vvEnable": "Replace TAAU with DLSS",
+            "vvRung": "Effective mode",
             "model": "DLSS model (preset)",
             "presetAuto": "Driver default",
             "presetDefault": "driver default",
