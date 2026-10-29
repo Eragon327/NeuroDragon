@@ -220,6 +220,40 @@ def check_ngx_params(root: Path) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- #
+# Depth convention (DLSS-SR)
+# --------------------------------------------------------------------------- #
+
+CREATE_FLAGS = re.compile(r'"DLSS\.Feature\.Create\.Flags"\s*,\s*(\d+)')
+DEPTH_INVERTED_BIT = 1 << 3
+
+
+def check_depth_flag(root: Path) -> list[dict]:
+    """DLSS-SR has no DepthInverted parameter (the runtime's string table has no
+    such name); inversion is bit 3 of the create flags. The depth handed to the
+    feature is d = 1 - near/z (near 0, sky 1) - the same convention the engine's own
+    SR declares with flags 3 - so bit 3 must stay clear. This check exists because
+    flags 11 was written for a month believing bit 3 was AutoExposure (1 << 6)."""
+    findings: list[dict] = []
+    for path in _sources(root):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for match in CREATE_FLAGS.finditer(text):
+            value = int(match.group(1))
+            if value & DEPTH_INVERTED_BIT:
+                line = text.count("\n", 0, match.start()) + 1
+                findings.append(
+                    finding(
+                        "vv.depth-flag",
+                        "vv.create-flag-depth-inverted",
+                        "error",
+                        f"DLSS.Feature.Create.Flags = {value} sets bit 3 (DepthInverted); "
+                        "the input depth is 1 - near/z (near 0, sky 1) - see docs/specs/nr.md §9 P8",
+                        f"{_rel(root, path)}:{line}",
+                    )
+                )
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # HLSL
 # --------------------------------------------------------------------------- #
 
@@ -350,7 +384,7 @@ def check_shaders(root: Path) -> list[dict]:
 
 
 def run(root: Path) -> list[dict]:
-    return check_ngx_params(root) + check_shaders(root)
+    return check_ngx_params(root) + check_depth_flag(root) + check_shaders(root)
 
 
 if __name__ == "__main__":
