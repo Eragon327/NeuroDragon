@@ -61,9 +61,18 @@ struct SrState {
     unsigned renderHeight{};
     unsigned displayWidth{};
     unsigned displayHeight{};
+    /// DLSS.Hint.Render.Preset.* value the feature was created with (0 = driver
+    /// default). Read back into the panel so a preset that did not take is visible
+    /// instead of silently echoing the config.
+    int      preset{};
 };
 
 [[nodiscard]] bool ensureSrFeature(void* device, void* commandList, unsigned renderWidth, unsigned renderHeight, unsigned displayWidth, unsigned displayHeight);
+
+/// Drops the feature so the next ensureSrFeature() recreates it. Needed for knobs the
+/// runtime only reads at CreateFeature (the model preset). The next frames reset the
+/// temporal history themselves, so a rebuild costs one frame of accumulation.
+void requestFeatureRebuild();
 
 // Colour / depth / motion / output are ID3D12Resource*. Reset=1 clears TAA history.
 [[nodiscard]] bool evaluateSr(

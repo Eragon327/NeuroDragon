@@ -2,6 +2,8 @@
 
 #include "neurodragon/utils/Utils.h"
 
+#include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
@@ -9,18 +11,15 @@
 #include <utility>
 #include <vector>
 
-#ifdef TEST
 #include "ll/api/service/TargetedBedrock.h"
 
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/options/IOptionRegistry.h"
 #include "mc/options/option_types/Option.h"
 #include "mc/options/option_types/OptionID.h"
-#endif
 
 namespace neurodragon::probe::options {
 
-#ifdef TEST
 namespace {
 
 // One slot, not a queue: the panel only ever asks for "the value I just picked", and
@@ -124,6 +123,47 @@ WriteResult write(IOptionRegistry& registry, Known option, std::string const& va
     return result;
 }
 
+// Reads one option by id, with the same tag check the write uses: a number alone would
+// happily report whatever unrelated setting moved into that slot.
+int readInt(IOptionRegistry& registry, Known option, int fallback) {
+    char const* const tag = tagOf(option);
+    auto              found = registry.getIfValid(static_cast<OptionID>(static_cast<int>(option)));
+    if (!found || !*found) {
+        return fallback;
+    }
+    std::string const value = savedValue(**found, tag);
+    if (value.empty()) {
+        return fallback;
+    }
+    char*     end = nullptr;
+    long const parsed = std::strtol(value.c_str(), &end, 10);
+    if (!end || end == value.c_str() || *end != '\0') {
+        return fallback;
+    }
+    return static_cast<int>(parsed);
+}
+
+struct Cached {
+    std::atomic<int>      graphicsMode{-1};
+    std::atomic<int>      percent{-1};
+    std::atomic<bool>     valid{false};
+    std::atomic<uint64_t> lastMs{0};
+};
+
+Cached& cache() {
+    static Cached instance;
+    return instance;
+}
+
+std::uint64_t nowMs() {
+    return static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()
+        )
+            .count()
+    );
+}
+
 } // namespace
 
 void requestWrite(Known option, std::string value) {
@@ -174,9 +214,16 @@ void applyPending() {
         result.ok ? "ok" : "failed",
         result.text
     );
-    auto& state = pending();
-    std::lock_guard lock(state.mutex);
-    state.last = result;
+    {
+        auto& state = pending();
+        std::lock_guard lock(state.mutex);
+        state.last = result;
+    }
+    // The panel's "configured" reading comes from the same registry; refresh it now so
+    // the page does not keep reporting the pre-write value for up to two seconds.
+    if (result.ok) {
+        refreshKnownValues(true);
+    }
 }
 
 WriteResult lastWrite() {
@@ -185,16 +232,45 @@ WriteResult lastWrite() {
     return state.last;
 }
 
+KnownValues knownValues() {
+    auto& c = cache();
+    KnownValues values{};
+    values.valid            = c.valid.load(std::memory_order_relaxed);
+    values.graphicsMode     = c.graphicsMode.load(std::memory_order_relaxed);
+    values.upscalingPercent = c.percent.load(std::memory_order_relaxed);
+    return values;
+}
+
+void refreshKnownValues(bool force) {
+    constexpr std::uint64_t kIntervalMs = 2000;
+    auto&                   c           = cache();
+    std::uint64_t const     now         = nowMs();
+    if (!force) {
+        std::uint64_t const last = c.lastMs.load(std::memory_order_relaxed);
+        if (last && now - last < kIntervalMs) {
+            return;
+        }
+    }
+    c.lastMs.store(now, std::memory_order_relaxed);
+
+    auto client = ll::service::getClientInstance();
+    if (!client) {
+        return;
+    }
+    auto& registry = client->getOptions();
+    int const mode = readInt(registry, Known::GraphicsMode, -1);
+    int const pct  = readInt(registry, Known::UpscalingPercentage, -1);
+    if (mode < 0 && pct < 0) {
+        return;
+    }
+    c.graphicsMode.store(mode, std::memory_order_relaxed);
+    c.percent.store(pct, std::memory_order_relaxed);
+    c.valid.store(true, std::memory_order_relaxed);
+}
+
 void requestBilinear() {
     utils::logger().info("[vv] options: bilinear switch requested at load time");
     requestWrite(Known::UpscalingMode, "1");
 }
-
-#else
-void requestWrite(Known, std::string) {}
-void applyPending() {}
-WriteResult lastWrite() { return {}; }
-void requestBilinear() {}
-#endif
 
 } // namespace neurodragon::probe::options

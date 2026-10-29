@@ -1,0 +1,46 @@
+# EXP-0082: the 超分 page branches on the live backend and can replace TAAU from the panel
+# source: E:\LeviLauncher\versions\1.26.51.01-r3\logs\latest.log, 2026-10-29 09:47-10:31,
+#         TEST build, verbatim excerpts. Several launches are mixed: the switch landed in
+#         b3da9c38 (09:53), the final build 0b3e18f4 was deployed at 10:29 and is the one
+#         behind the 10:31 block.
+# criterion: the page names the live backend, its internal-resolution control writes the
+#         engine option and applies live, and the product switch arms the whole
+#         substitution (inject + TAAU draw skip) without the TEST diagnostics buttons.
+# note: the panel's own state (badge text, disabled sections) is not logged; the user
+#         confirmed each state in chat ("已完成", "开关都是这个" -> fixed, see EXP-0082 result).
+#         What the log can show is the half that matters: writes, arming, and continuity.
+
+## 1. Internal resolution driven from the page (no TEST buttons, no F11)
+
+[2026-10-29 09:48:12.947 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 66 -> 33
+[2026-10-29 10:18:40.110 IFO][NeuroDragon] [vv] options: write ok 579 upscaling_percentage 33 -> 66
+
+## 2. The product switch: on/off cycles, each logged once per change
+
+[2026-10-29 10:26:22.571 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+[2026-10-29 10:26:34.560 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)
+[2026-10-29 10:26:43.950 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+[2026-10-29 10:31:09.613 IFO][NeuroDragon] [vvsr] sr enabled (TAAU draw skipped)
+
+## 3. After enabling: one injected frame and one skipped TAAU draw, every frame
+
+[2026-10-29 10:31:11.170 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 10:31:11.182 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1 list=0x290e4feb0b0 mv=0x290033ea070
+[2026-10-29 10:31:11.185 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 10:31:11.193 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2 list=0x290e01aa2d0 mv=0x290033ea070
+[2026-10-29 10:31:11.194 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 10:31:11.202 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3 list=0x290e2d64d50 mv=0x290033ea070
+[2026-10-29 10:31:17.320 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 10:31:17.328 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #600 list=0x290deafc640 mv=0x290033ea070
+
+## 4. What this settles
+
+- The resolution control on the page is the engine option, and it applies live: the same
+  write path as EXP-0081, now reachable without the diagnostics page (100/66/33/50 all
+  exercised in one session).
+- The switch is a single product action: `sr enabled (TAAU draw skipped)` and the very
+  next frame already shows `sr arg10 #1` plus `d-suppress: skipped TAAU draw #1`, with the
+  pair advancing in lockstep up to #3000. `sr disabled (TAAU draw restored)` stops it.
+- The badge's meaning was corrected in the same session: with the switch off the image is
+  the engine's TAAU, so the page says TAAU (engine); only a frame our pipeline actually
+  recorded says DLSS (VV).

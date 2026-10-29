@@ -72,6 +72,28 @@ void captureTaaRef();
 /// of falling back to anything.
 [[nodiscard]] bool recordArg10(void* commandList, void* arg10);
 
+/// Clears the DLSS temporal history over the next recorded frames. The panel's "reset"
+/// button uses it; the pipeline also resets by itself after a world or size change.
+void requestReset();
+
+// ---------------------------------------------------------------------------
+// The product switch (docs/specs/ui.md §3)
+// ---------------------------------------------------------------------------
+// On: our DLSS writes arg10 and the engine's TAAU draw is skipped (the draw-level
+// suppress, EXP-0067 - not the callback-level one, which also removed the material
+// binds the MV channel needs). Off: the engine's own TAAU, nothing of ours runs.
+//
+// The sequence is kept here, in one place, because it is four switches that only mean
+// something together; the diagnostics page's individual buttons stay as manual
+// overrides for experiments.
+void setEnabled(bool enabled);
+[[nodiscard]] bool enabled();
+
+/// Reads `sr.vvEnabled` once per present and applies a change. Called from
+/// probe::vv::onPresent(); a no-op while the config value has not changed, so the
+/// diagnostics page's manual arming is not fought over every frame.
+void syncConfig();
+
 [[nodiscard]] Stats stats();
 
 void release();

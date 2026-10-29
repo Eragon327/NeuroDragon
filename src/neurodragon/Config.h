@@ -99,11 +99,26 @@ struct Nr {
 // One percentage drives both; the panel's choice applies immediately, without a
 // window resize (docs/I §11).
 struct Sr {
-    // 0 = follow the engine (Balanced 58% in practice). 33/50/58/66/100 = render
-    // and upscale at that ratio: the DLSS quality slot is set accordingly and the
-    // frame builder's factor table entry is patched to the same value. Only the
+    // RT path only. 0 = follow the engine (Balanced 58% in practice). 33/50/58/66/100
+    // = render and upscale at that ratio: the DLSS quality slot is set accordingly and
+    // the frame builder's factor table entry is patched to the same value. Only the
     // ratios DLSS has a native slot for are offered (no 75%).
+    //
+    // VV cannot honour this: there the engine owns the render size and DLSS must be fed
+    // exactly it (src/neurodragon/vv/VvSr.h), which is what `vvPercent` writes instead.
     int scalePercent = 0;
+
+    // VV path only: the engine option `upscaling_percentage` (id 579), written live.
+    // 0 = follow the engine (no write). 100 is a real value and turns the upscaler off
+    // entirely, so there is no TAAU output for our SR to replace - the panel disables
+    // itself in that state (EXP-0081).
+    int vvPercent = 0;
+
+    // VV path only: whether our DLSS replaces the engine's TAAU. On = our pipeline
+    // writes arg10 and the engine's TAAU draw is skipped; off = the engine's own TAAU.
+    // The RT path has no equivalent - there the engine owns DLSS and there is nothing
+    // for us to switch.
+    bool vvEnabled = false;
 
     // DLSS model preset request (NGX DLSS.Hint.Render.Preset.*): 0 = driver
     // default, 5/6 = legacy E/F, 10 = J, 11 = K, 12 = L, 13 = M. Written into all
@@ -151,7 +166,7 @@ struct Ui {
 };
 
 struct Config {
-    int version = 3;
+    int version = 5;
     Nr  nr{};
     Sr  sr{};
     Ui  ui{};

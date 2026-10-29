@@ -1,5 +1,6 @@
 #include "neurodragon/vv/VvDlssSr.h"
 
+#include "neurodragon/Config.h"
 #include "neurodragon/probe/VvProbe.h"
 
 #include <Windows.h>
@@ -417,6 +418,9 @@ unsigned  gSrDisplayW{};
 unsigned  gSrDisplayH{};
 SrState   gSrState{};
 std::mutex gSrMutex;
+// Set by requestFeatureRebuild(): the model preset is only read at CreateFeature, so
+// changing it means dropping the feature and letting the next frame build a new one.
+std::atomic<bool> gSrRebuild{false};
 
 using GetU32Fn = int (*)(void*, char const*, unsigned*);
 using GetF32Fn = int (*)(void*, char const*, float*);
@@ -509,6 +513,15 @@ bool ensureSrFeature(void* deviceVoid, void* commandList, unsigned renderWidth, 
         gSrState.ready = false;
         return false;
     }
+    // A pending rebuild request drops the feature even when the sizes still match: the
+    // model preset is a CreateFeature-time parameter, so there is no other way to apply
+    // it (the RT path's quality-slot nudge exists for the same reason).
+    bool const rebuild = gSrRebuild.exchange(false, std::memory_order_acq_rel);
+    if (rebuild && gSrFeature) {
+        gRelease(gSrFeature);
+        gSrFeature = nullptr;
+        utils::logger().info("[vvsr] sr feature released for a rebuild (preset change)");
+    }
     if (gSrFeature && gSrRenderW == renderWidth && gSrRenderH == renderHeight
         && gSrDisplayW == displayWidth && gSrDisplayH == displayHeight) {
         gSrState.ready = true;
@@ -527,6 +540,26 @@ bool ensureSrFeature(void* deviceVoid, void* commandList, unsigned renderWidth, 
     paramU32(params, "CreationNodeMask", 1);
     paramU32(params, "VisibilityNodeMask", 1);
     paramI32(params, "DLSS.Feature.Create.Flags", 11); // IsHDR | MVLowRes | AutoExposure
+    // Model preset, the same six keys and the same values the engine path writes
+    // (src/neurodragon/nr/D3D12Bridge.cpp, srApplyCreateOverrides): 0 = driver default,
+    // 5/6 = E/F, 10/11/12/13 = J/K/L/M. Our session's parameter object is our own, so
+    // there is no engine 0x80000000 bit to preserve; 0 is still written so a previous
+    // choice does not survive a return to "default".
+    {
+        int const preset = config::get().sr.preset;
+        static char const* const keys[] = {
+            "DLSS.Hint.Render.Preset.DLAA",
+            "DLSS.Hint.Render.Preset.Quality",
+            "DLSS.Hint.Render.Preset.Balanced",
+            "DLSS.Hint.Render.Preset.Performance",
+            "DLSS.Hint.Render.Preset.UltraPerformance",
+            "DLSS.Hint.Render.Preset.UltraQuality",
+        };
+        for (char const* key : keys) {
+            paramU32(params, key, static_cast<unsigned>(preset));
+        }
+        gSrState.preset = preset;
+    }
     void*     feature = nullptr;
     int const ret     = gCreate(commandList, 1, params, &feature);
     gSrState.createRet     = ret;
@@ -607,6 +640,10 @@ bool evaluateSr(void* commandList, void* color, void* depth, void* motionVectors
 SrState srState() {
     std::lock_guard lock(gSrMutex);
     return gSrState;
+}
+
+void requestFeatureRebuild() {
+    gSrRebuild.store(true, std::memory_order_release);
 }
 
 void releaseSr() {

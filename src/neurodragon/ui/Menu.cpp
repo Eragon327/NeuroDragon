@@ -8,6 +8,7 @@
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/sr/SrSharpening.h"
+#include "neurodragon/sr/SrStatus.h"
 #include "neurodragon/ui/Overlay.h"
 #include "neurodragon/ui/Theme.h"
 #include "neurodragon/ui/Widgets.h"
@@ -64,6 +65,7 @@ int sanitizedSrPercent(int percent) {
 
 config::Sr sanitizedSr(config::Sr sr) {
     sr.scalePercent = sanitizedSrPercent(sr.scalePercent);
+    sr.vvPercent    = sanitizedSrPercent(sr.vvPercent);
     // A hand-edited config can carry anything; the render thread reads the strength
     // every frame, so keep one sanitised copy at the panel boundary as well.
     if (!std::isfinite(sr.sharpness) || sr.sharpness < 0.0f || sr.sharpness > 1.0f) {
@@ -764,67 +766,167 @@ void drawTabNeural() {
 }
 
 void drawTabSr() {
-    auto const sr = nr::srPanelStats();
-    auto const ps = nr::nrPanelStats();
+    // Which upscaler is actually running decides what this page can offer: the RT path
+    // owns the engine's DLSS feature, the VV path owns ours, and with neither there is
+    // nothing to control (docs/specs/ui.md §3). Detection is observation - a settings
+    // value cannot tell "TAAU at 100%" from "TAAU running" (EXP-0081).
+    auto const backend = sr::status();
+    // Not `rt`/`vv`: `vv` is a namespace here (`vv::sr`, `vv::dlss`), and a local of
+    // that name hides it in this scope.
+    bool const enginePath = backend.backend == sr::Backend::EngineDlss;
+    bool const vvPath     = backend.backend == sr::Backend::VvDlss;
+    bool const any        = enginePath || vvPath;
+    // The VV ratio is also the way back from the one state where nothing runs: at
+    // 100% the upscaler is gone, so the control must stay reachable - and the engine's
+    // own setting is what says this machine is a VV machine even then.
+    bool const ratioEditable = any || backend.vvConfigured || backend.vvSeen;
+
+    auto const sr      = nr::srPanelStats();
+    auto const ps      = nr::nrPanelStats();
+    auto const vvStats = vv::sr::stats();
+    auto const vvDlss  = vv::dlss::srState();
 
     char buffer[128]{};
 
-    // The old "engine (read only)" block lived here. It duplicated the measured size
-    // chain, flashed the temporary quality slot for a few frames after every forced
-    // rebuild, and mixed "what we asked for" with "what the engine did". What survives
-    // is only the part that verifies a write (docs/L §0.7): the size chain next to the
-    // control that moves it, plus the quality slot and preset the engine last created
-    // its feature with - both blanked while a rebuild is in flight, because the
-    // temporary slot is not a result (docs/J §8).
-    widgets::sectionHeader("ui.sr.internal"_tr().c_str());
-    // Only the ratios DLSS actually has a slot for: each one maps 1:1 to the
-    // engine's own quality slot, so the DLSS size is the engine's exact answer and
-    // the scene factor table is patched to the same ratio. "Follow" leaves both
-    // alone and restores the table.
-    std::string const scaleItems[6] = {
-        "ui.sr.scaleAuto"_tr(),
-        "33%",
-        "50%",
-        "58%",
-        "66%",
-        "100%",
-    };
-    char const* scalePointers[6] = {
-        scaleItems[0].c_str(),
-        scaleItems[1].c_str(),
-        scaleItems[2].c_str(),
-        scaleItems[3].c_str(),
-        scaleItems[4].c_str(),
-        scaleItems[5].c_str(),
-    };
-    int const scaleValues[6] = {0, 33, 50, 58, 66, 100};
-    if (mappedCombo("ui.sr.scale"_tr().c_str(), &gDraftSr.scalePercent, scalePointers, scaleValues, 6)) {
-        markDirty();
+    widgets::sectionHeader("ui.sr.backend"_tr().c_str());
+    {
+        // The badge answers "what is upscaling the picture right now", not "which path
+        // could be substituted". Under VV with the switch off the image is the engine's
+        // TAAU, so that is what it says; only a frame that our pipeline actually
+        // recorded counts as "DLSS".
+        bool const substituting = vvPath && vv::sr::enabled() && vvStats.recorded;
+        std::string name = "ui.sr.backendNone"_tr();
+        int         tint = kRed;
+        if (enginePath) {
+            name = "ui.sr.backendEngine"_tr();
+            tint = kAccent;
+        } else if (substituting) {
+            name = "ui.sr.backendVv"_tr();
+            tint = kAccent;
+        } else if (vvPath || backend.vvConfigured || backend.vvSeen) {
+            name = "ui.sr.backendTauu"_tr();
+            tint = 0;
+        }
+        widgets::statRow("ui.sr.backendNow"_tr().c_str(), name.c_str(), tint);
+        if (!any) {
+            if (backend.vvConfigured) {
+                // Observation cannot explain this one; the engine's own setting can.
+                if (backend.configuredPercent >= 0) {
+                    std::snprintf(buffer, sizeof(buffer), "%d", backend.configuredPercent);
+                } else {
+                    std::snprintf(buffer, sizeof(buffer), "?");
+                }
+                widgets::hint("ui.sr.backendConfigured"_tr(buffer).c_str());
+            } else if (!backend.live && backend.ageMs != 0) {
+                std::snprintf(buffer, sizeof(buffer), "%u s", backend.ageMs / 1000u);
+                widgets::hint("ui.sr.backendLost"_tr(buffer).c_str());
+            } else {
+                widgets::hint("ui.sr.backendNever"_tr().c_str());
+            }
+        }
     }
-    widgets::hint("ui.sr.scaleHint"_tr().c_str());
-    // What the two writes actually produced: scene render rect -> engine output.
-    // This is the pair that proves the override landed (docs/J §2), so it belongs
-    // right under the control that moves it - not in a separate read-only block.
-    if (ps.renderWidth != 0 && ps.outputWidth != 0) {
+
+    // The resolution row is deliberately outside the disabled block below: it is the
+    // only way back from the state where nothing runs (100% = no upscaler), so it gets
+    // its own gate. Everything else is a write into a feature that does not exist
+    // without a backend; the counters stay visible (dimmed) so "why is this grey" is
+    // answerable from the same screen.
+    ImGui::Spacing();
+    widgets::sectionHeader("ui.sr.internal"_tr().c_str());
+    if (vvPath || (!enginePath && (backend.vvConfigured || backend.vvSeen))) {
+        // The master switch: under VV the engine's upscaler is TAAU, so "enabled" means
+        // our DLSS writes TAAU's output and the engine's TAAU draw is skipped.
+        if (widgets::toggle("ui.sr.vvEnable"_tr().c_str(), &gDraftSr.vvEnabled)) {
+            markDirty();
+        }
+        widgets::hint("ui.sr.vvEnableHint"_tr().c_str());
+        ImGui::Spacing();
+        // VV: the engine owns the render size, and DLSS has to be fed exactly it, so
+        // the only honest control is the engine option itself (live, EXP-0081).
+        std::string const vvItems[6] = {
+            "ui.sr.scaleAuto"_tr(),
+            "33%",
+            "50%",
+            "58%",
+            "66%",
+            "100%",
+        };
+        char const* vvPointers[6] = {
+            vvItems[0].c_str(),
+            vvItems[1].c_str(),
+            vvItems[2].c_str(),
+            vvItems[3].c_str(),
+            vvItems[4].c_str(),
+            vvItems[5].c_str(),
+        };
+        int const vvValues[6] = {0, 33, 50, 58, 66, 100};
+        if (!ratioEditable) {
+            ImGui::BeginDisabled();
+        }
+        if (mappedCombo("ui.sr.scale"_tr().c_str(), &gDraftSr.vvPercent, vvPointers, vvValues, 6)) {
+            markDirty();
+        }
+        if (!ratioEditable) {
+            ImGui::EndDisabled();
+        }
+        widgets::hint("ui.sr.scaleHintVv"_tr().c_str());
+    } else {
+        // RT: only the ratios DLSS actually has a slot for; each maps 1:1 to the
+        // engine's quality slot and the scene factor table is patched to match.
+        std::string const scaleItems[6] = {
+            "ui.sr.scaleAuto"_tr(),
+            "33%",
+            "50%",
+            "58%",
+            "66%",
+            "100%",
+        };
+        char const* scalePointers[6] = {
+            scaleItems[0].c_str(),
+            scaleItems[1].c_str(),
+            scaleItems[2].c_str(),
+            scaleItems[3].c_str(),
+            scaleItems[4].c_str(),
+            scaleItems[5].c_str(),
+        };
+        int const scaleValues[6] = {0, 33, 50, 58, 66, 100};
+        if (!any) {
+            ImGui::BeginDisabled();
+        }
+        if (mappedCombo("ui.sr.scale"_tr().c_str(), &gDraftSr.scalePercent, scalePointers, scaleValues, 6)) {
+            markDirty();
+        }
+        if (!any) {
+            ImGui::EndDisabled();
+        }
+        widgets::hint("ui.sr.scaleHint"_tr().c_str());
+    }
+    // What the write actually produced: scene render rect -> upscale target. This is the
+    // pair that proves the override landed, so it sits under the control that moves it.
+    if (backend.renderWidth != 0 && backend.displayWidth != 0) {
         std::snprintf(
             buffer,
             sizeof(buffer),
             "%u x %u → %u x %u（%.1f%%）",
-            ps.renderWidth,
-            ps.renderHeight,
-            ps.outputWidth,
-            ps.outputHeight,
-            100.0 * static_cast<double>(ps.renderWidth) / static_cast<double>(ps.outputWidth)
+            backend.renderWidth,
+            backend.renderHeight,
+            backend.displayWidth,
+            backend.displayHeight,
+            100.0 * static_cast<double>(backend.renderWidth) / static_cast<double>(backend.displayWidth)
         );
         widgets::statRow("ui.sr.currentSize"_tr().c_str(), buffer);
     }
-    {
+    if (enginePath) {
         // Read back from the engine's CreateFeature parameter object, not from the
         // draft: this is how a "the preset did not take" report is distinguished from
         // "the panel did not save it" without reading the log.
         std::string const slot =
             sr.rebuilding ? "ui.sr.rebuilding"_tr() : qualityName(sr.quality);
         widgets::statRow("ui.sr.quality"_tr().c_str(), slot.c_str(), sr.rebuilding ? kTextDim : 0);
+    }
+
+    if (!any) {
+        ImGui::BeginDisabled();
     }
 
     ImGui::Spacing();
@@ -853,8 +955,16 @@ void drawTabSr() {
     }
     widgets::hint("ui.sr.modelHint"_tr().c_str());
     {
-        std::string const preset = sr.rebuilding ? "ui.sr.rebuilding"_tr() : presetName(sr.preset);
-        widgets::statRow("ui.sr.preset"_tr().c_str(), preset.c_str(), sr.rebuilding ? kTextDim : 0);
+        // The read-back differs per backend: the engine's parameter object on RT, our own
+        // feature's CreateFeature value on VV (VvDlssSr.h stores it for exactly this).
+        std::string preset;
+        if (vvPath) {
+            preset = vvDlss.ready ? presetName(vvDlss.preset) : "ui.sr.rebuilding"_tr();
+        } else {
+            preset = sr.rebuilding ? "ui.sr.rebuilding"_tr() : presetName(sr.preset);
+        }
+        bool const dim = (vvPath && !vvDlss.ready) || (enginePath && sr.rebuilding);
+        widgets::statRow("ui.sr.preset"_tr().c_str(), preset.c_str(), dim ? kTextDim : 0);
     }
 
     ImGui::Spacing();
@@ -862,6 +972,14 @@ void drawTabSr() {
     // The DLSS "Sharpness" parameter is dead (docs/J §5), so sharpening is our own
     // RCAS pass after the engine's upscale. Live: the render thread reads the config
     // every evaluation, so Apply is enough - no feature rebuild, no restart.
+    //
+    // The pass hangs off the engine's EvaluateFeature, which does not exist on the VV
+    // path yet: our DLSS output goes straight into arg10. The section stays visible and
+    // disabled rather than disappearing, so "why is there no sharpening here" has an
+    // answer on the same screen.
+    if (!enginePath) {
+        ImGui::BeginDisabled();
+    }
     {
         auto const sharp = neurodragon::sr::sharpStats();
         if (widgets::toggle("ui.sr.sharpEnable"_tr().c_str(), &gDraftSr.sharpening)) {
@@ -876,7 +994,7 @@ void drawTabSr() {
         if (!gDraftSr.sharpening) {
             ImGui::EndDisabled();
         }
-        widgets::hint("ui.sr.sharpHint"_tr().c_str());
+        widgets::hint(enginePath ? "ui.sr.sharpHint"_tr().c_str() : "ui.sr.sharpHintVv"_tr().c_str());
 
         // Read-back (docs/L §0.7): what the render thread actually recorded, not
         // what the draft says. "Applied" is dim until a frame has gone through.
@@ -899,115 +1017,166 @@ void drawTabSr() {
             widgets::hint(sharp.enabled ? "ui.sr.sharpZeroHint"_tr().c_str() : "ui.sr.sharpOffHint"_tr().c_str());
         }
     }
-
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.sr.ctx"_tr().c_str());
-    auto const eng = nr::srEngineStats();
-    if (eng.valid) {
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%u / %.3f",
-            eng.ctxQuality,
-            static_cast<double>(eng.ctxFactor)
-        );
-        widgets::statRow("ui.sr.ctxCtx"_tr().c_str(), buffer);
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%u / %.3f",
-            eng.requestedQ,
-            static_cast<double>(eng.requestedF)
-        );
-        widgets::statRow("ui.sr.ctxEngine"_tr().c_str(), buffer);
-        std::snprintf(buffer, sizeof(buffer), "%u x %u", eng.renderW, eng.renderH);
-        widgets::statRow("ui.sr.ctxRender"_tr().c_str(), buffer);
-        std::snprintf(buffer, sizeof(buffer), "%.3f", static_cast<double>(eng.ctxExtra));
-        widgets::statRow("ui.sr.ctxExtra"_tr().c_str(), buffer);
-    } else {
-        widgets::hint("ui.sr.ctxNone"_tr().c_str());
+    if (!enginePath) {
+        ImGui::EndDisabled();
     }
 
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.sr.callback"_tr().c_str());
-
-    std::snprintf(buffer, sizeof(buffer), "%u", sr.callbackCount);
-    widgets::statRow("ui.sr.cbCount"_tr().c_str(), buffer);
-    if (sr.callbackCount != 0) {
-        std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbDisplayW, sr.cbDisplayH);
-        widgets::statRow("ui.sr.cbDisplay"_tr().c_str(), buffer);
-        std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbRenderW, sr.cbRenderH);
-        widgets::statRow("ui.sr.cbRender"_tr().c_str(), buffer);
-        std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(sr.cbSharpness));
-        widgets::statRow("ui.sr.cbSharpness"_tr().c_str(), buffer);
-        if (sr.dynMinW != 0) {
+    if (enginePath) {
+        ImGui::Spacing();
+        widgets::sectionHeader("ui.sr.ctx"_tr().c_str());
+        auto const eng = nr::srEngineStats();
+        if (eng.valid) {
             std::snprintf(
                 buffer,
                 sizeof(buffer),
-                "%u x %u .. %u x %u",
-                sr.dynMinW,
-                sr.dynMinH,
-                sr.dynMaxW,
-                sr.dynMaxH
+                "%u / %.3f",
+                eng.ctxQuality,
+                static_cast<double>(eng.ctxFactor)
             );
-            widgets::statRow("ui.sr.dynamic"_tr().c_str(), buffer);
+            widgets::statRow("ui.sr.ctxCtx"_tr().c_str(), buffer);
+            std::snprintf(
+                buffer,
+                sizeof(buffer),
+                "%u / %.3f",
+                eng.requestedQ,
+                static_cast<double>(eng.requestedF)
+            );
+            widgets::statRow("ui.sr.ctxEngine"_tr().c_str(), buffer);
+            std::snprintf(buffer, sizeof(buffer), "%u x %u", eng.renderW, eng.renderH);
+            widgets::statRow("ui.sr.ctxRender"_tr().c_str(), buffer);
+            std::snprintf(buffer, sizeof(buffer), "%.3f", static_cast<double>(eng.ctxExtra));
+            widgets::statRow("ui.sr.ctxExtra"_tr().c_str(), buffer);
+        } else {
+            widgets::hint("ui.sr.ctxNone"_tr().c_str());
         }
-    } else {
-        widgets::hint("ui.sr.cbNone"_tr().c_str());
-    }
-    // Create flags (IsHDR|MVLowRes = 0x3) come from the same parameter object as the
-    // optimal-settings answer, so they live here rather than in a separate block.
-    std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
-    widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
-    widgets::hint("ui.sr.cbHint"_tr().c_str());
 
-    // Self-check + telemetry (docs/I §7 risk register, docs/K §2.2 ③). The four
-    // check rows answer "is SR wired up at all" after a game update; the rows below
-    // answer "is the engine actually running it" without reading the log.
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.sr.selfCheck"_tr().c_str());
-    auto const checkRow = [](char const* label, bool ok) {
+        ImGui::Spacing();
+        widgets::sectionHeader("ui.sr.callback"_tr().c_str());
+
+        std::snprintf(buffer, sizeof(buffer), "%u", sr.callbackCount);
+        widgets::statRow("ui.sr.cbCount"_tr().c_str(), buffer);
+        if (sr.callbackCount != 0) {
+            std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbDisplayW, sr.cbDisplayH);
+            widgets::statRow("ui.sr.cbDisplay"_tr().c_str(), buffer);
+            std::snprintf(buffer, sizeof(buffer), "%u x %u", sr.cbRenderW, sr.cbRenderH);
+            widgets::statRow("ui.sr.cbRender"_tr().c_str(), buffer);
+            std::snprintf(buffer, sizeof(buffer), "%.2f", static_cast<double>(sr.cbSharpness));
+            widgets::statRow("ui.sr.cbSharpness"_tr().c_str(), buffer);
+            if (sr.dynMinW != 0) {
+                std::snprintf(
+                    buffer,
+                    sizeof(buffer),
+                    "%u x %u .. %u x %u",
+                    sr.dynMinW,
+                    sr.dynMinH,
+                    sr.dynMaxW,
+                    sr.dynMaxH
+                );
+                widgets::statRow("ui.sr.dynamic"_tr().c_str(), buffer);
+            }
+        } else {
+            widgets::hint("ui.sr.cbNone"_tr().c_str());
+        }
+        // Create flags (IsHDR|MVLowRes = 0x3) come from the same parameter object as the
+        // optimal-settings answer, so they live here rather than in a separate block.
+        std::snprintf(buffer, sizeof(buffer), "0x%08X", sr.flags);
+        widgets::statRow("ui.sr.flags"_tr().c_str(), buffer);
+        widgets::hint("ui.sr.cbHint"_tr().c_str());
+
+        // Self-check + telemetry (docs/I §7 risk register, docs/K §2.2 ③). The four
+        // check rows answer "is SR wired up at all" after a game update; the rows below
+        // answer "is the engine actually running it" without reading the log.
+        ImGui::Spacing();
+        widgets::sectionHeader("ui.sr.selfCheck"_tr().c_str());
+        auto const checkRow = [](char const* label, bool ok) {
+            widgets::statRow(
+                label,
+                ok ? "ui.sr.checkOk"_tr().c_str() : "ui.sr.checkFailed"_tr().c_str(),
+                ok ? 0 : kRed
+            );
+        };
+        checkRow("ui.sr.checkCallback"_tr().c_str(), sr.callbackWrapped);
+        checkRow("ui.sr.checkFrameCtx"_tr().c_str(), sr.frameContextHook);
+        checkRow("ui.sr.checkFactorTable"_tr().c_str(), sr.factorTable);
+        checkRow("ui.sr.checkCreate"_tr().c_str(), sr.createOverridesRan);
+        widgets::hint("ui.sr.checkHint"_tr().c_str());
+
+        std::snprintf(buffer, sizeof(buffer), "%u", sr.evalCount);
+        widgets::statRow("ui.sr.evalCount"_tr().c_str(), buffer);
+        std::snprintf(buffer, sizeof(buffer), "%u", sr.evalFailures);
+        widgets::statRow("ui.sr.evalFailures"_tr().c_str(), buffer, sr.evalFailures != 0 ? kRed : 0);
         widgets::statRow(
-            label,
-            ok ? "ui.sr.checkOk"_tr().c_str() : "ui.sr.checkFailed"_tr().c_str(),
-            ok ? 0 : kRed
+            "ui.sr.inputFormat"_tr().c_str(),
+            sr.inputFormatValid ? formatName(sr.inputFormat).c_str() : "-"
         );
-    };
-    checkRow("ui.sr.checkCallback"_tr().c_str(), sr.callbackWrapped);
-    checkRow("ui.sr.checkFrameCtx"_tr().c_str(), sr.frameContextHook);
-    checkRow("ui.sr.checkFactorTable"_tr().c_str(), sr.factorTable);
-    checkRow("ui.sr.checkCreate"_tr().c_str(), sr.createOverridesRan);
-    widgets::hint("ui.sr.checkHint"_tr().c_str());
-
-    std::snprintf(buffer, sizeof(buffer), "%u", sr.evalCount);
-    widgets::statRow("ui.sr.evalCount"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u", sr.evalFailures);
-    widgets::statRow("ui.sr.evalFailures"_tr().c_str(), buffer, sr.evalFailures != 0 ? kRed : 0);
-    widgets::statRow(
-        "ui.sr.inputFormat"_tr().c_str(),
-        sr.inputFormatValid ? formatName(sr.inputFormat).c_str() : "-"
-    );
-    widgets::statRow(
-        "ui.sr.inputHdr"_tr().c_str(),
-        sr.flags == 0 ? "-" : ((sr.flags & 1u) != 0u ? "HDR" : "SDR")
-    );
-    std::snprintf(
-        buffer,
-        sizeof(buffer),
-        "%.2f / %.2f",
-        static_cast<double>(sr.jitterX),
-        static_cast<double>(sr.jitterY)
-    );
-    widgets::statRow("ui.sr.jitter"_tr().c_str(), buffer);
+        widgets::statRow(
+            "ui.sr.inputHdr"_tr().c_str(),
+            sr.flags == 0 ? "-" : ((sr.flags & 1u) != 0u ? "HDR" : "SDR")
+        );
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%.2f / %.2f",
+            static_cast<double>(sr.jitterX),
+            static_cast<double>(sr.jitterY)
+        );
+        widgets::statRow("ui.sr.jitter"_tr().c_str(), buffer);
+    } else if (vvPath || backend.vvSeen) {
+        // VV: what this page can honestly report is our own pipeline, not the
+        // engine's - there is no engine DLSS feature on this path at all.
+        ImGui::Spacing();
+        widgets::sectionHeader("ui.sr.vvSection"_tr().c_str());
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%s  %u x %u → %u x %u",
+            vvStats.pipelineReady ? "ui.sr.vvReady"_tr().c_str() : "ui.sr.vvNotBuilt"_tr().c_str(),
+            vvStats.renderWidth,
+            vvStats.renderHeight,
+            vvStats.displayWidth,
+            vvStats.displayHeight
+        );
+        widgets::statRow("ui.sr.vvPipeline"_tr().c_str(), buffer, vvStats.pipelineReady ? 0 : kTextDim);
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "feature=%d create=0x%08X eval=0x%08X",
+            vvStats.dlssReady ? 1 : 0,
+            static_cast<unsigned>(vvStats.dlssCreateRet),
+            static_cast<unsigned>(vvStats.dlssEvaluateRet)
+        );
+        widgets::statRow("ui.sr.vvFeature"_tr().c_str(), buffer, vvStats.dlssReady ? kAccent : kTextDim);
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "colour=%u depth=%u mv=%u",
+            vvStats.colorFormat,
+            vvStats.depthFormat,
+            vvStats.mvFormat
+        );
+        widgets::statRow("ui.sr.vvInputs"_tr().c_str(), buffer, vvStats.mvSource ? 0 : kRed);
+        if (vvStats.lastError != 0) {
+            std::snprintf(buffer, sizeof(buffer), "0x%08X", static_cast<unsigned>(vvStats.lastError));
+            widgets::statRow("ui.sr.vvError"_tr().c_str(), buffer, kRed);
+        }
+    }
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.actions"_tr().c_str());
     std::string resetLabel = "ui.sr.reset"_tr();
     resetLabel += "##srReset";
     if (ImGui::Button(resetLabel.c_str())) {
-        nr::srRequestReset();
+        if (vvPath) {
+            vv::sr::requestReset();
+        } else {
+            nr::srRequestReset();
+        }
     }
-    widgets::hint("ui.sr.resetHint"_tr().c_str());
+    widgets::hint(enginePath ? "ui.sr.resetHint"_tr().c_str() : "ui.sr.resetHintVv"_tr().c_str());
+
+    if (!any) {
+        ImGui::EndDisabled();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1313,6 +1482,32 @@ void drawB0Probe() {
     );
     widgets::statRow("R3 D draw", buffer);
     widgets::hint("Arm stage B first; the TAAU quad is skipped only after a frame that injected.");
+
+    // The SR page's badge is a conclusion; these are the counters behind it, kept here
+    // because a product page should not read like a counter dump (2026-10-29 request).
+    // `declared` advances even while the draw is skipped - that is what says "VV is
+    // running"; `skipped / forwarded / missed` is what says whether TAAU really ran.
+    widgets::sectionHeader("SR backend counters (TEST)");
+    {
+        auto const draw = probe::vv::taauDrawStats();
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "declared=%llu dlssEvals=%u",
+            static_cast<unsigned long long>(draw.declared),
+            nr::srPanelStats().evalCount
+        );
+        widgets::statRow("backend", buffer);
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "skipped=%llu forwarded=%llu missed=%llu",
+            static_cast<unsigned long long>(draw.suppressed),
+            static_cast<unsigned long long>(draw.forwarded),
+            static_cast<unsigned long long>(draw.missed)
+        );
+        widgets::statRow("taau draw", buffer, draw.missed != 0 ? kRed : 0);
+    }
 
     // Engine option writes (docs/specs/vv.md §17). `upscaling_percentage` is the knob
     // that decides the VV render size, so this answers whether the SR panel can ever
@@ -1740,6 +1935,7 @@ void drawTabAdvanced() {
 
 void applyDraft(bool persist) {
     int const oldPreset = config::get().sr.preset;
+    int const oldVv     = config::get().sr.vvPercent;
 
     config::get().nr                = gDraft;
     config::get().sr                = gDraftSr;
@@ -1751,9 +1947,31 @@ void applyDraft(bool persist) {
     gDirty = false;
 
     // A model preset is only read at CreateFeature, so applying a new one has to
-    // make the engine rebuild its DLSS feature. Other settings are read live.
+    // make the feature rebuild. Each backend owns its own feature: the engine's on the
+    // RT path, ours on the VV path. Asking the idle one is a no-op.
     if (config::get().sr.preset != oldPreset) {
         nr::srRequestFeatureRebuild();
+        vv::dlss::requestFeatureRebuild();
+    }
+
+    // VV's internal resolution is not a config the renderer reads every frame: it is
+    // the engine option `upscaling_percentage` (docs/specs/vv.md §17.2), so applying it
+    // means writing that option. The write is skipped when the engine already runs at
+    // the requested ratio, and "follow the engine" (0) never writes.
+    if (config::get().sr.vvPercent != 0) {
+        auto const active = sr::status();
+        double const measured =
+            active.displayWidth != 0
+                ? 100.0 * static_cast<double>(active.renderWidth) / static_cast<double>(active.displayWidth)
+                : 0.0;
+        bool const differs = active.renderWidth == 0
+            || std::abs(measured - static_cast<double>(config::get().sr.vvPercent)) > 1.5;
+        if (differs || config::get().sr.vvPercent != oldVv) {
+            probe::options::requestWrite(
+                probe::options::Known::UpscalingPercentage,
+                std::to_string(config::get().sr.vvPercent)
+            );
+        }
     }
 
     if (!persist) {

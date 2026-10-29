@@ -1,5 +1,6 @@
 #include "neurodragon/vv/VvSr.h"
 
+#include "neurodragon/Config.h"
 #include "neurodragon/probe/VvCalibrate.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
@@ -149,6 +150,12 @@ std::atomic<int> gDepthChoice{0};
 // every frame instead of overwriting the previous one. File scope because the TEST
 // hotkey path has to be able to name the run it just triggered.
 std::atomic<unsigned> gDumpNo{0};
+// Frames of forced Reset requested from the panel. Two, not one: the first frame after
+// a rebuild may still be the one the engine had already recorded before the request.
+std::atomic<unsigned> gManualReset{0};
+// The product switch's current state (config `sr.vvEnabled`), so syncConfig() only acts
+// on a change instead of re-arming every frame.
+std::atomic<bool> gEnabled{false};
 // F2: copy this frame's TAAU output (arg10, before our PS write) into taauRef, so the
 // engine's result and the DLSS result of the *same* frame can be compared offline.
 std::atomic<bool> gCaptureTaaRef{false};
@@ -599,6 +606,54 @@ void cycleColor() {
 void cycleDepth() {
     int const next = gDepthChoice.fetch_add(1, std::memory_order_relaxed) + 1;
     utils::logger().info("[vvsr] sr depth choice -> {}", next);
+}
+
+void requestReset() {
+    gManualReset.store(2, std::memory_order_relaxed);
+    utils::logger().info("[vvsr] sr reset requested (two frames)");
+}
+
+void setEnabled(bool wantEnabled) {
+    bool const was = gEnabled.exchange(wantEnabled, std::memory_order_acq_rel);
+    if (was == wantEnabled) {
+        return;
+    }
+    if (wantEnabled) {
+        // Arm the injection first, then the draw skip: the suppress gate only fires on
+        // a frame that really injected, so this order leaves TAAU running for the one
+        // frame that has no replacement yet.
+        probe::vv::setArg10Solid(true);
+        probe::vv::inject::setUseArg10(true);
+        probe::vv::inject::setUseBackBuffer(false);
+        probe::vv::inject::setFromTail(false);
+        probe::vv::inject::setAction(probe::vv::inject::Action::DlssArg10);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Fixed);
+        probe::vv::setDrawSuppress(true);
+    } else {
+        // The reverse order: TAAU comes back first, then our writer stops touching
+        // arg10, so no frame is drawn by neither path.
+        probe::vv::setDrawSuppress(false);
+        probe::vv::setArg10Solid(false);
+        probe::vv::inject::setUseArg10(false);
+        probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
+        probe::vv::inject::setAction(probe::vv::inject::Action::Clear);
+    }
+    utils::logger().info(
+        "[vvsr] sr {} (TAAU draw {})",
+        wantEnabled ? "enabled" : "disabled",
+        wantEnabled ? "skipped" : "restored"
+    );
+}
+
+bool enabled() {
+    return gEnabled.load(std::memory_order_relaxed);
+}
+
+void syncConfig() {
+    bool const wanted = config::get().sr.vvEnabled;
+    if (wanted != gEnabled.load(std::memory_order_relaxed)) {
+        setEnabled(wanted);
+    }
 }
 
 // The per-frame TAAContext parameters that are still consumed: the sub-pixel jitter fed
@@ -1238,12 +1293,18 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                 resetFrames.store(pending - 1, std::memory_order_relaxed);
             }
             bool const gap = probe::vv::takeArg10Gap();
+            // A panel reset request ("clear history") uses the same two-frame window as
+            // a world or size change.
+            unsigned const manual = gManualReset.load(std::memory_order_relaxed);
+            if (manual > 0) {
+                gManualReset.store(manual - 1, std::memory_order_relaxed);
+            }
             // Outside a world (menu / title screen) the panorama is not rendered with
             // the world TAAU jitter, so feeding it shifts the image every frame - that
             // was the up-down judder (EXP-0073). History is allowed to accumulate again
             // (EXP-0074); if the panorama's MV does not describe its rotation this
             // smears, which is what the next run checks.
-            bool const reset = spatial || pending > 0 || !mv.valid || gap;
+            bool const reset = spatial || pending > 0 || manual > 0 || !mv.valid || gap;
             dlssEvaluated    = dlss::evaluateSr(
                 list,
                 gPipeline.colorHalf,

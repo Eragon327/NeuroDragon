@@ -2972,6 +2972,9 @@ bool install() {
             // the panel) does not have to wait for the executor queue that did not
             // deliver during startup (EXP-0018/0019). No-op when nothing is pending.
             options::applyPending();
+            // The panel's "configured for VV" reading is the only thing observation
+            // cannot answer (at 100% nothing runs), so refresh it on every join.
+            options::refreshKnownValues(true);
         });
         gExitLevelListener = bus.emplaceListener<ll::event::client::ClientExitLevelEvent>([](auto&) {
             gWorldLoaded.store(false, std::memory_order_relaxed);
@@ -2983,6 +2986,9 @@ bool install() {
         // retry window.
         gLevelTickListener = bus.emplaceListener<ll::event::world::ClientLevelTickEvent>([](auto&) {
             options::applyPending();
+            // Throttled to ~2 s inside; keeps the panel's "configured" reading honest
+            // when the player changes the graphics setting while in a world.
+            options::refreshKnownValues();
         });
         utils::logger().info(
             "[vv] level listeners join={} exit={} tick={}",
@@ -3392,6 +3398,11 @@ void onPresent() {
     if (presents <= 10 || presents % 600 == 0) {
         logSubmitRate(presents);
     }
+    // The product switch (docs/specs/ui.md §3): `sr.vvEnabled` is a config value, but
+    // the arming itself is four injector switches, so it is applied here - every frame,
+    // and only when the value changed. A no-op otherwise, which keeps the diagnostics
+    // page's manual buttons from being overwritten 60 times a second.
+    neurodragon::vv::sr::syncConfig();
 #ifdef TEST
     // B0 hotkeys, polled here so they work regardless of the panel/input focus and
     // need no file creation while playing:

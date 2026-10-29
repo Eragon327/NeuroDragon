@@ -21,8 +21,7 @@ namespace neurodragon::probe::options {
 // a game update that shifts the ids turns the write into a logged no-op instead of
 // writing into an unrelated setting.
 
-/// The engine options this mod writes, by the id the registry uses on 1.26.51.01.
-/// The values are the ones the EXP-0020 scan printed for `upscaling_percentage`,
+/// The engine options this mod writes, by the id the registry uses on 1.26.51.01./// The values are the ones the EXP-0020 scan printed for `upscaling_percentage`,
 /// `upscaling_mode`, `gfx_upscaling`, `target_resolution` and `graphics_mode`; the
 /// 26.51.9 LeviLamina headers carry the same numbers (26.51.7 ships the enum empty).
 enum class Known : int {
@@ -49,6 +48,22 @@ void requestWrite(Known option, std::string value);
 void applyPending();
 
 [[nodiscard]] WriteResult lastWrite();
+
+/// The engine's configured graphics/upscaling state, read from the same registry.
+/// The panel needs it for one case observation cannot answer: at `upscaling_percentage
+/// = 100` nothing runs, so "is the player configured for VV or for ray tracing" decides
+/// whether the ratio control is the way back or has no business being there.
+struct KnownValues {
+    bool valid{false};
+    int  graphicsMode{-1};      ///< 2 = Vibrant Visuals, 3 = ray tracing
+    int  upscalingPercent{-1};  ///< 0 = native (no upscaling to replace)
+};
+
+[[nodiscard]] KnownValues knownValues();
+
+/// Re-reads the two options above on the client thread. Throttled unless `force`, so a
+/// level tick can call it without paying two registry reads every frame.
+void refreshKnownValues(bool force = false);
 
 // TEST only: the A2 route that leaves the TAAU branch by switching `upscaling_mode`
 // to Bilinear through the same queue. Kept as a named entry point because the

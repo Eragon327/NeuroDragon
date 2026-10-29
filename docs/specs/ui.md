@@ -39,6 +39,7 @@
 | `ui/Glyphs.h` | **生成物**：`scripts/collect_glyphs.py` 从 `src/lang/*.json` 抽出的非 ASCII 字集 |
 | `ui/Screenshot.{h,cpp}` | Present 里抓后缓冲 → WIC PNG（[sr §8](sr.md)） |
 | `ui/GameNotice.cpp` | 聊天栏通知（`ui::notice::chat`） |
+| `sr/SrStatus.{h,cpp}` | 后端判定（`EngineDlss` / `VvDlss` / 无）+ 共用快照：尺寸、特征、新鲜度 |
 | `src/lang/*.json` | 面板文案（`ui.*`，`zh_CN` / `en_US`，占位符一致） |
 | `nr/D3D12Bridge` | 只读 `nrPanelStats()`：尺寸、状态、错误码、两张 GPU 中位数 |
 
@@ -75,7 +76,31 @@
 ```
 
 - 页签四个：`神经渲染` / `超分` / `诊断` / `高级`。原来的 `画面` 页内容并入 `神经渲染` 页顶部。
-  `超分` 页是引擎 SR 的读数 + 设置（[sr §1](sr.md)）。
+  `超分` 页是超分的读数 + 设置（[sr §1](sr.md)）。
+- **`超分` 页按「当前后端」分岔，不按配置分岔**（2026-10-29，`sr/SrStatus`）：顶部一行写
+  **画面上真正在做什么**——`DLSS（VV）`（开关开、且上一帧我们的管线真的记录成功）、
+  `TAAU（引擎）`（VV 路径但开关关着或还没注入成功）、`引擎 DLSS（光追）`、`无`。
+  它不是"这条路能替换"，而是"这一帧谁在放大"；判定用的原始计数（TAAU 声明数、
+  draw 跳过/转发/漏、DLSS 求值数）按用户要求只放在 `诊断` 页，正式页面不显示计数器。
+  RT 与 VV 的控件语义不同，所以只有**语义相同**的分区共用：
+  模型预设、重置、尺寸读数；内部分辨率两边都可控但机制不同（RT 写质量槽 + 因子表，
+  VV 写引擎选项 `upscaling_percentage`）；锐化目前只挂在 RT 上，VV 下显示为禁用并说明原因。
+- **VV 的总开关**（`sr.vvEnabled`，页面上是「用 DLSS 替换 TAAU」）：开 = 我们的 DLSS 写 arg10
+  且引擎那条 TAAU draw 被跳过（draw 级 suppress，EXP-0067；不是整回调，那会连 MV 用的材质绑定
+  一起没了）；关 = 完全回到引擎 TAAU。四个开关的先后顺序只写在 `vv::sr::setEnabled` 一处——
+  开时先 arm 注入再 arm 跳过（跳过门只对「上一帧真的注入了」的帧生效），关时先恢复 TAAU 再停写。
+  诊断页里那几个单步按钮保留为实验用的手动覆盖；`syncConfig` 只在配置值变化时动手，两者不打架。
+  **判定依据的原始计数只在 `诊断` 页**（TAAU 声明数、draw `跳过/转发/漏`、DLSS 求值数）：
+  声明数涨说明 VV 在跑（suppress 不改变它），draw 的三个数才回答「TAAU 是否真的没执行」；
+  用 draw 计数当后端判据是错的——我们一 suppress，它就会显示「VV 没了」。
+- **禁用规则**：没有后端时，除「内部分辨率」外的分区整体 `BeginDisabled`，读数保留（变暗）；
+  内部分辨率单独放行，因为 100% 会把上采样整个关掉，这个下拉是唯一的回头路。
+  判定只看计数是否在涨（`taauDrawStats().declared` / `srPanelStats().evalCount`），
+  不看设置项——`upscaling_percentage = 100` 时设置看着是开的、TAAU 却一次都不跑（EXP-0081）；
+  也不用 TAAU 的 **draw** 计数，因为我们自己的 draw 级 suppress 跳的正是那条 draw。
+- **例外的那一个读设置的地方**：`graphics_mode` 与 `upscaling_percentage` 在进世界/每 2 s 读一次并
+  缓存（`probe::options::knownValues`）。理由同上——100% 时一个逐帧信号都没有，只有设置本身能
+  说明这台机器是 VV，页面才知道该把分辨率下拉留在 VV 语义下而不是变成死路。
 - 两栏是**固定宽度**（330 / 460 逻辑，gutter 18），窗口宽度由它们推出来，滑条不会随屏幕变长；
   行宽另有一道上限（440 逻辑）。子窗口内边距 14 逻辑，**必须传
   `ImGuiChildFlags_AlwaysUseWindowPadding`**（无边框 child 默认没有 padding）；统计行标签超宽时按宽度
