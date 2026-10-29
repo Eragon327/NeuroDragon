@@ -208,15 +208,11 @@
             "shotFailed": "截图失败（见日志）"
         },
         "sr": {
-            "backend": "超分后端",
             "backendNow": "当前后端",
             "backendTauu": "引擎超分（TAAU）",
             "backendEngine": "光追超分（DLSS）",
             "backendVv": "VV 超分（DLSS）",
             "backendNone": "无",
-            "backendLost": "上次看到是 {0} 前；现在没有在跑（不在世界，或上采样已关闭）。",
-            "backendConfigured": "引擎配置为 VV，但我们的上采样没有在跑（引擎比例 {0}%）。100% 现在是原生渲染 + 保活分支，DLSS/NR 仍可开；选一个比例再应用即可恢复。",
-            "backendNever": "没有检测到可接管的超分：VV 需要「上采样 = TAAU」且比例有效（100% 走保活分支）；光追需要开启光线追踪。",
             "internal": "内部分辨率",
             "scale": "内部分辨率",
             "scaleAuto": "跟随引擎",
@@ -225,7 +221,6 @@
             "currentSize": "尺寸（实测）",
             "rebuilding": "重建中…",
             "vvEnable": "用 DLSS 替换 TAAU",
-            "vvRung": "有效档位",
             "model": "DLSS 模型（预设）",
             "presetAuto": "驱动默认",
             "presetDefault": "驱动默认",

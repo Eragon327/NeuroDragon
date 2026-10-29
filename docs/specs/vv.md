@@ -2672,7 +2672,8 @@ RT 路径的失败是"创建策略降级"（core → runtime → after → befor
   `NoSharp` 只是跳过 `recordSharpeningInto`；两者都不改用户配置。
 - 自愈：`TAAU` 停 600 sr 帧后重试 `Full`；处于 `NoNr`/`NoSharp` 时连续成功 600 帧就升一档。故障持续时
   表现为"每 ~10 秒 probe 一次再退回 TAAU"，不是每帧 alloc。
-- 面板「有效档位」显示档位 + 原因（create/eval/retry）+ 连续失败计数。强制 create / eval 失败的
+- 档位变化只走日志 `[vvsr] fallback: <档> (<原因>) nr=0/1 rcas=0/1`（warn 级，release 也保留）；
+  面板不再单独一行显示档位（2026-10-30 删掉「有效档位」行）。强制 create / eval 失败的
   `vv::sr::setFault` 只在 TEST 构建里编译（主 UI 收口后没有面板入口），要复跑四档得在 TEST 面板里接回。
 - EXP-0112 实测：create → 3 次失败直接 TAAU；eval → NoNr(1.8 s) → NoSharp(1.4 s) → TAAU(1.4 s)；
   清注入后 600 帧回 Full；TAAU 期间 `inject skipped` 连续出现、画面确由 TAAU 覆盖。证据：

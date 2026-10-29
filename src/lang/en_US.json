@@ -208,15 +208,11 @@
             "shotFailed": "Screenshot failed (see log)"
         },
         "sr": {
-            "backend": "SR backend",
             "backendNow": "Active backend",
             "backendTauu": "engine SR (TAAU)",
             "backendEngine": "RT SR (DLSS)",
             "backendVv": "VV SR (DLSS)",
             "backendNone": "None",
-            "backendLost": "Last seen {0} ago; nothing is running now (out of a world, or upscaling is off).",
-            "backendConfigured": "The engine is set to VV, but our upscaling is not running (engine ratio {0}%). 100% is now native render with a branch keepalive: DLSS/NR can still run. Pick a ratio and apply to bring it back.",
-            "backendNever": "No SR backend detected: VV needs upscaling = TAAU with a valid ratio (100% uses the branch keepalive); ray tracing needs ray tracing enabled.",
             "internal": "Internal resolution",
             "scale": "Internal resolution",
             "scaleAuto": "Engine default",
@@ -225,7 +221,6 @@
             "currentSize": "Size (measured)",
             "rebuilding": "rebuilding…",
             "vvEnable": "Replace TAAU with DLSS",
-            "vvRung": "Effective mode",
             "model": "DLSS model (preset)",
             "presetAuto": "Driver default",
             "presetDefault": "driver default",

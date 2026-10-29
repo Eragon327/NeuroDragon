@@ -1029,55 +1029,10 @@ void drawTabSr(Live const& live) {
 
     char buffer[128]{};
 
-    widgets::sectionHeader("ui.sr.backend"_tr().c_str());
-    {
-        // The badge answers "what is upscaling the picture right now", not "which path
-        // could be substituted" - the same shared answer the left column shows.
-        ImU32             tint = 0;
-        std::string const up   = backendName(live, &tint);
-        widgets::statRow("ui.sr.backendNow"_tr().c_str(), up.c_str(), tint);
-        if (!any) {
-            if (backend.vvConfigured) {
-                // Observation cannot explain this one; the engine's own setting can.
-                if (backend.configuredPercent >= 0) {
-                    std::snprintf(buffer, sizeof(buffer), "%d", backend.configuredPercent);
-                } else {
-                    std::snprintf(buffer, sizeof(buffer), "?");
-                }
-                widgets::hint("ui.sr.backendConfigured"_tr(buffer).c_str());
-            } else if (!backend.live && backend.ageMs != 0) {
-                std::snprintf(buffer, sizeof(buffer), "%u s", backend.ageMs / 1000u);
-                widgets::hint("ui.sr.backendLost"_tr(buffer).c_str());
-            } else {
-                widgets::hint("ui.sr.backendNever"_tr().c_str());
-            }
-        }
-    }
-
-    // Feature-level fallback (docs/specs/vv.md §38): the rung our DLSS-SR is on right
-    // now. Only the VV path has this ladder, and a degraded rung is a fact the user can
-    // see in the picture - so it gets a row of its own, not a log line.
-    if (vvMode) {
-        vv::sr::Fallback const fb = vv::sr::fallback();
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%s (%s) create=%u eval=%u",
-            vv::sr::rungName(fb.rung),
-            vv::sr::rungReasonName(fb.reason),
-            fb.createFails,
-            fb.evalFails
-        );
-        ImU32 const rungTint =
-            fb.rung == vv::sr::Rung::EngineTaau ? kRed : (fb.rung == vv::sr::Rung::Full ? 0 : kAccent);
-        widgets::statRow("ui.sr.vvRung"_tr().c_str(), buffer, rungTint);
-    }
-
     // The resolution row is deliberately outside the disabled block below: it is the
     // only way back from the state where nothing runs (100% = no upscaler), so it gets
     // its own gate. Everything else is a write into a feature that does not exist
     // without a backend.
-    ImGui::Spacing();
     widgets::sectionHeader("ui.sr.internal"_tr().c_str());
     if (vvMode) {
         // The master switch: under VV the engine's upscaler is TAAU, so "enabled" means
