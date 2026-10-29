@@ -84,7 +84,9 @@
   draw 跳过/转发/漏、DLSS 求值数）按用户要求只放在 `诊断` 页，正式页面不显示计数器。
   RT 与 VV 的控件语义不同，所以只有**语义相同**的分区共用：
   模型预设、重置、尺寸读数；内部分辨率两边都可控但机制不同（RT 写质量槽 + 因子表，
-  VV 写引擎选项 `upscaling_percentage`）；锐化目前只挂在 RT 上，VV 下显示为禁用并说明原因。
+  VV 写引擎选项 `upscaling_percentage`）；锐化两边跑同一套 RCAS，但落点不同
+  （RT 在引擎 DLSS 之后；VV 在写 arg10 之前，见 [sr §7.1](sr.md)），提示行会说明 VV 下
+  第一人称手也在被锐化的那一层里。
 - **VV 的总开关**（`sr.vvEnabled`，页面上是「用 DLSS 替换 TAAU」）：开 = 我们的 DLSS 写 arg10
   且引擎那条 TAAU draw 被跳过（draw 级 suppress，EXP-0067；不是整回调，那会连 MV 用的材质绑定
   一起没了）；关 = 完全回到引擎 TAAU。四个开关的先后顺序只写在 `vv::sr::setEnabled` 一处——
@@ -189,6 +191,44 @@
 - 诊断页的「手动 dump 一次」按钮（需要桥里加触发入口）。
 - 热键已升级为**组合键**（`Config.h` 的四个 `*Keys` 数组，修饰键在前）；不再支持单键配置文件，
   也不做迁移。
+
+### 8.1 短期目标：VV 线的 UI 收口（2026-10-29 起）
+
+> **定位**：阶段 2（VV 替 TAAU）的**功能**已收口——S1–S6 与 F1–F3 全部 accepted，R3 阶段 A–D 通过
+> （[vv §35](vv.md)、[roadmap §3](../roadmap.md)）。本清单是它**之后**的面板侧收尾，不是新阶段的开始。
+> T1–T5 只改面板与读法，不碰渲染；T6 会改渲染，先答 Q3。
+>
+> **一个 session 装不下**：按 §8.1.3 的 S1 / S2 / S3 切；每个 session 结束用
+> `python scripts/agentflow/flow.py handoff write --next "..."` 记下停在哪一项，
+> 不要把进度写进 `HANDOFF.md`（AGENTS §10）。
+
+#### 8.1.1 清单
+
+| # | 任务 | 现状（证据在代码里） | 判据 | 估 | 状态 |
+|---|---|---|---|---|---|
+| T1 | 诊断页补 R3/VV 读数，并把切点实验关进 `TEST` | R3 计数全在 `Menu.cpp` 的 `#ifdef TEST`（`drawB0Probe`，1475–1513）。本检出的 xmake 配置是 `test = true`（`.xmake/windows/x64/xmake.conf`），所以**现在看得见**；一旦发 `--test=n` 的构建它们全没了。而老的切点实验 `drawVvInjection`（1547）在两种构建里都能点，默认 `Action::Clear` 会把后缓冲清成品红（`VvInject.cpp:262`）。底层 API 本身不受 `TEST` 保护（`VvProbe.h:157/186/226`） | release 构建的面板也能读到 arg10 writer split、draw `skipped/forwarded/missed`、`sr.recorded`、MV 来源；会闪屏的切点实验在 release 里点不到 | 2–3 h | ⬜ |
+| T2 | 顶栏健康点与管线图按后端分岔 | 健康点用 `stats.featureCreated` = `gNr.created`（`D3D12Bridge.cpp:4325`），NR 关着就写「关」；管线第三格写死 `ui.pipeline.upscale`（`Menu.cpp:419`），VV 下画的其实是我们的 DLSS | VV 下健康点反映「上一帧真的写了 arg10」；管线第三格写明是我们的 DLSS → arg10，成本行不再标成引擎 DLSS | 2 h | ⬜ |
+| T3 | 超分页 VV 区补读 | 只有三个格式号（`Menu.cpp:1152`）；候选数/选择、跳过原因、NR 是否接管 Color、100% 原生保活是否生效都不可见（`nativeRender()` 只有 `VvProbe.cpp:2128` 一处在用） | 至少补：跳过原因、NR 接管、100% 保活状态；代价（NR ~9.8 ms @1440p）在 100% 下有一行提示 | 2 h | ⬜ |
+| T4 | 神经渲染页按后端分岔 | 位置轴/替换模式/白点等照旧可点，文案是 RT 语境（`ui.neural.placementHint`：「结果交给引擎 DLSS 放大」）；[contract](../agent/contract.json) 把 VV 的 NR 位置轴与画质调参划为出界 | 按 Q1 的结论：VV 下位置轴禁用 + 一行说明；仍可点但未验收的项标注清楚 | 1–2 h | ⬜ |
+| T5 | 杂项：版本号、配置路径、热键 | `Menu.cpp:1934` 写死 `0.0.0`；`tooth.json` 与 `manifest.json` 的版本源目前也都是占位值，所以「显示真版本」要先定版本从哪来（构建期 define 或运行时读 mod 元数据）；高级 → 配置文件只有一句「启动时读取」，没有路径；VV 总开关与内部比例没有热键 | 面板显示的是构建真实版本；配置分区显示路径；VV 开关可绑组合键（`Config.h` 的 `*Keys` 数组 + `Hotkey` 枚举各加一项） | 2–3 h | ⬜ |
+| T6 | VV 下的锐化（RCAS） | ✅ **已完成**（EXP-0096，dll `d846ec24`）：`sr::recordSharpeningInto` 复用同一份 shader/PSO/强度映射，`VvSr` 增加 `sharpOut`；`sr::OwnEvaluateScope` 关掉 detour 对 VV 自己 evaluate 的引擎锐化。落点与数值见 [sr §7.1](sr.md)。尾巴：同帧 GPU 对未采（F7 未触发），F11/resize 未测 | — | 已完成 | ✅ |
+| T7 | §8 里剩下的老待办（可选） | 预设命名保存/加载、诊断页「手动 dump 一次」、背景模糊 | — | 各自 2–4 h | ⬜ |
+
+#### 8.1.2 开工前要拍板
+
+| Q | 冲突 | 选项 |
+|---|---|---|
+| Q1 | [vv §36](vv.md) 与 `CHANGELOG` 说 `nr.placement` 在 VV 下也生效；[contract](../agent/contract.json) 的 `out_of_scope` 却说「VV 里的 NR 位置轴（固定放大前）与 NR 画质调参」 | (a) 以 contract 为准：VV 下禁用位置轴，spec/CHANGELOG 改成「未验收」；(b) 以 spec 为准：把位置轴补进验收（要一次实机） |
+| Q2 | release 面板里能点到切点实验（会把画面清成品红） | 建议移入 `TEST`；若保留，必须改名成「实验」并加二次确认 |
+| Q3 | T6 在不在当前契约里 | 「VV 下锐化」不在 contract 的 goal 里。做它要 `contract set` 扩目标（需用户授权，AGENTS §5），或另开一份契约 |
+
+#### 8.1.3 建议的三个 session
+
+- **S1（零管线风险）**：T1 + T2 + T5。只动面板与 i18n；每项 `verify` 即可，不需要实机。
+- **S2（面板读法）**：T3 + T4。先答 Q1、Q2；仍不碰渲染。
+- **S3（功能）**：T6。先答 Q3；改渲染 ⇒ 一条 `exp` + 一次实机，成功后视余量做 T7。
+
+> 改任何一句文案（含英文稿）都要重跑 `scripts/collect_glyphs.py`，否则字图集里没这个字（§7 末条）。
 
 ## 9. 参考
 

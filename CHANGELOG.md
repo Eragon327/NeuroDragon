@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 修复（2026-10-29：VV 画面抖动 = 喂给 DLSS 的 jitter）
+
+- **VV 下不再把 TAA 的亚像素 jitter 交给 DLSS**（默认 0）。世界帧**没有**按
+  `TAAContext+0x1e4` 那个偏移渲染，DLSS 却按它重建历史，于是每帧错位 —— 表现为画面轻微抖动，
+  锐化只是把它放大。用户 A/B：「=0 就稳了；关掉锐化也抖」。机制与 EXP-0073 定位的菜单抖动同源。
+  引擎值保留成诊断开关（诊断页 TEST：「Use engine jitter」），日志 `[vvsr] sr jitter …`。
+- 代价：没有真 jitter 时 DLSS 少掉亚像素采样（66% 下会略软）。要真正利用 jitter 得我们自己抖
+  引擎相机，不在本轮；100% 原生下本来就没有可采的亚像素。
+- **已用测量坐实（EXP-0100）**：四对 F7 双采 + 离线亚像素位移（相位相关 + 1/50 px 上采样 DFT，标定 ±0.01 px）
+  显示喂给 DLSS 的那层画面**不随 jitter 移动** —— `|Δj|` 0.758/0.486/0.161/0.462 对应实测
+  0.063/0.216/0.331/**0.028** px，位移与 `|Δj|` 无关。所以 jitter 只是 TAAU 重采样核的相位，不是光栅化偏移。
+- **2026-10-29 复核（契约与边界）**：jitter 本身
+  = Halton(2,3)−0.5、±0.5 渲染像素、y 向下，与 DLSS 的 `Jitter.Offset` 同空间，**直传不需要换算**
+  （×ratio / ×0.5 / ±0.5 已记入 `canon/refuted.jsonl`）。测量只覆盖 color 层（depth/MV 未测）；那一轮
+  A/B 里 `-j` 与 `j(n-1)` 看着也稳属观察矛盾（当轮是 100% 原生、锐化开着做的），不作符号依据。明细见
+  `docs/specs/vv.md` §37 与 `docs/research/2026-10-29-taau-jitter-dlss-contract.md`。
+
+### 修复（2026-10-29：注入停了，TAAU 自己回来）
+
+- **draw 级 suppress 的锁存值现在每个引擎帧都写一次**（`inject::prepare` 先判定「是否引擎帧」，
+  之后的每条出口——包括「决定不注入」——都写一次结果）。此前 `mode == Off` 那条出口不写，
+  锁存就一直停在 `true`：没人写 `arg10`、TAAU 又被跳过，画面冻在最后一帧（14:40 现场）。
+- **`setMode(Off)` 一并清掉产品开关**，面板实验控件在产品开启时置灰并在首帧**读回**当前模式
+  （它以前在第一次绘制时无条件写 `Mode::Off`，打开诊断页就会停注入）。
+
+### 功能（2026-10-29：VV 下也能用 RCAS 锐化）
+
+- **VV 路径现在有锐化**：`sr::recordSharpeningInto(commandList, src, dst, w, h, frame)` 复用
+  RT 那套 RCAS 的同一份着色器、PSO、根签名与强度映射（不是第二份实现），在 DLSS 输出写进
+  `arg10` 之前跑一遍：`dlssOut → sharpOut → 写 arg10 的 PS 采它`。资源状态归 `VvSr`
+  （`COMMON → UAV → PIXEL`），引擎路径那套 copy 往返在这里不需要。`sr.sharpening` /
+  `sr.sharpness` 两个键两条路径共用，面板「超分 → 锐化」在 VV 下不再置灰。
+- **修掉一个潜伏的状态错**：VV 自己的 `EvaluateFeature` 也经过 RT 探针的 detour，而引擎锐化假定
+  `Output` 在 `ALL_SHADER_RESOURCE`——VV 的输出那一刻是 `UNORDERED_ACCESS`。现在 VV 用
+  `sr::OwnEvaluateScope` 标住这次调用，detour 跳过引擎锐化（否则一开 `sr.sharpening` 就是
+  状态不匹配的 barrier）。
+- **落点差异**：arg10 里没有 HUD/准星，但第一人称手在（EXP-0058），所以 VV 下锐化会连手一起锐化；
+  提示行已写明。
+- **实测**：EXP-0096 实机 600+ 帧 `sr arg10 ... sharp=on`、`eval=1` 连续、正常退出无 crash；
+  离线重放同一 shader 于本管线自己的 1440p DLSS 输出，编码域均值差 0.37–0.82/255、边缘区是
+  平坦区的 6–9 倍、整体均值 +0.2%（`docs/specs/sr.md` §7.1）。
+- **未验证**：同帧 GPU 对（`sr_sharp_*`，F7 未触发）、F11/改分辨率后的锐化尺寸。
+
 ### 功能（2026-10-29：VV 比例直控、100% 保活 + DLSS/NR 原生）
 
 - **VV 内部比例不再写 Option 579**：`probe/VvUpscaling.cpp` hook

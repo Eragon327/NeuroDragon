@@ -123,7 +123,7 @@ Windows declarator 在 `0xB7505C0…0xB75060B` 按资源名 hash 绑定上述四
 | `mode` | 0（Taau） | 确实是 TAAU 分支 |
 | `factor` | **0.3300** | 渲染/显示比 = 33%（2560×1440 → 约 844×475） |
 | `dynScale` | 1.0000 | 动态分辨率当前没缩放 |
-| `jitter` | 每帧递增回绕（2,6,10,14,…） | 亚像素抖动在跑 ⇒ DLSS 需要的 jitter 可直接取 |
+| `jitter` | **0 基、每帧 +1、16 项回绕**（EXP-0047 逐帧核过） | 值 = Halton(2,3)−0.5，±0.5 **渲染像素**、屏幕 y 向下 ⇒ 与 DLSS 的 `Jitter.Offset` 同空间，**直传不需要任何换算**；能不能直传取决于世界帧是否按它渲染，见 §37 |
 | `clipping` / `mvFilter` | true / false | TAAU 的色域裁剪与 MV 过滤开关 |
 | viewport | 2560×1440+0,0 | 显示的 viewport（输出尺寸） |
 | `minFactor` / `targetFps` / `pixelScaling` / `smoothing` | 0.25 / 30 / 5 / 0.3 | `UpscalingParameters` 其余字段，布局与 SDK 头一致 |
@@ -263,7 +263,7 @@ hook `CreateCommittedResource` / `CreatePlacedResource` 之后，渲染分辨率
 | color | `R11G11B10_FLOAT`（渲染分辨率） | 需转 FP16 |
 | depth | `R24G8_TYPELESS` / `R32_FLOAT` | reversed-Z，`DepthInverted=true` |
 | MV | **自己重建**（depth + `TAAContext+0x200/+0x240`） | 像素单位 |
-| jitter | `UpscalingData.jitterIndex` → 引擎 jitter 表 | 需确认是否已进投影矩阵 |
+| jitter | `UpscalingData.jitterIndex` → 引擎 jitter 表（Halton(2,3)−0.5，±0.5 渲染像素、y 向下） | 单位/坐标与 DLSS 的 `Jitter.Offset` 同空间，**不需要换算**。**2026-10-29 已确认（EXP-0100 几何测量）：颜色层没有按这个偏移光栅化** ⇒ 唯一真实值是 0，产品侧固定用 0；见 §37 |
 | 输出 | 后缓冲（倒 4 之后写入） | 已是本 spec 的插入点 |
 
 > **2026-10-28 更正（静态已确认，取代上面「没有 MV 纹理」整段与 M6 表的 MV 行）**：
@@ -2193,6 +2193,11 @@ HUD 与准星在后缓冲上，只动 `arg10` 理应不受影响；若 HUD 一�
 - 黑闪的两个已修原因：`record()` 在丢弃帧上 evaluate（历史污染）与 list 级 `!dsv` 误杀 writer
   （EXP-0059/0060 复盘）。
 - **抖动仍是唯一未解**：一次、无触发、不可复现；疑与自算 MV/时域有关，阶段 C 换引擎 MV 后重点看。
+  → **2026-10-29 定位（EXP-0098/0099）**：不是 MV，是喂给 DLSS 的亚像素 jitter。用户 A/B
+  「=0 就稳了；锐化只是让抖动更明显，关掉锐化也抖」⇒ 直传的引擎值与当帧输入对不上。
+  「世界帧没按 `TAAContext+0x1e4` 渲染」仍是**推断**；这个值本身与 DLSS 同空间（渲染像素、y 向下，
+  不需要任何换算，见 §37 / `research/2026-10-29-taau-jitter-dlss-contract.md`）。产品侧改成 jitter 恒为 0，
+  引擎值只留作 TEST 开关；机制同 EXP-0073 的菜单抖动。
 - 观察项：108-list UI 帧出现过一次 `split=13/108` 注入，本轮未见黑闪；若黑闪回来，先查这类 UI 帧。
 
 ### 35.3 阶段 C：切换引擎 MV，删除自算 MV
@@ -2261,6 +2266,7 @@ dlssMv = float2(engineMv.z, -engineMv.w) * renderResolution;
 - 用户在这次会话的**第一次录制**（MV 正确的那段）报告了画面抖动 ⇒ **抖动与 MV 源无关**，
   在自算 MV（EXP-0060/0061）和引擎 MV 下都能复现，按独立未知项继续查（present/历史/reset 方向），
   不阻塞阶段 C 的输入切换。
+  → 该未知项已在 2026-10-29 关闭：原因是 jitter，不是 MV（见 §35.2 的同一条注）。
 - 收口要求：resize 后到引擎 MV 尺寸与 render 尺寸一致之前，**不注入**（跳过该帧并记日志），
   不允许用自算 MV 或零场静默顶上；然后再做「F11 两种形态 × 静止/走动」的回归。
 
@@ -2500,3 +2506,46 @@ VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution
 
 **EXP-0088 结果**：`[nr] MV scale 1.000,1.000 (guide 1280x720)`；用户「已完成，无闪动」；
 12:56:31 正常退出，无新 crash dump。证据 `docs/agent/evidence/nr-vv-mv-scale-EXP-0088.log`。
+
+## 37. TAAU jitter → DLSS 的契约与判别实验（2026-10-29，已判别：帧没有按它渲染）
+
+全文与证据链在 `research/2026-10-29-taau-jitter-dlss-contract.md`，地址在 canon `taau_jitter_table`。
+这里只放结论与待办。
+
+**已确认（静态 + 原始日志）**：
+
+- 值 = `float2(VanDerCorput(2,k+1), VanDerCorput(3,k+1)) - 0.5`，`k = mCurrentJitterIdx`（**0 基、每帧 +1、16 项回绕**）；
+  与 RTXPT 的 Halton 抖动是同一序列，只差相位数量（引擎 16，RTXPT 取 `max(32, 8×面积比)`）。
+- 单位 = **渲染分辨率像素**、屏幕 **y 向下**：TAAU PS 是 `srcPos = displayCenter*ratio - jitter - 0.5`，jitter 从
+  渲染像素坐标里直接减；那个 `-0.5` 是像素中心约定，不属于 jitter。
+- DLSS 侧要的是同一个量：RTXPT 把 `View::GetPixelOffset()` 原样交 `slConstants.jitterOffset`，只对光线相机翻 Y；
+  同一 View 出来的 MV 也是像素单位。**MV 需要 `(-z,+w)`（翻 Y + 时间方向取反），jitter 两项都不需要。**
+- 因此「直传前要 ×ratio / ×0.5 / ±0.5」已进 `canon/refuted.jsonl`：直传在数值上就是对的。
+
+**已判别（EXP-0100，四对 F7 双采 + 离线亚像素测量）**：世界帧**没有**按这个偏移光栅化。
+
+- 方法：站定不动，每对 dump 相隔 ≈131 帧；两张 `sr_colour_*`（喂给 DLSS 的 render-size 颜色，1706x960 fmt26）
+  用相位相关 + 1/50 px 上采样 DFT 求位移（工具 `_local/tools/jitter_shift.py`，用真实 dump 造已知位移标定到 ±0.01 px）。
+- 结果：`|Δj|` = 0.758 / 0.486 / 0.161 / 0.462，对应实测位移 = 0.063 / 0.216 / 0.331 / **0.028** px。
+  最干净的一对（相关峰最高、五个区域全是 0.02）在 `|Δj| = 0.462` 时只动了 0.02 px；`|Δj|` 最大的一对只动了 0.06–0.13。
+  位移与 `|Δj|` 无关，较大残差随取景区域变化（贴图动画）。
+- ⇒ 唯一真实的 `Jitter.Offset` 是 **0**（产品默认）；TAAU 自己用这个值只是它重采样核的相位，不要求世界帧真的抖过。
+- 仍未解释（记账，不当证据）：用户 A/B 里 `-j(n)` 与 `j(n-1)` 看着也稳、只有 `j(n)` 抖；按测量它们同样注入
+  ~0.37 px 假相位，几何上应与 `j(n)` 同量级，疑为 DLSS 历史权重差异或一次观感漏判。
+
+**判别实验**（每个改几行 + 面板切换，不需要新工具；`j(n)` 为当帧 ctx 值）：
+
+| 喂给 DLSS | 帧没按它渲染 | 帧有、符号正确 | 帧有、符号反 |
+|---|---|---|---|
+| `j(n)`（现状） | 抖 | 稳（不该抖） | 抖 |
+| `-j(n)` | 幅度几乎不变 | 幅度翻倍 | 稳 |
+| `j(n-1)` | 抖 | 抖 | 抖；**稳** ⇒ 相位差一帧 |
+
+- `-j(n)` 幅度翻倍 ⇒ 值与帧对得上，别再改符号或缩放，去查相位 / depth / MV 一致性；
+- `-j(n)` 幅度不变 ⇒ 这一帧确实没按它渲染 ⇒ 只能喂 0；想要亚像素采样增益就得在渲染侧自己施加 jitter（另一个工程）；
+- `j(n-1)` 稳 ⇒ 引擎 ctx 的 jitter 领先渲染一帧，属相位 bug，修 source。
+
+**顺序**：产品侧维持 jitter = 0（`VvSr` 默认；四档诊断只剩 `0 / j(n) / -j(n) / j(n-1)` 供复查）。
+若要拿回 66% 下的亚像素采样，得在 `createDeferredRenderingCameras`（直写 factor 的同一个钩子）里**自己抖投影**，
+再把同一个值交给 DLSS —— 这是新工程，不在本轮。depth 语义（`near/(1-d)` 与 `DepthInverted=1`）仍待收口：
+它影响的是重投影精度，与 jitter 是否喂值相互独立。

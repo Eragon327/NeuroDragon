@@ -40,7 +40,7 @@ docs/
 | [specs/vv.md](specs/vv.md) | VV 路径（阶段 2） | 触发条件、插入点、命令流、已答/未答的未知、M4–M7 与 stop/go；§34–§35 为 R3（插入点上移、写 `arg10`、实施阶段 A–D） |
 | [specs/nr.md](specs/nr.md) | NR | NGX feature `0x12` 的契约、参数表、编码/合成、位置轴、尺寸与生命周期、剩余工作与探针结论 |
 | [specs/sr.md](specs/sr.md) | SR | 引擎 DLSS 的三层分辨率、内部分辨率、模型预设与重建、RCAS 锐化、截图、读数与待办 |
-| [specs/ui.md](specs/ui.md) | UI / 设置 | Present 钩子 + D3D11On12 面板、输入吞噬、draft 配置语义、监控与拆分计划 |
+| [specs/ui.md](specs/ui.md) | UI / 设置 | Present 钩子 + D3D11On12 面板、输入吞噬、draft 配置语义、监控与拆分计划；§8.1 为 VV 线 UI 收口的短期清单 |
 | [specs/trp.md](specs/trp.md) | 对照与选型 | TRP 0.5.3 的 SR/NR 功能全表、我们已有/缺什么、代价、不做与原因 |
 | [decisions/0001-taau-insertion-point.md](decisions/0001-taau-insertion-point.md) | ADR | 接入点选「包住 `taau`」，不是「在帧图里找缝」 |
 | [decisions/0002-no-kernel-patching.md](decisions/0002-no-kernel-patching.md) | ADR | 不做 `.trpk` / INT8 / MFG 这类对驱动内核的逆向 patch |

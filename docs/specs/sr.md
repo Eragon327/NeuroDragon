@@ -26,7 +26,7 @@
 |---|---|---|
 | 内部分辨率 | 跟随引擎 / 33 / 50 / 58 / 66 / 100 | 应用即生效，**不需要**拖窗口/F11 |
 | DLSS 模型（预设） | 默认 / E / F / J / K / L / M | 应用时若预设变化，强制一次 feature 重建 |
-| 锐化（RCAS） | 开/关 + 0–1 强度（默认 0.672） | 每帧，在引擎 DLSS 之后 |
+| 锐化（RCAS） | 开/关 + 0–1 强度（默认 0.672） | 每帧：RT 下在引擎 DLSS 之后；VV 下在写 arg10 之前（§7.1） |
 | 引擎上采样读数 | 尺寸链、创建时的质量槽、创建时的预设 | 只读；重建在飞时显示「重建中…」 |
 | 自检与遥测 | 四项自检 + 求值次数/失败数/输入格式/HDR/jitter | 只读 |
 
@@ -165,6 +165,42 @@ patch 表项（`.rdata` 用 `VirtualProtect` 包一次）→ 场景按该比例�
   两条缝、四段画面）；锐化的 A/B 用整帧开关。
 - 每累计 120 帧自动写一对 dump（强度变化后重新计时）：`dump/sharp_before_<强度>.bmp` /
   `sharp_after_<强度>.bmp`，日志给两者 max。
+
+### 7.1 VV 路径（2026-10-29，EXP-0096）
+
+VV 不走引擎的 `Output`，所以这里**复用同一套 RCAS**，只换入口与资源：
+
+```
+vv DLSS 输出 (dlssOut, RGBA16F, 显示尺寸) → RCAS → sharpOut → 写 arg10 的 PS 采它
+```
+
+- **同一份实现**：`sr::recordSharpeningInto(cmd, src, dst, w, h, frame)` 与引擎路径共用
+  `kRcasHlsl`、PSO、根签名、强度映射和统计（`sharpStats()` 两边共用一组计数）。它只做
+  dispatch，**不碰资源状态**——状态归 `VvSr`（`sharpOut: COMMON → UNORDERED_ACCESS → PIXEL`），
+  因为只有它知道那张纹理的来历。引擎路径那套「copy 进私有纹理、再 copy 回去」在这里不需要：
+  两边都是我们自己的纹理。
+- **必须的一处修正**：VV 的 `NVSDK_NGX_D3D12_EvaluateFeature` 也经过 RT 探针的 detour（NR 就是
+  靠这条路径接进去的），而引擎路径的锐化假定 `Output` 在 `ALL_SHADER_RESOURCE`——VV 的输出那一刻
+  是 `UNORDERED_ACCESS`。所以 VV 在自己的 evaluate 外面套 `sr::OwnEvaluateScope`，detour 见到它
+  就跳过引擎锐化（`RenderProbe.cpp` 的 `if (result == 1 && out && !sr::insideOwnEvaluate())`）。
+  没有这层，打开 `sr.sharpening` 会在 VV 下产生状态不匹配的 barrier。
+- **落点语义与 RT 不同的一处**：arg10 里没有 HUD / 准星，但**第一人称手在**（EXP-0058 的品红实验），
+  所以 VV 下锐化会连手一起锐化。HUD 与文字仍然不受影响。
+- **离线数值（离线逐行重放 `kRcasHlsl`，输入是本管线自己 dump 的 1440p DLSS 输出，强度 0.672）**：
+
+  | 输入 | 编码域 mean | p99 | 边缘区 / 平坦区 | 整体均值比 |
+  |---|---|---|---|---|
+  | `sr_dlssout_2560x1440_5/3/1` | 0.82 / 0.82 / 0.66 (÷255) | 6.7–8.6 | 3.0–4.1 vs 0.39–0.46 | 1.0021–1.0024 |
+  | `sr_dlssout_2560x1369_4` | 0.37 (÷255) | 3.5 | 1.5 vs 0.24 | 1.0019 |
+
+  即：变化集中在边缘（平坦区只有一个零头），整体亮度几乎不动（+0.2%）。
+  证据 `docs/agent/evidence/vv-sharpen-offline-EXP-0096.txt`。
+- **运行时（EXP-0096，dll `d846ec24`）**：`sharp=off` 三帧 → 打开后 `[sr] RCAS 就绪/已启用` →
+  `sr arg10` 到 #1200 都是 `sharp=on` 且 `eval=1`，100% 原生保活态同样如此；正常退出、无 crash。
+  证据 `docs/agent/evidence/vv-sharpen-EXP-0096.log`。
+- **仍未取到**：同帧 GPU 对（`sr_sharp_*` / `sr_dlssout_*`）。日志里没有 `[vvsr] sr dump`，
+  说明 F7 没被按下；取法是面板开着锐化时按一次 F7，或往游戏根目录放 `vv_dump_sr.txt` 标记。
+  `dumpInputs()` 已经会顺带写 `sr_sharp_*`（`DumpState::ShaderResource`）。
 
 ## 8. 成品帧截图
 
