@@ -1238,6 +1238,32 @@ Windows 下 shared_ptr 是函数第 3 个参数（`r8`）；先解引用得到�
 因为相机和帧图尺寸已经确定。资源按新尺寸重建、切场景与 `1.0` 往返尚需实机验证，
 静态结论不冒充运行时通过。
 
+**实现（2026-10-29，EXP-0089）**：`probe/VvUpscaling.cpp` 用 canon 签名 hook
+`mce::framebuilder::bgfxbridge::createDeferredRenderingCameras`（win-26.51 rva
+`0x8c7c2f0`，32 字节唯一签名），在 `origin` 之前从 `shared_ptr`（r8）解出对象：
+写 `+0x4 = factorForPercent(sr.vvPercent)`，并把 `+0x8`（`mEnableDynamicResolution`）
+置 0，避免动态分辨率把目标比例再乘一次。`vvPercent = 0`（跟随引擎）不覆盖。
+面板 Apply 不再写 Option 579，玩家的 `upscaling_percentage` 保持原值；写入前校验
+对象可读、`mode` 0..3、原 factor 0..4，避免 ABI 位置变化时写坏内存。
+EXP-0089 实测：factor=1.0 时引擎直接停掉 TAAU/arg10，现有 arg10 路径无法在 100% 工作；
+保活方案见下。
+
+**100% 保活（EXP-0090 通过）**：`vvPercent=100` 时 hook 先写 1.0 建相机，
+`origin` 后恢复 `before`（<1）或 0.6667 作为 branch，让 frameImpl 仍声明 TAAU/arg10；
+`nativeRender()` 为真时 VvProbe 把 display size 当 render size，TAAU draw 仍由现有 suppress
+跳过。这样 DLSS 以 1:1 写 arg10，NR 在 display 分辨率上跑。
+
+EXP-0090 实机：`[vv] native render: camera 1.000, branch 0.5000`；
+`[vvsr] sr buffers 2560x1440 -> 2560x1440`；`sr arg10` 连续 `eval=1`；退出无新 crash。
+代价：NR 在 display 分辨率约 9.8 ms（1440p），帧率明显下降，这是 100% 档的固有成本。
+**未单独验证**：100% → 66% 的运行时回切（这次最后是直接禁用 VV DLSS，日志里没有回切段）。
+
+**菜单 100%（EXP-0093）**：菜单背景不走 R3 arg10 链；在菜单里应用 native 保活会把相机建在 1.0、菜单采样器仍按 <1 取，背景放大到左上角并延续进世界。修法：native 100 只在 `worldLoaded()` 时应用；菜单保持引擎自己的 factor。
+
+**EXP-0093 更正**：只跳过菜单不够。join 事件会让 `worldLoaded()` 在进世界的加载帧就为真，而 NGX 会话/R3 管线还没 live（`session: no NGX core`、无 `sr arg10`）；TAAU 仍按 branch 0.5 采样 display 颜色，画面左上角放大且 DLSS 不启动。EXP-0094 起 native 100 只在首次 `sr arg10` 成功之后启用，首帧保持引擎 factor。
+
+**EXP-0094 / 0095**：逐帧撤销 native 会形成反馈环：100% 帧仍持旧 1280×720 arg11，注入失败后退回 50%，成功后再进 100%；43 次尺寸交替对应用户看到的黑白闪动，最后在 MV 的 `CreateShaderResourceView` 中触发 NVIDIA 驱动空读。EXP-0095 把 live 改为首次成功后锁存到 disable/release，等待原生 MV，不再在 record 开始或单次注入失败时切回。实机通过：原生 MV 在 36 ms 后接管，`sr arg10` 连续到 #600，无尺寸振荡或新崩溃。证据：`docs/agent/evidence/vv-native-live-oscillation-EXP-0094.log`、`docs/agent/evidence/vv-native-live-latch-EXP-0095.log`。
+
 ## 18. S5：callback 级替换（EXP-0025 失败，见 §19）
 
 ### 18.1 反编译依据

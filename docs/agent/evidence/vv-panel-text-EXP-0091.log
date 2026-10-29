@@ -1,0 +1,59 @@
+agentflow gate: 2 finding(s), 0 error(s), 0 waived
+  WARN             shader.out-of-scope      HLSL chunk kEncodeHlsl (src/neurodragon/nr/D3D12Bridge.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+  WARN             shader.out-of-scope      HLSL chunk kRcasHlsl (src/neurodragon/sr/SrSharpening.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+----
+warning: in the working copy of 'src/lang/en_US.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/lang/zh_CN.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/neurodragon/ui/Glyphs.h', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/lang/en_US.json b/src/lang/en_US.json
+index e1bb6fe..67c6dbe 100644
+--- a/src/lang/en_US.json
++++ b/src/lang/en_US.json
+@@ -352,11 +352,11 @@
+             "backendVv": "DLSS (VV)",
+             "backendNone": "None",
+             "backendLost": "Last seen {0} ago; nothing is running now (out of a world, or upscaling is off).",
+-            "backendConfigured": "The engine is set to VV, but upscaling is not running (ratio {0}%; 100% turns it off). Pick a lower ratio below to bring it back.",
++            "backendConfigured": "The engine is set to VV, but our upscaling is not running (engine ratio {0}%). 100% is now native render with a branch keepalive: DLSS/NR can still run. Pick a ratio and apply to bring it back.",
+             "vvEnable": "Replace TAAU with DLSS",
+-            "vvEnableHint": "On: our DLSS writes into TAAU's output (arg10) and the engine's TAAU draw is skipped. Off: the engine's own TAAU, nothing of ours runs. Requires an upscaling ratio below 100% (at 100% there is no TAAU to replace).",
+-            "backendNever": "No SR backend detected: VV needs upscaling = TAAU with a ratio below 100%; ray tracing needs ray tracing enabled.",
+-            "scaleHintVv": "Writes the engine option upscaling_percentage; it applies live, without a restart or F11. 100% turns upscaling off entirely: TAAU disappears and this page has nothing left to replace.",
++            "vvEnableHint": "On: our DLSS writes into TAAU's output (arg10) and the engine's TAAU draw is skipped. Off: the engine's own TAAU, nothing of ours runs. The ratio is written directly to UpscalingData.factor; 100% keeps arg10 alive through the branch keepalive, with DLSS 1:1 and NR at native resolution.",
++            "backendNever": "No SR backend detected: VV needs upscaling = TAAU with a valid ratio (100% uses the branch keepalive); ray tracing needs ray tracing enabled.",
++            "scaleHintVv": "Writes the engine's UpscalingData.factor before the camera viewport is built; the player's upscaling_percentage option stays untouched. 100% is native render: the camera is built at 1.0, then a branch-keepalive factor keeps TAAU/arg10 declared, so DLSS runs 1:1 and NR runs at native resolution (higher cost).",
+             "sharpHintVv": "Sharpening is not wired up on the VV path yet: the RCAS pass hangs off the engine's EvaluateFeature, while VV writes arg10 from our own pipeline.",
+             "resetHintVv": "Use it when the picture smears after a teleport or a camera cut: clears the DLSS history for two frames.",
+             "vvSection": "VV pipeline (measured)",
+diff --git a/src/lang/zh_CN.json b/src/lang/zh_CN.json
+index 67f318b..3ac6187 100644
+--- a/src/lang/zh_CN.json
++++ b/src/lang/zh_CN.json
+@@ -352,11 +352,11 @@
+             "backendVv": "DLSS（VV）",
+             "backendNone": "无",
+             "backendLost": "上次看到是 {0} 前；现在没有在跑（不在世界，或上采样已关闭）。",
+-            "backendConfigured": "引擎配置为 VV，但上采样没有在跑（比例为 {0}%；100% 表示关掉上采样）。在下面选一个低比例即可恢复。",
++            "backendConfigured": "引擎配置为 VV，但我们的上采样没有在跑（引擎比例 {0}%）。100% 现在是原生渲染 + 保活分支，DLSS/NR 仍可开；选一个比例再应用即可恢复。",
+             "vvEnable": "用 DLSS 替换 TAAU",
+-            "vvEnableHint": "开：我们的 DLSS 写进 TAAU 的输出（arg10），并跳过引擎那条 TAAU draw；关：完全回到引擎自己的 TAAU。需要上采样比例低于 100%（100% 时没有 TAAU 可替换）。",
+-            "backendNever": "没有检测到可接管的超分：VV 需要「上采样 = TAAU」且比例低于 100%；光追需要开启光线追踪。",
+-            "scaleHintVv": "写引擎选项 upscaling_percentage，运行时生效，不需要重启或 F11。100% 表示关掉上采样：TAAU 整条消失，这块面板也就没有可替换的对象了。",
++            "vvEnableHint": "开：我们的 DLSS 写进 TAAU 的输出（arg10），并跳过引擎那条 TAAU draw；关：完全回到引擎自己的 TAAU。比例由 UpscalingData.factor 直控；100% 会用保活分支保留 arg10，DLSS 1:1 + NR 原生。",
++            "backendNever": "没有检测到可接管的超分：VV 需要「上采样 = TAAU」且比例有效（100% 走保活分支）；光追需要开启光线追踪。",
++            "scaleHintVv": "直接写引擎的 UpscalingData.factor（在相机视口建立之前），玩家的 upscaling_percentage 选项保持不动。100% = 原生渲染：相机按 100% 建，分支保活让 TAAU/arg10 仍在，DLSS 1:1 + NR 原生（成本更高）。",
+             "sharpHintVv": "VV 下锐化尚未接入：这条 pass 挂在引擎的 EvaluateFeature 上，而 VV 走的是我们自己的 arg10 写入。",
+             "resetHintVv": "画面出现拖影或跳变时按一下：让 DLSS 历史清零两帧。",
+             "vvSection": "VV 管线（实测）",
+diff --git a/src/neurodragon/ui/Glyphs.h b/src/neurodragon/ui/Glyphs.h
+index b952676..85de59b 100644
+--- a/src/neurodragon/ui/Glyphs.h
++++ b/src/neurodragon/ui/Glyphs.h
+@@ -6,4 +6,4 @@
+ // full-width punctuation (，。（）：？！、…) that Chinese text uses. The panel's
+ // text lives in src/lang/*.json (ll::i18n), so the catalogue is the primary
+ // source; the ui sources are scanned too for untranslated strings.
+-inline constexpr char kUiGlyphs[] = "§±·×–…→≈②③、。「」一三上下不与且世丢两个中为么之乘也了二于互些交亮什仅仍从代以们件价任会传但位低体何作使例供侧保修倍值偏做停健像先光入全六关内再写冲决准出分切创初判别到制前割功加动包化匹区半单南卡即卸历压原参反发取受变叠口只可台史右吃合同名后含启和品响器四回因围固图在场均块型域基增处备复外大失始子字存它安完定实室宽寸对导射小少尚就尺尾局屏工左差己已帧常平并序应底度康建开异弃式引张强归当录彩影征径待很心志快态性恢意慢戏成我或截戳所手才打执扫批找把抖抢抵拆拉拒拖拿持挂指按挪损换掉排接推描提操擎擦支收改放效数整文斥断新方旋无日旧时明映是显景暂暗曝更替最有未末本条来松板构果染查栅标栏样核格档检槽模次止正每比求没法注测消深清渲游满点热版特状独率环现理生用由画界留白的皮益盖目直相省看眼着矢知短码硬示神移程空窗立端第等签算管糊素繁约级纯纹线组细终经绑结给络绝统继绪续缀缓编缩缺网置而肉肤能自致色节范荐落行表被装要覆见视角计认让记设诊试询该误说请读调象败质走超越足跑跟路跳踪转轮载输辨边迁过运近返还这进追送适选通遥那部都配采释里重量钩钮链销锐错键闭问间队际降除随难零需静面页项顺顿预频题风首驱验高默鼠（），：；";
++inline constexpr char kUiGlyphs[] = "§±·×–…→≈②③、。「」一三上下不与且世丢两个中为么之乘了二于互些交亮什仅仍从代以们件价任会传但位低体何作使例供侧保修倍值偏做停健像先光入全六关内再写冲决准出分切创初判别到制前割功加动包化匹区半单南卡即卸历压原参反发取受变叠口只可台史右吃合同名后含启和品响器四回因围固图在场均型域基增处备复外大失始子字存它安完定实室家宽寸对导射小少尚就尺尾局屏工左差己已帧常平并序应底度康建开异弃式引张强归当录彩影征径待很心志快态性恢意慢戏成我或截戳所手才打执扫批找把抖抢抵拆拉拒拖拿持挂指按挪损换掉排接控推描提操擎擦支收改放效数整文斥断新方旋无日旧时明映是显景暂暗曝更替最有未末本机条来松板构果染查栅标栏样核格档检槽模次止正每比求没法注活测消深清渲游满点热版特状独率玩环现理生用由画界留白的皮益盖目直相省看眼着矢知短码硬示神移程空窗立端第等签算管糊素繁约级纯纹线组细终经绑结给络绝统继绪续缀缓编缩缺网置而肉肤能自致色节范荐落行表被装要覆见视角计认让记设诊试询该误说请读调败质走超越足跑跟路跳踪转轮载输辨边迁过运近返还这进追送适选通遥那部都配采释里重量钩钮链销锐错键闭问间队际降除随难零需静面页项顺顿预频题风首驱验高默鼠（），：；";
+----
+deployed 6a95dbbb

@@ -96,6 +96,11 @@ void syncConfig();
 
 [[nodiscard]] Stats stats();
 
+/// True after a frame successfully wrote arg10, and latched until disable/release.
+/// The direct-factor hook defers the native 100% keepalive until this is true, then
+/// keeps the render size stable while the engine rebinds its native-size motion vectors.
+[[nodiscard]] bool live();
+
 void release();
 
 } // namespace neurodragon::vv::sr

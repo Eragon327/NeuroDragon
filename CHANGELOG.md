@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 功能（2026-10-29：VV 比例直控、100% 保活 + DLSS/NR 原生）
+
+- **VV 内部比例不再写 Option 579**：`probe/VvUpscaling.cpp` hook
+  `createDeferredRenderingCameras`（win-26.51 rva `0x8c7c2f0`），在相机/视口建立前直接写
+  `UpscalingData.factor`；0 = 跟随引擎，50/66/… = 直控。玩家的 `upscaling_percentage`
+  保持不动；面板 Apply 不再写这个 option。
+- **100% = 原生渲染 + 分支保活**：相机按 1.0 建，`origin` 后恢复 `<1` 的 factor 让
+  `frameImpl` 仍声明 TAAU/arg10；TAAU draw 继续被 suppress，DLSS 以 1:1 写 arg10，
+  NR 在 display 分辨率上跑。EXP-0090 通过（`[vv] native render: camera 1.000,
+  branch 0.5000`、`sr buffers 2560x1440 -> 2560x1440`、`sr arg10` 连续 `eval=1`）；
+  代价是 NR ~9.8 ms @1440p。
+- **菜单不启用 100% 保活**：菜单背景不走 R3 arg10 链，保活会让背景放大到左上角并延续进世界
+  （EXP-0093）；native 模式只在 `worldLoaded()` 时应用，菜单保持引擎自己的 factor。
+- **100% 保活等首次成功并锁存**：`worldLoaded()` 在进世界的加载帧就可能为真，而 NGX 会话/管线还没起来；
+  首帧保活会让 TAAU 以 branch 采样 display 画面（放大且无 DLSS）。`native 100` 只在首次
+  `sr arg10` 成功后启用，并保持到 disable/release，等待原生尺寸 MV 重绑；不再因过渡帧注入失败
+  在 50%/100% 之间逐帧振荡。EXP-0095 实测原生 MV 接管、`sr arg10` 连续到 #600，无黑白闪动或崩溃。
+- **未验证**：100% → 66% 的运行时回切；F11/改分辨率后的 NR 合成纹理尺寸。
+
 ### 功能（2026-10-29：VV 下接入 NR，opt-in）
 
 - **NR（NGX feature `0x12`）现在可以在 VV 路径作为 DLSS-SR 的输入级运行**：NR 的创建/尺寸跟随/

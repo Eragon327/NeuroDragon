@@ -1,0 +1,87 @@
+[2026-10-29 13:32:52.879 IFO][NeuroDragon] [vv] native render: camera 1.000, branch 0.5000 (dynamic off, option untouched)
+[2026-10-29 13:32:54.670 IFO][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=4 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-29 13:32:55.237 WRN][NeuroDragon] [vv] inject skipped (1): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:32:55.239 IFO][NeuroDragon] [vv] taau #2 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2 lists=48
+[2026-10-29 13:32:55.302 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+[2026-10-29 13:32:55.302 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-29 13:32:55.303 IFO][NeuroDragon] [vv] taau #3 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=6 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5 lists=97
+[2026-10-29 13:32:55.309 WRN][NeuroDragon] [vv] inject skipped (3): recording the injected work failed
+[2026-10-29 13:32:55.322 IFO][NeuroDragon] [vv] taau #4 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7 lists=145
+[2026-10-29 13:32:56.354 WRN][NeuroDragon] [vv] inject skipped (120): recording the injected work failed
+[2026-10-29 13:32:57.373 WRN][NeuroDragon] [vv] inject skipped (240): recording the injected work failed
+[2026-10-29 13:32:57.874 IFO][NeuroDragon] [vv] taau #300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=599 lists=14650
+[2026-10-29 13:32:58.409 WRN][NeuroDragon] [vv] inject skipped (360): recording the injected work failed
+[2026-10-29 13:32:59.429 WRN][NeuroDragon] [vv] inject skipped (480): recording the injected work failed
+[2026-10-29 13:33:00.443 IFO][NeuroDragon] [vv] taau #600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=1199 lists=29350
+[2026-10-29 13:33:00.454 WRN][NeuroDragon] [vv] inject skipped (600): recording the injected work failed
+[2026-10-29 13:33:01.483 WRN][NeuroDragon] [vv] inject skipped (720): recording the injected work failed
+[2026-10-29 13:33:02.524 WRN][NeuroDragon] [vv] inject skipped (840): recording the injected work failed
+[2026-10-29 13:33:03.089 IFO][NeuroDragon] [vv] taau #900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=1799 lists=44050
+[2026-10-29 13:33:03.654 WRN][NeuroDragon] [vv] inject skipped (960): recording the injected work failed
+[2026-10-29 13:33:04.829 WRN][NeuroDragon] [vv] inject skipped (1080): recording the injected work failed
+[2026-10-29 13:33:05.974 IFO][NeuroDragon] [vv] taau #1200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2576 lists=58927
+[2026-10-29 13:33:05.984 WRN][NeuroDragon] [vv] inject skipped (1200): recording the injected work failed
+[2026-10-29 13:33:07.124 WRN][NeuroDragon] [vv] inject skipped (1320): recording the injected work failed
+[2026-10-29 13:33:08.294 WRN][NeuroDragon] [vv] inject skipped (1440): recording the injected work failed
+[2026-10-29 13:33:08.850 IFO][NeuroDragon] [vv] taau #1500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=3476 lists=73927
+[2026-10-29 13:33:09.434 WRN][NeuroDragon] [vv] inject skipped (1560): recording the injected work failed
+[2026-10-29 13:33:10.593 WRN][NeuroDragon] [vv] inject skipped (1680): recording the injected work failed
+[2026-10-29 13:33:11.639 IFO][NeuroDragon] [vv] taau #1800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=4376 lists=88927
+[2026-10-29 13:33:11.649 WRN][NeuroDragon] [vv] inject skipped (1800): recording the injected work failed
+[2026-10-29 13:33:12.774 WRN][NeuroDragon] [vv] inject skipped (1920): recording the injected work failed
+[2026-10-29 13:33:13.904 WRN][NeuroDragon] [vv] inject skipped (2040): recording the injected work failed
+[2026-10-29 13:33:14.364 IFO][NeuroDragon] [vv] taau #2100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5276 lists=103927
+[2026-10-29 13:33:14.879 WRN][NeuroDragon] [vv] inject skipped (2160): recording the injected work failed
+[2026-10-29 13:33:15.989 WRN][NeuroDragon] [vv] inject skipped (2280): recording the injected work failed
+[2026-10-29 13:33:17.130 IFO][NeuroDragon] [vv] taau #2400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=6176 lists=118927
+[2026-10-29 13:33:17.139 WRN][NeuroDragon] [vv] inject skipped (2400): recording the injected work failed
+[2026-10-29 13:33:18.254 WRN][NeuroDragon] [vv] inject skipped (2520): recording the injected work failed
+[2026-10-29 13:33:19.384 WRN][NeuroDragon] [vv] inject skipped (2640): recording the injected work failed
+[2026-10-29 13:33:19.925 IFO][NeuroDragon] [vv] taau #2700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7076 lists=133927
+[2026-10-29 13:33:20.489 WRN][NeuroDragon] [vv] inject skipped (2760): recording the injected work failed
+[2026-10-29 13:33:21.639 WRN][NeuroDragon] [vv] inject skipped (2880): recording the injected work failed
+[2026-10-29 13:33:24.833 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:33:24.866 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:33:24.886 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:33:25.282 IFO][NeuroDragon] [vv] taau #3000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7895 lists=148865
+[2026-10-29 13:33:32.253 IFO][NeuroDragon] [vv] taau #3300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=8495 lists=163872
+[2026-10-29 13:33:41.273 IFO][NeuroDragon] [vvsr] sr arg10 #600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:33:41.500 IFO][NeuroDragon] [vv] taau #3600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=9201 lists=182815
+[2026-10-29 13:33:48.980 IFO][NeuroDragon] [vv] taau #3900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=10101 lists=204565
+[2026-10-29 13:33:49.232 IFO][NeuroDragon] [vvsr] sr buffers 1706x960 -> 2560x1440
+[2026-10-29 13:33:53.982 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:33:54.104 IFO][NeuroDragon] [vv] taau #4200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=10881 lists=226510
+[2026-10-29 13:33:57.044 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+[2026-10-29 13:34:01.114 IFO][NeuroDragon] [vv] taau #4500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=11781 lists=248250
+[2026-10-29 13:34:08.430 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:34:08.606 IFO][NeuroDragon] [vv] taau #4800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=12514 lists=270140
+[2026-10-29 13:34:16.114 IFO][NeuroDragon] [vv] taau #5100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=13114 lists=291848
+[2026-10-29 13:34:24.072 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:34:24.252 IFO][NeuroDragon] [vv] taau #5400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=13714 lists=313850
+[2026-10-29 13:34:31.857 IFO][NeuroDragon] [vv] taau #5700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=14314 lists=335720
+[2026-10-29 13:34:39.443 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:34:39.607 IFO][NeuroDragon] [vv] taau #6000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=15166 lists=357563
+[2026-10-29 13:34:40.853 IFO][NeuroDragon] [vvsr] sr buffers 1706x960 -> 2560x1440
+[2026-10-29 13:34:46.078 IFO][NeuroDragon] [vv] taau #6300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=16002 lists=379760
+[2026-10-29 13:34:51.159 IFO][NeuroDragon] [vvsr] sr arg10 #3600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:34:51.257 IFO][NeuroDragon] [vv] taau #6600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=16602 lists=401534
+[2026-10-29 13:34:57.446 IFO][NeuroDragon] [vv] taau #6900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=17209 lists=421306
+[2026-10-29 13:35:02.015 IFO][NeuroDragon] [vvsr] sr arg10 #4200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:35:02.111 IFO][NeuroDragon] [vv] taau #7200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=17976 lists=436173
+[2026-10-29 13:35:06.454 IFO][NeuroDragon] [vv] taau #7500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=18876 lists=451173
+[2026-10-29 13:35:09.435 IFO][NeuroDragon] [vv] taau #7800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=19766 lists=466163
+[2026-10-29 13:35:12.684 IFO][NeuroDragon] [vv] taau #8100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=20366 lists=480999
+[2026-10-29 13:35:16.157 IFO][NeuroDragon] [vv] taau #8400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=20966 lists=495979
+[2026-10-29 13:35:19.825 IFO][NeuroDragon] [vv] taau #8700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=21566 lists=516856
+[2026-10-29 13:35:22.916 IFO][NeuroDragon] [vv] taau #9000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=22166 lists=538314
+[2026-10-29 13:35:26.440 IFO][NeuroDragon] [vv] taau #9300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=22773 lists=559448
+[2026-10-29 13:35:29.440 IFO][NeuroDragon] [vv] taau #9600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=23402 lists=574561
+[2026-10-29 13:35:32.374 IFO][NeuroDragon] [vv] taau #9900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=24302 lists=589561
+[2026-10-29 13:35:35.365 IFO][NeuroDragon] [vv] taau #10200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=25202 lists=604561
+[2026-10-29 13:35:38.315 IFO][NeuroDragon] [vv] taau #10500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=26102 lists=619561
+[2026-10-29 13:35:41.280 IFO][NeuroDragon] [vv] taau #10800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=27002 lists=634561
+[2026-10-29 13:35:44.195 IFO][NeuroDragon] [vv] taau #11100 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=27902 lists=649561
+[2026-10-29 13:35:47.536 IFO][NeuroDragon] [vv] taau #11400 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=11 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=28706 lists=664643
+[2026-10-29 13:35:51.553 IFO][NeuroDragon] [vv] taau #11700 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=29306 lists=681165
+[2026-10-29 13:35:54.617 IFO][NeuroDragon] [vv] taau #12000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=29906 lists=702944
+[2026-10-29 13:35:58.256 IFO][NeuroDragon] [vv] taau #12300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=30513 lists=721818

@@ -1,0 +1,194 @@
+91671: [2026-10-29 13:47:42.238 DBG][NeuroDragon] [eval] f=1 tid=29664 cl=0x1ba0cfe31a0 h=0x1ba47db5510 1280x720 c=0x1ba072c2070 d=0x1ba072bf0a0 mv=0x1ba072bfa30 o=0x1ba099460a0 ret=0x1
+91672: [2026-10-29 13:47:42.238 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+91673: [2026-10-29 13:47:42.239 IFO][NeuroDragon] [vv] slot12 raw #1 this=0x1ba0cfe31a0 vertices=3 instances=1 startVertex=0 startInstance=0
+91674: [2026-10-29 13:47:42.239 IFO][NeuroDragon] [vvsr] sr arg10 #1: 2560x1440 fmt=26 eval=1 mv=engine
+91675: [2026-10-29 13:47:42.239 IFO][NeuroDragon] [vv] inject: arg10 boundary split=36/59 list=0x1b8f97f1f80 target=0x1b816190640
+91676: [2026-10-29 13:47:42.244 IFO][NeuroDragon] [vv] inject fixed k=36/59 injected=1 skipped=755
+91677: [2026-10-29 13:47:42.244 IFO][NeuroDragon] [vv] native render: camera 1.000, branch 0.5000 (dynamic off, option untouched)
+91678: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c30670 2560x1440 fmt=28 flags=0x1
+91679: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] dsv res=0x1ba03c34960 2560x1440 fmt=44
+91680: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c36610 2560x1440 fmt=11 flags=0x1
+91681: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c352f0 2560x1440 fmt=26 flags=0x1
+91682: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c35c80 2560x1440 fmt=26 flags=0x1
+91683: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c36fa0 2560x1440 fmt=54 flags=0x1
+91684: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c39f70 2560x1440 fmt=12 flags=0x1
+91685: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c33fd0 2560x1440 fmt=28 flags=0x1
+91686: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba03c395e0 2560x1440 fmt=10 flags=0x1
+91687: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] dsv res=0x1ba0d609ff0 2560x1440 fmt=44
+91688: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba0d60c630 2560x1440 fmt=41 flags=0x1
+91689: [2026-10-29 13:47:42.269 IFO][NeuroDragon] [vv] rtv res=0x1ba0d60e2e0 40x23 fmt=34 flags=0x1
+91690: [2026-10-29 13:47:42.270 IFO][NeuroDragon] [vv] rtv res=0x1ba0d60d950 40x23 fmt=34 flags=0x1
+91691: [2026-10-29 13:47:42.270 IFO][NeuroDragon] [vv] rtv res=0x1ba0d60cfc0 2560x1440 fmt=26 flags=0x1
+91692: [2026-10-29 13:47:42.270 IFO][NeuroDragon] [vv] rtv res=0x1ba0d6112b0 1280x720 fmt=26 flags=0x1
+91693: [2026-10-29 13:47:42.270 IFO][NeuroDragon] [vv] rtv res=0x1ba0d611c40 160x90 fmt=54 flags=0x1
+91694: [2026-10-29 13:47:42.270 IFO][NeuroDragon] [vv] rtv res=0x1ba0d60ec70 2560x1440 fmt=26 flags=0x1
+91695: [2026-10-29 13:47:42.270 IFO][NeuroDragon] [vv] rtv res=0x1ba0d6125d0 2560x1440 fmt=26 flags=0x1
+91696: [2026-10-29 13:47:42.271 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #1 list=0x1b8f1d10a40 mv=0x1b8161965e0
+91697: [2026-10-29 13:47:42.274 IFO][NeuroDragon] [vvsr] world: getLevel()=1 changed=0
+91698: [2026-10-29 13:47:42.279 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+91699: [2026-10-29 13:47:42.279 IFO][NeuroDragon] [vvsr] sr depth[0]=0x1ba0d609ff0 2560x1440 fmt=44
+91700: [2026-10-29 13:47:42.279 IFO][NeuroDragon] [vvsr] sr depth[1]=0x1ba03c34960 2560x1440 fmt=44
+91701: [2026-10-29 13:47:42.279 IFO][NeuroDragon] [vvsr] sr depth[2]=0x1ba097b7be0 2560x1440 fmt=44
+91702: [2026-10-29 13:47:42.279 WRN][NeuroDragon] [vvsr] sr mv: arg11=0x1b8161965e0 fmt=10 unusable at 2560x1440
+91703: [2026-10-29 13:47:42.279 WRN][NeuroDragon] [vvsr] sr mv: no usable arg11 for 2560x1440 (native=0x1b8161965e0 fmt=10); frame skipped
+91704: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba4e559d00 1280x720 fmt=28 flags=0x1
+91705: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] dsv res=0x1ba4e55a690 1280x720 fmt=44
+91706: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce1860 1280x720 fmt=11 flags=0x1
+91707: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba4e55b020 1280x720 fmt=26 flags=0x1
+91708: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba4cdf4380 1280x720 fmt=26 flags=0x1
+91709: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce2b80 1280x720 fmt=54 flags=0x1
+91710: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce3510 1280x720 fmt=12 flags=0x1
+91711: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce21f0 1280x720 fmt=28 flags=0x1
+91712: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce3ea0 1280x720 fmt=10 flags=0x1
+91713: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] dsv res=0x1ba33ce0ed0 1280x720 fmt=44
+91714: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce5b50 1280x720 fmt=41 flags=0x1
+91715: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce64e0 20x12 fmt=34 flags=0x1
+91716: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce7800 20x12 fmt=34 flags=0x1
+91717: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce94b0 1280x720 fmt=26 flags=0x1
+91718: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce8b20 20x11 fmt=26 flags=0x1
+91719: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ce9e40 80x45 fmt=54 flags=0x1
+91720: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33cea7d0 1280x720 fmt=26 flags=0x1
+91721: [2026-10-29 13:47:42.296 IFO][NeuroDragon] [vv] rtv res=0x1ba33ceb160 1280x720 fmt=26 flags=0x1
+91722: [2026-10-29 13:47:42.300 IFO][NeuroDragon] [vv] frame #758 lists=60: 1:v0x0z d0 2:v2560x1440z d0 3:v1280x720 d0 4:v1x1z d0 5:v1x1z d0 6:v128x128z d0 7:v128x128 d0 8:v128x128 d1 x6 9:v1280x720 d0 10:v1280x720 d0 11:v1280x720 d0 12:v1280x720z d0 13:v1280x720 d0 15:v1280x720 d1 x6 16:v1280x720z d1 x6 17:v20x12z d0 18:v20x12z d0 19:v2048x2048 d0 20:v2048x2048 d0 21:v64x64 d7 x36 22:v2048x2048 d0 23:v2048x2048 d1 x13122 24:v1x1z d0 25:v1x1z d0 26:v1x1z d0 27:v1280x720 d1 x6 28:v1280x720 d1 x6 29:v1280x720z d1 x6 30:v1280x720z d1 x6 31:v1280x720z d1 x6 32:v1280x720z d1 x72 33:v1280x720z d1 x6 34:v1280x720 d1 x6 35:v1280x720z d1 x72 36:v2560x1440 d1 x6 37:v1x1z d0 38:v640x360 d1 x6 39:v320x180 d1 x6 40:v160x90 d1 x6 41:v80x45 d1 x6 42:v40x22 d1 x6 43:v20x11 d1 x6 44:v40x22 d1 x6 45:v1x1z d0 46:v1x1z d0 47:v80x45 d1 x6 48:v80x45 d1 x6 49:v160x90 d1 x6 50:v320x180 d1 x6 51:v640x360 d1 x6 52:v1x1z d0 53:v1280x720 d1 x6 54:v1280x720 d1 x6 55:v2560x1440z d1 x6 56:v1280x720 d0 57:v1280x720 d1 x72 58:v1024x1024 d170 x6
+91723: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr buffers 1280x720 -> 2560x1440
+91724: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[0]=0x1ba33ceb160 1280x720 fmt=26
+91725: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[1]=0x1ba33cea7d0 1280x720 fmt=26
+91726: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[2]=0x1ba33ce94b0 1280x720 fmt=26
+91727: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[3]=0x1ba4cdf4380 1280x720 fmt=26
+91728: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[4]=0x1ba4e55b020 1280x720 fmt=26
+91729: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[5]=0x1ba0d6112b0 1280x720 fmt=26
+91730: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr colour[6]=0x1b816199f40 1280x720 fmt=26
+91731: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr depth[0]=0x1ba33ce0ed0 1280x720 fmt=44
+91732: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr depth[1]=0x1ba4e55a690 1280x720 fmt=44
+91733: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr depth[2]=0x1b8161952c0 1280x720 fmt=44
+91734: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr mv: engine arg11=0x1b8161965e0 fmt=10 layout=zw (1280x720, pixels current->previous)
+91735: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr params colour=1737540752 depth=1737543664 mv=1737540656 out=1737540432 jitter=-0.19,-0.13 reset=1
+91736: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr readback Jitter.Offset.X: u32 ret=1 val=0 | f32 ret=1 val=-0.188
+91737: [2026-10-29 13:47:42.304 IFO][NeuroDragon] [vvsr] sr readback MV.Scale.X: u32 ret=1 val=1 | f32 ret=1 val=1.000
+91738: [2026-10-29 13:47:42.308 DBG][NeuroDragon] [eval] f=2 tid=11656 cl=0x1ba0cfe31a0 h=0x1ba47db5510 1280x720 c=0x1ba33ce8190 d=0x1ba33ceeac0 mv=0x1ba33cec480 o=0x1ba33cee130 ret=0x1
+91739: [2026-10-29 13:47:42.308 IFO][NeuroDragon] [vv] slot12 raw #2 this=0x1ba0cfe31a0 vertices=3 instances=1 startVertex=0 startInstance=0
+91740: [2026-10-29 13:47:42.308 IFO][NeuroDragon] [vvsr] sr arg10 #2: 2560x1440 fmt=26 eval=1 mv=engine
+91741: [2026-10-29 13:47:42.308 IFO][NeuroDragon] [vv] inject: arg10 boundary split=37/60 list=0x1b8f75bdde0 target=0x1b816190640
+91742: [2026-10-29 13:47:42.309 IFO][NeuroDragon] [vv] inject fixed k=37/60 injected=2 skipped=756
+91743: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba1a5dc360 2560x1440 fmt=28 flags=0x1
+91744: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] dsv res=0x1ba1a5da6b0 2560x1440 fmt=44
+91745: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba1a5db9d0 2560x1440 fmt=11 flags=0x1
+91746: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba1a5d9390 2560x1440 fmt=26 flags=0x1
+91747: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba1a5db040 2560x1440 fmt=26 flags=0x1
+91748: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4d8f1030 2560x1440 fmt=54 flags=0x1
+91749: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4d3ca8a0 2560x1440 fmt=12 flags=0x1
+91750: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4d8f2350 2560x1440 fmt=28 flags=0x1
+91751: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4d3cd870 2560x1440 fmt=10 flags=0x1
+91752: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] dsv res=0x1ba4d3ce200 2560x1440 fmt=44
+91753: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4d3ceb90 2560x1440 fmt=41 flags=0x1
+91754: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acb80a0 40x23 fmt=34 flags=0x1
+91755: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acba6e0 40x23 fmt=34 flags=0x1
+91756: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acbba00 2560x1440 fmt=26 flags=0x1
+91757: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acb8a30 1280x720 fmt=26 flags=0x1
+91758: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acbc390 160x90 fmt=54 flags=0x1
+91759: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acb93c0 2560x1440 fmt=26 flags=0x1
+91760: [2026-10-29 13:47:42.333 IFO][NeuroDragon] [vv] rtv res=0x1ba4acbfcf0 2560x1440 fmt=26 flags=0x1
+91761: [2026-10-29 13:47:42.334 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #2 list=0x1b8f75c76e0 mv=0x1b8161965e0
+91762: [2026-10-29 13:47:42.336 IFO][NeuroDragon] [vv] frame #759 lists=64: 1:v0x0z d0 2:v2560x1440z d0 3:v2560x1440 d0 4:v1x1z d0 5:v1x1z d0 6:v128x128z d0 7:v128x128 d0 8:v128x128 d1 x6 9:v128x128z d1 x6 10:v128x128z d1 x13122 11:v2560x1440 d0 12:v2560x1440 d0 13:v2560x1440 d0 14:v2560x1440z d0 15:v2560x1440 d0 17:v2560x1440 d1 x6 18:v2560x1440z d1 x6 19:v40x23z d0 20:v40x23z d0 21:v2048x2048 d0 22:v2048x2048 d1 x48 23:v2048x2048 d0 24:v64x64 d7 x36 25:v2048x2048 d0 26:v2048x2048 d1 x13122 27:v1x1z d0 28:v1x1z d0 29:v1x1z d0 30:v2560x1440 d1 x6 31:v2560x1440 d1 x6 32:v2560x1440z d1 x6 33:v2560x1440z d1 x6 34:v2560x1440z d1 x6 35:v2560x1440z d1 x72 36:v2560x1440z d1 x6 37:v2560x1440 d1 x6 38:v2560x1440 d0 39:v2560x1440z d1 x6 40:v2560x1440z d1 x72 41:v2560x1440 d1 x6 42:v1x1z d0 43:v1280x720 d1 x6 44:v640x360 d1 x6 45:v320x180 d1 x6 46:v160x90 d1 x6 47:v80x45 d1 x6 48:v40x22 d1 x6 49:v80x45 d1 x6 50:v1x1z d0 51:v1x1z d0 52:v160x90 d1 x6 53:v160x90 d1 x6 54:v320x180 d1 x6 55:v640x360 d1 x6 56:v1280x720 d1 x6 57:v1x1z d0 58:v2560x1440 d1 x6 59:v2560x1440 d1 x6 60:v2560x1440z d1 x6 61:v2560x1440 d1 x72 62:v1024x1024 d170 x6
+91763: [2026-10-29 13:47:42.344 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+91764: [2026-10-29 13:47:42.344 WRN][NeuroDragon] [vvsr] sr mv: no usable arg11 for 2560x1440 (native=0x1b8161965e0 fmt=10); frame skipped
+91784: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr buffers 1280x720 -> 2560x1440
+91785: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[0]=0x1ba1705e570 1280x720 fmt=26
+91786: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[1]=0x1ba1705b5a0 1280x720 fmt=26
+91787: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[2]=0x1ba1705c8c0 1280x720 fmt=26
+91788: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[3]=0x1ba4acc1010 1280x720 fmt=26
+91789: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[4]=0x1ba4acc2cc0 1280x720 fmt=26
+91790: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[5]=0x1ba4acb8a30 1280x720 fmt=26
+91791: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[6]=0x1ba33ceb160 1280x720 fmt=26
+91792: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[7]=0x1ba33cea7d0 1280x720 fmt=26
+91793: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[8]=0x1ba33ce94b0 1280x720 fmt=26
+91794: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[9]=0x1ba4cdf4380 1280x720 fmt=26
+91795: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[10]=0x1ba4e55b020 1280x720 fmt=26
+91796: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[11]=0x1ba0d6112b0 1280x720 fmt=26
+91797: [2026-10-29 13:47:42.373 IFO][NeuroDragon] [vvsr] sr colour[12]=0x1b816199f40 1280x720 fmt=26
+91798: [2026-10-29 13:47:42.374 DBG][NeuroDragon] [nr] Replace=6 placement=before 生效：TRP Ratio 合成（strength=0.00 white=1.00 colour=1.00 maxRatio=2.00）
+91799: [2026-10-29 13:47:42.375 DBG][NeuroDragon] [eval] f=3 tid=11656 cl=0x1ba0cfe31a0 h=0x1ba47db5510 1280x720 c=0x1ba495926f0 d=0x1ba49590a40 mv=0x1ba49593080 o=0x1ba495900b0 ret=0x1
+91800: [2026-10-29 13:47:42.375 IFO][NeuroDragon] [vv] slot12 raw #3 this=0x1ba0cfe31a0 vertices=3 instances=1 startVertex=0 startInstance=0
+91801: [2026-10-29 13:47:42.375 IFO][NeuroDragon] [vvsr] sr arg10 #3: 2560x1440 fmt=26 eval=1 mv=engine
+91802: [2026-10-29 13:47:42.375 IFO][NeuroDragon] [vv] inject: arg10 boundary split=42/65 list=0x1b8f97ea330 target=0x1b816190640
+91803: [2026-10-29 13:47:42.375 IFO][NeuroDragon] [vv] inject fixed k=42/65 injected=3 skipped=757
+91804: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e70fa20 2560x1440 fmt=28 flags=0x1
+91805: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e7103b0 32x32 fmt=10 flags=0x1
+91806: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e7116d0 64x64 fmt=10 flags=0x1
+91807: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] dsv res=0x1bc7e712060 2560x1440 fmt=44
+91808: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e715030 2560x1440 fmt=11 flags=0x1
+91809: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e7146a0 2560x1440 fmt=26 flags=0x1
+91810: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e713380 2560x1440 fmt=26 flags=0x1
+91811: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e7129f0 2560x1440 fmt=54 flags=0x1
+91812: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e716ce0 2560x1440 fmt=12 flags=0x1
+91813: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e7159c0 2560x1440 fmt=28 flags=0x1
+91814: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e716350 2560x1440 fmt=10 flags=0x1
+91815: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] dsv res=0x1bc7e713d10 2560x1440 fmt=44
+91816: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e719320 2560x1440 fmt=41 flags=0x1
+91817: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e719cb0 40x23 fmt=34 flags=0x1
+91818: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e71afd0 40x23 fmt=34 flags=0x1
+91819: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e718990 2560x1440 fmt=26 flags=0x1
+91820: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e71dfa0 1280x720 fmt=26 flags=0x1
+91821: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e71b960 160x90 fmt=54 flags=0x1
+91822: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e71cc80 2560x1440 fmt=26 flags=0x1
+91823: [2026-10-29 13:47:42.401 IFO][NeuroDragon] [vv] rtv res=0x1bc7e71d610 2560x1440 fmt=26 flags=0x1
+91824: [2026-10-29 13:47:42.404 IFO][NeuroDragon] [vv] d-suppress: skipped TAAU draw #3 list=0x1b8f3375b50 mv=0x1b8161965e0
+91825: [2026-10-29 13:47:42.406 IFO][NeuroDragon] [vv] frame #761 lists=101: 1:v0x0z d0 2:v2560x1440z d0 3:v2560x1440 d0 4:v1x1z d0 5:v1x1z d0 6:v32x32 d0 7:v64x64 d0 8:v64x64 d1 x6 9:v64x64 d0 10:v64x64 d1 x6 11:v64x64 d1 x6 12:v64x64 d0 13:v64x64 d1 x6 14:v64x64 d1 x6 15:v64x64 d0 16:v64x64 d1 x6 17:v64x64 d1 x6 18:v64x64 d0 19:v64x64 d1 x6 20:v64x64 d1 x6 21:v64x64 d0 22:v64x64 d1 x6 23:v64x64 d1 x6 24:v64x64 d0 25:v64x64 d1 x6 26:v32x32 d1 x6 27:v32x32 d0 28:v32x32 d1 x6 29:v32x32 d1 x6 30:v32x32 d0 31:v32x32 d1 x6 32:v32x32 d1 x6 33:v32x32 d0 34:v32x32 d1 x6 35:v32x32 d1 x6 36:v32x32 d0 37:v32x32 d1 x6 38:v32x32 d1 x6 39:v32x32 d0 40:v32x32 d1 x6 41:v32x32 d1 x6 42:v32x32 d0 43:v32x32 d1 x6 44:v2560x1440 d0 45:v2560x1440 d0 46:v2560x1440 d0 47:v2560x1440z d0 48:v2560x1440z d4 x42 49:v2560x1440z d4 x96 50:v2560x1440 d0 52:v2560x1440 d1 x6 53:v2560x1440z d1 x6 54:v40x23z d0 55:v40x23z d0 56:v2048x2048 d0 57:v2048x2048 d5 x42 58:v2048x2048 d4 x96 59:v2048x2048 d0 60:v64x64 d7 x144 61:v2048x2048 d0 62:v2048x2048 d1 x12372 63:v1x1z d0 64:v1x1z d0 65:v1x1z d0 66:v2560x1440 d1 x6 67:v2560x1440 d1 x6 68:v2560x1440z d1 x6 69:v2560x1440z d1 x6 70:v2560x1440z d1 x6 71:v2560x1440z d1 x72 72:v2560x1440z d1 x6 73:v2560x1440 d1 x6 74:v2560x1440 d0 75:v2560x1440z d1 x6 76:v2560x1440z d1 x72 77:v2560x1440 d1 x6 78:v1x1z d0 79:v1280x720 d1 x6 80:v640x360 d1 x6 81:v320x180 d1 x6 82:v160x90 d1 x6 83:v80x45 d1 x6 84:v40x22 d1 x6 85:v80x45 d1 x6 86:v1x1z d0 87:v1x1z d0 88:v160x90 d1 x6 89:v160x90 d1 x6 90:v320x180 d1 x6 91:v640x360 d1 x6 92:v1280x720 d1 x6 93:v1x1z d0 94:v2560x1440 d1 x6 95:v2560x1440 d1 x6 96:v2560x1440z d1 x6 97:v2560x1440z d43 x54 98:v2560x1440 d1 x72 99:v1024x1024 d170 x6
+91826: [2026-10-29 13:47:42.413 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+91827: [2026-10-29 13:47:42.413 WRN][NeuroDragon] [vvsr] sr mv: no usable arg11 for 2560x1440 (native=0x1b8161965e0 fmt=10); frame skipped
+92547: [2026-10-29 13:47:43.662 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+92548: [2026-10-29 13:47:43.678 IFO][NeuroDragon] [vv] rtv res=0x1bd22620180 1280x720 fmt=28 flags=0x1
+92549: [2026-10-29 13:47:43.678 WRN][NeuroDragon] [vv] depth ring (64 slots) is evicting a 1280x720 depth - the SR input may vanish
+92550: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] dsv res=0x1bd22623150 1280x720 fmt=44
+92551: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22620b10 1280x720 fmt=11 flags=0x1
+92552: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22621e30 1280x720 fmt=26 flags=0x1
+92553: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22623ae0 1280x720 fmt=26 flags=0x1
+92554: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22625790 1280x720 fmt=54 flags=0x1
+92555: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22626ab0 1280x720 fmt=12 flags=0x1
+92556: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22627440 1280x720 fmt=28 flags=0x1
+92557: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22626120 1280x720 fmt=10 flags=0x1
+92558: [2026-10-29 13:47:43.679 WRN][NeuroDragon] [vv] depth ring (64 slots) is evicting a 2560x1440 depth - the SR input may vanish
+92559: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] dsv res=0x1bd22624470 1280x720 fmt=44
+92560: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22624e00 1280x720 fmt=41 flags=0x1
+92561: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22628760 20x12 fmt=34 flags=0x1
+92562: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd2262a410 20x12 fmt=34 flags=0x1
+92563: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd2262b730 1280x720 fmt=26 flags=0x1
+92564: [2026-10-29 13:47:43.679 WRN][NeuroDragon] [vv] depth ring (64 slots) is evicting a 2560x1440 depth - the SR input may vanish
+92565: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] dsv res=0x1bd22627dd0 1280x720 fmt=44
+92566: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd226290f0 20x11 fmt=26 flags=0x1
+92567: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd2262ca50 80x45 fmt=54 flags=0x1
+92568: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd22629a80 1280x720 fmt=26 flags=0x1
+92569: [2026-10-29 13:47:43.679 IFO][NeuroDragon] [vv] rtv res=0x1bd2262e700 1280x720 fmt=26 flags=0x1
+92570: [2026-10-29 13:47:43.690 IFO][NeuroDragon] [vvsr] sr buffers 1280x720 -> 2560x1440
+92571: [2026-10-29 13:47:43.690 IFO][NeuroDragon] [sr] fb render=2560x1440 factor=1.000 enabled=true info=Upscaling Mode: Fallback
+
+trace:18: 2026-10-29 13:47:44.426 [info] Exception: 
+trace:19: 2026-10-29 13:47:44.426 [info]   |Raw Seh Exception, from <nvwgf2umx.dll>:
+trace:20: 2026-10-29 13:47:44.427 [info]   |[0xC0000005:ntstatus] 0x%p 指令引用了 0x%p 内存。该内存不能为 %s。
+trace:21: 2026-10-29 13:47:44.427 [info]   |Parameter 0: 0x0
+trace:22: 2026-10-29 13:47:44.427 [info]   |Parameter 1: 0x2c
+trace:23: 2026-10-29 13:47:44.427 [info] 
+trace:24: 2026-10-29 13:47:44.428 [info] Registers: 
+trace:25: 2026-10-29 13:47:44.428 [info]   |RAX: 0x00007FF9C15C93F0  RBX: 0x0000000B6E9FCF80  RCX: 0x0000000B6E9FCF80
+trace:26: 2026-10-29 13:47:44.428 [info]   |RDX: 0x000000000000000A  RSI: 0x0000000000000000  RDI: 0x0000000000000000
+trace:27: 2026-10-29 13:47:44.428 [info]   |RBP: 0x0000000B6E9FCEE0  RSP: 0x0000000B6E9FCE90  R8:  0x00007FF9C1180000
+trace:28: 2026-10-29 13:47:44.428 [info]   |R9:  0x0000000B6E9FD100  R10: 0x0000000000000000  R11: 0x0000000000000180
+trace:29: 2026-10-29 13:47:44.429 [info]   |R12: 0x0000000000000018  R13: 0x000001B8161967D0  R14: 0x000001B8419742A0
+trace:30: 2026-10-29 13:47:44.429 [info]   |R15: 0x000001B8419742A0
+trace:31: 2026-10-29 13:47:44.429 [info]   |RIP: 0x00007FF9C15C93F0  EFLAGS: 0x00010204
+trace:32: 2026-10-29 13:47:44.429 [info]   |DR0: 0x0000000000000000  DR1: 0x0000000000000000  DR2: 0x0000000000000000
+trace:33: 2026-10-29 13:47:44.429 [info]   |DR3: 0x0000000000000000  DR6: 0x0000000000000000  DR7: 0x0000000000000000
+trace:34: 2026-10-29 13:47:44.430 [info]   |CS: 0x0033  DS: 0x0000   ES: 0x0000  FS: 0x0000   GS: 0x0000  SS: 0x002B
+trace:35: 2026-10-29 13:47:44.430 [info] 
+trace:36: 2026-10-29 13:47:44.430 [info] Last Assembly: 
+trace:37: 2026-10-29 13:47:44.430 [info]   |0x7FF9C15C93F0 --> movzx eax, word ptr [rsi+0x2C]
+trace:38: 2026-10-29 13:47:44.430 [info] 
+trace:39: 2026-10-29 13:47:44.431 [info] Stacktrace: 
+trace:40: 2026-10-29 13:47:44.431 [info]   |0> at pc 0x7FF9C15C93F0 nvwgf2umx.dll
+trace:41: 2026-10-29 13:47:44.431 [info]   |1> at pc 0x7FF9C18C8C79 nvwgf2umx.dll
+trace:42: 2026-10-29 13:47:44.431 [info]   |2> at pc 0x7FF9C1733F24 nvwgf2umx.dll
+trace:43: 2026-10-29 13:47:44.432 [info]   |3> at pc 0x7FF90C5FD737 D3D12Core.dll
+trace:44: 2026-10-29 13:47:44.436 [info]   |4> at pc 0x7FF975067870 NeuroDragon.dll -> neurodragon::vv::sr::recordInternal+0xE32 [VvSr.cpp:1177L]
+trace:45: 2026-10-29 13:47:44.436 [info]   |5> at pc 0x7FF975006740 NeuroDragon.dll -> neurodragon::probe::vv::inject::`anonymous namespace'::record+0xB0 [VvInject.cpp:240L]
+trace:46: 2026-10-29 13:47:44.437 [info]   |6> at pc 0x7FF975005CE0 NeuroDragon.dll -> neurodragon::probe::vv::inject::prepare+0x28B [VvInject.cpp:432L]
+trace:47: 2026-10-29 13:47:44.439 [info]   |7> at pc 0x7FF9750517F0 NeuroDragon.dll -> neurodragon::ui::`anonymous namespace'::executeCommandListsHook+0xA9 [Overlay.cpp:1481L]

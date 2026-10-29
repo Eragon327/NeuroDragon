@@ -375,7 +375,22 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         return 0;
     }
     if (g.queue && g.queue != queue) {
-        return 0;
+        // A frame-graph rebuild can move the engine to a new direct queue (the 100%
+        // native switch does this). Refusing silently used to leave the draw suppress
+        // armed while nothing wrote arg10: the picture froze on the last injected
+        // frame (EXP-0092). Wait for the old queue's last injection to finish, then
+        // rebind. While it is still pending, report a failed injection so the draw
+        // suppress releases TAAU next frame instead of freezing.
+        if (g.fence && g.fence->GetCompletedValue() < g.fenceValue) {
+            setReason(SkipReason::FenceBusy);
+            return 0;
+        }
+        utils::logger().info(
+            "[vv] inject: queue changed {:#x} -> {:#x}; rebinding",
+            reinterpret_cast<std::uintptr_t>(g.queue),
+            reinterpret_cast<std::uintptr_t>(queue)
+        );
+        g.queue = queue;
     }
     noteListCount(listCount);
     if (!g.device) {

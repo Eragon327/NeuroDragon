@@ -1,0 +1,17 @@
+[2026-10-29 13:19:41.694 IFO][NeuroDragon] [vvsr] sr arg10 #1200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:19:41.830 IFO][NeuroDragon] [vvsr] sr buffers 1706x960 -> 2560x1440
+[2026-10-29 13:19:44.445 IFO][NeuroDragon] [vv] native render: camera 1.000, branch 0.5000 (dynamic off, option untouched)
+[2026-10-29 13:19:44.482 IFO][NeuroDragon] [vvsr] sr buffers 2560x1440 -> 2560x1440
+[2026-10-29 13:19:55.260 IFO][NeuroDragon] [vvsr] sr arg10 #1800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:20:09.017 IFO][NeuroDragon] [vvsr] sr arg10 #2400: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:20:22.368 IFO][NeuroDragon] [vvsr] sr arg10 #3000: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:20:22.581 IFO][NeuroDragon] [vvsr] sr buffers 1280x720 -> 2560x1440
+[2026-10-29 13:20:26.970 IFO][NeuroDragon] [vvsr] sr buffers 1706x960 -> 2560x1440
+[2026-10-29 13:20:32.082 IFO][NeuroDragon] [vvsr] sr arg10 #3600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:20:42.037 IFO][NeuroDragon] [vvsr] sr arg10 #4200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:20:52.198 IFO][NeuroDragon] [vvsr] sr arg10 #4800: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:21:01.883 IFO][NeuroDragon] [vvsr] sr arg10 #5400: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:21:12.092 IFO][NeuroDragon] [vvsr] sr arg10 #6000: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:21:22.498 IFO][NeuroDragon] [vvsr] sr arg10 #6600: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:21:29.551 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)
+[2026-10-29 13:21:29.858 DBG][NeuroDragon] [nr] 退出：保留 GPU 对象与 feature（不 Release，避免驱动在退出时崩溃）

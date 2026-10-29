@@ -156,6 +156,11 @@ std::atomic<unsigned> gManualReset{0};
 // The product switch's current state (config `sr.vvEnabled`), so syncConfig() only acts
 // on a change instead of re-arming every frame.
 std::atomic<bool> gEnabled{false};
+// Latched by the first successful arg10 write and cleared only on disable/release.
+// Once native 100% starts, transient records with the previous size's motion vectors
+// must not switch the camera back: that oscillates the render size every frame and
+// prevents the native-size binding from ever arriving (EXP-0094).
+std::atomic<bool> gLive{false};
 // Serialises recordInternal() against release(). The render thread may still be
 // recording an injected list when the mod is disabled; freeing the pipeline textures
 // under it is a use-after-free (EXP-0085 exit crash). release() takes this lock after
@@ -639,6 +644,7 @@ void setEnabled(bool wantEnabled) {
     } else {
         // The reverse order: TAAU comes back first, then our writer stops touching
         // arg10, so no frame is drawn by neither path.
+        gLive.store(false, std::memory_order_release);
         probe::vv::setDrawSuppress(false);
         probe::vv::setArg10Solid(false);
         probe::vv::inject::setUseArg10(false);
@@ -654,6 +660,10 @@ void setEnabled(bool wantEnabled) {
 
 bool enabled() {
     return gEnabled.load(std::memory_order_relaxed);
+}
+
+bool live() {
+    return gLive.load(std::memory_order_acquire);
 }
 
 void syncConfig() {
@@ -1456,6 +1466,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                 prepMode ? "engine" : "vp"
             );
         }
+        gLive.store(true, std::memory_order_release);
         return true;
     }
     // R3 writes arg10 only; there is no back-buffer path left (EXP-0067).
@@ -1474,6 +1485,7 @@ Stats stats() {
 void release() {
     // Stop new records first, then wait for the one that may already be running. The
     // detour/NR state is left to nrShutdown(); here only our own pipeline goes away.
+    gLive.store(false, std::memory_order_release);
     gReleased.store(true, std::memory_order_release);
     std::lock_guard recordLock(gRecordMutex);
     std::lock_guard lock(gMutex);

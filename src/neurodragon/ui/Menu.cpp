@@ -841,8 +841,11 @@ void drawTabSr() {
         }
         widgets::hint("ui.sr.vvEnableHint"_tr().c_str());
         ImGui::Spacing();
-        // VV: the engine owns the render size, and DLSS has to be fed exactly it, so
-        // the only honest control is the engine option itself (live, EXP-0081).
+        // VV: the render thread writes UpscalingData.factor before the camera build
+        // (probe/VvUpscaling.cpp), so this is a real control and the engine option is
+        // left alone. 100% means native render: the hook restores a <1 branch factor
+        // after the camera so TAAU/arg10 stay declared, and DLSS runs 1:1 with NR at
+        // native resolution (EXP-0090).
         std::string const vvItems[6] = {
             "ui.sr.scaleAuto"_tr(),
             "33%",
@@ -1935,7 +1938,6 @@ void drawTabAdvanced() {
 
 void applyDraft(bool persist) {
     int const oldPreset = config::get().sr.preset;
-    int const oldVv     = config::get().sr.vvPercent;
 
     config::get().nr                = gDraft;
     config::get().sr                = gDraftSr;
@@ -1954,25 +1956,10 @@ void applyDraft(bool persist) {
         vv::dlss::requestFeatureRebuild();
     }
 
-    // VV's internal resolution is not a config the renderer reads every frame: it is
-    // the engine option `upscaling_percentage` (docs/specs/vv.md §17.2), so applying it
-    // means writing that option. The write is skipped when the engine already runs at
-    // the requested ratio, and "follow the engine" (0) never writes.
-    if (config::get().sr.vvPercent != 0) {
-        auto const active = sr::status();
-        double const measured =
-            active.displayWidth != 0
-                ? 100.0 * static_cast<double>(active.renderWidth) / static_cast<double>(active.displayWidth)
-                : 0.0;
-        bool const differs = active.renderWidth == 0
-            || std::abs(measured - static_cast<double>(config::get().sr.vvPercent)) > 1.5;
-        if (differs || config::get().sr.vvPercent != oldVv) {
-            probe::options::requestWrite(
-                probe::options::Known::UpscalingPercentage,
-                std::to_string(config::get().sr.vvPercent)
-            );
-        }
-    }
+    // VV's ratio is applied on the render thread by the createDeferredRenderingCameras
+    // hook (probe/VvUpscaling.cpp): it writes UpscalingData.factor before the camera
+    // viewport is built. The player's upscaling_percentage option is deliberately not
+    // touched, so "follow the engine" (0) still means the engine's own setting.
 
     if (!persist) {
         setStatus("ui.footer.applied"_tr());

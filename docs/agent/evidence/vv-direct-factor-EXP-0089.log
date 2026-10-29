@@ -1,0 +1,25 @@
+[2026-10-29 13:11:53.357 IFO][NeuroDragon] [vv] direct factor 0.5000 -> 1.0000 (dynamic off, option untouched)
+[2026-10-29 13:11:54.310 WRN][NeuroDragon] [vv] inject skipped (8640): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:11:55.510 WRN][NeuroDragon] [vv] inject skipped (8760): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:11:56.715 WRN][NeuroDragon] [vv] inject skipped (8880): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:11:57.915 WRN][NeuroDragon] [vv] inject skipped (9000): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:11:59.115 WRN][NeuroDragon] [vv] inject skipped (9120): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:11:59.975 IFO][NeuroDragon] [vv] content boundary split=66/69 list=0x14fd0987430 via=signature+hud marks=1 sigs=67
+[2026-10-29 13:12:00.315 WRN][NeuroDragon] [vv] inject skipped (9240): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:01.515 WRN][NeuroDragon] [vv] inject skipped (9360): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:02.715 WRN][NeuroDragon] [vv] inject skipped (9480): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:03.915 WRN][NeuroDragon] [vv] inject skipped (9600): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:05.115 WRN][NeuroDragon] [vv] inject skipped (9720): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:06.185 IFO][NeuroDragon] [vv] direct factor 0.5000 -> 0.6667 (dynamic off, option untouched)
+[2026-10-29 13:12:07.143 IFO][NeuroDragon] [vv] taau #12600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.6667 dynScale=1.0000 jitter=7 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=31186 lists=805666
+[2026-10-29 13:12:09.853 IFO][NeuroDragon] [vvsr] sr arg10 #4200: 2560x1440 fmt=26 eval=1 mv=engine
+[2026-10-29 13:12:10.473 IFO][NeuroDragon] [vv] direct factor 0.5000 -> 1.0000 (dynamic off, option untouched)
+[2026-10-29 13:12:10.616 WRN][NeuroDragon] [vv] inject skipped (9840): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:11.815 WRN][NeuroDragon] [vv] inject skipped (9960): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:13.016 WRN][NeuroDragon] [vv] inject skipped (10080): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:13.805 IFO][NeuroDragon] [vv] content boundary split=67/70 list=0x14fd0987430 via=signature+hud marks=1 sigs=68
+[2026-10-29 13:12:14.215 WRN][NeuroDragon] [vv] inject skipped (10200): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:15.415 WRN][NeuroDragon] [vv] inject skipped (10320): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:16.615 WRN][NeuroDragon] [vv] inject skipped (10440): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:17.816 WRN][NeuroDragon] [vv] inject skipped (10560): no pre-HUD boundary; TAAU restored
+[2026-10-29 13:12:19.519 WRN][NeuroDragon] [vv] inject skipped (10680): no pre-HUD boundary; TAAU restored

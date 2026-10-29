@@ -1,0 +1,19 @@
+[2026-10-29 13:42:11.393 IFO][NeuroDragon] [vv] taau #9000 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=13 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=19226 lists=442412
+[2026-10-29 13:42:11.397 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7ff912f30000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-29 13:42:11.397 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 13:42:14.493 IFO][NeuroDragon] [vv] native render: camera 1.000, branch 0.5000 (dynamic off, option untouched)
+[2026-10-29 13:42:15.067 IFO][NeuroDragon] [vv] session (world enter): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7ff912f30000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-29 13:42:15.067 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 13:42:15.067 IFO][NeuroDragon] [vv] semantics: world entered (B0: manual dump only; press F11, then F9)
+[2026-10-29 13:42:16.189 IFO][NeuroDragon] [vv] taau #9300 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=9 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=19826 lists=459673
+[2026-10-29 13:42:19.203 IFO][NeuroDragon] [vv] taau #9600 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=20426 lists=481273
+[2026-10-29 13:42:19.209 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7ff912f30000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-29 13:42:19.209 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 13:42:22.220 IFO][NeuroDragon] [vv] taau #9900 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=1 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=21261 lists=503722
+[2026-10-29 13:42:25.219 IFO][NeuroDragon] [vv] taau #10200 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=13 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=22161 lists=525870
+[2026-10-29 13:42:25.223 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7ff912f30000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-29 13:42:25.223 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here
+[2026-10-29 13:42:28.235 IFO][NeuroDragon] [vv] taau #10500 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=9 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=23061 lists=547922
+[2026-10-29 13:42:31.265 IFO][NeuroDragon] [vv] taau #10800 viewport=2560x1440+0,0 mode=0(Taau) factor=0.5000 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=23924 lists=569502
+[2026-10-29 13:42:31.269 IFO][NeuroDragon] [vv] session (present poll): shim=0x0 core=0x0 dlss=0x0 dlssnr=0x0 d3d12core=0x7ff912f30000 engineInit=0 appId=0x0 dataPath=<none>
+[2026-10-29 13:42:31.269 WRN][NeuroDragon] [vv] session: no NGX core module; DLSS-SR cannot be created here

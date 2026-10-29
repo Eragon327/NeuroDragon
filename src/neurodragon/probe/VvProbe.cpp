@@ -5,6 +5,7 @@
 #include "neurodragon/probe/VvCalibrate.h"
 #include "neurodragon/probe/VvCamera.h"
 #include "neurodragon/probe/VvInject.h"
+#include "neurodragon/probe/VvUpscaling.h"
 #include "neurodragon/utils/Utils.h"
 #include "neurodragon/vv/VvSr.h"
 
@@ -2124,10 +2125,24 @@ void taauDetour(
     if (width && height && up.factor > 0.0f && up.factor <= 1.0f) {
         gDisplayWidth.store(width, std::memory_order_relaxed);
         gDisplayHeight.store(height, std::memory_order_relaxed);
-        // The engine truncates (1131 x 0.33 -> 373x239, not 373x240), so this must
-        // truncate too.
-        gRenderWidth.store(static_cast<unsigned>(static_cast<float>(width) * up.factor), std::memory_order_relaxed);
-        gRenderHeight.store(static_cast<unsigned>(static_cast<float>(height) * up.factor), std::memory_order_relaxed);
+        if (nativeRender()) {
+            // 100% camera + branch keepalive (probe/VvUpscaling.cpp): the camera and
+            // colour/depth targets are display sized; the restored <1 factor only
+            // keeps TAAU/arg10 declared, so display is the real render size.
+            gRenderWidth.store(width, std::memory_order_relaxed);
+            gRenderHeight.store(height, std::memory_order_relaxed);
+        } else {
+            // The engine truncates (1131 x 0.33 -> 373x239, not 373x240), so this must
+            // truncate too.
+            gRenderWidth.store(
+                static_cast<unsigned>(static_cast<float>(width) * up.factor),
+                std::memory_order_relaxed
+            );
+            gRenderHeight.store(
+                static_cast<unsigned>(static_cast<float>(height) * up.factor),
+                std::memory_order_relaxed
+            );
+        }
     }
 
     bool const verbose = index <= 4 || index % 300 == 0;
