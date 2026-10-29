@@ -67,38 +67,96 @@ std::wstring       gGameDir;
 wchar_t const*     gPathList[1]{};
 FeatureCommonInfo  gCommon{};
 
-// _nvngx.dll lives in the driver store on this machine (the engine loads it from
-// there in RT mode). System32 may hold a copy on other installs, so try both, then
-// the DriverStore repository glob. Returns the first readable file.
+// _nvngx.dll is NVIDIA's NGX core. The engine loads it in RT mode; VV substitutes
+// the upscaler, so this file has to load the core itself. The driver provides it,
+// so the driver store comes first - the package directory is named after the INF
+// that shipped the file, and that name is vendor/branch specific: nvami.inf_amd64_*
+// on this machine, nv_dispi.inf_amd64_* on an ASUS-customised driver (2026-10-30,
+// "no _nvngx.dll found" while the file was right there). Both are official, so the
+// glob is nv*.inf_amd64_* and every match is probed instead of assuming one name.
+//   1. driver store, newest copy wins (a driver upgrade leaves older packages);
+//   2. System32, where some installs keep a copy;
+//   3. the mod's own directory, only as a last resort. The game root is not searched
+//      on purpose: shipping the core is the driver's job, and a stray copy next to
+//      Minecraft.Windows.exe would shadow the driver's on every driver upgrade.
+std::wstring findNextTo(std::wstring const& dir) {
+    for (wchar_t const* name : {L"\\_nvngx.dll", L"\\nvngx.dll"}) {
+        std::wstring const candidate = dir + name;
+        if (::GetFileAttributesW(candidate.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+std::wstring findInDriverStore(std::wstring const& base) {
+    std::wstring const pattern = base + L"\\DriverStore\\FileRepository\\nv*.inf_amd64_*";
+    WIN32_FIND_DATAW   data{};
+    HANDLE const       find = ::FindFirstFileW(pattern.c_str(), &data);
+    if (find == INVALID_HANDLE_VALUE) {
+        return {};
+    }
+    std::wstring best;
+    FILETIME     bestTime{};
+    do {
+        std::wstring const candidate =
+            findNextTo(base + L"\\DriverStore\\FileRepository\\" + data.cFileName);
+        if (candidate.empty()) {
+            continue;
+        }
+        WIN32_FILE_ATTRIBUTE_DATA info{};
+        if (!::GetFileAttributesExW(candidate.c_str(), GetFileExInfoStandard, &info)) {
+            continue;
+        }
+        if (best.empty() || ::CompareFileTime(&info.ftLastWriteTime, &bestTime) > 0) {
+            best     = candidate;
+            bestTime = info.ftLastWriteTime;
+        }
+    } while (::FindNextFileW(find, &data));
+    ::FindClose(find);
+    return best;
+}
+
 std::wstring findCorePath() {
     wchar_t systemDir[MAX_PATH]{};
     if (!::GetSystemDirectoryW(systemDir, MAX_PATH)) {
         return {};
     }
     std::wstring const base = systemDir;
-    for (wchar_t const* name : {L"\\_nvngx.dll", L"\\nvngx.dll"}) {
-        std::wstring candidate = base + name;
-        if (::GetFileAttributesW(candidate.c_str()) != INVALID_FILE_ATTRIBUTES) {
-            return candidate;
+
+    if (std::wstring const fromDriver = findInDriverStore(base); !fromDriver.empty()) {
+        ND_DEBUG("[vvsr] sr core: {}", std::string(fromDriver.begin(), fromDriver.end()));
+        return fromDriver;
+    }
+
+    if (std::wstring const inSystem = findNextTo(base); !inSystem.empty()) {
+        ND_DEBUG("[vvsr] sr core: {}", std::string(inSystem.begin(), inSystem.end()));
+        return inSystem;
+    }
+
+    // Last resort: beside NeuroDragon.dll. GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS turns
+    // an address inside our own module into that module's handle (a global variable's
+    // address is stable and inside the DLL, unlike the game's code).
+    HMODULE self = nullptr;
+    if (::GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&gCore),
+            &self
+        )) {
+        wchar_t mine[MAX_PATH]{};
+        if (::GetModuleFileNameW(self, mine, MAX_PATH)) {
+            std::wstring dir = mine;
+            if (auto const cut = dir.find_last_of(L'\\'); cut != std::wstring::npos) {
+                dir.resize(cut);
+                std::wstring const beside = findNextTo(dir);
+                if (!beside.empty()) {
+                    ND_DEBUG("[vvsr] sr core: {}", std::string(beside.begin(), beside.end()));
+                    return beside;
+                }
+            }
         }
     }
-    std::wstring const pattern = base + L"\\DriverStore\\FileRepository\\nvami.inf_amd64_*";
-    WIN32_FIND_DATAW   data{};
-    HANDLE const       find = ::FindFirstFileW(pattern.c_str(), &data);
-    if (find == INVALID_HANDLE_VALUE) {
-        return {};
-    }
-    std::wstring found;
-    do {
-        std::wstring const candidate =
-            base + L"\\DriverStore\\FileRepository\\" + data.cFileName + L"\\_nvngx.dll";
-        if (::GetFileAttributesW(candidate.c_str()) != INVALID_FILE_ATTRIBUTES) {
-            found = candidate;
-            break;
-        }
-    } while (::FindNextFileW(find, &data));
-    ::FindClose(find);
-    return found;
+    return {};
 }
 
 void logState(char const* what, int ret) {
@@ -210,10 +268,17 @@ bool ensureSession(ID3D12Device* device) {
         } else {
             std::wstring const path = findCorePath();
             if (path.empty()) {
-                utils::logger().error("[vvsr] sr: no _nvngx.dll found");
+                utils::logger().error(
+                    "[vvsr] sr: no NGX core (_nvngx.dll) in the driver store, System32 or the mod "
+                    "directory - install a complete NVIDIA driver (DLSS needs an NVIDIA GPU); the "
+                    "game folder is not searched on purpose"
+                );
                 return false;
             }
             gCore = ::LoadLibraryW(path.c_str());
+            if (!gCore) {
+                utils::logger().error("[vvsr] sr: _nvngx.dll would not load (error {})", ::GetLastError());
+            }
         }
         if (!gCore) {
             return false;
