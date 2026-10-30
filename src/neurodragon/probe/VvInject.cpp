@@ -198,6 +198,18 @@ void setDevice(void* device) { g.device = static_cast<ID3D12Device*>(device); }
 
 void noteSwapChain(void* swapChain) { g.swapChain = static_cast<IDXGISwapChain*>(swapChain); }
 
+// Why there is no arg10 to write, in one clause. The TAAU output is our only cut point:
+// if the engine's upscaling is DLSS (its runtime is resident) or there is no upscaling
+// pass at all, nothing ever writes arg10. The 2026-10-30 tester log is exactly that -
+// 87 lists per submission, split 0 - while the enable line claimed the draw was being
+// skipped.
+char const* engineUpscalingHint() {
+    if (::GetModuleHandleW(L"nvngx_dlss.dll")) {
+        return "nvngx_dlss.dll is loaded, so the game's upscaling is DLSS; VV replacement needs TAAU";
+    }
+    return "the game's upscaling is off or at 100%; VV replacement needs TAAU with a sub-100% ratio";
+}
+
 unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     // ---- is this an engine frame at all? -------------------------------------
     // The decision below may only touch the inject/suppress state for submissions that
@@ -272,12 +284,24 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
             probe::vv::noteArg10Gap();
         }
         static std::atomic<unsigned> misses{0};
-        unsigned const               n = misses.fetch_add(1, std::memory_order_relaxed);
-        if (n < 4 || n % 600 == 0) {
+        unsigned const               n = misses.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n < 4) {
+            // Normal for the first frames after arming: the split is resolved from the
+            // lists that bound arg10 in the previous armed frame.
             utils::logger().warn(
-                "[vv] inject: arg10 writer not found (split={}/{})",
+                "[vv] inject: arg10 writer not found yet (split={}/{}); TAAU runs this frame",
                 split,
                 listCount
+            );
+        } else if (n % 600 == 0) {
+            // Ten seconds without a single writer: the premise is wrong, and saying so
+            // is the difference between "the mod does nothing" and a diagnosis.
+            utils::logger().warn(
+                "[vv] inject: no arg10 writer after {} frames (split={}/{}); {}",
+                n,
+                split,
+                listCount,
+                engineUpscalingHint()
             );
         }
         setReason(SkipReason::NoBoundary);
@@ -303,6 +327,15 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     unsigned const n = gContentLogs.fetch_add(1, std::memory_order_relaxed);
     if (n < 4) {
         ND_DEBUG("[vv] inject: arg10 boundary split={}/{}", split, listCount);
+    }
+    if (n == 0) {
+        // The "it is really replacing TAAU now" marker, kept in release logs: the enable
+        // line only says armed, and this is the first frame that proves otherwise.
+        utils::logger().info(
+            "[vv] inject: arg10 captured (split={}/{}); the TAAU draw is skipped from here",
+            split,
+            listCount
+        );
     }
     return split;
 }

@@ -724,10 +724,14 @@ void setEnabled(bool wantEnabled) {
         probe::vv::inject::setMode(probe::vv::inject::Mode::Off);
     }
     // The one line the product prints about itself: a user-visible switch flipping.
+    // On enable it says *armed*, not "draw skipped": the draw only starts being skipped
+    // once a frame really wrote arg10 (noteInjectionResult), and a session whose engine
+    // is not on the TAAU path never gets there (2026-10-30 tester log: "enabled (TAAU
+    // draw skipped)" while every submission had no arg10 writer at all).
     utils::logger().info(
-        "[vvsr] sr {} (TAAU draw {})",
+        "[vvsr] sr {} ({})",
         wantEnabled ? "enabled" : "disabled",
-        wantEnabled ? "skipped" : "restored"
+        wantEnabled ? "armed; TAAU runs until the first arg10 frame" : "TAAU draw restored"
     );
 }
 

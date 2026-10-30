@@ -45,6 +45,13 @@
 > `sr.vvPercent`（引擎 `upscaling_percentage`）、`sr.preset`/`sr.sharpening`、
 > `sr::requestReset()`（面板「重置历史」）、`setJitterSource`（四档 `0 / j(n) / -j(n) / j(n-1)`，
 > 默认 0；见 §37）。
+>
+> **前提：引擎的上采样必须是 TAAU，且比例 < 100%**（2026-10-30 补）。`arg10` 是 TAAU 那条 pass
+> 的输出；引擎上采样选 DLSS、关掉、或停在 100% 原生时，这一帧没有任何东西写 `arg10`，注入只能
+> 跳过（测试者日志：一次提交 87 个 list、`split=0`，而产品行当时谎称 `TAAU draw skipped`）。
+> 现在开关注入时只说 `sr enabled (armed; TAAU runs until the first arg10 frame)`，第一次真正注入
+> 成功才说 `inject: arg10 captured … the TAAU draw is skipped from here`；连续 600 帧没有 writer
+> 会打一条结论行（进程里有 `nvngx_dlss.dll` 就说明引擎自己在跑 DLSS）。
 
 ## 0. 一句话
 
