@@ -18,7 +18,7 @@ NR 是我们自己的 feature 0x12，用 core 的 CreateFeature 建、在引擎�
 |---|---|
 | 接入方式 | NGX feature **`0x12`**，runtime `nvngx_dlssnr.dll`（310.9.16，266 MB，不进安装包） |
 | 创建方式 | **core**（`_nvngx.dll`）的 `CreateFeature`；模型 DLL 自己的 `Init_Ext` 恒失败 |
-| 硬性前提 | 驱动 **≥ 617.42**；模型文件**必须叫 `nvngx_dlssnr.dll`** 且位于 **exe 同目录** |
+| 硬性前提 | 驱动 **≥ 616.56**（本机实测 617.42）；模型文件**必须叫 `nvngx_dlssnr.dll`** 且位于 **exe 同目录 / mod 同目录** |
 | 上屏 | 前档：改引擎参数对象的 `Color`，由引擎 DLSS 放大；后档：直接写回引擎 `Output` |
 | 默认 | `nr.enabled=false`（面板启用）、`replace=6`（TRP Ratio）、`placement=0`（放大前） |
 | 成本 | 前档 **3.5–3.8 ms @1485×835**（~29% 帧预算）、100% 时 8.75 ms；后档 **9.78 ms @2560×1440** |
@@ -66,8 +66,9 @@ NR 是我们自己的 feature 0x12，用 core 的 CreateFeature 建、在引擎�
 
 ### 2.3 三条硬性前提（每条都有反例）
 
-1. **驱动 ≥ 617.42**：核心 `_nvngx.dll`（32.0.16.1742）的 feature 名字表里才有 `dlssnr`；
-   610.88 的核心（32.0.16.1088）没有，`CreateFeature(0x12)` 返回 `0xBAD0000C`（OutOfDate）。
+1. **驱动 ≥ 615.64**：这个版本起 `CreateFeature(0x12)` 才能返回 1（本机实测是 617.42）；
+   610.88 的驱动直接返回 `0xBAD0000C`（OutOfDate）。下限按 615.64 记（2026-10-30 用户更正），
+   610.88→615.64 之间的具体分界点没有逐个版本验过。
 2. **模型必须叫 `nvngx_dlssnr.dll`，放 exe 同目录**：用版本名（`nvngx_dlssnr_310.9.16.dll`）
    返回 `0xBAD0000B`（找不到/初始化不了该库），改名后立刻 `0x00000001`。
 3. **必须用 core 的 `CreateFeature`**（core 自己加载模型），不要用 runtime 自己的 `Init_Ext` /
@@ -81,6 +82,9 @@ NR 是我们自己的 feature 0x12，用 core 的 CreateFeature 建、在引擎�
 | 617.42，应用目录无模型 | `0xBAD0000B` UnableToInitializeFeature |
 | 617.42，应用目录有 `nvngx_dlssnr.dll` | **`0x00000001`，handle 非空** |
 | 617.42，只放版本名 DLL | `0xBAD0000B`（名字是硬要求） |
+
+驱动下限按 **615.64** 记（2026-10-30 更正）：610.88 是"太旧"的一端，617.42 是实测可用的版本，
+两者之间没有逐版本验，只把用户给的 615.64 当下限。
 
 另外两条实测事实：
 

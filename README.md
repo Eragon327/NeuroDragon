@@ -10,12 +10,14 @@ RenderDragon 管线，在 3D 世界画完之后、UI 与色调映射之前插入
 |---|---|
 | 游戏 | Minecraft Bedrock **1.26.51**（1.26.5101.0） |
 | 加载器 | LeviLamina **client** `26.51.*` |
-| 显卡 | NVIDIA RTX（NR 在 RTX 50 系上验证；20/30/40 系通常需要额外的内核包，本模组不提供） |
-| 驱动 | NR 需要 **≥ 617.42** |
+| 显卡 | NVIDIA RTX（DLSS 超分：20 系起即可；NR 只在 RTX 50 系实测） |
+| 驱动 | NR 需要 **≥ 616.56**；DLSS 超分只要驱动带 NGX 核心 |
 | 系统 | Windows 10 / 11 x64 |
 
 ## 功能
 
+- **VV：用 DLSS 替换 TAAU**：在 Vibrant Visuals 管线里把引擎的 TAAU 换成我们自己的 DLSS-SR
+  （`feature 1`），NR 作为它的输入；HUD / 手 / 准星不动。前提见「已知限制」。
 - **神经渲染（NR）**：把 `nvngx_dlssnr.dll` 作为 NGX feature `0x12` 跑在世界画面上，
   结果与原始颜色合成后交给引擎的 DLSS 放大上屏。带历史、按帧求值，可按分辨率变化自动重建。
 - **位置轴**：NR 可以站在放大器的两侧——**放大前**（处理渲染分辨率，默认，约 3.5 ms @1485×835）
@@ -42,7 +44,11 @@ RenderDragon 管线，在 3D 世界画完之后、UI 与色调映射之前插入
 
 3. **放入 NR 模型**：把 `nvngx_dlssnr.dll`（NVIDIA DLSS Neural Rendering 运行时，约 266 MB）
    放进 `mods/NeuroDragon/`。模型不随模组发布，需要自己准备。
-4. 启动游戏。模组会在加载时把模型**硬链接**到 `Minecraft.Windows.exe` 同级目录（同卷零拷贝；
+4. **放入 DLSS 超分载荷**：把 `nvngx_dlss.dll`（DLSS-SR 运行时，约 55–59 MB）放在**游戏根目录**
+   （`Minecraft.Windows.exe` 同级）——NGX 从应用目录取它。NGX 核心 `_nvngx.dll` 由 NVIDIA 驱动
+   提供，模组依次从驱动目录（`DriverStore\FileRepository\nv*.inf_amd64_*`，多个命中取最新一份）、
+   `System32`、模组自己的目录里找，不需要手动放，也不需要动系统目录。
+5. 启动游戏。模组会在加载时把模型**硬链接**到 `Minecraft.Windows.exe` 同级目录（同卷零拷贝；
    跨卷则复制）。若游戏目录不可写，日志会打印目标路径，手动复制即可。
 
 > 模型文件名**必须是 `nvngx_dlssnr.dll`**——NGX 核心按这个名字找它，带版本号的名字会被拒绝。
@@ -51,9 +57,7 @@ RenderDragon 管线，在 3D 世界画完之后、UI 与色调映射之前插入
 
 - `End` 打开/关闭面板（可在「高级 → 热键」重绑），面板打开时 `Esc` 关闭。
 - **首次启用 NR**：`神经渲染` 页勾选「启用神经渲染」→ 按「应用」。
-- **替换模式**：
-  - `6 TRP Ratio`（默认）：按比例/增益合成，高光取自原图；
-  - `5 增益`：把网络增益直接叠到画面上，可用「增益」滑条放大，便于观察。
+- **合成模式**：只有 TRP Ratio 一种（按比例/增益合成，高光取自原图）；旧的「增益」模式已删除。
 - **输入分辨率**：50 / 66 / 100%。低于 100% 时只在低分辨率上跑网络，guide 仍是全分辨率，
   合成仍在全分辨率做——省 GPU，画面损失用分屏对比判断。
 - **热键**：`[` 开/关 NR，`]` 重置 NR 与 DLSS 的历史（擦掉残影），`F2` 截图。
@@ -64,12 +68,15 @@ RenderDragon 管线，在 3D 世界画完之后、UI 与色调映射之前插入
 
 ## 已知限制
 
-- **VV（Vibrant Visuals）管线还没接管**：当前只在光追（RT）渲染路径上工作；
-  VV 下用 DLSS 替换 TAAU 是下一个阶段。
+- **VV 替换要求引擎上采样是 TAAU 且比例 < 100%**：`arg10` 是 TAAU 那条 pass 的输出。游戏里选
+  DLSS、关掉上采样、或停在 100% 原生时，这一帧没有任何东西写 arg10，注入只会跳过；日志会打
+  `[vv] inject: no arg10 writer …` 并写出原因（进程里有 `nvngx_dlss.dll` 就说明引擎在跑 DLSS）。
+- **NR 报 `0xBAD0000C`（FAIL_OutOfDate）**：驱动低于 615.64，或 core 太旧；与显卡代数无关。
 - **「放大后」位置较贵**：100% 时约 9.8 ms（1440p），66/50 的降本档还没做。
 - **75% / 78% 内部分辨率不提供**：DLSS 没有对应的原生质量槽，强行借用会被动态范围夹住。
 - **mip LOD 偏置、帧生成、光线重建**：未实现。
-- **20/30/40 系**：NR 通常需要 TRP 风格的 `.trpk` 内核包，本模组不带，也不做这类内核 patch。
+- **NR 只在 50 系实测**：20/30/40 系没有验证；TRP 那套在这些卡上要 `.trpk` 内核包，本模组不带，
+  也不做这类内核 patch（`decisions/0002`）。DLSS 超分不受此限——20 系起就能跑。
 - 只在 **RTX 5070 Laptop + 1.26.5101.0 + LeviLamina 26.51** 上实测；其他组合未验证。
 
 ## 从源码构建
@@ -110,5 +117,5 @@ scripts/      # 构建后打包、字形收集
 
 - **Theo's Render Pipeline（TRP）**：NR / 超分 / 锐化的设计参考与 `NVSDK_NGX` 参数契约来源。
 - **LeviLamina / LeviMC**：客户端模组加载器与 SDK。
-- **Mangrove / LHolo**：Present 钩子 + D3D11On12 覆盖层的实现参考。
+- **LHolo**：Present 钩子 + D3D11On12 覆盖层的实现参考。
 - **Dear ImGui / MinHook**：面板与挂钩。
