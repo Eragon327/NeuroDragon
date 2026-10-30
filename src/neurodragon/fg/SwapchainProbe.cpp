@@ -1,10 +1,12 @@
 #include "neurodragon/fg/SwapchainProbe.h"
 
+#include "neurodragon/fg/Streamline.h"
 #include "neurodragon/utils/Utils.h"
 
 #include <Windows.h>
 
 #include <cstdint>
+#include <string>
 
 namespace neurodragon::fg::probe {
 
@@ -45,6 +47,7 @@ namespace {
 
 using CreateFactoryFn    = HRESULT(WINAPI*)(REFIID, void**);
 using CreateFactory2Fn   = HRESULT(WINAPI*)(UINT, REFIID, void**);
+using CreateDeviceFn     = HRESULT(WINAPI*)(IUnknown*, int, REFIID, void**);
 using CreateSwapChainFn  = HRESULT(STDMETHODCALLTYPE*)(IDXGIFactory*, IUnknown*, DXGI_SWAP_CHAIN_DESC*, IDXGISwapChain**);
 using CreateForHwndFn    = HRESULT(STDMETHODCALLTYPE*)(
     IDXGIFactory2*,
@@ -84,6 +87,7 @@ constexpr size_t kCreateForCompositionSlot = 24;
 CreateFactoryFn    gCreateFactory{};
 CreateFactoryFn    gCreateFactory1{};
 CreateFactory2Fn   gCreateFactory2{};
+CreateDeviceFn     gCreateDevice{};
 CreateSwapChainFn  gCreateSwapChain{};
 CreateForHwndFn    gCreateForHwnd{};
 CreateForWindowFn  gCreateForWindow{};
@@ -94,6 +98,130 @@ std::atomic_bool gFactoryHooked{};
 std::mutex       gHookMutex;
 void*            gHookedTargets[8]{};
 int              gHookedCount{};
+std::wstring     gModDir;
+
+// SlInit must not run under the loader lock: load() deadlocked the client (0-byte log,
+// no window). The first *game* factory call is outside it and still before the swap
+// chain. Calls from this DLL (the overlay's temporary chain) are skipped.
+bool internalCaller() {
+    void*  frames[8]{};
+    USHORT count = ::RtlCaptureStackBackTrace(1, 8, frames, nullptr);
+    HMODULE self = nullptr;
+    ::GetModuleHandleExW(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCWSTR>(&gModDir),
+        &self
+    );
+    for (USHORT i = 1; i < count; ++i) {
+        HMODULE module = nullptr;
+        if (::GetModuleHandleExW(
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                reinterpret_cast<LPCWSTR>(frames[i]),
+                &module
+            )
+            && module == self) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ensureStreamline() {
+    if (neurodragon::fg::streamline::ready()) {
+        return true;
+    }
+    if (internalCaller()) {
+        return false;
+    }
+    return neurodragon::fg::streamline::init(gModDir);
+}
+
+std::wstring moduleBaseName(void* address) {
+    HMODULE module = nullptr;
+    wchar_t path[MAX_PATH]{};
+    if (!::GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(address),
+            &module
+        )
+        || !module || !::GetModuleFileNameW(module, path, MAX_PATH)) {
+        return {};
+    }
+    std::wstring const full  = path;
+    auto const         slash = full.find_last_of(L"\\/");
+    return slash == std::wstring::npos ? full : full.substr(slash + 1);
+}
+
+bool selfModule(HMODULE module) {
+    HMODULE self = nullptr;
+    return ::GetModuleHandleExW(
+               GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+               reinterpret_cast<LPCWSTR>(&gModDir),
+               &self
+           )
+        && self == module;
+}
+
+// The game's own factory only: NvCamera and the overlay also create factories, and
+// proxying those would attach Streamline to a swap chain we do not own.
+bool gameCaller() {
+    wchar_t exe[MAX_PATH]{};
+    if (!::GetModuleFileNameW(nullptr, exe, MAX_PATH)) {
+        return false;
+    }
+    std::wstring const full  = exe;
+    auto const         slash = full.find_last_of(L"\\/");
+    std::wstring const exeName = slash == std::wstring::npos ? full : full.substr(slash + 1);
+
+    void*  frames[12]{};
+    USHORT count = ::RtlCaptureStackBackTrace(1, 12, frames, nullptr);
+    for (USHORT i = 0; i < count; ++i) {
+        HMODULE module = nullptr;
+        if (!::GetModuleHandleExW(
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                reinterpret_cast<LPCWSTR>(frames[i]),
+                &module
+            )
+            || !module || selfModule(module)) {
+            continue;
+        }
+        return moduleBaseName(frames[i]) == exeName;
+    }
+    return false;
+}
+
+// A native swap-chain method reached through Streamline's proxy has an interposer
+// frame on the stack; a direct call (the overlay's temporary chain) does not.
+bool viaInterposer() {
+    void*  frames[16]{};
+    USHORT count = ::RtlCaptureStackBackTrace(1, 16, frames, nullptr);
+    for (USHORT i = 0; i < count; ++i) {
+        std::wstring const name = moduleBaseName(frames[i]);
+        if (name == L"sl.interposer.dll" || name == L"sl.common.dll") {
+            return true;
+        }
+    }
+    return false;
+}
+
+void* maybeUpgradeFactory(void* native) {
+    if (!native || internalCaller() || !gameCaller()) {
+        return native;
+    }
+    if (!ensureStreamline()) {
+        return native;
+    }
+    void* proxy = native;
+    if (neurodragon::fg::streamline::upgradeFactory(&proxy) && proxy) {
+        ND_DEBUG(
+            "[fg] factory upgraded to SL proxy 0x{:x} (native 0x{:x})",
+            reinterpret_cast<std::uintptr_t>(proxy),
+            reinterpret_cast<std::uintptr_t>(native)
+        );
+        return proxy;
+    }
+    return native;
+}
 
 std::string callerStack() {
     void*       frames[16]{};
@@ -282,21 +410,43 @@ void hookFactory(void* factory) {
 HRESULT WINAPI createFactoryDetour(REFIID riid, void** out) {
     HRESULT const hr = gCreateFactory ? gCreateFactory(riid, out) : E_FAIL;
     logFactory("CreateDXGIFactory", hr, out ? *out : nullptr);
-    if (SUCCEEDED(hr) && out && *out) hookFactory(*out);
+    if (SUCCEEDED(hr) && out && *out) {
+        void* const native = *out;
+        hookFactory(native);
+        *out = maybeUpgradeFactory(native);
+    }
     return hr;
 }
 
 HRESULT WINAPI createFactory1Detour(REFIID riid, void** out) {
     HRESULT const hr = gCreateFactory1 ? gCreateFactory1(riid, out) : E_FAIL;
     logFactory("CreateDXGIFactory1", hr, out ? *out : nullptr);
-    if (SUCCEEDED(hr) && out && *out) hookFactory(*out);
+    if (SUCCEEDED(hr) && out && *out) {
+        void* const native = *out;
+        hookFactory(native);
+        *out = maybeUpgradeFactory(native);
+    }
     return hr;
 }
 
 HRESULT WINAPI createFactory2Detour(UINT flags, REFIID riid, void** out) {
     HRESULT const hr = gCreateFactory2 ? gCreateFactory2(flags, riid, out) : E_FAIL;
     logFactory("CreateDXGIFactory2", hr, out ? *out : nullptr);
-    if (SUCCEEDED(hr) && out && *out) hookFactory(*out);
+    if (SUCCEEDED(hr) && out && *out) {
+        void* const native = *out;
+        hookFactory(native);
+        *out = maybeUpgradeFactory(native);
+    }
+    return hr;
+}
+
+HRESULT WINAPI createDeviceDetour(IUnknown* adapter, int level, REFIID riid, void** device) {
+    HRESULT const hr = gCreateDevice ? gCreateDevice(adapter, level, riid, device) : E_FAIL;
+    if (SUCCEEDED(hr) && device && *device) {
+        ND_DEBUG("[fg] device created 0x{:x}", reinterpret_cast<std::uintptr_t>(*device));
+        // The swap-chain `device` argument is the queue; this is the real device.
+        neurodragon::fg::streamline::noteDevice(*device);
+    }
     return hr;
 }
 
@@ -333,6 +483,14 @@ HRESULT STDMETHODCALLTYPE createForHwndDetour(
     IDXGISwapChain1**                     out
 ) {
     if (desc) {
+        if (viaInterposer()) {
+            // The proxy chain is the game's: SL needs the device. ALLOW_TEARING is
+            // not added yet: the game's ResizeBuffers1 still passes its original
+            // flags, and the proxy's resize (which bypasses the overlay's vtable
+            // hook) then fails with DXGI_ERROR_INVALID_CALL (EXP-0129). Tearing comes
+            // back once the resize path can carry it.
+            neurodragon::fg::streamline::ensureDeviceFromQueue(device);
+        }
         logRequest(
             "CreateSwapChainForHwnd",
             self,
@@ -415,7 +573,8 @@ HRESULT STDMETHODCALLTYPE createForCompositionDetour(
 
 } // namespace
 
-void install() {
+void install(std::wstring const& modDir) {
+    gModDir = modDir;
     bool expected = false;
     if (!gInstalled.compare_exchange_strong(expected, true)) return;
 
@@ -463,6 +622,18 @@ void install() {
             reinterpret_cast<void**>(&gCreateFactory2)
         );
     }
+    if (HMODULE const d3d12 = ::GetModuleHandleW(L"d3d12.dll")) {
+        if (auto const createDevice = ::GetProcAddress(d3d12, "D3D12CreateDevice")) {
+            any |= hookTarget(
+                "D3D12CreateDevice",
+                reinterpret_cast<void*>(createDevice),
+                reinterpret_cast<void*>(&createDeviceDetour),
+                reinterpret_cast<void**>(&gCreateDevice)
+            );
+        }
+    } else {
+        ND_DEBUG("[fg] d3d12.dll not loaded; D3D12CreateDevice not hooked");
+    }
 
     ND_DEBUG(
         "[fg] swapchain probe installed t={:.1f}ms hooks={} dxgi=0x{:x}",
@@ -490,7 +661,7 @@ void uninstall() {
 
 namespace neurodragon::fg::probe {
 
-void install() {}
+void install(std::wstring const&) {}
 void uninstall() {}
 
 } // namespace neurodragon::fg::probe

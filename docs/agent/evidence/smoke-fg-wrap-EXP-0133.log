@@ -1,0 +1,145 @@
+# agentflow smoke fg-wrap on EXP-0133
+# started 2026-10-30T23:59:46.380+08:00  verdict=FAIL elapsed=120s
+# tree 24378514e109093e  head ddf3d0ee
+# dll 98c81d7bff83602f
+# profile D:\Documents\NeuroDragon\main\scripts\agentflow\smoke\fg-wrap.json
+# requires=['\\[fg\\] factory upgraded to SL proxy', '\\[fg\\] CreateSwapChainForHwnd req .*flags=0x842', '\\[fg\\] streamline: slSetD3DDevice', '\\[fg\\] streamline: DLSS_G load-after-device result=0 loaded=1', '\\[vv\\] frame time: avg=']
+# missing=['\\[fg\\] CreateSwapChainForHwnd req .*flags=0x842', '\\[fg\\] streamline: slSetD3DDevice', '\\[fg\\] streamline: DLSS_G load-after-device result=0 loaded=1', '\\[vv\\] frame time: avg=']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 0 -> 15031
+[2026-10-30 23:59:56.047 IFO][LeviLamina]                                                                       
+[2026-10-30 23:59:56.047 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-30 23:59:56.047 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-30 23:59:56.047 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-30 23:59:56.047 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-30 23:59:56.047 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-30 23:59:56.047 IFO][LeviLamina]                                                                       
+[2026-10-30 23:59:56.047 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-30 23:59:56.047 IFO][LeviLamina]                                                                       
+[2026-10-30 23:59:56.047 IFO][LeviLamina]                                                                       
+[2026-10-30 23:59:56.047 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-30 23:59:56.047 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-30 23:59:56.061 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-30 23:59:56.062 IFO][LeviLamina] 正在加载模组……
+[2026-10-30 23:59:56.063 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-30 23:59:56.446 DBG][NeuroDragon] [fg] hook CreateDXGIFactory at 0x7ffa4943de50
+[2026-10-30 23:59:56.501 DBG][NeuroDragon] [fg] hook CreateDXGIFactory1 at 0x7ffa4943df80
+[2026-10-30 23:59:56.561 DBG][NeuroDragon] [fg] hook CreateDXGIFactory2 at 0x7ffa49442e80
+[2026-10-30 23:59:56.623 DBG][NeuroDragon] [fg] hook D3D12CreateDevice at 0x7ff98bdd70b0
+[2026-10-30 23:59:56.624 DBG][NeuroDragon] [fg] swapchain probe installed t=10235.9ms hooks=1 dxgi=0x7ffa493f0000
+[2026-10-30 23:59:56.626 DBG][NeuroDragon] NR model already in place, skipping (E:\LeviLauncher\versions\1.26.51.01\nvngx_dlssnr.dll , 254 MB)
+[2026-10-30 23:59:56.626 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-30 23:59:56.626 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-30 23:59:58.632 WRN][Server] <LVL|3289083568> Migration started
+[2026-10-30 23:59:58.634 WRN][Server] <LVL|3289083568> Migration completed in 0.002000 seconds
+[2026-10-30 23:59:58.757 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=12370.2ms tid=33508 hr=0x00000000 factory=0x187cef1d950 caller=NeuroDragon.dll +0x308eb <- NeuroDragon.dll +0x30493 <- Minecraft.Windows.exe +0xe00f420 <- Minecraft.Windows.exe +0xdf90ef7 <- Minecraft.Windows.exe +0xdfc61ce <- Minecraft.Windows.exe +0xdfc4991
+[2026-10-30 23:59:58.814 DBG][NeuroDragon] [fg] hook IDXGIFactory::CreateSwapChain at 0x7ffa4940f1a0
+[2026-10-30 23:59:58.873 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForHwnd at 0x7ffa49411040
+[2026-10-30 23:59:58.962 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForCoreWindow at 0x7ffa49482c40
+[2026-10-30 23:59:59.080 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForComposition at 0x7ffa49411340
+[2026-10-30 23:59:59.080 DBG][NeuroDragon] [fg] streamline: init attempt
+[2026-10-30 23:59:59.294 DBG][NeuroDragon] [fg] streamline: signature E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\sl.interposer.dll status=0x00000000
+[2026-10-30 23:59:59.296 DBG][NeuroDragon] [fg] streamline: nvngx search C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+[2026-10-30 23:59:59.299 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:003ms:647us]pluginManager.cpp:430[setHostSDKVersion] Streamline v2.14.1.98614dad6 - built on Fri Aug 28 13:38:13 2026 - host SDK v2.11.1
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:144us]ota.cpp:406[parseServerManifest] OTA feature sdk_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:175us]ota.cpp:406[parseServerManifest] OTA feature common_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:182us]ota.cpp:406[parseServerManifest] OTA feature deepdvc_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:188us]ota.cpp:406[parseServerManifest] OTA feature dlss_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:193us]ota.cpp:406[parseServerManifest] OTA feature dlss_d_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:199us]ota.cpp:406[parseServerManifest] OTA feature dlss_g_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:204us]ota.cpp:406[parseServerManifest] OTA feature nis_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:208us]ota.cpp:406[parseServerManifest] OTA feature nvperf_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:213us]ota.cpp:406[parseServerManifest] OTA feature pcl_0 version 2.14.16
+
+[2026-10-30 23:59:59.301 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:006ms:219us]ota.cpp:406[parseServerManifest] OTA feature reflex_0 version 2.14.16
+
+[2026-10-30 23:59:59.484 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:188ms:699us]ota.cpp:699[readOTAOverrideDRS] Read SL_DLSS_OVERRIDE DRS key (app profile): 0
+
+[2026-10-30 23:59:59.497 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:201ms:538us]ota.cpp:832[getNVDAArchitecture] Found NVIDIA GPUs, [00000011B24FA780]: 1
+
+[2026-10-30 23:59:59.499 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:203ms:331us]ota.cpp:838[getNVDAArchitecture] Found GPU 0, arch=0x1b0
+
+[2026-10-30 23:59:59.499 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:203ms:778us]ota.cpp:242[invokeNGXUpdater] Invoking NGX Updater: C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -cmsid 0 -feature sl_sdk_0 -api update -type zip -gpuarch 0x1B0 -bootstrap
+
+[2026-10-30 23:59:59.499 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:204ms:018us]pluginManager.cpp:545[findPlugins] Looking for plugins in E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime ...
+
+[2026-10-30 23:59:59.500 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:204ms:263us]pluginManager.cpp:1048[loadPlugins] eLoadDownloadedPlugins flag not passed to preferences, OTA'd plugins will not be loaded!
+
+[2026-10-30 23:59:59.512 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:216ms:533us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:59:59.512 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:216ms:910us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:59:59.512 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:216ms:954us]commonInterface.cpp:165[getSystemCaps] Enumerating up to 8 adapters but only one of them can be used to create a device - no mGPU support in this SDK
+
+[2026-10-30 23:59:59.513 DBG][NeuroDragon] [fg] factory CreateDXGIFactory t=13126.1ms tid=33508 hr=0x00000000 factory=0x187cf985c30 caller=NeuroDragon.dll +0x308eb <- NeuroDragon.dll +0x30413 <- sl.common.dll +0x46fe0 <- sl.common.dll +0x42921 <- sl.common.dll +0x36a18 <- sl.interposer.dll +0x5caab
+[2026-10-30 23:59:59.514 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:218ms:883us]commonInterface.cpp:287[getSystemCaps] >-----------------------------------------
+
+[2026-10-30 23:59:59.514 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:218ms:914us]commonInterface.cpp:290[getSystemCaps] NVIDIA driver 617.42
+
+[2026-10-30 23:59:59.516 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:220ms:547us]commonInterface.cpp:315[getSystemCaps] Adapter 0 architecture 0x1b0 implementation 0x6 revision 0xa1 - bit 0x1 - LUID 0.79860
+
+[2026-10-30 23:59:59.516 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:220ms:582us]commonInterface.cpp:321[getSystemCaps] -----------------------------------------<
+
+[2026-10-30 23:59:59.517 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:221ms:135us]commonEntry.cpp:2045[getOSVersionAndUpdateTimerResolution] Changed high resolution timer resolution to 5000 [100 ns units].
+
+[2026-10-30 23:59:59.517 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:221ms:159us]commonEntry.cpp:2124[updateEmbeddedJSON] Detected Windows OS version 10.0.26100
+
+[2026-10-30 23:59:59.517 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:221ms:282us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.common' - version 2.14.1.98614dad6 PRODUCTION - id 4294967295 - priority 0 - adapter mask 0x7 - interposer 'no'
+
+[2026-10-30 23:59:59.526 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:231ms:026us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:59:59.527 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:231ms:395us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=1 [23-59-59][streamline][warn][tid:33508][0s:582ms:210us]commonEntry.cpp:1093[getNGXFeatureRequirements] ngxResult not implemented
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=1 [23-59-59][streamline][warn][tid:33508][0s:582ms:261us]dlss_gEntry.cpp:143[updateEmbeddedJSON] Failed to obtain DLSS-G min spec requirements from NGX, using SL defaults
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:582ms:270us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeDepth' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:582ms:323us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeMotionVectors' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:582ms:342us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeHUDLessColor' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:582ms:349us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeUIColorAndAlpha' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:59:59.878 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:582ms:679us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.dlss_g' - version 2.14.1.98614dad6 PRODUCTION - id 1000 - priority 1000 - adapter mask 0x1 - interposer 'no'
+
+[2026-10-30 23:59:59.891 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:595ms:375us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:59:59.892 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:596ms:004us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:59:59.892 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:596ms:187us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.pcl' - version 2.14.1.98614dad6 PRODUCTION - id 4 - priority 2 - adapter mask 0x7 - interposer 'no'
+
+[2026-10-30 23:59:59.903 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:030us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:382us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:488us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.reflex' - version 2.14.1.98614dad6 PRODUCTION - id 3 - priority 100 - adapter mask 0x7 - interposer 'no'
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [fg] streamline: slInit 0 (runtime=E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime)
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:550us]pluginManager.cpp:1190[loadPlugins] Plugin execution order based on priority:
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:561us]pluginManager.cpp:1193[loadPlugins] P0 - sl.common
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:572us]pluginManager.cpp:1193[loadPlugins] P2 - sl.pcl
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:587us]pluginManager.cpp:1193[loadPlugins] P100 - sl.reflex
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:595us]pluginManager.cpp:1193[loadPlugins] P1000 - sl.dlss_g
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:618us]sl.cpp:674[operator ()] Upgrading IDXGIFactory to use SL proxy ...
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [sl] lv=0 [23-59-59][streamline][info][tid:33508][0s:608ms:627us]dxgiFactory.cpp:172[checkAndUpgradeInterface] Upgraded IDXGIFactory v0 to v7
+
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [fg] streamline: DLSS_G loaded=1 result=0 (feature load deferred until the device exists)
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [fg] streamline: slUpgradeInterface 0x187cef1d950 -> 0x187cfbb1940 result=0
+[2026-10-30 23:59:59.904 DBG][NeuroDragon] [fg] factory upgraded to SL proxy 0x187cfbb1940 (native 0x187cef1d950)
+[2026-10-30 23:59:59.912 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=13525.1ms tid=33508 hr=0x00000000 factory=0x187cf097fd0 caller=NeuroDragon.dll +0x308eb <- NeuroDragon.dll +0x30513 <- D3D12Core.dll +0x6116e <- D3D12Core.dll +0x78aac <- D3D12Core.dll +0x6b315 <- D3D12Core.dll +0x6b138

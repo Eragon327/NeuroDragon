@@ -1,0 +1,8 @@
+# agentflow smoke fg-sl on EXP-0122
+# started 2026-10-30T22:39:09.637+08:00  verdict=FAIL elapsed=90s
+# tree e323e2e08a70d702  head ddf3d0ee
+# dll df4d314b247bf2a9
+# profile D:\Documents\NeuroDragon\main\scripts\agentflow\smoke\fg-sl.json
+# requires=['\\[fg\\] streamline: slInit 0', '\\[fg\\] streamline: DLSS_G loaded=1']
+# missing=['\\[fg\\] streamline: slInit 0', '\\[fg\\] streamline: DLSS_G loaded=1']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 0 -> 0

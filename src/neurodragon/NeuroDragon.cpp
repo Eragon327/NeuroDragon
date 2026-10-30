@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/fg/HudlessProbe.h"
+#include "neurodragon/fg/Streamline.h"
 #include "neurodragon/fg/SwapchainProbe.h"
 #include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/RuntimeOptions.h"
@@ -55,7 +56,12 @@ bool NeuroDragon::load() {
     // installed at the earliest point the mod controls. It sits after the log-level
     // block on purpose: installed before it, the probe's own install line was written
     // at debug level while debug was still off and vanished from latest.log.
-    fg::probe::install();
+    //
+    // Streamline's slInit is deliberately NOT called here: load() runs under the
+    // loader lock and LoadLibrary/WinVerifyTrust from it deadlocked the client
+    // (EXP-0122/0123: 0-byte log, no window, same with the mod disabled). The probe
+    // runs it on the first *game* factory call instead, still before the swap chain.
+    fg::probe::install(getSelf().getModDir().wstring());
 
     // Everything the release build prints goes through lang/<locale>.json, so the
     // catalogue must be in place before the first message (the model bootstrap
@@ -186,6 +192,10 @@ bool NeuroDragon::disable() {
     vv::dlss::releaseSr();
     probe::vv::uninstall();
     probe::uninstall();
+    // SL is deliberately NOT shut down: slShutdown() waits for its plugin threads
+    // while the proxy swap chain is still alive, and the client hangs on exit
+    // (2026-10-30). The OS reclaims the DLLs and threads with the process; an
+    // in-process mod reload is not supported.
     return true;
 }
 

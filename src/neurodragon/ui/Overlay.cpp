@@ -1810,6 +1810,17 @@ void logBackBufferRefs(char const* when, IDXGISwapChain* swapChain) {
     }
 }
 
+// A chain created with ALLOW_TEARING rejects a resize whose flags do not contain it
+// (DXGI_ERROR_INVALID_CALL). The game's resize still uses its original 0x42; the
+// flag was added by the FG factory hook at creation, so it has to be added here too.
+UINT withTearingFlag(IDXGISwapChain* swapChain, UINT flags) {
+    DXGI_SWAP_CHAIN_DESC desc{};
+    if (SUCCEEDED(swapChain->GetDesc(&desc)) && (desc.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING)) {
+        flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    }
+    return flags;
+}
+
 HRESULT __stdcall
 resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height, DXGI_FORMAT format, UINT flags) {
     // Before anything of ours runs: if the reference is already here, the holder is
@@ -1822,6 +1833,7 @@ resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height
     // ResizeBuffers requires every reference to the old back buffers to be gone.
     releaseGraphics();
     lock.unlock();
+    flags = withTearingFlag(swapChain, flags);
     logResizeRequest("ResizeBuffers", swapChain, count, width, height, format, flags);
     logBackBufferRefs("forward", swapChain);
     HRESULT const result = gOriginalResizeBuffers(swapChain, count, width, height, format, flags);
@@ -1844,6 +1856,7 @@ HRESULT __stdcall resizeBuffers1Hook(
     probe::vv::onSwapChainResize();
     releaseGraphics();
     lock.unlock();
+    flags = withTearingFlag(swapChain, flags);
     logResizeRequest("ResizeBuffers1", swapChain, count, width, height, format, flags);
     ND_DEBUG(
         "[vv] resize: ResizeBuffers1 nodeMask={:#x} presentQueue={:#x}",

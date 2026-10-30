@@ -1,0 +1,15 @@
+{
+  "name": "fg-sl",
+  "tier": "L1",
+  "timeout_s": 90,
+  "why": "F1 step 1: Streamline initialises in the game process and DLSS-G loads from the driver store, with no swap-chain wrapping yet.",
+  "requires": [
+    "\\[fg\\] streamline: slInit 0",
+    "\\[fg\\] streamline: DLSS_G load-after-device result=0 loaded=1"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ]
+}

@@ -1,0 +1,1225 @@
+# agentflow smoke fg-wrap on EXP-0130
+# started 2026-10-30T23:29:34.081+08:00  verdict=PASS elapsed=23s
+# tree 4e5975dccafd7ea4  head ddf3d0ee
+# dll c0a2c4fb2d2c6d4f
+# profile D:\Documents\NeuroDragon\main\scripts\agentflow\smoke\fg-wrap.json
+# requires=['\\[fg\\] factory upgraded to SL proxy', '\\[fg\\] CreateSwapChainForHwnd req .*flags=0x42', '\\[fg\\] streamline: slSetD3DDevice', '\\[vv\\] frame time: avg=']
+# missing=[]  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 0 -> 120809
+[2026-10-30 23:29:43.961 IFO][LeviLamina]                                                                       
+[2026-10-30 23:29:43.961 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-30 23:29:43.961 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-30 23:29:43.961 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-30 23:29:43.961 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-30 23:29:43.961 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-30 23:29:43.961 IFO][LeviLamina]                                                                       
+[2026-10-30 23:29:43.961 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-30 23:29:43.961 IFO][LeviLamina]                                                                       
+[2026-10-30 23:29:43.961 IFO][LeviLamina]                                                                       
+[2026-10-30 23:29:43.961 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-30 23:29:43.961 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-30 23:29:43.976 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-30 23:29:43.976 IFO][LeviLamina] 正在加载模组……
+[2026-10-30 23:29:43.977 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-30 23:29:44.363 DBG][NeuroDragon] [fg] hook CreateDXGIFactory at 0x7ffa4943de50
+[2026-10-30 23:29:44.437 DBG][NeuroDragon] [fg] hook CreateDXGIFactory1 at 0x7ffa4943df80
+[2026-10-30 23:29:44.510 DBG][NeuroDragon] [fg] hook CreateDXGIFactory2 at 0x7ffa49442e80
+[2026-10-30 23:29:44.576 DBG][NeuroDragon] [fg] hook D3D12CreateDevice at 0x7ff98bdd70b0
+[2026-10-30 23:29:44.576 DBG][NeuroDragon] [fg] swapchain probe installed t=10487.6ms hooks=1 dxgi=0x7ffa493f0000
+[2026-10-30 23:29:44.579 DBG][NeuroDragon] NR model already in place, skipping (E:\LeviLauncher\versions\1.26.51.01\nvngx_dlssnr.dll , 254 MB)
+[2026-10-30 23:29:44.579 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-30 23:29:44.579 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-30 23:29:49.261 WRN][Server] <LVL|3989071200> Migration started
+[2026-10-30 23:29:49.264 WRN][Server] <LVL|3989071200> Migration completed in 0.002000 seconds
+[2026-10-30 23:29:49.389 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=15300.4ms tid=44344 hr=0x00000000 factory=0x1d8f8875840 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x304d3 <- Minecraft.Windows.exe +0xe00f420 <- Minecraft.Windows.exe +0xdf90ef7 <- Minecraft.Windows.exe +0xdfc61ce <- Minecraft.Windows.exe +0xdfc4991
+[2026-10-30 23:29:49.446 DBG][NeuroDragon] [fg] hook IDXGIFactory::CreateSwapChain at 0x7ffa4940f1a0
+[2026-10-30 23:29:49.500 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForHwnd at 0x7ffa49411040
+[2026-10-30 23:29:49.579 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForCoreWindow at 0x7ffa49482c40
+[2026-10-30 23:29:49.692 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForComposition at 0x7ffa49411340
+[2026-10-30 23:29:49.692 DBG][NeuroDragon] [fg] streamline: init attempt
+[2026-10-30 23:29:49.776 DBG][NeuroDragon] [fg] streamline: signature E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\sl.interposer.dll status=0x00000000
+[2026-10-30 23:29:49.778 DBG][NeuroDragon] [fg] streamline: nvngx search C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+[2026-10-30 23:29:49.780 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:003ms:277us]pluginManager.cpp:430[setHostSDKVersion] Streamline v2.14.1.98614dad6 - built on Fri Aug 28 13:38:13 2026 - host SDK v2.11.1
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:335us]ota.cpp:406[parseServerManifest] OTA feature sdk_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:386us]ota.cpp:406[parseServerManifest] OTA feature common_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:396us]ota.cpp:406[parseServerManifest] OTA feature deepdvc_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:401us]ota.cpp:406[parseServerManifest] OTA feature dlss_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:406us]ota.cpp:406[parseServerManifest] OTA feature dlss_d_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:411us]ota.cpp:406[parseServerManifest] OTA feature dlss_g_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:416us]ota.cpp:406[parseServerManifest] OTA feature nis_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:421us]ota.cpp:406[parseServerManifest] OTA feature nvperf_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:425us]ota.cpp:406[parseServerManifest] OTA feature pcl_0 version 2.14.16
+
+[2026-10-30 23:29:49.782 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:005ms:429us]ota.cpp:406[parseServerManifest] OTA feature reflex_0 version 2.14.16
+
+[2026-10-30 23:29:49.928 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:150ms:612us]ota.cpp:699[readOTAOverrideDRS] Read SL_DLSS_OVERRIDE DRS key (app profile): 0
+
+[2026-10-30 23:29:49.946 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:168ms:834us]ota.cpp:832[getNVDAArchitecture] Found NVIDIA GPUs, [000000AF71BDAB60]: 1
+
+[2026-10-30 23:29:49.948 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:170ms:661us]ota.cpp:838[getNVDAArchitecture] Found GPU 0, arch=0x1b0
+
+[2026-10-30 23:29:49.948 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:171ms:285us]ota.cpp:242[invokeNGXUpdater] Invoking NGX Updater: C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -cmsid 0 -feature sl_sdk_0 -api update -type zip -gpuarch 0x1B0 -bootstrap
+
+[2026-10-30 23:29:49.948 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:171ms:444us]pluginManager.cpp:545[findPlugins] Looking for plugins in E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime ...
+
+[2026-10-30 23:29:49.949 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:171ms:660us]pluginManager.cpp:1048[loadPlugins] eLoadDownloadedPlugins flag not passed to preferences, OTA'd plugins will not be loaded!
+
+[2026-10-30 23:29:49.960 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:183ms:425us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:29:49.961 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:183ms:962us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:29:49.961 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:184ms:011us]commonInterface.cpp:165[getSystemCaps] Enumerating up to 8 adapters but only one of them can be used to create a device - no mGPU support in this SDK
+
+[2026-10-30 23:29:49.961 DBG][NeuroDragon] [fg] factory CreateDXGIFactory t=15872.5ms tid=44344 hr=0x00000000 factory=0x1d8f8e14ec0 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x30453 <- sl.common.dll +0x46fe0 <- sl.common.dll +0x42921 <- sl.common.dll +0x36a18 <- sl.interposer.dll +0x5caab
+[2026-10-30 23:29:49.962 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:185ms:294us]commonInterface.cpp:287[getSystemCaps] >-----------------------------------------
+
+[2026-10-30 23:29:49.962 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:185ms:311us]commonInterface.cpp:290[getSystemCaps] NVIDIA driver 617.42
+
+[2026-10-30 23:29:49.964 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:186ms:826us]commonInterface.cpp:315[getSystemCaps] Adapter 0 architecture 0x1b0 implementation 0x6 revision 0xa1 - bit 0x1 - LUID 0.79860
+
+[2026-10-30 23:29:49.964 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:186ms:851us]commonInterface.cpp:321[getSystemCaps] -----------------------------------------<
+
+[2026-10-30 23:29:49.965 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:187ms:551us]commonEntry.cpp:2045[getOSVersionAndUpdateTimerResolution] Changed high resolution timer resolution to 5000 [100 ns units].
+
+[2026-10-30 23:29:49.965 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:187ms:574us]commonEntry.cpp:2124[updateEmbeddedJSON] Detected Windows OS version 10.0.26100
+
+[2026-10-30 23:29:49.965 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:187ms:685us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.common' - version 2.14.1.98614dad6 PRODUCTION - id 4294967295 - priority 0 - adapter mask 0x7 - interposer 'no'
+
+[2026-10-30 23:29:49.974 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:196ms:976us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:29:49.974 DBG][NeuroDragon] [sl] lv=0 [23-29-49][streamline][info][tid:44344][0s:197ms:357us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:29:50.304 DBG][NeuroDragon] [sl] lv=1 [23-29-50][streamline][warn][tid:44344][0s:527ms:183us]commonEntry.cpp:1093[getNGXFeatureRequirements] ngxResult not implemented
+
+[2026-10-30 23:29:50.304 DBG][NeuroDragon] [sl] lv=1 [23-29-50][streamline][warn][tid:44344][0s:527ms:317us]dlss_gEntry.cpp:143[updateEmbeddedJSON] Failed to obtain DLSS-G min spec requirements from NGX, using SL defaults
+
+[2026-10-30 23:29:50.304 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:527ms:362us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeDepth' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:29:50.304 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:527ms:378us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeMotionVectors' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:29:50.304 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:527ms:396us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeHUDLessColor' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:29:50.304 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:527ms:407us]commonEntry.cpp:1457[updateCommonEmbeddedJSONConfig] Registering required tag 'kBufferTypeUIColorAndAlpha' life-cycle 'ResourceLifecycle::eValidUntilPresent' for feature `kFeatureDLSS_G`
+
+[2026-10-30 23:29:50.305 DBG][NeuroDragon] [sl] lv=1 [23-29-50][streamline][warn][tid:44344][0s:527ms:697us]pluginManager.cpp:797[mapPlugins] Ignoring plugin 'sl.dlss_g' since it is was not requested by the host
+
+[2026-10-30 23:29:50.318 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:540ms:930us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:29:50.319 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:541ms:330us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:29:50.319 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:541ms:404us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.pcl' - version 2.14.1.98614dad6 PRODUCTION - id 4 - priority 2 - adapter mask 0x7 - interposer 'no'
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:556ms:415us]plugin.cpp:94[isAppDenylisted] Plugin path: E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime\
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:556ms:887us]plugin.cpp:110[isAppDenylisted] Plugin is not from OTA - denylist does not apply
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [fg] streamline: slInit 0 (runtime=E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime)
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [fg] streamline: DLSS_G loaded=0 result=31 (feature load deferred until the device exists)
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [fg] streamline: slUpgradeInterface 0x1d8f8875840 -> 0x1d8f7411f30 result=0
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [fg] factory upgraded to SL proxy 0x1d8f7411f30 (native 0x1d8f8875840)
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:153us]pluginManager.cpp:907[mapPlugins] Loaded plugin 'sl.reflex' - version 2.14.1.98614dad6 PRODUCTION - id 3 - priority 100 - adapter mask 0x7 - interposer 'no'
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:180us]pluginManager.cpp:1190[loadPlugins] Plugin execution order based on priority:
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:192us]pluginManager.cpp:1193[loadPlugins] P0 - sl.common
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:201us]pluginManager.cpp:1193[loadPlugins] P2 - sl.pcl
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:210us]pluginManager.cpp:1193[loadPlugins] P100 - sl.reflex
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=2 [23-29-50][streamline][error][tid:44344][0s:557ms:219us]sl.cpp:179[slValidateFeatureContext] 'kFeatureDLSS_G' context is missing.
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:229us]sl.cpp:674[operator ()] Upgrading IDXGIFactory to use SL proxy ...
+
+[2026-10-30 23:29:50.334 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][0s:557ms:238us]dxgiFactory.cpp:172[checkAndUpgradeInterface] Upgraded IDXGIFactory v0 to v7
+
+[2026-10-30 23:29:50.348 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=16258.8ms tid=44344 hr=0x00000000 factory=0x1d8f95b4040 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x30553 <- D3D12Core.dll +0x6116e <- D3D12Core.dll +0x78aac <- D3D12Core.dll +0x6b315 <- D3D12Core.dll +0x6b138
+[2026-10-30 23:29:50.758 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=16669.1ms tid=44344 hr=0x00000000 factory=0x1d8f95b4040 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x304d3 <- NvCamera64.dll +0x1eace1 <- NvCamera64.dll +0x6d762 <- NvCamera64.dll +0x6d071 <- NvCamera64.dll +0x2e4ff
+[2026-10-30 23:29:50.854 DBG][NeuroDragon] [fg] device created 0x1d8f8ce75f0
+[2026-10-30 23:29:50.854 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:076ms:836us]pluginManager.cpp:1393[initializePlugins] Initializing plugins - api 0.0.1 - application ID 100721531
+
+[2026-10-30 23:29:50.855 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:077ms:606us]d3d12.cpp:1339[createKernel] Creating DXBC kernel copy_to_buffer.cs:main hash 12564409127886710297
+
+[2026-10-30 23:29:50.855 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:077ms:649us]generic.cpp:112[initNsightActivity] NSight SDK activity not detected (6)!
+
+[2026-10-30 23:29:50.855 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:077ms:668us]commonEntry.cpp:1568[slOnPluginStartup] At least one plugin requires NGX, trying to initialize ...
+
+[2026-10-30 23:29:50.855 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:077ms:763us]commonEntry.cpp:1368[ngxLog] [Unknown(32764)] [2026-10-30 23:29:50] [NGXSafeInitializeLog:150] App logging hooks successfully initialized
+
+
+[2026-10-30 23:29:50.855 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:077ms:888us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXSafeInitializeLog:139] App logging hooks successfully initialized
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:221us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXCheckArchitectureSupport:229] Found matching adapter with NVAPI physical GPU handle: 0x100 and LUID: { 0x0, 0x137f4 }
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:264us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXGetPathUsingQAI:475] Checking for path to NGX using QueryAdapterInfo
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:418us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXGetPathUsingQAI:512] Path to driverStore found using QAI: C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:436us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXGetPath:1046] using path for models: C:\ProgramData\NVIDIA\NGX\models
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:446us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXGetPath:1046] using path for models: C:\ProgramData\NVIDIA\NGX\models
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:456us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [CreateSecurityDescriptor:94] security attributes generated successfully
+
+
+[2026-10-30 23:29:50.860 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:082ms:465us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [CreateFolderWithACEs:154] using generated security descriptor for creating folder at: C:\ProgramData\NVIDIA\NGX\models
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:149ms:463us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [ModifyExistingFolderDACL:211] updated access control list for NGX cache (NGX cache should now be usable by all authenticated users)
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:149ms:535us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXCreateModelsFolder:1073] model folder created: C:\ProgramData\NVIDIA\NGX\models
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:149ms:919us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [dlss]
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:149ms:993us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658702=0.0.0
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:010us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658701=0.0.0
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:023us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9FEB50=1.0.108
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:035us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9FF4BC=1.0.108
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:047us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9FD524=1.0.108
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:059us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DF510=1.3.106
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:072us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9CB0B8=1.0.108
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:086us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9E26B0=2.1.28
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:104us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D48D0=1.0.108
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:119us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E99B5EC=1.2.109
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:131us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DFA64=1.0.108
+
+
+[2026-10-30 23:29:50.927 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:143us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9FD6C0=1.0.108
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:156us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9CF688=2.2.15
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:169us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D6F08=1.0.108
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:181us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9BF564=2.1.201
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:193us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DB4F4=1.0.108
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:205us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D2F5C=1.2.110
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:217us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D7388=1.0.108
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:230us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9F5618=2.1.29
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:243us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DAE68=1.2.109
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:255us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D8C54=1.2.109
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:268us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D3EF0=2.1.28
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:283us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9FACDC=2.1.201
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:296us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_F7361DC=2.1.28
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:307us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9C3560=2.1.201
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:319us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9B0430=2.1.28
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:332us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=310.9.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:344us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DB490=2.3.4
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:357us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [dlisp]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:370us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9CF688=2.1.15
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:381us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E99B5EC=1.2.102
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:393us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=310.0.0
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:406us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D8C54=1.2.106
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:475us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9D2F5C=1.2.106
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:489us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DF510=1.3.101
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:502us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_B9DAE68=1.2.106
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:515us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [dlss_override]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:529us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=310.9.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:542us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [dlssd]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:568us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=310.9.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:580us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [dlssg]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:593us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=310.9.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:606us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_sdk_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:618us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:718us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_common_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:733us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:747us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_deepdvc_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:762us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:775us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_dlss_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:788us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:801us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_dlss_d_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:813us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:825us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_dlss_g_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:838us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:850us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_nis_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:863us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:873us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_deepdvc_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:885us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:933us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_nvperf_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:947us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:959us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_pcl_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:970us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:982us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_reflex_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:150ms:994us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658703=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:023us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_sdk_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:034us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:045us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_dlss_g_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:057us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:068us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_common_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:078us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:089us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_dlss_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:100us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:111us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_nis_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:122us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:132us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_dlss_d_override_0]
+
+
+[2026-10-30 23:29:50.928 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:142us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:152us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_nvperf_override_0]
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:164us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:174us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_pcl_override_0]
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:185us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:206us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1145] [sl_reflex_override_0]
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:216us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [NGXLoadConfig:1151] app_E658700=2.14.16
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:228us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [`anonymous-namespace'::LoadMappingFileData:269] listItem.engineVersion .* listItem.genericCMSId 86aa7b4
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:243us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [`anonymous-namespace'::LoadMappingFileData:283]  project id 3F9D696D4363312194B0ECB2671E899F cms id B9FBD50
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:256us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [`anonymous-namespace'::LoadMappingFileData:269] listItem.engineVersion .* listItem.genericCMSId 8618954
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:267us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [`anonymous-namespace'::LoadMappingFileData:269] listItem.engineVersion .* listItem.genericCMSId b9b05cc
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:279us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [`anonymous-namespace'::LoadMappingFileData:269] listItem.engineVersion .* listItem.genericCMSId 876232c
+
+
+[2026-10-30 23:29:50.929 DBG][NeuroDragon] [sl] lv=0 [23-29-50][streamline][info][tid:44344][1s:151ms:290us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:50] [MapProjectId:1879] Found cms id 876232c for engine: custom engineVersion 0.1.0-neurodragon-fg projectID a0f57b54-1daf-4934-90ae-c4035c19df04
+
+
+[2026-10-30 23:29:51.019 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:241ms:675us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXDRSInit:196] DRS PROFILE FOUND : ProfileName "Minecraft", AppName "minecraft.windows.exe"
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:517us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXInitContext:245] called from module sl.common.dll at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:579us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dldenoiser, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:729us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:814us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:833us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:840us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dldenoiser.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:846us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXReportStatusFeedback:1103] Override shared memory was opened successfully
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:853us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXReportStatusFeedback:1115] Override shared memory was mapped successfully
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:890us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlss, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:911us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:970us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:254ms:992us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:003us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlss.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:012us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlinpainting, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:052us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:088us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:100us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.032 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:106us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlinpainting.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:142us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlisr, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:150us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:199us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:219us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:226us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlisr.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:247us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlslowmo, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:274us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:306us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:330us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:341us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlslowmo.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:347us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlvsr, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:385us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:409us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:444us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:460us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlvsr.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:466us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlcolorize, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:473us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:515us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:526us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:531us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlcolorize.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:551us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlstyletransfer, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:585us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:610us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:633us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:641us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlstyletransfer.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:652us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlvdenoiser, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:684us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:714us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:737us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:744us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlvdenoiser.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:753us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlisp, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:783us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:814us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:839us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:848us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlisp.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:855us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlresolve, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:888us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:920us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:946us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:955us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlresolve.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:960us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlssg, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.033 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:255ms:989us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:375us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXLoadLibrary:34] Loaded library from path (C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297/nvngx_dlssg.dll)
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:418us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1491] Validating snippet C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297/nvngx_dlssg.dll
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:426us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1493] NGX CORE API version : 0x15, Snippet requires at least : 0x13
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:432us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1495] GPU architecture : 0x1B0, Snippet expects at least : 0x190
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:437us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1509] Driver support flags : 0xF(SEAMLESS_OTA|LINUX_EXTENDED_DRIVER_VERSIONS|API_SPECIFIC_POPULATE_PARAMS|REQUIRE_CMSID), Snippet required flags : 0x0()
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:442us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1536] Driver version : 617.42, Snippet expects at least : 520.0
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:447us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1562] Snippet version : 310.2.1, Embedded app Id : E658703 (0)
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:474us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\ProgramData\NVIDIA\NGX\models\dlssg\versions\0\files
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:480us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1384] Feature dlssg failed to load (cmsid 141959980) from cache (location: C:\ProgramData\NVIDIA\NGX\models\dlssg\versions\0\files, name: 160_876232C.bin)
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:517us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\ProgramData\NVIDIA\NGX\models\dlssg\versions\0\files
+
+
+[2026-10-30 23:29:51.053 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:275ms:538us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1384] Feature dlssg failed to load (cmsid 241534723) from cache (location: C:\ProgramData\NVIDIA\NGX\models\dlssg\versions\0\files, name: 160_E658703.bin)
+
+
+[2026-10-30 23:29:51.064 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:286ms:435us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:363] starting C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe with command line - C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -api update -cmsid 0 -feature dlssg -bootstrap  -gpuarch 352
+
+
+[2026-10-30 23:29:51.064 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:286ms:483us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:364] process for NGX Updater created successfully
+
+
+[2026-10-30 23:29:51.076 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:298ms:650us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:363] starting C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe with command line - C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -api update -cmsid 1 -feature dlssg -bootstrap  -gpuarch 352
+
+
+[2026-10-30 23:29:51.076 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:298ms:737us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:364] process for NGX Updater created successfully
+
+
+[2026-10-30 23:29:51.086 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:308ms:698us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:363] starting C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe with command line - C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -api update -cmsid 2 -feature dlssg -bootstrap  -gpuarch 352
+
+
+[2026-10-30 23:29:51.086 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:308ms:744us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:364] process for NGX Updater created successfully
+
+
+[2026-10-30 23:29:51.250 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:472ms:430us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:363] starting C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe with command line - C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -api update -cmsid 3 -feature dlssg -bootstrap  -gpuarch 352
+
+
+[2026-10-30 23:29:51.250 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:472ms:576us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [LaunchNGXUpdater:364] process for NGX Updater created successfully
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:731us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXLoadLibrary:34] Loaded library from path (C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297/nvngx_dlssg.dll)
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:792us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1491] Validating snippet C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297/nvngx_dlssg.dll
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:802us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1493] NGX CORE API version : 0x15, Snippet requires at least : 0x13
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:811us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1495] GPU architecture : 0x1B0, Snippet expects at least : 0x190
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:831us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1509] Driver support flags : 0xF(SEAMLESS_OTA|LINUX_EXTENDED_DRIVER_VERSIONS|API_SPECIFIC_POPULATE_PARAMS|REQUIRE_CMSID), Snippet required flags : 0x0()
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:860us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1536] Driver version : 617.42, Snippet expects at least : 520.0
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:868us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXValidateSnippetMetaData:1562] Snippet version : 310.2.1, Embedded app Id : E658703 (0)
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:876us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1420] Found dlssg driver fallback snippet at C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:886us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1499] app 876232C feature dlssg snippet: C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297/nvngx_dlssg.dll version: 310.2.1
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:894us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXLoadFeature:1577] Setting telemetry callback for dlssg [schema 3.0+]
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:921us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature deepdvc, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.270 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:492ms:969us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:043us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:090us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:101us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_deepdvc.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:109us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlssd, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:120us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:283us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:344us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:360us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlssd.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:369us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature truehdr, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:408us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:449us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:480us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:489us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_truehdr.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:501us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature latewarp, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:535us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:580us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:601us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:612us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_latewarp.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:621us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature vsr, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:658us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:690us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:716us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:724us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_vsr.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:734us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature fgx, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:763us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:811us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:832us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:851us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_fgx.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:857us]commonEntry.cpp:1368[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXContextDenyListData::IsFeatureDenied:676] Feature dlssnr, denial value 0 for Cms ID 876232c
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:873us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:921us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at C:\Windows\system32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:939us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [`anonymous-namespace'::SnippetLocationInfo::load:716] Module not found at E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+
+[2026-10-30 23:29:51.271 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:493ms:948us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSecureLoadFeature:1286] warning: ModuleName - nvngx_dlssnr.dll doesn't exist in any of the search paths!
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:662ms:807us]commonEntry.cpp:1368[ngxLog] [FrameGeneration] [2026-10-30 23:29:51] [tid:44344][NGXInitLog:219] App logging hooks successfully initialized
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:662ms:860us]commonEntry.cpp:1368[ngxLog] [FrameGeneration] [2026-10-30 23:29:51] [tid:44344][NGXInitLog:226] Built with APP_NAME = driver_fallback
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:662ms:868us]commonEntry.cpp:1368[ngxLog] [FrameGeneration] [2026-10-30 23:29:51] [tid:44344][NGXDLSSG::InitCommon:666] Calling debug config init!
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:662ms:943us]commonEntry.cpp:1368[ngxLog] [FrameGeneration] [2026-10-30 23:29:51] [tid:44344][NgxDlssgDebug::LoadKeyConfigJson:24] KeyConfigJson - not found at: ngx_keybinds.json
+Using default hardcoded config...
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:662ms:951us]commonEntry.cpp:1368[ngxLog] [FrameGeneration] [2026-10-30 23:29:51] [tid:44344][NGXDLSSG::InitCommon:670] Get snippet file version!
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:261us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [GetSystemInfo:1130] Detected Windows Version 10.0.26100.6713
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:753us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:345] Sending Telemetry Init Data
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:765us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:346] appExeName = sl.common.dll
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:770us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:347] drsProfileName = Minecraft
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:775us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:348] drsName = minecraft.windows.exe
+
+
+[2026-10-30 23:29:51.441 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:780us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:350] AppIdType = RENDERING_ENGINE
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:786us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:351] ProjectId = a0f57b54-1daf-4934-90ae-c4035c19df04
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:792us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:352] EngineVersion = 0.1.0-neurodragon-fg
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:798us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:353] EngineType = custom
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:803us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:354] cmsId = 0
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:809us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:355] featureType = FrameGeneration
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:814us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:356] gpuDeviceId = 11608
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:818us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:357] gpuVendorId = 4318
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:825us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:358] gpuSubSys = 274993219
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:830us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:359] gpuRev = 161
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:835us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:360] ngxSDKVersion = 1.5
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:840us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:361] ngxCoreVersion = 1.4.0.0
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:845us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:362] ngxFeatureVersion = 310.2.1
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:849us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:363] displayDriverVersion = 617.42
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:854us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:364] osVersion = 10.0.26100.6713
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:859us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:365] APIType = 0
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:863us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:366] FeatureInitResult = NvNGXFeatureInitSuccess
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:868us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:367] GpuAPI = 2
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:873us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:369] StreamlineVersion = 2,14,1,0
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:878us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:370] StreamlineGitSHA = SHA: 98614dad6 v2.14.1-rc0
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:882us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:371] ExeModuleName = Minecraft.Windows.exe
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:887us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:372] OTAEnabled = 1
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:892us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:373] DLLSource = 1
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:896us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:376] gameSessionId = 
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:901us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:377] SLOTAFlags = 0
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:663ms:905us]commonEntry.cpp:1369[ngxLog] [Unknown(32765)] [2026-10-30 23:29:51] [NGXSendTelemetryInitializeData:379] -- END telemetry init data --
+
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:664ms:063us]commonEntry.cpp:1694[slOnPluginStartup] NGX loaded - app id 100721531 - application data path E:\LeviLauncher\versions\1.26.51.01\mods\NeuroDragon\fg-runtime
+
+[2026-10-30 23:29:51.442 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:664ms:091us]commonEntry.cpp:1754[slOnPluginStartup] At least one plugin requires DRS, trying to initialize ...
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:334us]commonEntry.cpp:1762[slOnPluginStartup] DRS loaded - app id 100721531
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:385us]pluginManager.cpp:1499[mapPluginCallbacks] Callback sl.common:slSetData:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:439us]pluginManager.cpp:1500[mapPluginCallbacks] Callback sl.common:slGetData:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:446us]pluginManager.cpp:1501[mapPluginCallbacks] Callback sl.common:slAllocateResources:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:452us]pluginManager.cpp:1502[mapPluginCallbacks] Callback sl.common:slFreeResources:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:457us]pluginManager.cpp:1503[mapPluginCallbacks] Callback sl.common:slEvaluateFeature:0x7ff98429a0c0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:462us]pluginManager.cpp:1504[mapPluginCallbacks] Callback sl.common:slSetTag:0x7ff984298ba0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:467us]pluginManager.cpp:1505[mapPluginCallbacks] Callback sl.common:slSetTagForFrame:0x7ff984298d10
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:472us]pluginManager.cpp:1506[mapPluginCallbacks] Callback sl.common:slSetConsts:0x7ff984299ba0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:476us]pluginManager.cpp:1266[processPluginHooks] Hook sl.common:slHookVkPresent:before - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:482us]pluginManager.cpp:1266[processPluginHooks] Hook sl.common:slHookVkAfterPresent:after - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:487us]pluginManager.cpp:1266[processPluginHooks] Hook sl.common:slHookVkCmdBindPipeline:after - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:492us]pluginManager.cpp:1266[processPluginHooks] Hook sl.common:slHookVkCmdBindDescriptorSets:after - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:496us]pluginManager.cpp:1266[processPluginHooks] Hook sl.common:slHookVkBeginCommandBuffer:after - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:501us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookCreateSwapChain:before - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:507us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookCreateSwapChainForHwnd:before - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:511us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookCreateSwapChainForCoreWindow:before - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:614us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookResizeSwapChainPre:before - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:644us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookPresent:before - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:651us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookAfterPresent:after - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:656us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookPresent1:before - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:662us]pluginManager.cpp:1290[processPluginHooks] Hook sl.common:slHookAfterPresent:after - OK
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:668us]pluginManager.cpp:1499[mapPluginCallbacks] Callback sl.pcl:slSetData:0x7ff9982ab850
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:673us]pluginManager.cpp:1500[mapPluginCallbacks] Callback sl.pcl:slGetData:0x7ff9982ab860
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:679us]pluginManager.cpp:1501[mapPluginCallbacks] Callback sl.pcl:slAllocateResources:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:684us]pluginManager.cpp:1502[mapPluginCallbacks] Callback sl.pcl:slFreeResources:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:690us]pluginManager.cpp:1503[mapPluginCallbacks] Callback sl.pcl:slEvaluateFeature:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:696us]pluginManager.cpp:1504[mapPluginCallbacks] Callback sl.pcl:slSetTag:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:714us]pluginManager.cpp:1505[mapPluginCallbacks] Callback sl.pcl:slSetTagForFrame:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:720us]pluginManager.cpp:1506[mapPluginCallbacks] Callback sl.pcl:slSetConsts:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:725us]pluginManager.cpp:1251[processPluginHooks] Plugin 'sl.pcl' has no registered hooks
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:758us]pluginManager.cpp:1499[mapPluginCallbacks] Callback sl.reflex:slSetData:0x7ff98a00bae0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:765us]pluginManager.cpp:1500[mapPluginCallbacks] Callback sl.reflex:slGetData:0x7ff98a00c450
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:770us]pluginManager.cpp:1501[mapPluginCallbacks] Callback sl.reflex:slAllocateResources:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:775us]pluginManager.cpp:1502[mapPluginCallbacks] Callback sl.reflex:slFreeResources:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:780us]pluginManager.cpp:1503[mapPluginCallbacks] Callback sl.reflex:slEvaluateFeature:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:785us]pluginManager.cpp:1504[mapPluginCallbacks] Callback sl.reflex:slSetTag:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:791us]pluginManager.cpp:1505[mapPluginCallbacks] Callback sl.reflex:slSetTagForFrame:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:796us]pluginManager.cpp:1506[mapPluginCallbacks] Callback sl.reflex:slSetConsts:0x0
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:802us]pluginManager.cpp:1266[processPluginHooks] Hook sl.reflex:slHookVkCreateSwapchainKHRBefore:before - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:809us]pluginManager.cpp:1266[processPluginHooks] Hook sl.reflex:slHookVkCreateSwapchainKHRAfter:after - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:791ms:815us]pluginManager.cpp:1266[processPluginHooks] Hook sl.reflex:slHookVkDestroySwapchainKHRBefore:before - skipped
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=1 [23-29-51][streamline][warn][tid:44344][1s:791ms:820us]pluginManager.cpp:489[setFeatureEnabled] Feature 'kFeatureDLSS_G' not loaded
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [sl] lv=2 [23-29-51][streamline][error][tid:44344][1s:791ms:826us]sl.cpp:179[slValidateFeatureContext] 'kFeatureDLSS_G' context is missing.
+
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [fg] streamline: slSetD3DDevice 0x1d8f8ce75f0 result=0
+[2026-10-30 23:29:51.569 DBG][NeuroDragon] [fg] streamline: DLSS_G load-after-device result=34 loaded=0
+[2026-10-30 23:29:51.722 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd req t=17633.1ms tid=44344 factory=0x1d8f8875840 device=0x1d88cf18bf0 hwnd=0xb10e2 2560x1369 fmt=28 buffers=3 usage=0x20 flags=0x42 effect=3 scaling=0 caller=NeuroDragon.dll +0x32a30 <- NeuroDragon.dll +0x327b8 <- sl.interposer.dll +0x291ac <- Minecraft.Windows.exe +0xe00fd69 <- Minecraft.Windows.exe +0xdf939c2 <- Minecraft.Windows.exe +0xdfc61ce
+[2026-10-30 23:29:51.729 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd done t=17640.1ms hr=0x00000000 chain=0x1d88e314060
+[2026-10-30 23:29:51.729 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][1s:951ms:507us]dxgiSwapchain.cpp:106[checkAndUpgradeInterface] Upgraded IDXGISwapChain v0 to v4
+
+[2026-10-30 23:29:51.772 DBG][NeuroDragon] [fg] first flip t=17682.6ms context=0x1d88880b040 swapChain=0x1d88dd37360
+[2026-10-30 23:29:51.785 DBG][NeuroDragon] [sl] lv=0 [23-29-51][streamline][info][tid:44344][2s:007ms:805us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.56 GB
+
+[2026-10-30 23:29:52.189 DBG][NeuroDragon] [sl] lv=0 [23-29-52][streamline][info][tid:39384][2s:411ms:047us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.71 GB
+
+[2026-10-30 23:29:52.290 DBG][NeuroDragon] [sl] lv=0 [23-29-52][streamline][info][tid:39384][2s:512ms:999us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.71 GB
+
+[2026-10-30 23:29:52.391 DBG][NeuroDragon] [sl] lv=0 [23-29-52][streamline][info][tid:39384][2s:613ms:547us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.71 GB
+
+[2026-10-30 23:29:52.958 DBG][NeuroDragon] [sl] lv=0 [23-29-52][streamline][info][tid:39384][3s:180ms:290us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.87 GB
+
+[2026-10-30 23:29:52.964 DBG][NeuroDragon] [sl] lv=0 [23-29-52][streamline][info][tid:39384][3s:185ms:984us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.88 GB
+
+[2026-10-30 23:29:52.989 DBG][NeuroDragon] [sl] lv=0 [23-29-52][streamline][info][tid:39384][3s:211ms:755us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.89 GB
+
+[2026-10-30 23:29:53.018 DBG][NeuroDragon] [sl] lv=0 [23-29-53][streamline][info][tid:48668][3s:240ms:682us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.89 GB
+
+[2026-10-30 23:29:53.183 DBG][NeuroDragon] [sl] lv=0 [23-29-53][streamline][info][tid:39384][3s:405ms:397us]commonInterface.cpp:626[presentCommon] Total VRAM used: 0.92 GB
+
+[2026-10-30 23:29:53.232 WRN][Server] <LVL|1986411424> Time played notifier not required for 'zh_CN'
+[2026-10-30 23:29:53.247 IFO][LeviLamina] 正在启用模组……
+[2026-10-30 23:29:53.247 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-30 23:29:53.247 DBG][NeuroDragon] [probe] 模块已 PIN（禁用后仍需重启游戏才能彻底卸载）
+[2026-10-30 23:29:53.247 IFO][NeuroDragon] NR 已启用（config/config.json：nr.enabled = true）
+[2026-10-30 23:29:53.399 DBG][NeuroDragon] [nr] level 监听 join=true exit=true
+[2026-10-30 23:29:53.481 DBG][NeuroDragon] [sr] frame-context hook @ 0x7ff7036553c0
+[2026-10-30 23:29:53.552 DBG][NeuroDragon] [vv] taau hooked at 0x7ff700ddf860 (rva 0xb74f860)
+[2026-10-30 23:29:53.617 DBG][NeuroDragon] [vv] level listeners join=true exit=true tick=true
+[2026-10-30 23:29:53.696 DBG][NeuroDragon] [vv] taau draw hooked at 0x7ff700de2820 (rva 0xb752820)
+[2026-10-30 23:29:53.696 DBG][NeuroDragon] [vv] texture table: layout ok (rva 0xdfa4214 -> global 0x12006060); ctx resolved on first sample
+[2026-10-30 23:29:53.757 DBG][NeuroDragon] [vv] material texture hooked at 0x7ff7036864e0 (rva 0xdff64e0)
+[2026-10-30 23:29:53.757 WRN][NeuroDragon] [vv] D3D12CreateDevice not hooked; render targets stay unresolved
+[2026-10-30 23:29:53.758 IFO][NeuroDragon] [vv] options: marker './mods/NeuroDragon\config\force_bilinear.flag' present=0 (mod dir './mods/NeuroDragon'), 'E:\LeviLauncher\versions\1.26.51.01\force_bilinear.flag' present=0
+[2026-10-30 23:29:53.828 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-30 23:29:53.832 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=19742.6ms tid=44344 hr=0x00000000 factory=0x1d9753c7180 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x30553 <- D3D12Core.dll +0x6116e <- D3D12Core.dll +0x78aac <- D3D12Core.dll +0x6b315 <- D3D12Core.dll +0x6b138
+[2026-10-30 23:29:53.832 DBG][NeuroDragon] [fg] device created 0x1d8f8ce75f0
+[2026-10-30 23:29:53.940 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=19851.3ms tid=44344 hr=0x00000000 factory=0x1d9753c7180 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x304d3 <- NeuroDragon.dll +0x7ada2 <- NeuroDragon.dll +0x35d19 <- NeuroDragon.dll +0x3692d <- LeviLamina.dll +0xa376c
+[2026-10-30 23:29:53.940 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd req t=19851.3ms tid=44344 factory=0x1d9753c7180 device=0x1d987348290 hwnd=0x4f0dec 8x8 fmt=28 buffers=2 usage=0x20 flags=0x0 effect=4 scaling=0 caller=NeuroDragon.dll +0x32a30 <- NeuroDragon.dll +0x327b8 <- NeuroDragon.dll +0x7ae2d <- NeuroDragon.dll +0x35d19 <- NeuroDragon.dll +0x3692d <- LeviLamina.dll +0xa376c
+[2026-10-30 23:29:53.944 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd done t=19854.8ms hr=0x00000000 chain=0x1d976537640
+[2026-10-30 23:29:54.724 DBG][NeuroDragon] overlay: ready (End opens the panel)
+[2026-10-30 23:29:54.724 IFO][NeuroDragon] 安装游戏内面板：完成，用时 896 ms
+[2026-10-30 23:29:54.724 IFO][LeviLamina] 已在 1.5 秒内启用 1 个模组
+[2026-10-30 23:29:54.724 DBG][NeuroDragon] [init] hooked NVSDK_NGX_D3D12_Init on _nvngx.dll
+[2026-10-30 23:29:54.724 DBG][NeuroDragon] [sl] lv=0 [23-29-54][streamline][info][tid:35656][4s:529ms:909us]ota.cpp:144[execThreadProc] execThreadProc: C:\Windows\System32\DriverStore\FileRepository\nvami.inf_amd64_fe9850868a438297\nvngx_update.exe -cmsid 0 -feature sl_sdk_0 -api update -type zip -gpuarch 0x1B0 -bootstrap
+
+[2026-10-30 23:29:54.724 DBG][NeuroDragon] [init] hooked NVSDK_NGX_D3D12_Init_Ext on _nvngx.dll
+[2026-10-30 23:29:54.724 DBG][NeuroDragon] [init] hooked NVSDK_NGX_D3D12_Init_ProjectID on _nvngx.dll
+[2026-10-30 23:29:54.724 DBG][NeuroDragon] [input] t=48337562 hid vk=0x12(18) name="Alt" state=down origin=1 action=forwarded
+[2026-10-30 23:29:54.766 DBG][NeuroDragon] [vv] taau #1 viewport=2560x1440+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=2 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-30 23:29:54.766 DBG][NeuroDragon] [vv] texture table ctx=0x1d88880b040 (global rva 0x12006060); handle->native is a plain read
+[2026-10-30 23:29:54.768 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x1d974e72750 1920x1080 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 23:29:54.769 DBG][NeuroDragon] [vv] chain: now buffers=3 2560x1440 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-30 23:29:54.769 DBG][NeuroDragon] [vv] 3 back buffer(s) excluded from the render-target inventory
+[2026-10-30 23:29:54.769 DBG][NeuroDragon] [vv] presents=1 submits=0 lists=0 maxListsPerSubmit=0 taau=1 draws=1 | submits/frame=0.00 lists/frame=0.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:54.769 DBG][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-30 23:29:54.769 DBG][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-30 23:29:54.769 IFO][NeuroDragon] [vvsr] sr enabled (armed; TAAU runs until the first arg10 frame)
+[2026-10-30 23:29:54.769 DBG][NeuroDragon] [vv] submit #1 tid=39384 lists=1
+[2026-10-30 23:29:54.770 IFO][NeuroDragon] [sr] ctx call #1 engine=000001D88880B040 ctx=000001D8F97EBDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:54.770 IFO][NeuroDragon] [sr] ctx #1 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-30 23:29:54.776 DBG][NeuroDragon] [vv] submit #2 tid=39384 lists=47
+[2026-10-30 23:29:54.776 DBG][NeuroDragon] [vv] engine list vtable=0x7ff9455aa830 slot9=D3D12Core.dll+0x232dd0 slot12=D3D12Core.dll+0x234f30 slot13=D3D12Core.dll+0x234c80 slot25=D3D12Core.dll+0x238f50 slot28=D3D12Core.dll+0x238900
+[2026-10-30 23:29:54.776 DBG][NeuroDragon] [vv] engine device 0x1d8f8ce75f0
+[2026-10-30 23:29:54.776 DBG][NeuroDragon] [vv] device created 0x1d8f8ce75f0
+[2026-10-30 23:29:54.919 DBG][NeuroDragon] [vv] CreateRenderTargetView hooked on device 0x1d8f8ce75f0 (target 0x7ff9452e4700)
+[2026-10-30 23:29:55.064 DBG][NeuroDragon] [vv] CreateDepthStencilView hooked on device 0x1d8f8ce75f0 (target 0x7ff9452f1d90)
+[2026-10-30 23:29:55.208 DBG][NeuroDragon] [vv] command list slot 12 (DrawInstanced) hooked
+[2026-10-30 23:29:55.279 DBG][NeuroDragon] [vv] command list slot 13 (DrawIndexedInstanced) hooked
+[2026-10-30 23:29:55.341 DBG][NeuroDragon] [vv] command list slot 46 (OMSetRenderTargets) hooked
+[2026-10-30 23:29:55.341 DBG][NeuroDragon] [fg] hudless scan m0 world=0 lists=47 arg10w=0 tail= 36:- 37:- 38:- 39:- 40:- 41:- 42:- 43:- 44:- 45:- 46:- 47:-
+[2026-10-30 23:29:55.342 DBG][NeuroDragon] [vv] inject pipeline ready
+[2026-10-30 23:29:55.342 WRN][NeuroDragon] [vv] inject: arg10 writer not found yet (split=0/47); TAAU runs this frame
+[2026-10-30 23:29:55.342 WRN][NeuroDragon] [vv] inject skipped (1): no arg10 writer in this submission; TAAU restored
+[2026-10-30 23:29:55.342 DBG][NeuroDragon] [vv] taau #2 viewport=2560x1440+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=3 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2 lists=48
+[2026-10-30 23:29:55.344 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x1d974e72750 1920x1080 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 23:29:55.344 DBG][NeuroDragon] [vv] presents=2 submits=2 lists=48 maxListsPerSubmit=47 taau=2 draws=2 | submits/frame=1.00 lists/frame=24.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.344 DBG][NeuroDragon] [vv] long frame 575.8 ms at present #2
+[2026-10-30 23:29:55.344 IFO][NeuroDragon] [vv] frame time: avg=575.78 ms min=575.78 max=575.78 over 1 presents
+[2026-10-30 23:29:55.345 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=21256.6ms tid=39384 hr=0x00000000 factory=0x1d9753c7940 caller=NeuroDragon.dll +0x3092b <- NeuroDragon.dll +0x30553 <- d3d11.dll +0xacdf0 <- d3d11.dll +0xaf476 <- NeuroDragon.dll +0x7ecba <- NeuroDragon.dll +0x7e08f
+[2026-10-30 23:29:55.356 DBG][NeuroDragon] [vv] rtv res=0x0 0x0 fmt=0
+[2026-10-30 23:29:55.374 DBG][NeuroDragon] overlay: ImGui context created on window 0xb10e2
+[2026-10-30 23:29:55.412 DBG][NeuroDragon] [vv] submit #3 tid=39384 lists=1
+[2026-10-30 23:29:55.412 DBG][NeuroDragon] [vv] submit #4 tid=39384 lists=1
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] rtv res=0x1d974e697e0 2560x1440 fmt=26
+[2026-10-30 23:29:55.416 IFO][NeuroDragon] [sr] ctx call #2 engine=000001D88880B040 ctx=000001D8FA66C780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.416 IFO][NeuroDragon] [sr] ctx #2 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] om rt #1 list=0x1d95a123d90 count=1 single=1 handle0=0x1d95d090210 increment=32
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] om rt #2 list=0x1d95a123d90 count=1 single=1 handle0=0x1d95d090210 increment=32
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #2 this=0x1d95a1250b0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #8 this=0x1d95a12cd00 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #7 this=0x1d95a129d30 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #5 this=0x1d95a12a6c0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #3 this=0x1d95a1263d0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #4 this=0x1d95a1293a0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #1 this=0x1d95a126d60 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.416 DBG][NeuroDragon] [vv] slot13 raw #6 this=0x1d95a12c370 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 23:29:55.586 DBG][NeuroDragon] [nr] timestamp 频率 1000000000
+[2026-10-30 23:29:55.586 DBG][NeuroDragon] [vv] submit #5 tid=39384 lists=47
+[2026-10-30 23:29:55.586 DBG][NeuroDragon] [fg] hudless scan m1 world=0 lists=47 arg10w=26 tail= 36:d0:r1:h1d95d090210 37:d1:r1:h1d95d091550 38:d1:r1:h1d95d091250 39:d1:r1:h1d95d091150 40:d1:r1:h1d95d091050 41:d1:r1:h1d95d090f50 42:d0:r1:h1d95d090210 43:d1:r1:h1d95d091650 44:d1:r1:h1d95d091750 45:d1:r1:h1d95d090210 46:d0:r1:h1d95d090210 47:-
+[2026-10-30 23:29:55.594 DBG][NeuroDragon] [vvsr] sr pipeline ready (prep + DLSS -> arg10)
+[2026-10-30 23:29:55.599 DBG][NeuroDragon] [vvsr] sr buffers 1920x1080 -> 2560x1440
+[2026-10-30 23:29:55.599 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1080 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 23:29:55.599 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-30 23:29:55.599 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-30 23:29:55.600 DBG][NeuroDragon] [vv] taau #3 viewport=2560x1440+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=4 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5 lists=97
+[2026-10-30 23:29:55.602 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x1d974e72750 1920x1080 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 23:29:55.604 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:48668][5s:826ms:143us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.06 GB
+
+[2026-10-30 23:29:55.604 DBG][NeuroDragon] [vv] presents=3 submits=5 lists=97 maxListsPerSubmit=47 taau=3 draws=3 | submits/frame=1.67 lists/frame=32.33 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.604 DBG][NeuroDragon] [vv] long frame 259.1 ms at present #3
+[2026-10-30 23:29:55.604 IFO][NeuroDragon] [vv] frame time: avg=259.12 ms min=259.12 max=259.12 over 1 presents
+[2026-10-30 23:29:55.604 DBG][NeuroDragon] [vv] submit #6 tid=48668 lists=1
+[2026-10-30 23:29:55.604 DBG][NeuroDragon] [vv] rtv res=0x1d974e6ab00 2560x1440 fmt=26
+[2026-10-30 23:29:55.604 IFO][NeuroDragon] [sr] ctx call #3 engine=000001D88880B040 ctx=000001D8F97EBDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.604 IFO][NeuroDragon] [sr] ctx #3 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-30 23:29:55.611 DBG][NeuroDragon] [vv] submit #7 tid=48668 lists=48
+[2026-10-30 23:29:55.611 DBG][NeuroDragon] [fg] hudless scan m2 world=0 lists=48 arg10w=26 tail= 37:d1:r1:h1d95d091550 38:d1:r1:h1d95d091250 39:d1:r1:h1d95d091150 40:d1:r1:h1d95d091050 41:d1:r1:h1d95d090f50 42:d0:r1:h1d95d090230 43:d1:r1:h1d95d091650 44:d1:r1:h1d95d091750 45:d1:r1:h1d95d090230 46:d1:r1:h1d95d090230 47:d0:r1:h1d95d090230 48:-
+[2026-10-30 23:29:55.611 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1080 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 23:29:55.611 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-30 23:29:55.611 WRN][NeuroDragon] [vv] inject skipped (3): recording the injected work failed
+[2026-10-30 23:29:55.614 DBG][NeuroDragon] [vv] taau #4 viewport=2560x1440+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=5 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7 lists=146
+[2026-10-30 23:29:55.616 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x1d974e72750 1920x1080 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 23:29:55.616 DBG][NeuroDragon] [vv] presents=4 submits=7 lists=146 maxListsPerSubmit=48 taau=4 draws=4 | submits/frame=1.75 lists/frame=36.50 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.616 IFO][NeuroDragon] [vv] frame time: avg=12.69 ms min=12.69 max=12.69 over 1 presents
+[2026-10-30 23:29:55.617 DBG][NeuroDragon] [vv] submit #8 tid=39384 lists=1
+[2026-10-30 23:29:55.618 IFO][NeuroDragon] [sr] ctx call #4 engine=000001D88880B040 ctx=000001D8FA66C780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.618 IFO][NeuroDragon] [sr] ctx #4 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-30 23:29:55.622 DBG][NeuroDragon] [vv] submit #9 tid=39384 lists=48
+[2026-10-30 23:29:55.622 DBG][NeuroDragon] [fg] hudless scan m3 world=0 lists=48 arg10w=26 tail= 37:d1:r1:h1d95d091550 38:d1:r1:h1d95d091250 39:d1:r1:h1d95d091150 40:d1:r1:h1d95d091050 41:d1:r1:h1d95d090f50 42:d0:r1:h1d95d0901f0 43:d1:r1:h1d95d091650 44:d1:r1:h1d95d091750 45:d1:r1:h1d95d0901f0 46:d14:r1:h1d95d0901f0 47:d0:r1:h1d95d0901f0 48:-
+[2026-10-30 23:29:55.622 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1080 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 23:29:55.622 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-30 23:29:55.787 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x1d974e72750 1920x1080 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 23:29:55.788 DBG][NeuroDragon] [vv] presents=5 submits=9 lists=195 maxListsPerSubmit=48 taau=5 draws=5 | submits/frame=1.80 lists/frame=39.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.788 DBG][NeuroDragon] [vv] long frame 171.5 ms at present #5
+[2026-10-30 23:29:55.788 IFO][NeuroDragon] [vv] frame time: avg=171.49 ms min=171.49 max=171.49 over 1 presents
+[2026-10-30 23:29:55.788 DBG][NeuroDragon] [vv] submit #10 tid=39384 lists=1
+[2026-10-30 23:29:55.788 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:39384][6s:010ms:891us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.07 GB
+
+[2026-10-30 23:29:55.789 IFO][NeuroDragon] [sr] ctx call #5 engine=000001D88880B040 ctx=000001D8F97EBDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.789 IFO][NeuroDragon] [sr] ctx #5 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000
+[2026-10-30 23:29:55.793 DBG][NeuroDragon] [vv] submit #11 tid=39384 lists=48
+[2026-10-30 23:29:55.793 DBG][NeuroDragon] [fg] hudless scan m4 world=0 lists=48 arg10w=26 tail= 37:d1:r1:h1d95d091550 38:d1:r1:h1d95d091250 39:d1:r1:h1d95d091150 40:d1:r1:h1d95d091050 41:d1:r1:h1d95d090f50 42:d0:r1:h1d95d090210 43:d1:r1:h1d95d091650 44:d1:r1:h1d95d091750 45:d1:r1:h1d95d090210 46:d35:r1:h1d95d090210 47:d0:r1:h1d95d090210 48:-
+[2026-10-30 23:29:55.793 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1080 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 23:29:55.796 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x1d974e72750 1920x1080 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 23:29:55.797 DBG][NeuroDragon] [vv] presents=6 submits=11 lists=244 maxListsPerSubmit=48 taau=6 draws=6 | submits/frame=1.83 lists/frame=40.67 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.797 IFO][NeuroDragon] [vv] frame time: avg=9.43 ms min=9.43 max=9.43 over 1 presents
+[2026-10-30 23:29:55.798 DBG][NeuroDragon] [vv] submit #12 tid=48668 lists=1
+[2026-10-30 23:29:55.799 IFO][NeuroDragon] [sr] ctx call #6 engine=000001D88880B040 ctx=000001D8FA66C780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.807 DBG][NeuroDragon] [vv] submit #13 tid=48668 lists=48
+[2026-10-30 23:29:55.807 DBG][NeuroDragon] [fg] hudless scan m5 world=0 lists=48 arg10w=26 tail= 37:d1:r1:h1d95d091550 38:d1:r1:h1d95d091250 39:d1:r1:h1d95d091150 40:d1:r1:h1d95d091050 41:d1:r1:h1d95d090f50 42:d0:r1:h1d95d090230 43:d1:r1:h1d95d091650 44:d1:r1:h1d95d091750 45:d1:r1:h1d95d090230 46:d35:r1:h1d95d090230 47:d0:r1:h1d95d090230 48:-
+[2026-10-30 23:29:55.807 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1080 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 23:29:55.810 DBG][NeuroDragon] [vv] presents=7 submits=13 lists=293 maxListsPerSubmit=48 taau=7 draws=7 | submits/frame=1.86 lists/frame=41.86 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.810 IFO][NeuroDragon] [vv] frame time: avg=12.81 ms min=12.81 max=12.81 over 1 presents
+[2026-10-30 23:29:55.810 DBG][NeuroDragon] [vv] submit #14 tid=39384 lists=1
+[2026-10-30 23:29:55.819 IFO][NeuroDragon] [sr] ctx call #7 engine=000001D88880B040 ctx=000001D8F97EBDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.820 DBG][NeuroDragon] [vv] submit #15 tid=39384 lists=48
+[2026-10-30 23:29:55.825 DBG][NeuroDragon] [vv] presents=8 submits=15 lists=342 maxListsPerSubmit=48 taau=8 draws=8 | submits/frame=1.88 lists/frame=42.75 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.825 IFO][NeuroDragon] [vv] frame time: avg=15.22 ms min=15.22 max=15.22 over 1 presents
+[2026-10-30 23:29:55.825 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:39384][6s:047ms:825us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.12 GB
+
+[2026-10-30 23:29:55.826 DBG][NeuroDragon] [vv] submit #16 tid=39384 lists=1
+[2026-10-30 23:29:55.834 IFO][NeuroDragon] [sr] ctx call #8 engine=000001D88880B040 ctx=000001D8FA66C780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.836 DBG][NeuroDragon] [vv] submit #17 tid=39384 lists=48
+[2026-10-30 23:29:55.839 DBG][NeuroDragon] [vv] presents=9 submits=17 lists=391 maxListsPerSubmit=48 taau=9 draws=9 | submits/frame=1.89 lists/frame=43.44 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.839 IFO][NeuroDragon] [vv] frame time: avg=13.91 ms min=13.91 max=13.91 over 1 presents
+[2026-10-30 23:29:55.839 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:39384][6s:061ms:752us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.15 GB
+
+[2026-10-30 23:29:55.839 DBG][NeuroDragon] [vv] submit #18 tid=39384 lists=1
+[2026-10-30 23:29:55.848 IFO][NeuroDragon] [sr] ctx call #9 engine=000001D88880B040 ctx=000001D8F97EBDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.849 DBG][NeuroDragon] [vv] submit #19 tid=39384 lists=48
+[2026-10-30 23:29:55.852 DBG][NeuroDragon] [vv] presents=10 submits=19 lists=440 maxListsPerSubmit=48 taau=10 draws=10 | submits/frame=1.90 lists/frame=44.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 23:29:55.852 IFO][NeuroDragon] [vv] frame time: avg=12.98 ms min=12.98 max=12.98 over 1 presents
+[2026-10-30 23:29:55.852 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:39384][6s:074ms:793us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.18 GB
+
+[2026-10-30 23:29:55.852 DBG][NeuroDragon] [vv] submit #20 tid=39384 lists=1
+[2026-10-30 23:29:55.854 IFO][NeuroDragon] [sr] ctx call #10 engine=000001D88880B040 ctx=000001D8FA66C780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1440 tail=1.000 valid=1
+[2026-10-30 23:29:55.857 DBG][NeuroDragon] [vv] submit #21 tid=39384 lists=48
+[2026-10-30 23:29:55.872 DBG][NeuroDragon] [vv] submit #22 tid=39384 lists=1
+[2026-10-30 23:29:55.877 DBG][NeuroDragon] [vv] submit #23 tid=39384 lists=48
+[2026-10-30 23:29:55.880 DBG][NeuroDragon] [vv] submit #24 tid=39384 lists=1
+[2026-10-30 23:29:55.889 WRN][Server] <LVL|2627709328> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-30 23:29:55.889 WRN][Server] <LVL|2627709328> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-30 23:29:55.911 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:39384][6s:133ms:113us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.18 GB
+
+[2026-10-30 23:29:55.925 DBG][NeuroDragon] [sl] lv=0 [23-29-55][streamline][info][tid:39384][6s:148ms:027us]commonInterface.cpp:626[presentCommon] Total VRAM used: 1.25 GB
+
+[2026-10-30 23:29:56.011 DBG][NeuroDragon] [vv] TAAU timing available: 0.163712 ms (26 samples)
+[2026-10-30 23:29:56.328 WRN][Server] <LVL|1936005904> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect

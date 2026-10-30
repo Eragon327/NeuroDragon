@@ -1,0 +1,1 @@
+﻿launch=direct exe (no launcher process); log=0 bytes after 25s; modules: LeviLamina, LeviLauncher, d3d11, d3d12, dxgi, NeuroDragon, WINTRUST; no window; same stall with NeuroDragon.dll renamed away

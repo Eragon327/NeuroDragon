@@ -123,6 +123,10 @@ P6 flip / Present：FG dispatch → 原始 Present
   之后、UI list 之前）拷贝得到**无 HUD 的最终 LDR**；`listCount-2`（UI list，44 draws）
   之后含 HUD（toast / 头像 / 快捷栏 / 准星全在）。`listCount-6` 读到的是上一帧（仍带 UI），
   所以边界必须晚于世界写入。
+- 2026-10-30（EXP-0125）：Streamline 2.14.1（2.11.1 头）在游戏进程内 `slInit 0`、
+  `DLSS_G loaded=1`；`nvngx_dlssg` 用驱动仓库的 310.2.1（`versionNGX=0.0.0` 是该版本不回报）。
+  **`slInit` 不能在 `load()` 里调用**：LoadLibrary/WinVerifyTrust 在 LeviLamina 的加载上下文
+  死锁（0 字节日志、无窗口）；改到第一次游戏 factory 调用（loader lock 之外）后正常。
 
 ### 4.2 未解决，不能当事实写死
 
@@ -180,6 +184,18 @@ fg/Config.*         开关、固定 2x、诊断状态（也可并入现有 confi
 
 ### F1：Streamline 与交换链透传
 
+- ✅ 2026-10-30（EXP-0125）：初始化已在游戏内通过（`slInit 0`、`DLSS_G loaded=1`，SL 2.14.1，
+  `nvngx` 用驱动仓库 310.2.1）。`slInit` 必须放在第一次游戏 factory 调用，不能放 `load()`。
+- ✅ 2026-10-30（EXP-0130）：**代理链透传通过**——游戏链由 SL proxy 创建（`flags=0x42`），
+  面板 Present 钩子仍命中（`[vv] frame time`），游戏不退出。
+- `ALLOW_TEARING` 暂时移除：创建时补 `0x800` 后，游戏的 `ResizeBuffers1` 仍传 `0x42`，
+  而 SL proxy 的 resize 绕过 overlay 的 vtable 钩子，DXGI 返回 invalid call（EXP-0129）。
+- **DLSS-G 的加载待解**：`slInit` 不带 `DLSS_G` 时 `slSetFeatureLoaded` 返回 34（插件未请求）；
+  带 `DLSS_G` 时设备设置与首个代理链都成功，但约 2 s 后插件创建
+  `nv.sl.dlss_g.cmdQ.pacer` 失败，随后 `0x887A0005`（device removed）、
+  灵动视效不可用（EXP-0132/0133）。
+- **当前可用基线**（EXP-0134）：代理链 + 不加载 DLSS-G；游戏稳定、面板 Present 正常、
+  灵动视效可开、退出正常。DLSS-G 的加载是 F1 唯一剩下的阻塞项。
 - 固定 Streamline 版本，准备 `sl.interposer/sl.common/sl.dlss_g/sl.reflex/sl.pcl` 与可发现的 `nvngx_dlssg`。
 - 使用 manual hooking、frame-based resource tagging、DXGI factory proxy。
 - 创建 Streamline 包装链，但保持 `DLSSGMode::eOff`。
