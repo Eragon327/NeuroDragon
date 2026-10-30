@@ -15,7 +15,7 @@ void                beginRow();
 void                labelRow(std::string_view label);
 [[nodiscard]] float rowRight();
 
-// A section title with a rule, like the reference panel's group headers.
+// Medium-weight section title.
 void sectionHeader(char const* label);
 
 // "label ......... value" - the stats-column primitive.
@@ -24,10 +24,10 @@ void statRow(char const* label, char const* value, ImU32 valueColor = 0);
 // Small dim note (key hints, units).
 void hint(char const* text);
 
-// Orange check box + label; the whole row is the hit target.
+// Label on the left and a switch on the right; the whole row is the hit target.
 bool toggle(char const* label, bool* value);
 
-// Label + value on one line, then a full-width track with a small orange handle.
+// Label, track and editable numeric field in one row; narrow rows stack the track.
 // Returns true on the frame the value changed.
 //
 // The number on the right is clickable: it turns into a text box prefilled with the
@@ -49,7 +49,7 @@ bool slider(
 // rounded to the nearest integer like the track produces.
 bool sliderInt(char const* label, int* value, int min, int max, char const* suffix = nullptr);
 
-// Label above a full-width dropdown.
+// Label on the left and a full remaining-width dropdown on the right.
 bool combo(char const* label, int* current, char const* const* items, int count);
 
 // Pipeline strip primitives, drawn at explicit screen positions so the menu can

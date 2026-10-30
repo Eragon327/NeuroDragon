@@ -39,18 +39,17 @@ using namespace theme;
 // config/config.json is an import at load, not a live file.
 // ---------------------------------------------------------------------------
 
-config::Nr  gDraft{};
-config::Sr  gDraftSr{};
-// SR jitter is staged like every other control in the right column, but it has no
-// config entry: it is an A/B switch, not a preference. So Apply is the only thing that
-// writes it into the running pipeline, "Save as default" leaves it out, and closing
-// the panel without applying leaves the running value alone. Default Zero - the world
-// frame carries no TAA sub-pixel offset (EXP-0098).
+config::Nr     gDraft{};
+config::Sr     gDraftSr{};
+config::Config gSavedConfig{};
+bool           gSavedConfigInitialized{};
+// Jitter is staged like every other control but has no config entry: Apply writes the
+// running pipeline, Save as default leaves it out, and closing without applying leaves
+// the running value alone. Zero suits preset K; preset M can self-oscillate with Zero
+// and should use Engine. Other preset/source combinations are still being validated.
 int gDraftJitter{static_cast<int>(vv::sr::JitterSource::Zero)};
 
-// The combo offers all four sources; an unknown value is staged as Zero, which is both
-// the default and the only one that is a shipping setting (the other three are the
-// discriminators from the jitter contract, kept for diagnosis).
+// Unknown values fall back to Zero; all four known sources remain normal choices.
 int stagedJitter(vv::sr::JitterSource running) {
     switch (running) {
     case vv::sr::JitterSource::Engine:
@@ -115,7 +114,7 @@ int gPendingKeySlot{-1};
 // per frame: the pick only matters on the next start anyway.
 std::vector<std::string> gModelFiles;
 int         gActiveTab{};
-bool        gDirty{};
+int         gRequestedTab{-1};
 std::string gStatus;
 
 // NR/SR slot swap in the pipeline strip (after-upscaling placement): 0 = NR then SR,
@@ -130,24 +129,14 @@ bool            gSwapPrimed{};
 // by the title strip only, exactly like a Win32 window, so a click anywhere else in
 // the panel never drags it.
 ImVec2 gPos{-1.0f, -1.0f};
+bool   gPositionInitialized{};
 bool   gDragging{};
 
-void markDirty() {
-    gDirty = true;
-    gStatus.clear();
-}
+void onDraftEdited() { gStatus.clear(); }
 
 void setStatus(std::string text) { gStatus = std::move(text); }
 
 void at(ImVec2 position) { ImGui::SetCursorScreenPos(position); }
-
-// Column caption. Plain text, not a section rule: a rule directly above the first
-// real section rule read as a doubled header.
-void columnCaption(char const* text) {
-    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(kTextDim));
-    ImGui::TextUnformatted(text);
-    ImGui::PopStyleColor();
-}
 
 // ---------------------------------------------------------------------------
 // Buttons
@@ -163,7 +152,7 @@ bool menuButton(char const* label, ImVec2 size = ImVec2(0.0f, 0.0f), bool primar
 // ---------------------------------------------------------------------------
 // Live observation (docs/specs/ui.md §3, §6)
 //
-// The pipeline strip and the left column answer one question: what is the renderer
+// The pipeline strip and the overview answer one question: what is the renderer
 // doing *right now*. A config flag says what was asked for, `featureCreated` says
 // something was built - neither says a frame went through it. Every state shown on
 // those two surfaces is therefore derived from counters that only move when the
@@ -354,7 +343,7 @@ ImU32 overallColor(Overall state) {
 }
 
 // What is upscaling the picture this second (docs/specs/ui.md §3). Shared by the
-// pipeline strip, the left column and the SR page so the three cannot disagree.
+// pipeline strip, the overview and the SR page so the three cannot disagree.
 // Only a backend that really carries the frame gets the accent; TAAU is the engine
 // doing its own thing, so it reads dim rather than competing with the substitute.
 std::string backendName(Live const& live, ImU32* tint = nullptr) {
@@ -388,6 +377,43 @@ void reloadKeyDrafts() {
     gDraftResetKeys      = parseKeys(config::get().ui.resetKeys, config::kDefaultResetKey);
     gDraftScreenshotKeys = parseKeys(config::get().ui.screenshotKeys, config::kDefaultScreenshotKey);
     gPendingKeySlot      = -1;
+}
+
+bool same(config::Nr const& a, config::Nr const& b) {
+    return a.enabled == b.enabled && a.placement == b.placement && a.replace == b.replace && a.style == b.style
+        && a.intensity == b.intensity && a.localToneStrength == b.localToneStrength
+        && a.localStructureStrength == b.localStructureStrength && a.modelFile == b.modelFile
+        && a.skinStructure == b.skinStructure && a.depthInverted == b.depthInverted && a.inputPercent == b.inputPercent
+        && a.networkPreset == b.networkPreset && a.compare == b.compare && a.compareSplit == b.compareSplit
+        && a.sweep == b.sweep && a.mvecScale == b.mvecScale && a.nrEncode == b.nrEncode && a.whitePoint == b.whitePoint
+        && a.transferStrength == b.transferStrength && a.colourStrength == b.colourStrength && a.maxRatio == b.maxRatio
+        && a.broad == b.broad && a.detail == b.detail && a.adaptiveExposure == b.adaptiveExposure
+        && a.exposureBias == b.exposureBias && a.resetEveryFrame == b.resetEveryFrame
+        && a.srResetEveryFrame == b.srResetEveryFrame && a.paramLog == b.paramLog;
+}
+
+bool same(config::Sr const& a, config::Sr const& b) {
+    return a.scalePercent == b.scalePercent && a.vvPercent == b.vvPercent && a.vvEnabled == b.vvEnabled
+        && a.preset == b.preset && a.sharpening == b.sharpening && a.sharpness == b.sharpness;
+}
+
+bool same(config::Ui const& a, config::Ui const& b) {
+    return a.openKeys == b.openKeys && a.nrKeys == b.nrKeys && a.resetKeys == b.resetKeys
+        && a.screenshotKeys == b.screenshotKeys;
+}
+
+bool same(config::Config const& a, config::Config const& b) {
+    return a.version == b.version && same(a.nr, b.nr) && same(a.sr, b.sr) && same(a.ui, b.ui);
+}
+
+bool hasUnsavedChanges() { return gSavedConfigInitialized && !same(config::get(), gSavedConfig); }
+
+bool hasUnappliedChanges() {
+    auto const& running = config::get();
+    return !same(gDraft, running.nr) || !same(gDraftSr, running.sr)
+        || gDraftPanelKeys.keys() != running.ui.openKeys || gDraftNrKeys.keys() != running.ui.nrKeys
+        || gDraftResetKeys.keys() != running.ui.resetKeys || gDraftScreenshotKeys.keys() != running.ui.screenshotKeys
+        || gDraftJitter != stagedJitter(vv::sr::jitterSource());
 }
 
 bool mappedCombo(char const* label, int* value, char const* const* items, int const* values, int count) {
@@ -491,20 +517,18 @@ Layout computeLayout(ImVec2 pos, ImVec2 size) {
     layout.scale = theme::scale();
 
     float const s         = layout.scale;
-    layout.pad            = 18.0f * s;
-    layout.headerHeight   = 54.0f * s; // title strip, also the drag handle
-    layout.pipelineHeight = 90.0f * s;
-    layout.tabsHeight     = 34.0f * s;
-    layout.footerHeight   = 50.0f * s;
+    layout.pad            = 20.0f * s;
+    layout.headerHeight   = 56.0f * s;
+    layout.pipelineHeight = 78.0f * s;
+    layout.tabsHeight     = 38.0f * s;
+    layout.footerHeight   = 56.0f * s;
 
     layout.bodyTop    = pos.y + layout.pad + layout.headerHeight + layout.pipelineHeight + layout.tabsHeight;
     layout.bodyHeight = pos.y + size.y - layout.pad - layout.footerHeight - layout.bodyTop;
     layout.bodyHeight = std::max(layout.bodyHeight, 70.0f * s);
 
-    layout.gutter = 18.0f * s;
-    // Fixed columns: the window is sized from them, and the stats column has to be
-    // wide enough for "label ... value" on one line at this font size.
-    layout.leftWidth = std::min(330.0f * s, size.x - layout.pad * 2.0f - 240.0f * s);
+    layout.gutter    = 24.0f * s;
+    layout.leftWidth = std::min(340.0f * s, size.x - layout.pad * 2.0f - 280.0f * s);
     return layout;
 }
 
@@ -595,38 +619,21 @@ void drawPipeline(Layout const& layout, Live const& live) {
     float const left   = layout.pos.x + layout.pad;
     float const width  = layout.size.x - layout.pad * 2.0f;
 
-    constexpr int kArrows    = 3;
-    float const   arrowWidth = 30.0f * s;
-    float const   nodeWidth  = (width - static_cast<float>(kArrows) * arrowWidth) / 4.0f;
+    constexpr int kArrows    = 4;
+    float const   arrowWidth = 26.0f * s;
+    float const   nodeWidth  = (width - static_cast<float>(kArrows) * arrowWidth) / 5.0f;
 
-    // Sizes come from `sr::status()`, not from the RT-only PanelStats: it normalises per
-    // backend (the ray-traced branch maps the same PanelStats, the VV branch reports the
-    // engine's TAAU declaration sizes), so the strip shows real numbers under Vibrant
-    // Visuals too (2026-10-29 report: VV had GPU time but no sizes).
     char render[48]{};
     char output[48]{};
     std::snprintf(render, sizeof(render), "%u x %u", live.backend.renderWidth, live.backend.renderHeight);
     std::snprintf(output, sizeof(output), "%u x %u", live.backend.displayWidth, live.backend.displayHeight);
 
-    // NR box: where the feature actually runs, and what state it is in. The placement is
-    // read back from the render thread's own record (`PanelStats.placement`) - an after
-    // side that was refused reports the before side it really ran. A feature that was
-    // never created has no placement, so the first line stays empty instead of inventing
-    // one, and the state line carries the "not created yet" answer. Numbers (GPU ms,
-    // counters) live in the LIVE column; this box answers "where" and "in what state".
-    std::string nrPlacement;
+    std::string nrDetail = stageName(live.nr);
     if (live.nr != Stage::Off && live.nr != Stage::Configured) {
         bool const after = live.stats.placement == 1 && !live.stats.afterFallback;
-        nrPlacement      = after ? "ui.pipeline.nrAfter"_tr() : "ui.pipeline.nrBefore"_tr();
+        nrDetail         = (after ? "ui.pipeline.nrAfter"_tr() : "ui.pipeline.nrBefore"_tr()) + " · " + nrDetail;
     }
-    std::string const nrState = stageName(live.nr);
 
-    // Upscaler: who does it, which preset its feature was created with, and the ratio
-    // the frame is *actually* rendered at (render / display, not the setting). The
-    // preset is read back from the feature itself - the engine's parameter object on
-    // RT, our own CreateFeature value on VV - so a control that did not take shows up
-    // here instead of echoing the config. TAAU has no preset and says so. No frame
-    // counts: the box answers "what" and "how much", not "how many".
     std::string upName;
     std::string upLine;
     bool        upActive = live.upscale == Stage::Running;
@@ -639,113 +646,106 @@ void drawPipeline(Layout const& layout, Live const& live) {
     case sr::Backend::VvDlss: {
         bool const substituting = vv::sr::enabled() && live.vvStats.recorded;
         upName                  = substituting ? "ui.pipeline.upVv"_tr() : "ui.pipeline.upTauu"_tr();
-        if (substituting) {
-            upLine = presetName(static_cast<unsigned>(live.dlss.preset)) + " · "
-                   + ratioName(live.backend.renderWidth, live.backend.displayWidth);
-        } else {
-            upLine = "ui.pipeline.noPreset"_tr() + " · "
-                   + ratioName(live.backend.renderWidth, live.backend.displayWidth);
-        }
+        upLine = substituting ? presetName(static_cast<unsigned>(live.dlss.preset)) : "ui.pipeline.noPreset"_tr();
+        upLine += " · " + ratioName(live.backend.renderWidth, live.backend.displayWidth);
         break;
     }
     default:
-        // Nothing is upscaling. A VV-configured engine at 100% is real but invisible
-        // to observation, so the left column carries the explanation.
         upName   = "ui.pipeline.upNone"_tr();
         upActive = false;
         break;
     }
 
-    std::string const titles[4] = {
-        "ui.pipeline.world"_tr(),
-        "ui.pipeline.nr"_tr(),
-        "ui.pipeline.upscale"_tr(),
-        "ui.pipeline.output"_tr(),
-    };
-    std::string const outSub    = "ui.pipeline.outputSub"_tr();
-    std::string const rasterSub = "ui.pipeline.raster"_tr();
+    std::string const worldTitle = "ui.pipeline.world"_tr();
+    std::string const nrTitle    = "ui.pipeline.nr"_tr();
+    std::string const outTitle   = "ui.pipeline.output"_tr();
+    std::string const fgTitle    = "ui.pipeline.fg"_tr();
+    std::string const fgDetail   = "ui.pipeline.fgUnavailable"_tr();
 
-    // A size is the evidence for the two outer boxes: no extent for the live backend
-    // means it has not handed us a frame yet (same source as the text above).
     bool const worldActive = live.backend.renderWidth != 0 && live.backend.renderHeight != 0;
     bool const outActive   = live.backend.displayWidth != 0 && live.backend.displayHeight != 0;
 
     struct Node {
         char const* title{};
-        char const* line1{};
-        char const* line2{};
+        char const* detail{};
         bool        active{};
+        int         page{};
     };
-    Node const worldNode{titles[0].c_str(), render,              rasterSub.c_str(), worldActive               };
-    Node const nrNode   {titles[1].c_str(), nrPlacement.c_str(), nrState.c_str(),   live.nr == Stage::Running };
-    Node const srNode   {titles[2].c_str(), upName.c_str(),      upLine.c_str(),    upActive                  };
-    Node const outNode  {titles[3].c_str(), output,              outSub.c_str(),    outActive                 };
+    Node const worldNode{worldTitle.c_str(), render,           worldActive,               0};
+    Node const nrNode   {nrTitle.c_str(),    nrDetail.c_str(), live.nr == Stage::Running, 1};
+    Node const srNode   {upName.c_str(),     upLine.c_str(),   upActive,                  2};
+    Node const fgNode   {fgTitle.c_str(),    fgDetail.c_str(), false,                     3};
+    Node const outNode  {outTitle.c_str(),   output,           outActive,                 0};
 
-    // The two middle boxes swap places with the actual placement: before upscaling the
-    // picture goes World -> NR -> SR -> Output, after upscaling it goes World -> SR ->
-    // NR -> Output. A refused after side is the before side the render thread really
-    // ran, so it takes the before order (`placement` is already 0 then, the explicit
-    // check keeps the intent readable). The first frame after the panel opens snaps to
-    // the current order instead of replaying the move; later changes animate (~0.25 s)
-    // so a placement change reads as a swap rather than a jump.
     float const target = (live.stats.placement == 1 && !live.stats.afterFallback) ? 1.0f : 0.0f;
     if (!gSwapPrimed) {
         gSwapProgress = target;
         gSwapPrimed   = true;
     } else {
-        // A hitch must not make the boxes jump: cap the step at the frame delta.
         float const dt   = std::min(ImGui::GetIO().DeltaTime, 0.1f);
         float const step = dt / kSwapSeconds;
         gSwapProgress    = std::clamp(gSwapProgress + std::clamp(target - gSwapProgress, -step, step), 0.0f, 1.0f);
     }
-    // smoothstep: ease out of one slot and into the other.
     float const t = gSwapProgress * gSwapProgress * (3.0f - 2.0f * gSwapProgress);
 
     auto const  slotX   = [&](int index) { return left + static_cast<float>(index) * (nodeWidth + arrowWidth); };
     float const nrX     = slotX(1) + (slotX(2) - slotX(1)) * t;
     float const srX     = slotX(2) + (slotX(1) - slotX(2)) * t;
-    bool const  nrFirst = t < 0.5f; // which of the two middle slots holds NR right now
+    bool const  nrFirst = t < 0.5f;
 
-    // Arrows first, so a sliding box covers a gap arrow instead of being covered by it.
-    // They always point right: the middle arrow connects whatever sits in the left slot
-    // to whatever sits in the right slot, which is the real flow in both orders - the
-    // swap therefore never shows a reversed arrow.
     float const midY = top + height * 0.5f;
-    for (int index = 0; index < 3; ++index) {
-        bool active = outNode.active;
+    for (int index = 0; index < kArrows; ++index) {
+        bool active = false;
         if (index == 0) active = nrFirst ? nrNode.active : srNode.active;
         else if (index == 1) active = nrFirst ? srNode.active : nrNode.active;
-        float const fromX = slotX(index) + nodeWidth + 5.0f * s;
+        float const fromX = slotX(index) + nodeWidth + 4.0f * s;
         float const toX   = slotX(index) + nodeWidth + arrowWidth - 2.0f * s;
         widgets::nodeArrow(ImVec2(fromX, midY), ImVec2(toX, midY), active);
     }
 
     auto const drawNode = [&](Node const& node, float x) {
-        widgets::nodeBox(ImVec2(x, top), ImVec2(nodeWidth, height), node.title, node.line1, node.line2, node.active);
+        ImGui::PushID(node.title);
+        at(ImVec2(x, top));
+        if (ImGui::InvisibleButton("##pipelineNode", ImVec2(nodeWidth, height))) {
+            gActiveTab    = node.page;
+            gRequestedTab = node.page;
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        widgets::nodeBox(
+            ImVec2(x, top),
+            ImVec2(nodeWidth, height),
+            node.title,
+            node.detail,
+            "",
+            node.active
+        );
+        ImGui::PopID();
     };
     drawNode(worldNode, slotX(0));
     drawNode(nrNode, nrX);
     drawNode(srNode, srX);
-    drawNode(outNode, slotX(3));
+    drawNode(fgNode, slotX(3));
+    drawNode(outNode, slotX(4));
 }
-
-// Tabs ----------------------------------------------------------------------
 
 void drawTabs(Layout const& layout) {
     float const y = layout.pos.y + layout.pad + layout.headerHeight + layout.pipelineHeight;
 
-    std::string const tabs[4] = {
+    std::string const tabs[6] = {
+        "ui.tab.overview"_tr(),
         "ui.tab.neural"_tr(),
         "ui.tab.sr"_tr(),
+        "ui.tab.fg"_tr(),
         "ui.tab.diagnostics"_tr(),
         "ui.tab.advanced"_tr(),
     };
 
     at(ImVec2(layout.pos.x + layout.pad, y));
     if (ImGui::BeginTabBar("##neurodragonTabs")) {
-        for (int index = 0; index < 4; ++index) {
+        for (int index = 0; index < 6; ++index) {
             ImGui::PushID(index);
-            if (ImGui::BeginTabItem(tabs[index].c_str())) {
+            ImGuiTabItemFlags const flags = gRequestedTab == index ? ImGuiTabItemFlags_SetSelected : 0;
+            if (ImGui::BeginTabItem(tabs[index].c_str(), nullptr, flags)) {
                 gActiveTab = index;
                 ImGui::EndTabItem();
             }
@@ -753,6 +753,7 @@ void drawTabs(Layout const& layout) {
         }
         ImGui::EndTabBar();
     }
+    gRequestedTab = -1;
 }
 
 // Stats column --------------------------------------------------------------
@@ -763,50 +764,28 @@ void drawTabs(Layout const& layout) {
 // per-feature counters moved to the diagnostics page (and most of them were deleted,
 // 2026-10-29).
 
-void drawStatsColumn(Layout const& layout, Live const& live) {
+void drawPerformanceColumn(Layout const& layout, Live const& live) {
     auto const s       = layout.scale;
     auto const frame   = Overlay::getInstance().frameStats();
     auto const history = Overlay::getInstance().recentFrameMs();
 
-    columnCaption("ui.live.header"_tr().c_str());
-    ImGui::Spacing();
-
     widgets::sectionHeader("ui.stats.frames"_tr().c_str());
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", "ui.stats.fps"_tr().c_str());
+    ImGui::PushFont(theme::titleFont());
+    ImGui::Text("%.1f", frame.fps);
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextUnformatted("FPS");
 
     char buffer[96]{};
-    std::snprintf(buffer, sizeof(buffer), "%.1f fps", frame.fps);
-    widgets::statRow("ui.stats.fps"_tr().c_str(), buffer);
     std::snprintf(buffer, sizeof(buffer), "%.2f ms", frame.frameMs);
     widgets::statRow("ui.stats.frameTime"_tr().c_str(), buffer);
 
-    ImVec2 const graphSize{ImGui::GetContentRegionAvail().x, 48.0f * s};
+    ImVec2 const graphSize{ImGui::GetContentRegionAvail().x, 96.0f * s};
     auto const   graphPos = ImGui::GetCursorScreenPos();
     widgets::frameGraph(graphPos, graphSize, history, autoGraphMax(history));
-    ImGui::Dummy(ImVec2(graphSize.x, graphSize.y + 4.0f * s));
+    ImGui::Dummy(ImVec2(graphSize.x, graphSize.y + 8.0f * s));
 
-    widgets::sectionHeader("ui.stats.pipeline"_tr().c_str());
-
-    // The column's one conclusion: the pipeline as a whole (see Overall), so NR being
-    // off on purpose does not read as "the mod is off".
-    Overall const state = overallState(live);
-    widgets::statRow("ui.stats.status"_tr().c_str(), overallName(state).c_str(), overallColor(state));
-
-    // Which stage is upscaling the picture right now - the same answer the strip and
-    // the SR page use.
-    ImU32             tint = 0;
-    std::string const up   = backendName(live, &tint);
-    widgets::statRow("ui.sr.backendNow"_tr().c_str(), up.c_str(), tint);
-
-    // Sizes come from the normalised backend snapshot (same as the strip): the RT branch
-    // maps PanelStats, the VV branch reports the engine's TAAU declaration sizes.
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", live.backend.renderWidth, live.backend.renderHeight);
-    widgets::statRow("ui.stats.renderSize"_tr().c_str(), buffer);
-    std::snprintf(buffer, sizeof(buffer), "%u x %u", live.backend.displayWidth, live.backend.displayHeight);
-    widgets::statRow("ui.stats.outputSize"_tr().c_str(), buffer);
-
-    // What the two stages cost, in the panel's normal text colour. A measured time is
-    // a measurement, not an alarm: NR and SR read the same white, and only "no
-    // sample" is dimmed.
     widgets::sectionHeader("ui.stats.gpu"_tr().c_str());
     if (!live.stats.stampsActive) {
         widgets::statRow("ui.stats.nrGpu"_tr().c_str(), "ui.diag.timingOff"_tr().c_str(), kTextDim);
@@ -827,128 +806,104 @@ void drawStatsColumn(Layout const& layout, Live const& live) {
     }
 }
 
+void drawLiveColumn(Live const& live) {
+    widgets::sectionHeader("ui.stats.pipeline"_tr().c_str());
+    Overall const state = overallState(live);
+    widgets::statRow("ui.stats.status"_tr().c_str(), overallName(state).c_str(), overallColor(state));
+
+    ImU32             tint = 0;
+    std::string const up   = backendName(live, &tint);
+    widgets::statRow("ui.sr.backendNow"_tr().c_str(), up.c_str(), tint);
+
+    char buffer[96]{};
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", live.backend.renderWidth, live.backend.renderHeight);
+    widgets::statRow("ui.stats.renderSize"_tr().c_str(), buffer);
+    std::snprintf(buffer, sizeof(buffer), "%u x %u", live.backend.displayWidth, live.backend.displayHeight);
+    widgets::statRow("ui.stats.outputSize"_tr().c_str(), buffer);
+}
+
 // Settings columns ----------------------------------------------------------
 
 void drawTabNeural() {
-    // One composite, no choice: TRP's Ratio resolve is the only one that ships
-    // (2026-10-29). The gain composite's controls are gone with it, so the draft is
-    // pinned here instead of in applyDraft - everything else applyDraft writes keeps
-    // its old meaning.
     gDraft.replace = 6;
 
     widgets::sectionHeader("ui.neural.enableSection"_tr().c_str());
-
-    if (widgets::toggle("ui.neural.enable"_tr().c_str(), &gDraft.enabled)) markDirty();
-    // Asked for explicitly (2026-10-29): the two consequences a user cannot see - the
-    // history restart and what "save as default" does while it is off.
+    if (widgets::toggle("ui.neural.enable"_tr().c_str(), &gDraft.enabled)) onDraftEdited();
     widgets::tip("ui.neural.enableTip"_tr().c_str());
-    // A state, not an explanation: while this is off everything below is grey and the
-    // reason has to be visible without hovering anything.
     if (!gDraft.enabled) widgets::hint("ui.neural.disabledHint"_tr().c_str());
 
     if (!gDraft.enabled) ImGui::BeginDisabled();
-
-    // Position axis (docs/N): the two sides are exclusive, and the cost difference
-    // belongs in the hint (the after side's ~9.6 ms is not a regression).
     widgets::sectionHeader("ui.neural.placementSection"_tr().c_str());
     gDraft.placement = gDraft.placement == 1 ? 1 : 0;
-    {
-        std::string const placementItems[2] = {
-            "ui.neural.placementBefore"_tr(),
-            "ui.neural.placementAfter"_tr(),
-        };
-        char const* itemPointers[2]  = {placementItems[0].c_str(), placementItems[1].c_str()};
-        int const   placementValues[2] = {0, 1};
-        if (mappedCombo(
-                "ui.neural.placement"_tr().c_str(),
-                &gDraft.placement,
-                itemPointers,
-                placementValues,
-                2
-            )) {
-            markDirty();
-        }
-        // Asked for explicitly: the after side's cost and the rebuild/reset a switch costs.
-        widgets::tip("ui.neural.placementTip"_tr().c_str());
+    std::string const placementItems[2] = {
+        "ui.neural.placementBefore"_tr(),
+        "ui.neural.placementAfter"_tr(),
+    };
+    char const* placementPointers[2] = {placementItems[0].c_str(), placementItems[1].c_str()};
+    int const   placementValues[2]   = {0, 1};
+    if (mappedCombo("ui.neural.placement"_tr().c_str(), &gDraft.placement, placementPointers, placementValues, 2)) {
+        onDraftEdited();
     }
+    widgets::tip("ui.neural.placementTip"_tr().c_str());
     widgets::hint(
         gDraft.placement == 1 ? "ui.neural.placementAfterHint"_tr().c_str() : "ui.neural.placementHint"_tr().c_str()
     );
-    // The fallback is a fact about this session, so it stays inline next to it.
     if (gDraft.placement == 1 && nr::nrAfterFallback()) {
         widgets::hint("ui.neural.afterFallbackHint"_tr().c_str());
     }
-
     if (!gDraft.enabled) ImGui::EndDisabled();
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.style.section"_tr().c_str());
-
-    // A dropdown, not a slider: three discrete styles and no meaningful order.
     static char const* const kStyleItems[]  = {"0", "1", "2"};
     static int const         kStyleValues[] = {0, 1, 2};
-    if (mappedCombo("ui.style.style"_tr().c_str(), &gDraft.style, kStyleItems, kStyleValues, 3)) markDirty();
-    if (widgets::slider("ui.style.intensity"_tr().c_str(), &gDraft.intensity, 0.0f, 2.0f, "%.2f")) markDirty();
-    if (widgets::slider("ui.style.localTone"_tr().c_str(), &gDraft.localToneStrength, 0.0f, 2.0f, "%.2f")) markDirty();
+    if (mappedCombo("ui.style.style"_tr().c_str(), &gDraft.style, kStyleItems, kStyleValues, 3)) onDraftEdited();
+    if (widgets::slider("ui.style.intensity"_tr().c_str(), &gDraft.intensity, 0.0f, 2.0f, "%.2f")) onDraftEdited();
+    if (widgets::slider("ui.style.localTone"_tr().c_str(), &gDraft.localToneStrength, 0.0f, 2.0f, "%.2f")) onDraftEdited();
     if (widgets::slider("ui.style.localStructure"_tr().c_str(), &gDraft.localStructureStrength, 0.0f, 2.0f, "%.2f")) {
-        markDirty();
+        onDraftEdited();
     }
 #ifdef TEST
-    // Probe only: no visible difference was measurable at -1/0/1 on Minecraft content
-    // (docs/L P1), and TRP ties this knob to its automatic skin mask, which needs skin
-    // classification our inputs cannot carry. A release build does not offer a knob
-    // that does nothing; the parameter keeps its old default of 1.0.
-    if (widgets::slider("ui.style.skin"_tr().c_str(), &gDraft.skinStructure, -1.0f, 2.0f, "%.2f")) markDirty();
+    if (widgets::slider("ui.style.skin"_tr().c_str(), &gDraft.skinStructure, -1.0f, 2.0f, "%.2f")) onDraftEdited();
     widgets::hint("ui.style.skinHint"_tr().c_str());
 #endif
 
     ImGui::Spacing();
-    widgets::sectionHeader("ui.neural.input"_tr().c_str());
-
-    std::string const depthItems[3] = {
-        "ui.neural.depthFollow"_tr(),
-        "ui.neural.depthNormal"_tr(),
-        "ui.neural.depthInverted"_tr(),
-    };
-    char const* depthPointers[3] = {depthItems[0].c_str(), depthItems[1].c_str(), depthItems[2].c_str()};
-    int const   depthValues[3]   = {-1, 0, 1};
-    if (mappedCombo("ui.neural.depth"_tr().c_str(), &gDraft.depthInverted, depthPointers, depthValues, 3)) markDirty();
-
-    bool autoMvec = gDraft.mvecScale < 0.0f;
-    if (widgets::toggle("ui.neural.autoMv"_tr().c_str(), &autoMvec)) {
-        gDraft.mvecScale = autoMvec ? -1.0f : 0.0f;
-        markDirty();
-    }
-    if (!autoMvec) {
-        if (widgets::slider("ui.neural.mv"_tr().c_str(), &gDraft.mvecScale, 1.0f, 2048.0f, "%.0f")) markDirty();
-    }
-
-    if (gDraft.placement == 0) {
-        ImGui::Spacing();
-        widgets::sectionHeader("ui.neural.scale"_tr().c_str());
-        // Only the ratios that keep the feature inside the engine's native slot sizes and
-        // are worth the image cost (docs/L 2.1); a refused percentage falls back to 100%
-        // with a log line, so the panel cannot leave NR broken.
-        std::string const scaleItems[3] = {
-            "ui.neural.scale100"_tr(),
-            "ui.neural.scale66"_tr(),
-            "ui.neural.scale50"_tr(),
-        };
-        char const* scalePointers[3] = {scaleItems[0].c_str(), scaleItems[1].c_str(), scaleItems[2].c_str()};
-        int const   scaleValues[3]    = {100, 66, 50};
-        if (mappedCombo("ui.neural.scalePercent"_tr().c_str(), &gDraft.inputPercent, scalePointers, scaleValues, 3)) {
-            markDirty();
+    if (ImGui::CollapsingHeader("ui.neural.input"_tr().c_str())) {
+        if (gDraft.placement == 0) {
+            std::string const scaleItems[3] = {
+                "ui.neural.scale100"_tr(),
+                "ui.neural.scale66"_tr(),
+                "ui.neural.scale50"_tr(),
+            };
+            char const* scalePointers[3] = {scaleItems[0].c_str(), scaleItems[1].c_str(), scaleItems[2].c_str()};
+            int const   scaleValues[3]   = {100, 66, 50};
+            if (mappedCombo("ui.neural.scalePercent"_tr().c_str(), &gDraft.inputPercent, scalePointers, scaleValues, 3)) {
+                onDraftEdited();
+            }
+            widgets::hint("ui.neural.scaleHint"_tr().c_str());
+        } else {
+            widgets::hint("ui.neural.scaleAfterHint"_tr().c_str());
         }
-        widgets::hint("ui.neural.scaleHint"_tr().c_str());
-    } else {
-        widgets::hint("ui.neural.scaleAfterHint"_tr().c_str());
-    }
 
-    // Runtime picker (docs/L 3.1): the build in the mod directory that is materialised
-    // next to the game executable at load. Read at load, so it says "restart".
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.neural.model"_tr().c_str());
-    {
+        std::string const depthItems[3] = {
+            "ui.neural.depthFollow"_tr(),
+            "ui.neural.depthNormal"_tr(),
+            "ui.neural.depthInverted"_tr(),
+        };
+        char const* depthPointers[3] = {depthItems[0].c_str(), depthItems[1].c_str(), depthItems[2].c_str()};
+        int const   depthValues[3]   = {-1, 0, 1};
+        if (mappedCombo("ui.neural.depth"_tr().c_str(), &gDraft.depthInverted, depthPointers, depthValues, 3)) onDraftEdited();
+
+        bool autoMvec = gDraft.mvecScale < 0.0f;
+        if (widgets::toggle("ui.neural.autoMv"_tr().c_str(), &autoMvec)) {
+            gDraft.mvecScale = autoMvec ? -1.0f : 0.0f;
+            onDraftEdited();
+        }
+        if (!autoMvec) {
+            if (widgets::slider("ui.neural.mv"_tr().c_str(), &gDraft.mvecScale, 1.0f, 2048.0f, "%.0f")) onDraftEdited();
+        }
+
         std::vector<std::string> items;
         std::vector<std::string> values;
         items.push_back("ui.neural.modelDefault"_tr());
@@ -966,38 +921,27 @@ void drawTabNeural() {
         }
         std::vector<char const*> pointers;
         pointers.reserve(items.size());
-        for (auto const& item : items) {
-            pointers.push_back(item.c_str());
-        }
-        if (widgets::combo(
-                "ui.neural.modelFile"_tr().c_str(),
-                &index,
-                pointers.data(),
-                static_cast<int>(pointers.size())
-            )) {
+        for (auto const& item : items) pointers.push_back(item.c_str());
+        if (widgets::combo("ui.neural.modelFile"_tr().c_str(), &index, pointers.data(), static_cast<int>(pointers.size()))) {
             gDraft.modelFile = values[static_cast<std::size_t>(index)];
-            markDirty();
+            onDraftEdited();
         }
         widgets::hint("ui.neural.modelHint"_tr().c_str());
     }
 
-    ImGui::Spacing();
-    widgets::sectionHeader("ui.neural.ratio"_tr().c_str());
-    if (widgets::slider("ui.neural.white"_tr().c_str(), &gDraft.whitePoint, 0.05f, 4.0f, "%.3f")) markDirty();
-    if (widgets::slider("ui.neural.transfer"_tr().c_str(), &gDraft.transferStrength, 0.0f, 2.0f, "%.2f")) markDirty();
-    if (widgets::slider("ui.neural.colour"_tr().c_str(), &gDraft.colourStrength, 0.0f, 2.0f, "%.2f")) markDirty();
-    if (widgets::slider("ui.neural.maxRatio"_tr().c_str(), &gDraft.maxRatio, 1.0f, 8.0f, "%.2f")) markDirty();
-    // TRP's broad/detail split of NR's change: 1.0 / 1.0 leaves the result unchanged.
-    if (widgets::slider("ui.neural.broad"_tr().c_str(), &gDraft.broad, 0.0f, 2.0f, "%.2f")) markDirty();
-    if (widgets::slider("ui.neural.detail"_tr().c_str(), &gDraft.detail, 0.0f, 2.0f, "%.2f")) markDirty();
-    widgets::hint("ui.neural.toneHint"_tr().c_str());
-
-    // Adaptive exposure (docs/L 3.2): the white point comes from the scene instead of
-    // the constant above. Only Replace=6 normalises against it in the resolve.
-    if (widgets::toggle("ui.neural.adaptiveExposure"_tr().c_str(), &gDraft.adaptiveExposure)) markDirty();
-    if (gDraft.adaptiveExposure) {
-        if (widgets::slider("ui.neural.exposureBias"_tr().c_str(), &gDraft.exposureBias, -2.0f, 2.0f, "%+.2f", "EV")) {
-            markDirty();
+    if (ImGui::CollapsingHeader("ui.neural.ratio"_tr().c_str())) {
+        if (widgets::slider("ui.neural.white"_tr().c_str(), &gDraft.whitePoint, 0.05f, 4.0f, "%.3f")) onDraftEdited();
+        if (widgets::slider("ui.neural.transfer"_tr().c_str(), &gDraft.transferStrength, 0.0f, 2.0f, "%.2f")) onDraftEdited();
+        if (widgets::slider("ui.neural.colour"_tr().c_str(), &gDraft.colourStrength, 0.0f, 2.0f, "%.2f")) onDraftEdited();
+        if (widgets::slider("ui.neural.maxRatio"_tr().c_str(), &gDraft.maxRatio, 1.0f, 8.0f, "%.2f")) onDraftEdited();
+        if (widgets::slider("ui.neural.broad"_tr().c_str(), &gDraft.broad, 0.0f, 2.0f, "%.2f")) onDraftEdited();
+        if (widgets::slider("ui.neural.detail"_tr().c_str(), &gDraft.detail, 0.0f, 2.0f, "%.2f")) onDraftEdited();
+        widgets::hint("ui.neural.toneHint"_tr().c_str());
+        if (widgets::toggle("ui.neural.adaptiveExposure"_tr().c_str(), &gDraft.adaptiveExposure)) onDraftEdited();
+        if (gDraft.adaptiveExposure) {
+            if (widgets::slider("ui.neural.exposureBias"_tr().c_str(), &gDraft.exposureBias, -2.0f, 2.0f, "%+.2f", "EV")) {
+                onDraftEdited();
+            }
         }
     }
 }
@@ -1007,7 +951,7 @@ void drawTabSr(Live const& live) {
     // owns the engine's DLSS feature, the VV path owns ours, and with neither there is
     // nothing to control (docs/specs/ui.md §3). Detection is observation - a settings
     // value cannot tell "TAAU at 100%" from "TAAU running" (EXP-0081). The status comes
-    // from the frame sample, so this page and the left column can never disagree.
+    // from the frame sample, so this page and the overview can never disagree.
     auto const& backend = live.backend;
     // Not `rt`/`vv`: `vv` is a namespace here (`vv::sr`, `vv::dlss`), and a local of
     // that name hides it in this scope.
@@ -1023,12 +967,6 @@ void drawTabSr(Live const& live) {
     // DLSS, so offering them there would be a control with no effect.
     bool const vvMode = vvPath || (!enginePath && (backend.vvConfigured || backend.vvSeen));
 
-    auto const sr     = live.srStats;
-    auto const ps     = live.stats;
-    auto const vvDlss = live.dlss;
-
-    char buffer[128]{};
-
     // The resolution row is deliberately outside the disabled block below: it is the
     // only way back from the state where nothing runs (100% = no upscaler), so it gets
     // its own gate. Everything else is a write into a feature that does not exist
@@ -1038,7 +976,7 @@ void drawTabSr(Live const& live) {
         // The master switch: under VV the engine's upscaler is TAAU, so "enabled" means
         // our DLSS writes TAAU's output and the engine's TAAU draw is skipped.
         if (widgets::toggle("ui.sr.vvEnable"_tr().c_str(), &gDraftSr.vvEnabled)) {
-            markDirty();
+            onDraftEdited();
         }
         ImGui::Spacing();
         // VV: the render thread writes UpscalingData.factor before the camera build
@@ -1067,7 +1005,7 @@ void drawTabSr(Live const& live) {
             ImGui::BeginDisabled();
         }
         if (mappedCombo("ui.sr.scale"_tr().c_str(), &gDraftSr.vvPercent, vvPointers, vvValues, 6)) {
-            markDirty();
+            onDraftEdited();
         }
         if (!ratioEditable) {
             ImGui::EndDisabled();
@@ -1097,30 +1035,13 @@ void drawTabSr(Live const& live) {
             ImGui::BeginDisabled();
         }
         if (mappedCombo("ui.sr.scale"_tr().c_str(), &gDraftSr.scalePercent, scalePointers, scaleValues, 6)) {
-            markDirty();
+            onDraftEdited();
         }
         if (!any) {
             ImGui::EndDisabled();
         }
         widgets::hint("ui.sr.scaleHint"_tr().c_str());
     }
-    // What the write actually produced: scene render rect -> upscale target, with the
-    // ratio those two imply. This is the pair that proves the override landed, so it
-    // sits under the control that moves it.
-    if (backend.renderWidth != 0 && backend.displayWidth != 0) {
-        std::snprintf(
-            buffer,
-            sizeof(buffer),
-            "%u x %u → %u x %u（%s）",
-            backend.renderWidth,
-            backend.renderHeight,
-            backend.displayWidth,
-            backend.displayHeight,
-            ratioName(backend.renderWidth, backend.displayWidth).c_str()
-        );
-        widgets::statRow("ui.sr.currentSize"_tr().c_str(), buffer);
-    }
-
     if (!any) {
         ImGui::BeginDisabled();
     }
@@ -1147,42 +1068,19 @@ void drawTabSr(Live const& live) {
     };
     int const modelValues[7] = {0, 5, 6, 10, 11, 12, 13};
     if (mappedCombo("ui.sr.model"_tr().c_str(), &gDraftSr.preset, modelPointers, modelValues, 7)) {
-        markDirty();
+        onDraftEdited();
     }
     widgets::hint("ui.sr.modelHint"_tr().c_str());
-    {
-        // The read-back differs per backend: the engine's parameter object on RT, our own
-        // feature's CreateFeature value on VV (VvDlssSr.h stores it for exactly this).
-        std::string preset;
-        if (vvPath) {
-            preset = vvDlss.ready ? presetName(static_cast<unsigned>(vvDlss.preset)) : "ui.sr.rebuilding"_tr();
-        } else {
-            preset = sr.rebuilding ? "ui.sr.rebuilding"_tr() : presetName(sr.preset);
-        }
-        bool const dim = (vvPath && !vvDlss.ready) || (enginePath && sr.rebuilding);
-        widgets::statRow("ui.sr.preset"_tr().c_str(), preset.c_str(), dim ? kTextDim : 0);
-    }
 
     ImGui::Spacing();
     widgets::sectionHeader("ui.sr.jitterSection"_tr().c_str());
     {
-        // The sub-pixel offset handed to DLSS. Default Zero: the world frame is not
-        // rendered with the TAA context's offset, so feeding it shifted the input every
-        // frame (a visible wobble, EXP-0098). Engine follows the engine's current frame
-        // - the A/B described in research/2026-10-29-taau-jitter-dlss-contract.md.
+        // Only our own DLSS has a selectable offset; the ray-traced path is engine-owned.
+        // All four sources are normal choices. Zero is best with K and Engine is best with
+        // M; the best source for other preset combinations is not yet known.
         //
-        // Only our own DLSS has an offset we can choose; on the ray-traced path the
-        // engine feeds its feature, so the control is greyed out there instead of
-        // pretending to do something (2026-10-29 review).
-        //
-        // Staged like every other control: the combo only moves the draft, and
-        // applyDraft() is what writes vv::sr. It has no config entry, so Apply affects
-        // this run and "Save as default" does not carry it over.
-        //
-        // All four sources are offered again (2026-10-29): Zero is the shipping default,
-        // Engine is the A/B, Negated/Previous are the discriminators from
-        // research/2026-10-29-taau-jitter-dlss-contract.md §7 - the tip says so, because
-        // neither is a better picture.
+        // The combo edits the draft. Apply affects this run; Save as default does not
+        // persist jitter because it has no config entry.
         std::string const jitterItems[4] = {
             "ui.sr.jitterZero"_tr(),
             "ui.sr.jitterEngine"_tr(),
@@ -1203,7 +1101,7 @@ void drawTabSr(Live const& live) {
         };
         if (!vvMode) ImGui::BeginDisabled();
         if (mappedCombo("ui.sr.jitterSource"_tr().c_str(), &gDraftJitter, jitterPointers, jitterValues, 4)) {
-            markDirty();
+            onDraftEdited();
         }
         widgets::tip("ui.sr.jitterTip"_tr().c_str());
         if (!vvMode) ImGui::EndDisabled();
@@ -1223,30 +1121,20 @@ void drawTabSr(Live const& live) {
     {
         auto const sharp = neurodragon::sr::sharpStats();
         if (widgets::toggle("ui.sr.sharpEnable"_tr().c_str(), &gDraftSr.sharpening)) {
-            markDirty();
+            onDraftEdited();
         }
         if (!gDraftSr.sharpening) {
             ImGui::BeginDisabled();
         }
         if (widgets::slider("ui.sr.sharpStrength"_tr().c_str(), &gDraftSr.sharpness, 0.0f, 1.0f, "%.3f")) {
-            markDirty();
+            onDraftEdited();
         }
         if (!gDraftSr.sharpening) {
             ImGui::EndDisabled();
         }
         widgets::hint(enginePath ? "ui.sr.sharpHint"_tr().c_str() : "ui.sr.sharpHintVv"_tr().c_str());
 
-        // Read-back (docs/L §0.7): what the render thread actually recorded, not
-        // what the draft says. Its GPU time reads in the same white as every other
-        // timing in the panel.
-        if (sharp.enabled && sharp.strength > 0.0f) {
-            if (ps.hasRcas) {
-                std::snprintf(buffer, sizeof(buffer), "%.3f ms", ps.rcasMs);
-                widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), buffer);
-            } else {
-                widgets::statRow("ui.sr.sharpGpu"_tr().c_str(), "ui.stats.noSamples"_tr().c_str(), kTextDim);
-            }
-        } else {
+        if (!sharp.enabled || sharp.strength <= 0.0f) {
             widgets::hint(sharp.enabled ? "ui.sr.sharpZeroHint"_tr().c_str() : "ui.sr.sharpOffHint"_tr().c_str());
         }
     }
@@ -1267,6 +1155,13 @@ void drawTabSr(Live const& live) {
     if (!any) {
         ImGui::EndDisabled();
     }
+}
+
+void drawTabFrameGeneration() {
+    widgets::sectionHeader("ui.tab.fg"_tr().c_str());
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", "ui.fg.unavailable"_tr().c_str());
+    ImGui::Spacing();
+    widgets::hint("ui.fg.description"_tr().c_str());
 }
 
 void drawTabDiagnostics() {
@@ -1433,7 +1328,7 @@ void drawTabAdvanced() {
 
         if (reset) {
             *row.keys = defaultKeys(row.hotkey);
-            markDirty();
+            onDraftEdited();
 #ifdef TEST
             log::write(3, "[ui] hotkey reset: " + row.label + " -> " + row.keys->display());
 #endif
@@ -1460,7 +1355,7 @@ void drawTabAdvanced() {
             bool const keepsPanelKey = slot == static_cast<int>(Hotkey::Panel) && captured->empty();
             if (!keepsPanelKey && !keys.equals(*captured)) {
                 keys = std::move(*captured);
-                markDirty();
+                onDraftEdited();
             }
         }
         gPendingKeySlot = -1;
@@ -1487,7 +1382,6 @@ void applyDraft(bool persist) {
     config::get().ui.resetKeys      = gDraftResetKeys.keys();
     config::get().ui.screenshotKeys = gDraftScreenshotKeys.keys();
     Overlay::getInstance().refreshKeys();
-    gDirty = false;
 
     // SR jitter is the one staged value without a config entry, so this write *is* its
     // persistence: it reaches the render thread here and survives only this run.
@@ -1509,11 +1403,16 @@ void applyDraft(bool persist) {
     // touched, so "follow the engine" (0) still means the engine's own setting.
 
     if (!persist) {
-        setStatus("ui.footer.applied"_tr());
+        setStatus(hasUnsavedChanges() ? "ui.footer.appliedUnsaved"_tr() : "ui.footer.applied"_tr());
         return;
     }
-    if (config::save()) setStatus("ui.footer.saved"_tr());
-    else setStatus("ui.footer.writeFailed"_tr());
+    if (config::save()) {
+        gSavedConfig            = config::get();
+        gSavedConfigInitialized = true;
+        setStatus("ui.footer.saved"_tr());
+    } else {
+        setStatus("ui.footer.writeFailed"_tr());
+    }
 
     // "Save as default" with NR off is the deliberate "done with it" action: ask the
     // render thread to unload the feature and the 264 MB model. "Apply" deliberately
@@ -1532,53 +1431,53 @@ void drawFooter(Layout const& layout) {
         ImVec2(layout.pos.x + layout.pad, ruleY),
         ImVec2(layout.pos.x + layout.size.x - layout.pad, ruleY),
         kBorderSoft,
-        std::max(1.0f, 1.0f * s)
+        std::max(1.0f, s)
     );
 
-    float const top = ruleY + 14.0f * s;
+    float const top = ruleY + 12.0f * s;
+    bool const  unapplied = hasUnappliedChanges();
+    bool const  unsaved   = hasUnsavedChanges();
+    std::string status    = gStatus;
+    if (status.empty()) {
+        if (unapplied && unsaved) status = "ui.footer.dirtyAndUnsaved"_tr();
+        else if (unapplied) status = "ui.footer.dirty"_tr();
+        else if (unsaved) status = "ui.footer.unsaved"_tr();
+        else status = "ui.footer.clean"_tr();
+    }
+    at(ImVec2(layout.pos.x + layout.pad, top + 8.0f * s));
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(unapplied || unsaved ? kAccent : kTextDim), "%s", status.c_str());
 
-    std::string status = gStatus;
-    if (status.empty()) status = gDirty ? "ui.footer.dirty"_tr() : "ui.footer.clean"_tr();
-
-    at(ImVec2(layout.pos.x + layout.pad, top + 7.0f * s));
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(gDirty ? kAccent : kTextDim), "%s", status.c_str());
-
-    float const      buttonHeight = 28.0f * s;
+    float const      buttonHeight = 32.0f * s;
     std::string const saveLabel   = "ui.footer.saveDefault"_tr();
     float const      buttonWidth  = std::max(96.0f * s, widgets::buttonWidth(saveLabel.c_str()) + 4.0f * s);
-    // The three buttons are one group, so the gap is the panel's normal control
-    // spacing. It was widened while each button carried a `!` marker; the markers are
-    // gone (2026-10-29), and the wider gap then read as three unrelated buttons.
-    float const gap      = 12.0f * s;
-    float const rightX   = layout.pos.x + layout.size.x - layout.pad;
-    float const saveX    = rightX - buttonWidth;
-    float const applyX   = saveX - gap - buttonWidth;
-    float const discardX = applyX - gap - buttonWidth;
+    float const      gap          = 12.0f * s;
+    float const      rightX       = layout.pos.x + layout.size.x - layout.pad;
+    float const      applyX       = rightX - buttonWidth;
+    float const      saveX        = applyX - gap - buttonWidth;
+    float const      discardX     = saveX - gap - buttonWidth;
 
-    // Left to right: discard, apply, save-as-default - the order the panel shipped with.
-    // "Save as default" is the primary (filled) button on the right: it is the one that
-    // writes config/config.json and therefore the strongest promise; "Apply" stays the
-    // outlined secondary even though it is pressed more often. Both behaviours are
-    // unchanged - only the position and the emphasis follow the original design again.
+    bool const actionsDisabled = !unapplied;
+    if (actionsDisabled) ImGui::BeginDisabled();
     at(ImVec2(discardX, top));
     if (menuButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight))) {
         gDraft   = sanitizedNr(config::get().nr);
         gDraftSr = sanitizedSr(config::get().sr);
         reloadKeyDrafts();
         stageJitterDraft();
-        gDirty = false;
         setStatus("ui.footer.discarded"_tr());
     }
+    if (actionsDisabled) ImGui::EndDisabled();
 
-    at(ImVec2(applyX, top));
-    if (menuButton("ui.footer.apply"_tr().c_str(), ImVec2(buttonWidth, buttonHeight))) {
-        applyDraft(false);
-    }
-
+    bool const saveDisabled = !unapplied && !unsaved;
+    if (saveDisabled) ImGui::BeginDisabled();
     at(ImVec2(saveX, top));
-    if (menuButton(saveLabel.c_str(), ImVec2(buttonWidth, buttonHeight), true)) {
-        applyDraft(true);
-    }
+    if (menuButton(saveLabel.c_str(), ImVec2(buttonWidth, buttonHeight))) applyDraft(true);
+    if (saveDisabled) ImGui::EndDisabled();
+
+    if (actionsDisabled) ImGui::BeginDisabled();
+    at(ImVec2(applyX, top));
+    if (menuButton("ui.footer.apply"_tr().c_str(), ImVec2(buttonWidth, buttonHeight), true)) applyDraft(false);
+    if (actionsDisabled) ImGui::EndDisabled();
 }
 
 } // namespace
@@ -1590,19 +1489,19 @@ void render() {
     theme::apply(viewport);
 
     float const s = theme::scale();
-    // Width comes from the two fixed columns (330 + 460 logical) plus the gutter,
-    // not from the viewport.
     ImVec2 const defaultSize{
-        std::min(850.0f * s, viewport.x - 64.0f * s),
+        std::min(980.0f * s, viewport.x - 64.0f * s),
         std::min(700.0f * s, viewport.y - 64.0f * s),
     };
-    ImVec2 const defaultPos{26.0f * s, 26.0f * s};
-    if (gPos.x < 0.0f) gPos = defaultPos;
+    ImVec2 const defaultPos{
+        std::max(26.0f * s, (viewport.x - defaultSize.x) * 0.5f),
+        std::max(26.0f * s, (viewport.y - defaultSize.y) * 0.5f),
+    };
+    if (!gPositionInitialized) {
+        gPos                 = defaultPos;
+        gPositionInitialized = true;
+    }
 
-    // Drag is applied *before* Begin: the window, its background and both child
-    // columns are then all laid out at the same position. Applying it after Begin
-    // (SetWindowPos mid-frame) moved the frame but not the already-positioned
-    // children, which is exactly the "elements lag behind the window" symptom.
     auto const& io   = ImGui::GetIO();
     float const minX = 120.0f * s;
     float const minY = 40.0f * s;
@@ -1621,9 +1520,8 @@ void render() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f * s);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f * s);
 
-    // NoMove: dragging is our own state machine over the title strip only.
     constexpr ImGuiWindowFlags kWindowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
                                             | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings
                                             | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNavFocus
@@ -1636,14 +1534,11 @@ void render() {
         auto const live   = sampleLive();
 
         auto* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kPanel, 6.0f * s);
-        drawList->AddRect(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kBorder, 6.0f * s, 0, std::max(1.0f, s));
+        drawList->AddRectFilled(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kPanel, 10.0f * s);
+        drawList->AddRect(gPos, ImVec2(gPos.x + size.x, gPos.y + size.y), kBorderSoft, 10.0f * s, 0, std::max(1.0f, s));
 
         drawHeader(layout, live);
 
-        // Drag affordance: the title strip, minus anything interactive on it (the
-        // zoom buttons). Checked after the header so IsAnyItemHovered() already
-        // knows about them.
         ImVec2 const stripMax{gPos.x + size.x, gPos.y + layout.pad + layout.headerHeight};
         bool const   overStrip = ImGui::IsMouseHoveringRect(gPos, stripMax) && !ImGui::IsAnyItemHovered();
         if (overStrip && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) gDragging = true;
@@ -1653,59 +1548,66 @@ void render() {
         drawTabs(layout);
 
         float const leftX  = gPos.x + layout.pad;
-        float const rightX = leftX + layout.leftWidth + layout.gutter;
-        float const rightW = gPos.x + size.x - layout.pad - rightX;
-
-        drawList->AddRectFilled(
-            ImVec2(leftX, layout.bodyTop),
-            ImVec2(leftX + layout.leftWidth, layout.bodyTop + layout.bodyHeight),
-            kPanelDeep,
-            4.0f * s
-        );
-
-        float const padding = 14.0f * s;
-
+        float const padding = 16.0f * s;
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
-        at(ImVec2(leftX, layout.bodyTop));
-        // A borderless child window gets no padding unless asked for, which is why
-        // the columns looked like the text was glued to their edges.
-        if (ImGui::BeginChild(
-                "##statsColumn",
-                ImVec2(layout.leftWidth, layout.bodyHeight),
-                ImGuiChildFlags_AlwaysUseWindowPadding
-            )) {
-            drawStatsColumn(layout, live);
-        }
-        ImGui::EndChild();
 
-        at(ImVec2(rightX, layout.bodyTop));
-        if (ImGui::BeginChild(
-                "##settingsColumn",
-                ImVec2(rightW, layout.bodyHeight),
-                ImGuiChildFlags_AlwaysUseWindowPadding
-            )) {
-            // The two columns are different things, and the panel says so: the left one
-            // reads the renderer, this one stages changes for it.
-            columnCaption("ui.controls.header"_tr().c_str());
-            widgets::hint("ui.controls.hint"_tr().c_str());
-            ImGui::Spacing();
+        if (gActiveTab == 0) {
+            float const rightX = leftX + layout.leftWidth + layout.gutter;
+            float const rightW = gPos.x + size.x - layout.pad - rightX;
+            float const ruleX  = rightX - layout.gutter * 0.5f;
+            drawList->AddLine(
+                ImVec2(ruleX, layout.bodyTop + padding),
+                ImVec2(ruleX, layout.bodyTop + layout.bodyHeight - padding),
+                kBorderSoft,
+                std::max(1.0f, s)
+            );
 
-            switch (gActiveTab) {
-            case 0:
-                drawTabNeural();
-                break;
-            case 1:
-                drawTabSr(live);
-                break;
-            case 2:
-                drawTabDiagnostics();
-                break;
-            default:
-                drawTabAdvanced();
-                break;
+            at(ImVec2(leftX, layout.bodyTop));
+            if (ImGui::BeginChild(
+                    "##performanceColumn",
+                    ImVec2(layout.leftWidth, layout.bodyHeight),
+                    ImGuiChildFlags_AlwaysUseWindowPadding
+                )) {
+                drawPerformanceColumn(layout, live);
             }
+            ImGui::EndChild();
+
+            at(ImVec2(rightX, layout.bodyTop));
+            if (ImGui::BeginChild(
+                    "##liveColumn",
+                    ImVec2(rightW, layout.bodyHeight),
+                    ImGuiChildFlags_AlwaysUseWindowPadding
+                )) {
+                drawLiveColumn(live);
+            }
+            ImGui::EndChild();
+        } else {
+            at(ImVec2(leftX, layout.bodyTop));
+            if (ImGui::BeginChild(
+                    "##pageColumn",
+                    ImVec2(size.x - layout.pad * 2.0f, layout.bodyHeight),
+                    ImGuiChildFlags_AlwaysUseWindowPadding
+                )) {
+                switch (gActiveTab) {
+                case 1:
+                    drawTabNeural();
+                    break;
+                case 2:
+                    drawTabSr(live);
+                    break;
+                case 3:
+                    drawTabFrameGeneration();
+                    break;
+                case 4:
+                    drawTabDiagnostics();
+                    break;
+                default:
+                    drawTabAdvanced();
+                    break;
+                }
+            }
+            ImGui::EndChild();
         }
-        ImGui::EndChild();
         ImGui::PopStyleVar();
 
         drawFooter(layout);
@@ -1715,36 +1617,27 @@ void render() {
 }
 
 void onOpened() {
-    // Start from what is running right now. Nothing is read from disk here: the
-    // file is an import at load, and the panel is a staging area over the live
-    // values. Jitter has no config entry to import, so its running value is the only
-    // source.
+    // The saved baseline survives reopening: applied-but-unsaved changes must not become
+    // the new baseline merely because the panel was closed and opened again.
+    if (!gSavedConfigInitialized) {
+        gSavedConfig            = config::get();
+        gSavedConfigInitialized = true;
+    }
     gDraft   = sanitizedNr(config::get().nr);
     gDraftSr = sanitizedSr(config::get().sr);
     stageJitterDraft();
     reloadKeyDrafts();
     gModelFiles = utils::listNrModelFiles();
-    gDirty      = false;
     gStatus.clear();
 
-    // The pipeline strip shows the current NR/SR order immediately; the swap animation is
-    // for changes made while the panel is open.
     gSwapPrimed = false;
-
-    // Counters are re-primed so "growth since the panel was opened" starts at zero
-    // instead of inheriting the previous session's numbers.
-    gNrEvals = CounterWatch{};
-    gSrEvals = CounterWatch{};
+    gNrEvals    = CounterWatch{};
+    gSrEvals    = CounterWatch{};
 }
 
 void onClosed() {
-    // Unapplied edits die with the panel - same contract as the reference UI:
-    // Apply is the only way a change reaches the renderer.
     gDragging = false;
-    if (gDirty) {
-        gDirty = false;
-        Overlay::getInstance().notify("ui.footer.discarded"_tr());
-    }
+    if (hasUnappliedChanges()) Overlay::getInstance().notify("ui.footer.discarded"_tr());
 }
 
 } // namespace neurodragon::ui::menu

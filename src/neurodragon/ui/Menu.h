@@ -6,8 +6,7 @@ namespace neurodragon::ui::menu {
 // ImGui::NewFrame() and after theme::apply().
 void render();
 
-// Lifecycle hooks from the overlay: opening takes a fresh disk read (so the panel
-// starts from what is actually saved), closing writes changes back.
+// Opening stages the current running values; closing discards unapplied edits.
 void onOpened();
 void onClosed();
 

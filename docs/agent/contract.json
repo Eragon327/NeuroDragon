@@ -1,37 +1,40 @@
 {
-  "goal": "完善面板交互：滑条数字编辑、NR/SR位置交换动画、四档jitter与指定性能/测试tips",
+  "goal": "重构现代化渲染面板：统一视觉层级与控件布局，精简信息并预留 FG",
   "criteria": [
     {
-      "id": "UI4-S2",
+      "id": "UI5-S2",
       "stage": 2,
       "kind": "stage",
-      "text": "flow.py verify、TEST 构建与 release 构建通过，字图集同步"
+      "text": "flow.py verify、TEST 构建与 release 构建通过，中英文字集同步"
     },
     {
-      "id": "UI4-F1",
+      "id": "UI5-F1",
       "stage": 6,
       "kind": "final",
-      "text": "滑条数字可点击编辑，提交时完整解析并 clamp；非法数字、NaN/Inf 与 Escape 回滚到编辑前数值，拖动行为不变"
+      "text": "面板形成明确字体、表面和状态层级；设置采用一致的同行控件布局，无修改时操作按钮正确禁用，应用为主要操作"
     },
     {
-      "id": "UI4-F2",
+      "id": "UI5-F2",
       "stage": 6,
       "kind": "final",
-      "text": "实际 NR placement 改变时顶部 NR/SR 节点相向滑动交换顺序，初次显示不播动画，回退也按实际 before"
+      "text": "保留 NR/SR 实际位置交换动画、暂存/应用/保存语义、热键和全部现有可调功能，不以视觉重构改变渲染行为"
     },
     {
-      "id": "UI4-F3",
+      "id": "UI5-F3",
       "stage": 6,
       "kind": "final",
-      "text": "jitter 提供0、j(n)、-j(n)、j(n-1)并保留暂存语义；仅jitter、NR开关和NR位置显示指定橙色tips，提示测试/性能风险且组件横向显示"
+      "text": "管线与页面模型预留 FG 阶段和独立页面位置，未实现前不展示伪造的 FG 状态或可用控件"
+    },
+    {
+      "id": "UI5-F4",
+      "stage": 6,
+      "kind": "final",
+      "text": "概览集中显示实时监控，设置页减少重复读数；普通与高级参数分层，说明文字不再替代核心状态"
     }
   ],
   "out_of_scope": [
-    "改变默认jitter=0及暂存/保存语义",
-    "改变实际NR placement算法",
-    "新增其他tips",
-    "提交或部署"
+    "改变渲染/NR/SR功能与配置语义|实现FG功能|部署|实机实验"
   ],
   "stage": 6,
-  "updated": "2026-10-29T23:42:15.290+08:00"
+  "updated": "2026-10-30T20:29:43.249+08:00"
 }

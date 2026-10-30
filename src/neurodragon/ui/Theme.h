@@ -21,21 +21,20 @@ struct UiMetrics {
 
 namespace neurodragon::ui::theme {
 
-// Palette lifted from the reference panel (Theo's Render Pipeline): near-black
-// neutral panels, one warm orange accent, everything else grey.
+// Neutral blue-grey surfaces; amber is reserved for selection, edits and actions.
 constexpr ImU32 kAccent      = IM_COL32(240, 163, 60, 255);
 constexpr ImU32 kAccentSoft  = IM_COL32(240, 163, 60, 70);
-constexpr ImU32 kAccentText  = IM_COL32(28, 24, 18, 255); // text drawn on the accent
-constexpr ImU32 kPanel       = IM_COL32(33, 34, 36, 250);
-constexpr ImU32 kPanelDeep   = IM_COL32(24, 25, 27, 252);
-constexpr ImU32 kPanelRaised = IM_COL32(42, 43, 46, 255);
-constexpr ImU32 kFrame       = IM_COL32(46, 47, 50, 255);
-constexpr ImU32 kFrameHover  = IM_COL32(56, 57, 61, 255);
-constexpr ImU32 kBorder      = IM_COL32(60, 61, 64, 255);
-constexpr ImU32 kBorderSoft  = IM_COL32(48, 49, 52, 255);
-constexpr ImU32 kText        = IM_COL32(233, 233, 233, 255);
-constexpr ImU32 kTextDim     = IM_COL32(152, 153, 156, 255);
-constexpr ImU32 kTextFaint   = IM_COL32(110, 111, 114, 255);
+constexpr ImU32 kAccentText  = IM_COL32(28, 24, 18, 255);
+constexpr ImU32 kPanel       = IM_COL32(28, 30, 34, 250);
+constexpr ImU32 kPanelDeep   = IM_COL32(22, 24, 28, 252);
+constexpr ImU32 kPanelRaised = IM_COL32(36, 39, 45, 255);
+constexpr ImU32 kFrame       = IM_COL32(43, 47, 54, 255);
+constexpr ImU32 kFrameHover  = IM_COL32(54, 59, 67, 255);
+constexpr ImU32 kBorder      = IM_COL32(62, 68, 78, 255);
+constexpr ImU32 kBorderSoft  = IM_COL32(43, 47, 54, 255);
+constexpr ImU32 kText        = IM_COL32(235, 237, 240, 255);
+constexpr ImU32 kTextDim     = IM_COL32(164, 169, 177, 255);
+constexpr ImU32 kTextFaint   = IM_COL32(120, 126, 136, 255);
 constexpr ImU32 kGreen       = IM_COL32(95, 198, 110, 255);
 constexpr ImU32 kAmber       = IM_COL32(224, 163, 60, 255);
 constexpr ImU32 kRed         = IM_COL32(217, 96, 96, 255);
@@ -55,9 +54,10 @@ void apply(ImVec2 viewport);
 [[nodiscard]] float userScale();
 void                setUserScale(float value);
 
-// Larger face for the panel title / tab labels; may be null when no system font
-// could be loaded, so callers must fall back to the default font.
+// Larger title and medium section faces; either may be null when the system font
+// is unavailable, so callers must fall back to the default font.
 [[nodiscard]] ImFont* titleFont();
+[[nodiscard]] ImFont* sectionFont();
 
 // Drop the cached base style (call before destroying the ImGui context).
 void reset();

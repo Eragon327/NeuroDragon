@@ -40,15 +40,12 @@ float lineHeight() { return ImGui::GetTextLineHeight(); }
 
 float scaled(float value) { return value * theme::scale(); }
 
-// Rows stop growing at this width even when the column is wider: a slider that
-// spans a whole 1440p panel is impossible to aim at.
-float rowLimit() { return scaled(440.0f); }
+float rowLimit() { return scaled(720.0f); }
 
-// Button and marker metrics, logical units like every other size in this file.
-constexpr float kButtonPadX     = 12.0f;  // horizontal padding of an auto-width button
-constexpr float kButtonPadY     = 6.0f;   // vertical padding; one line + 2x this is the default height
-constexpr float kButtonInsetX   = 2.0f;   // padding of an explicitly sized button: clip inset only
-constexpr float kButtonRounding = 4.0f;   // same radius as the panel's boxes and frames
+constexpr float kButtonPadX     = 14.0f;
+constexpr float kButtonPadY     = 7.0f;
+constexpr float kButtonInsetX   = 2.0f;
+constexpr float kButtonRounding = 6.0f;
 constexpr float kTipGap         = 6.0f;   // space between an element and its "!" marker
 constexpr float kTipMinSize     = 14.0f;  // hit box of the marker when the line is shorter
 constexpr float kTipWrap        = 280.0f; // text width of the hint box; the box adds kTipPadX on both sides
@@ -57,13 +54,6 @@ constexpr float kTipPadY        = 8.0f;
 constexpr float kTipMargin      = 4.0f;  // least distance between the hint box and the display edge
 constexpr float kTipOffsetX     = 12.0f; // the box sits this far right of the cursor ...
 constexpr float kTipOffsetY     = 16.0f; // ... and this far below it
-constexpr float kValueEditPadX  = 4.0f;  // padding of the number box the value text turns into
-constexpr float kValueEditMinW  = 28.0f; // narrowest number box, so a single digit stays clickable
-constexpr float kValueNudgeY    = 1.0f;
-// Extra drop for a slider's number, on top of the line's text base offset (FramePadding.y).
-// 0 puts the number exactly on the label's baseline; positive pushes it down, in logical
-// units, and it moves the number, its hit box and the number box together - they are one
-// placement, so tuning them separately would only let them drift apart again.
 
 // The one open number box. ImGui can focus a single text field, so one slot serves
 // every slider instead of a per-widget map; `id` is 0 when nothing is being edited.
@@ -160,9 +150,9 @@ void labelRow(std::string_view label) {
 }
 
 void sectionHeader(char const* label) {
-    ImGui::PushStyleColor(ImGuiCol_Text, toColor(kTextDim));
-    ImGui::SeparatorText(label);
-    ImGui::PopStyleColor();
+    ImGui::PushFont(theme::sectionFont());
+    ImGui::TextColored(toColor(kText), "%s", label);
+    ImGui::PopFont();
 }
 
 void statRow(char const* label, char const* value, ImU32 valueColor) {
@@ -181,52 +171,51 @@ void statRow(char const* label, char const* value, ImU32 valueColor) {
 }
 
 void hint(char const* value) {
+    float const wrap = ImGui::GetCursorPosX() + std::min(ImGui::GetContentRegionAvail().x, rowLimit());
+    ImGui::PushTextWrapPos(wrap);
     ImGui::PushStyleColor(ImGuiCol_Text, toColor(kTextFaint));
     ImGui::TextWrapped("%s", value);
     ImGui::PopStyleColor();
+    ImGui::PopTextWrapPos();
 }
 
 bool toggle(char const* label, bool* value) {
-    auto const s = theme::scale();
+    if (!value) return false;
 
     ImGui::PushID(label);
-    float const box       = scaled(17.0f);
-    float const gap       = scaled(9.0f);
-    auto const  labelSize = ImGui::CalcTextSize(label);
-    float const rowHeight = std::max(box, lineHeight());
-
-    ImVec2 const pos = ImGui::GetCursorScreenPos();
-    ImGui::InvisibleButton("##toggle", ImVec2(box + gap + labelSize.x, rowHeight));
+    beginRow();
+    float const rowHeight = scaled(30.0f);
+    float const width     = gRowRight - gRowLeft;
+    ImVec2 const pos      = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton("##toggle", ImVec2(width, rowHeight));
 
     bool changed = false;
     if (ImGui::IsItemClicked()) {
         *value  = !*value;
         changed = true;
     }
-    if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+    bool const hovered = ImGui::IsItemHovered();
+    if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
-    auto*        drawList = ImGui::GetWindowDrawList();
-    float const  centerY  = pos.y + rowHeight * 0.5f;
-    ImVec2 const boxMin{pos.x, centerY - box * 0.5f};
-    ImVec2 const boxMax{pos.x + box, centerY + box * 0.5f};
+    auto*       drawList = ImGui::GetWindowDrawList();
+    float const switchW  = scaled(38.0f);
+    float const switchH  = scaled(20.0f);
+    float const centerY  = pos.y + rowHeight * 0.5f;
+    ImVec2 const boxMin{pos.x + width - switchW, centerY - switchH * 0.5f};
+    ImVec2 const boxMax{pos.x + width, centerY + switchH * 0.5f};
+    ImU32 const background = *value ? kAccent : (hovered ? kFrameHover : kFrame);
+    drawList->AddRectFilled(boxMin, boxMax, background, switchH * 0.5f);
 
-    if (*value) {
-        drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(toColor(kAccent)), scaled(3.0f));
-        // Hand-drawn tick: ImGui::RenderCheckMark lives in imgui_internal.h, and the
-        // panel has no reason to depend on internal headers.
-        float const  stroke = std::max(1.5f, s * 2.0f);
-        ImVec2 const a{boxMin.x + box * 0.26f, boxMin.y + box * 0.52f};
-        ImVec2 const b{boxMin.x + box * 0.44f, boxMin.y + box * 0.72f};
-        ImVec2 const c{boxMin.x + box * 0.76f, boxMin.y + box * 0.28f};
-        auto const   tick = ImGui::GetColorU32(toColor(kAccentText));
-        drawList->AddLine(a, b, tick, stroke);
-        drawList->AddLine(b, c, tick, stroke);
-    } else {
-        drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(toColor(kFrame)), scaled(3.0f));
-        drawList->AddRect(boxMin, boxMax, ImGui::GetColorU32(toColor(kBorder)), scaled(3.0f), 0, std::max(1.0f, s));
-    }
+    float const radius = scaled(7.0f);
+    float const knobX  = *value ? boxMax.x - radius - scaled(3.0f) : boxMin.x + radius + scaled(3.0f);
+    drawList->AddCircleFilled(ImVec2(knobX, centerY), radius, *value ? kAccentText : kTextDim);
 
-    drawList->AddText(ImVec2(boxMax.x + gap, centerY - lineHeight() * 0.5f), ImGui::GetColorU32(toColor(kText)), label);
+    auto const labelText = ellipsize(label, width - switchW - scaled(16.0f));
+    drawList->AddText(
+        ImVec2(pos.x, centerY - lineHeight() * 0.5f),
+        ImGui::GetColorU32(toColor(kText)),
+        labelText.c_str()
+    );
 
     ImGui::PopID();
     return changed;
@@ -243,28 +232,13 @@ bool slider(
 ) {
     if (!value) return false;
 
-    auto const s = theme::scale();
-
-    // A Text() line is drawn at CursorPos.y + CurrLineTextBaseOffset, and beginRow's
-    // AlignTextToFramePadding put FramePadding.y into that offset (SameLine() then carried
-    // it over from the label). DrawList::AddText() and item rects only ever see CursorPos,
-    // so the number has to be dropped by exactly this much to land on the label's baseline
-    // instead of one frame padding above it. kValueNudgeY is the by-eye correction on top.
-    float const textBase = ImGui::GetStyle().FramePadding.y + scaled(kValueNudgeY);
-
     ImGui::PushID(label);
     ImGuiID const valueId = ImGui::GetID("##valueBox");
-
-    // The box survives across frames - that is where the focus and the typed text live -
-    // so a slot whose owner stopped being drawn (tab switched, panel closed) is dropped
-    // instead of resuming when the row comes back. Two frames of slack cover a row that
-    // is skipped for one frame (a tab transition).
     if (gValueEdit.id != 0 && ImGui::GetFrameCount() - gValueEdit.lastFrame > 2) gValueEdit = ValueEdit{};
-    bool const editing = (gValueEdit.id == valueId);
+    bool const editing = gValueEdit.id == valueId;
 
     char buffer[64]{};
     std::snprintf(buffer, sizeof(buffer), format, static_cast<double>(*value));
-
     std::string shown = buffer;
     if (suffix && *suffix) {
         shown += ' ';
@@ -272,109 +246,101 @@ bool slider(
     }
 
     beginRow();
-    ImGui::TextColored(toColor(enabled ? kTextDim : kTextFaint), "%s", label);
+    float const totalWidth = gRowRight - gRowLeft;
+    float const rowHeight  = scaled(30.0f);
+    float const gap        = scaled(16.0f);
+    float const valueWidth = std::max(scaled(64.0f), ImGui::CalcTextSize(shown.c_str()).x + scaled(20.0f));
+    bool const  stacked    = totalWidth < scaled(480.0f);
+    float const labelWidth = stacked ? totalWidth - valueWidth - gap
+                                     : std::clamp(totalWidth * 0.26f, scaled(130.0f), scaled(180.0f));
+    float const trackWidth = stacked ? totalWidth : std::max(scaled(64.0f), totalWidth - labelWidth - valueWidth - gap * 2.0f);
+    auto const  labelText  = ellipsize(label, std::max(scaled(48.0f), labelWidth));
+    bool        changed    = false;
 
-    auto const valueWidth = ImGui::CalcTextSize(shown.c_str()).x;
-    bool       changed    = false;
-
-    ImGui::SameLine();
-    if (!editing) {
-        ImGui::SetCursorPosX(gRowRight - valueWidth);
-        if (!enabled) {
-            ImGui::TextColored(toColor(kTextFaint), "%s", shown.c_str());
-        } else {
-            // The number is a plain text line, but it is also the handle that opens the
-            // box: an invisible button the size of the glyphs with the text drawn into
-            // it, so the hit box and the glyphs cannot drift apart. Both are dropped onto
-            // the label's baseline (textBase) and the cursor is put back afterwards, so a
-            // row with an editable number is no taller than one without.
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + textBase);
-            ImVec2 const valuePos = ImGui::GetCursorScreenPos();
-            ImGui::InvisibleButton("##valueHit", ImVec2(std::max(valueWidth, scaled(10.0f)), lineHeight()));
-            bool const hovered = ImGui::IsItemHovered();
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() - textBase);
-            if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-            auto* drawList = ImGui::GetWindowDrawList();
-            drawList->AddText(valuePos, ImGui::GetColorU32(toColor(kText)), shown.c_str());
-            // A hairline under the number while hovered - the only affordance that says
-            // "this can be typed into", drawn in the palette's existing border grey.
-            if (hovered) {
-                float const underlineY = valuePos.y + lineHeight() - 1.0f;
-                drawList->AddLine(
-                    ImVec2(valuePos.x, underlineY),
-                    ImVec2(valuePos.x + valueWidth, underlineY),
-                    ImGui::GetColorU32(toColor(kBorder)),
-                    std::max(1.0f, std::round(s))
-                );
+    auto drawTrack = [&] {
+        ImVec2 const pos = ImGui::GetCursorScreenPos();
+        ImGui::InvisibleButton("##track", ImVec2(trackWidth, rowHeight));
+        if (enabled && ImGui::IsItemActive()) {
+            float const relative = std::clamp((ImGui::GetIO().MousePos.x - pos.x) / std::max(1.0f, trackWidth), 0.0f, 1.0f);
+            float const next     = min + relative * (max - min);
+            if (std::abs(next - *value) > 1e-6f) {
+                *value  = next;
+                changed = true;
             }
+        }
+        bool const active = enabled && ImGui::IsItemActive();
+        if (enabled && ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
-            if (ImGui::IsItemClicked()) {
-                // The box is drawn on the next frame, not this one: submitting it here
-                // would put a second item on the number's line, and ImGui would size the
-                // next line from the box's top instead of from the line's height - the
-                // track would jump for that one frame.
+        auto*       drawList     = ImGui::GetWindowDrawList();
+        float const trackHeight  = scaled(4.0f);
+        float const handleWidth  = scaled(10.0f);
+        float const handleHeight = scaled(18.0f);
+        float const fraction = max > min ? std::clamp((*value - min) / (max - min), 0.0f, 1.0f) : 0.0f;
+        float const centerY  = pos.y + rowHeight * 0.5f;
+        drawList->AddRectFilled(
+            ImVec2(pos.x, centerY - trackHeight * 0.5f),
+            ImVec2(pos.x + trackWidth, centerY + trackHeight * 0.5f),
+            enabled ? kFrame : kBorderSoft,
+            trackHeight * 0.5f
+        );
+        if (fraction > 0.0f) {
+            drawList->AddRectFilled(
+                ImVec2(pos.x, centerY - trackHeight * 0.5f),
+                ImVec2(pos.x + trackWidth * fraction, centerY + trackHeight * 0.5f),
+                enabled ? kAccentSoft : kBorder,
+                trackHeight * 0.5f
+            );
+        }
+        float const handleX = std::clamp(
+            pos.x + trackWidth * fraction,
+            pos.x + handleWidth * 0.5f,
+            pos.x + trackWidth - handleWidth * 0.5f
+        );
+        drawList->AddRectFilled(
+            ImVec2(handleX - handleWidth * 0.5f, centerY - handleHeight * 0.5f),
+            ImVec2(handleX + handleWidth * 0.5f, centerY + handleHeight * 0.5f),
+            enabled ? (active ? kText : kAccent) : kTextFaint,
+            scaled(5.0f)
+        );
+    };
+
+    auto drawValue = [&] {
+        if (!editing) {
+            ImGui::InvisibleButton("##valueHit", ImVec2(valueWidth, rowHeight));
+            bool const hovered = enabled && ImGui::IsItemHovered();
+            if (hovered) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            auto*       drawList = ImGui::GetWindowDrawList();
+            ImVec2 const minPos  = ImGui::GetItemRectMin();
+            ImVec2 const maxPos  = ImGui::GetItemRectMax();
+            drawList->AddRectFilled(minPos, maxPos, hovered ? kFrameHover : kFrame, scaled(6.0f));
+            ImVec2 const textSize = ImGui::CalcTextSize(shown.c_str());
+            drawList->AddText(
+                ImVec2(maxPos.x - scaled(8.0f) - textSize.x, minPos.y + (rowHeight - textSize.y) * 0.5f),
+                enabled ? kText : kTextFaint,
+                shown.c_str()
+            );
+            if (enabled && ImGui::IsItemClicked()) {
                 gValueEdit.id           = valueId;
                 gValueEdit.focusPending = true;
                 gValueEdit.lastFrame    = ImGui::GetFrameCount();
                 std::snprintf(gValueEdit.text, sizeof(gValueEdit.text), "%s", buffer);
             }
+            return;
         }
-    }
 
-    if (editing) {
         gValueEdit.lastFrame = ImGui::GetFrameCount();
-
-        // FramePadding.y = 0 makes the box exactly one text line high, so opening it
-        // does not push the track (or anything below) down for as long as it is open.
-        float const padX = scaled(kValueEditPadX);
-        float const boxW = std::max(valueWidth, scaled(kValueEditMinW)) + 2.0f * padX;
-
-        ImGui::SetCursorPosX(gRowRight - boxW);
-        ImGui::SetNextItemWidth(boxW);
+        ImGui::SetNextItemWidth(valueWidth);
         if (gValueEdit.focusPending) ImGui::SetKeyboardFocusHere();
-
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, 0.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, scaled(3.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, std::max(1.0f, std::round(s)));
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, toColor(kFrame));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, toColor(kFrameHover));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, toColor(kFrameHover));
-        ImGui::PushStyleColor(ImGuiCol_Border, toColor(kBorder));
-        ImGui::PushStyleColor(ImGuiCol_Text, toColor(kText));
-
         ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
         if (gValueEdit.focusPending) flags |= ImGuiInputTextFlags_AutoSelectAll;
         gValueEdit.focusPending = false;
-
-        // Escape is read before the box is submitted, so nothing in the widget can have
-        // consumed the key yet. ImGui's own Escape handling reverts the text; this
-        // reverts the value, which is the part ImGui does not know about.
         bool const escapePressed = ImGui::IsKeyPressed(ImGuiKey_Escape, false);
-
-        // The box replaces the number, so it starts on the same baseline (textBase). The
-        // cursor is put back right after it: ItemSize() measures a line from the item's
-        // top, so without that correction the track would drop for as long as the box is
-        // open. The box therefore must not share its line with the number's hit box -
-        // hence it opens on the frame after the click (see the click branch above).
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + textBase);
-
         bool const enter = ImGui::InputText("##valueEdit", gValueEdit.text, sizeof(gValueEdit.text), flags);
-
         bool const edited      = ImGui::IsItemDeactivatedAfterEdit();
         bool const deactivated = ImGui::IsItemDeactivated() || enter;
-
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - textBase);
-
-        ImGui::PopStyleColor(5);
-        ImGui::PopStyleVar(3);
-
-        // Enter on text that still reads exactly like the prefilled number is a no-op:
-        // re-parsing it would only move the value to the rounded display text.
-        bool const submit = edited || (enter && std::strcmp(gValueEdit.text, buffer) != 0);
-
+        bool const submit      = edited || (enter && std::strcmp(gValueEdit.text, buffer) != 0);
         if (escapePressed) {
-            gValueEdit = ValueEdit{}; // discarded; *value never saw the text
+            gValueEdit = ValueEdit{};
         } else if (deactivated) {
             float parsed = 0.0f;
             if (submit && parseNumber(gValueEdit.text, &parsed)) {
@@ -384,60 +350,26 @@ bool slider(
                     changed = true;
                 }
             }
-            gValueEdit = ValueEdit{}; // committed, rolled back, or nothing to commit
+            gValueEdit = ValueEdit{};
         }
+    };
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextColored(toColor(enabled ? kTextDim : kTextFaint), "%s", labelText.c_str());
+    if (stacked) {
+        ImGui::SameLine(0.0f, 0.0f);
+        ImGui::SetCursorPosX(gRowRight - valueWidth);
+        drawValue();
+        ImGui::SetCursorPosX(gRowLeft);
+        drawTrack();
+    } else {
+        ImGui::SameLine(0.0f, 0.0f);
+        ImGui::SetCursorPosX(gRowLeft + labelWidth + gap);
+        drawTrack();
+        ImGui::SameLine(0.0f, 0.0f);
+        ImGui::SetCursorPosX(gRowRight - valueWidth);
+        drawValue();
     }
-
-    float const trackHeight  = scaled(5.0f);
-    float const handleWidth  = scaled(9.0f);
-    float const handleHeight = scaled(17.0f);
-    // The value text above moved the cursor to the far right; the track must start
-    // at the row's left edge and span the whole row.
-    float const width = gRowRight - gRowLeft;
-
-    ImGui::SetCursorPosX(gRowLeft);
-    ImVec2 const pos = ImGui::GetCursorScreenPos();
-    ImGui::InvisibleButton("##track", ImVec2(std::max(width, 1.0f), handleHeight + scaled(4.0f)));
-
-    if (enabled && ImGui::IsItemActive()) {
-        auto const  relative = std::clamp((ImGui::GetIO().MousePos.x - pos.x) / std::max(1.0f, width), 0.0f, 1.0f);
-        float const next     = min + relative * (max - min);
-        if (std::abs(next - *value) > 1e-6f) {
-            *value  = next;
-            changed = true;
-        }
-    }
-    if (enabled && ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-    auto*       drawList = ImGui::GetWindowDrawList();
-    float const fraction = (max > min) ? std::clamp((*value - min) / (max - min), 0.0f, 1.0f) : 0.0f;
-    float const centerY  = pos.y + handleHeight * 0.5f + scaled(2.0f);
-
-    drawList->AddRectFilled(
-        ImVec2(pos.x, centerY - trackHeight * 0.5f),
-        ImVec2(pos.x + width, centerY + trackHeight * 0.5f),
-        ImGui::GetColorU32(toColor(enabled ? kFrame : kBorderSoft)),
-        trackHeight * 0.5f
-    );
-    if (fraction > 0.0f) {
-        drawList->AddRectFilled(
-            ImVec2(pos.x, centerY - trackHeight * 0.5f),
-            ImVec2(pos.x + width * fraction, centerY + trackHeight * 0.5f),
-            ImGui::GetColorU32(toColor(enabled ? kAccentSoft : kBorder)),
-            trackHeight * 0.5f
-        );
-    }
-
-    // The handle is inset by half its width at both ends: at fraction 0 or 1 a
-    // centred handle would stick out of the track and get clipped by the column.
-    float const handleX =
-        std::clamp(pos.x + width * fraction, pos.x + handleWidth * 0.5f, pos.x + width - handleWidth * 0.5f);
-    drawList->AddRectFilled(
-        ImVec2(handleX - handleWidth * 0.5f, centerY - handleHeight * 0.5f),
-        ImVec2(handleX + handleWidth * 0.5f, centerY + handleHeight * 0.5f),
-        ImGui::GetColorU32(toColor(enabled ? (ImGui::IsItemActive() ? kText : kAccent) : kTextFaint)),
-        scaled(3.0f)
-    );
 
     ImGui::PopID();
     return changed;
@@ -460,40 +392,54 @@ bool combo(char const* label, int* current, char const* const* items, int count)
 
     ImGui::PushID(label);
     beginRow();
-    ImGui::TextColored(toColor(kTextDim), "%s", label);
-    ImGui::SetNextItemWidth(gRowRight - gRowLeft);
+    float const totalWidth = gRowRight - gRowLeft;
+    float const labelWidth = std::clamp(totalWidth * 0.26f, scaled(130.0f), scaled(180.0f));
+    auto const  labelText  = ellipsize(label, labelWidth - scaled(12.0f));
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextColored(toColor(kTextDim), "%s", labelText.c_str());
+    ImGui::SameLine(0.0f, 0.0f);
+    ImGui::SetCursorPosX(gRowLeft + labelWidth + scaled(16.0f));
+    ImGui::SetNextItemWidth(std::max(scaled(80.0f), gRowRight - ImGui::GetCursorPosX()));
     bool const changed = ImGui::Combo("##combo", current, items, count);
     ImGui::PopID();
     return changed;
 }
 
 void nodeBox(ImVec2 pos, ImVec2 size, char const* title, char const* line1, char const* line2, bool active) {
-    auto const s        = theme::scale();
-    auto*      drawList = ImGui::GetWindowDrawList();
+    auto* drawList = ImGui::GetWindowDrawList();
 
-    drawList
-        ->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), active ? kPanelRaised : kPanelDeep, scaled(4.0f));
+    drawList->AddRectFilled(
+        pos,
+        ImVec2(pos.x + size.x, pos.y + size.y),
+        active ? kPanelRaised : kPanelDeep,
+        scaled(6.0f)
+    );
     drawList->AddRect(
         pos,
         ImVec2(pos.x + size.x, pos.y + size.y),
-        active ? kAccent : kBorder,
-        scaled(4.0f),
+        active ? kBorder : kBorderSoft,
+        scaled(6.0f),
         0,
-        std::max(1.0f, s)
+        std::max(1.0f, theme::scale())
     );
 
-    float const padX = scaled(10.0f);
-    float       y    = pos.y + scaled(7.0f);
+    int const lineCount = 1 + (line1 && *line1 ? 1 : 0) + (line2 && *line2 ? 1 : 0);
+    float const padX    = scaled(12.0f);
+    float const height  = lineCount * lineHeight() + (lineCount - 1) * scaled(4.0f);
+    float       y       = pos.y + (size.y - height) * 0.5f;
+    float const maxWidth = size.x - padX * 2.0f;
 
-    drawList->AddText(ImVec2(pos.x + padX, y), active ? kText : kTextDim, title);
-    y += lineHeight() + scaled(3.0f);
-
+    auto const titleText = ellipsize(title, maxWidth);
+    drawList->AddText(ImVec2(pos.x + padX, y), active ? kText : kTextDim, titleText.c_str());
+    y += lineHeight() + scaled(4.0f);
     if (line1 && *line1) {
-        drawList->AddText(ImVec2(pos.x + padX, y), active ? kTextDim : kTextFaint, line1);
-        y += lineHeight() + scaled(1.0f);
+        auto const text = ellipsize(line1, maxWidth);
+        drawList->AddText(ImVec2(pos.x + padX, y), active ? kTextDim : kTextFaint, text.c_str());
+        y += lineHeight() + scaled(4.0f);
     }
     if (line2 && *line2) {
-        drawList->AddText(ImVec2(pos.x + padX, y), active ? kTextDim : kTextFaint, line2);
+        auto const text = ellipsize(line2, maxWidth);
+        drawList->AddText(ImVec2(pos.x + padX, y), active ? kTextDim : kTextFaint, text.c_str());
     }
 }
 
