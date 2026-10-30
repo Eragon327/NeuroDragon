@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | 1 | NR 神经渲染 + SR 超分（RT 路线，复用引擎 DLSS） | 🟡 一半 | NR 批 1–4；SR 的 S1–S3 | [nr](specs/nr.md) / [sr](specs/sr.md) / [trp](specs/trp.md) |
 | 2 | NR + SR 接入 VV 管线，替代 TAAU | 🟡 R3 阶段 A–D 与 F1–F3 均已通过（EXP-0058/0061/0062/0063/0065/0067/0068/0070/0073/0074/0076）：draw 级 suppress、旧路径清理、出存档继续 DLSS、同帧无偏色 | M4 → M5 → M6 停在覆盖后缓冲；2026-10-28 改走 **R3**（A 纯色 ✅ → B DLSS ✅ → C 引擎 MV ✅ → D 收口 ✅ → F1–F3 ✅） | [vv](specs/vv.md) §34–§35 |
-| 3 | FG 帧生成 | ⬜ 未开始；2026-10-29 选定 VV + DLSS-G 2x，UI 后 dispatch | F0：swapchain 创建时机与 pre-UI LDR hudless | [fg](specs/fg.md) |
+| 3 | FG 帧生成 | 🟡 **F0 通过**（EXP-0119/0121）：`load()` 早于链创建；hudless = `listCount-3` | F0 ✅ → F1：Streamline 包装链（DLSSG=eOff） | [fg](specs/fg.md) |
 | 4 | RR 光线重建（尝试） | ⬜ 未开始，**可能不可做** | 先答 §5 的决定性问题 | [nr](specs/nr.md) §12 |
 
 ## 2. 阶段 1：NR + SR（用户判定：一半）
@@ -114,15 +114,16 @@ M7/M8 的收尾项挂起，等阶段 D 之后再回来。
 FG dispatch 按用户决定放在全部游戏 UI 合成之后、原始 Present 之前。完整设计、外部代码契约、
 Mac/Windows 点位与 F0–F4 验收见 [specs/fg.md](specs/fg.md)。
 
-开工前的 stop/go 只剩两个前置问题：
+**2026-10-30 F0 通过**（两个 stop/go 都已答）：
 
-1. 模组能否在游戏创建 swapchain 之前装好 factory 钩子；不能事后用 Present/Resize 冒充创建。
-2. Windows 26.51 能否在 P3/P5 取得 tonemap 后、全部 UI 前的最终 LDR hudless；
-   VV 的 `arg10` 是 HDR 中间面，不能代替它。
+1. ✅ factory 钩子装在 `load()`，早于游戏 `CreateDXGIFactory1`（11.07 s vs 14.25 s，EXP-0119）；
+   游戏链 = `CreateSwapChainForHwnd`，flags 无 `ALLOW_TEARING`。
+2. ✅ 不需要 P3/P5 符号：list 级边界 `listCount-3`（世界写入后、UI 前）取得无 HUD 的最终 LDR；
+   splash/toast/头像/快捷栏/准星都在 UI list（N-2）（EXP-0121）。
 
 VV 的 Depth/MV 与 D3D12 注入链已经在阶段 2 打通，不再是未开工项。Streamline 运行时搜索路径、
 交换链包装、输入 fence 和 UI 后 Present 调度按 FG spec 的 F0–F4 顺序验证；每步失败都直通原始 Present，
-不影响已经完成的 SR。
+不影响已经完成的 SR。当前下一步是 **F1：Streamline 包装链（DLSSG=eOff）**。
 
 ### 4.4 明确不碰
 

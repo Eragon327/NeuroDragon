@@ -1744,6 +1744,63 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                 gArg10WriterList.store(nullptr, std::memory_order_release);
             }
             gArg10FreshSubmission.store(fresh, std::memory_order_release);
+#ifdef TEST
+            // F0-b: the shape of the submission's tail. A hudless boundary can only be
+            // a list cut, so the first question is whether the display write and the UI
+            // draws are separate lists. The back-buffer RTV handle is not resolvable
+            // here (the view predates the device hook), so this logs raw handles: the
+            // handle shared by the last lists is the back buffer, and the first list
+            // that carries it is the display pass.
+            {
+                bool const       world = gWorldLoaded.load(std::memory_order_relaxed);
+                static unsigned  menuScans = 0;
+                static unsigned  worldScans = 0;
+                static unsigned  lateScans = 0;
+                static unsigned  worldTicks = 0;
+                if (world) ++worldTicks;
+                char const* tag   = nullptr;
+                unsigned    index = 0;
+                if (!world && menuScans < 6) {
+                    tag   = "m";
+                    index = menuScans++;
+                } else if (world && worldScans < 6) {
+                    tag   = "w";
+                    index = worldScans++;
+                } else if (world && worldTicks >= 120 && lateScans < 6) {
+                    // The frames the hudless probe captures: log their tail so the
+                    // split indices in the BMP names can be read against draw counts.
+                    tag   = "L";
+                    index = lateScans++;
+                }
+                if (tag) {
+                    unsigned const tail = listCount > 12 ? 12 : listCount;
+                    std::string    line;
+                    for (unsigned i = listCount - tail; i < listCount; ++i) {
+                        auto const* sig = sigAt(i);
+                        if (!sig) {
+                            line += fmt::format(" {}:-", i + 1);
+                            continue;
+                        }
+                        line += fmt::format(
+                            " {}:d{}:r{}:h{:x}",
+                            i + 1,
+                            sig->draws,
+                            sig->rtvSeenCount,
+                            sig->rtvSeenCount ? sig->rtvSeen[0] : std::uintptr_t{0}
+                        );
+                    }
+                    ND_DEBUG(
+                        "[fg] hudless scan {}{} world={} lists={} arg10w={} tail={}",
+                        tag,
+                        index,
+                        world ? 1 : 0,
+                        listCount,
+                        gArg10WriterSplit.load(std::memory_order_relaxed),
+                        line
+                    );
+                }
+            }
+#endif
             // The per-frame list table is rebuilt from scratch on every engine
             // submission: lists are pooled by the engine, and a stale entry would make
             // the writer proof match a list that is not in this frame.
@@ -1923,6 +1980,7 @@ bool taaMatrices(float* current, float* previous, float* camera, float* jitter) 
 }
 
 void* gameQueue() { return gGameQueue.load(std::memory_order_relaxed); }
+void* swapChain() { return gSwapChain.load(std::memory_order_relaxed); }
 unsigned renderWidth() { return gRenderWidth.load(std::memory_order_relaxed); }
 unsigned renderHeight() { return gRenderHeight.load(std::memory_order_relaxed); }
 

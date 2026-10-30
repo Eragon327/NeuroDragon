@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/Test.h"
+#include "neurodragon/fg/HudlessProbe.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
 #include "neurodragon/probe/VvInject.h"
@@ -1742,6 +1743,7 @@ HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT fla
     logSwapChainChange(swapChain);
     probe::vv::noteSwapChain(swapChain);
     probe::vv::onPresent();
+    fg::hudless::poll();
     render(swapChain);
     return gOriginalPresent(swapChain, interval, flags);
 }
@@ -1749,6 +1751,7 @@ HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT fla
 HRESULT __stdcall
 present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT_PARAMETERS const* parameters) {
     probe::vv::onPresent();
+    fg::hudless::poll();
     render(static_cast<IDXGISwapChain*>(swapChain));
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
@@ -1873,18 +1876,53 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     // Off by default; prepare() returns 0 and the call below forwards everything
     // unchanged. It also returns 0 for every submission that must not be cut (not the
     // engine's direct queue, no arg10 writer in this frame, fence still busy).
-    unsigned const splitAt = probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
-    if (splitAt != 0 && splitAt <= count) {
-        if (ID3D12CommandList* const ours = static_cast<ID3D12CommandList*>(probe::vv::inject::list())) {
-            // EXP-0015: dropping this list duplicated the menu UI. The 13:36 crash
-            // was in the dependency scanner (nr::describe), not in the drop path;
-            // the pass still carries frame-graph state, so submit it unchanged.
-            gOriginalExecuteCommandLists(queue, splitAt, lists);
-            gOriginalExecuteCommandLists(queue, 1, &ours);
-            if (count > splitAt) {
-                gOriginalExecuteCommandLists(queue, count - splitAt, lists + splitAt);
+    unsigned const injectSplit =
+        probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
+    // F0-b: the hudless copy is a *second* cut (after the display write, before UI), so
+    // it is recorded independently of the arg10 injection. Both lists can be submitted
+    // in one frame: [0..a) inject [a..b) copy [b..end). It declines outside a world.
+    unsigned const copySplit = fg::hudless::prepare(queue, count, reinterpret_cast<void* const*>(lists));
+
+    if ((injectSplit || copySplit) && injectSplit <= count && copySplit <= count) {
+        ID3D12CommandList* const injectList =
+            injectSplit ? static_cast<ID3D12CommandList*>(probe::vv::inject::list()) : nullptr;
+        ID3D12CommandList* const copyList =
+            copySplit ? static_cast<ID3D12CommandList*>(fg::hudless::list()) : nullptr;
+        if ((!injectSplit || injectList) && (!copySplit || copyList)) {
+            if (injectSplit && copySplit && injectSplit != copySplit) {
+                unsigned const     first     = injectSplit < copySplit ? injectSplit : copySplit;
+                unsigned const     second    = injectSplit < copySplit ? copySplit : injectSplit;
+                ID3D12CommandList* firstList = injectSplit < copySplit ? injectList : copyList;
+                ID3D12CommandList* secondList = injectSplit < copySplit ? copyList : injectList;
+                gOriginalExecuteCommandLists(queue, first, lists);
+                gOriginalExecuteCommandLists(queue, 1, &firstList);
+                gOriginalExecuteCommandLists(queue, second - first, lists + first);
+                gOriginalExecuteCommandLists(queue, 1, &secondList);
+                if (count > second) {
+                    gOriginalExecuteCommandLists(queue, count - second, lists + second);
+                }
+            } else if (injectSplit && copySplit) {
+                gOriginalExecuteCommandLists(queue, injectSplit, lists);
+                gOriginalExecuteCommandLists(queue, 1, &injectList);
+                gOriginalExecuteCommandLists(queue, 1, &copyList);
+                if (count > injectSplit) {
+                    gOriginalExecuteCommandLists(queue, count - injectSplit, lists + injectSplit);
+                }
+            } else if (injectSplit) {
+                gOriginalExecuteCommandLists(queue, injectSplit, lists);
+                gOriginalExecuteCommandLists(queue, 1, &injectList);
+                if (count > injectSplit) {
+                    gOriginalExecuteCommandLists(queue, count - injectSplit, lists + injectSplit);
+                }
+            } else {
+                gOriginalExecuteCommandLists(queue, copySplit, lists);
+                gOriginalExecuteCommandLists(queue, 1, &copyList);
+                if (count > copySplit) {
+                    gOriginalExecuteCommandLists(queue, count - copySplit, lists + copySplit);
+                }
             }
-            probe::vv::inject::submitted();
+            if (injectSplit) probe::vv::inject::submitted();
+            if (copySplit) fg::hudless::submitted();
             return;
         }
     }

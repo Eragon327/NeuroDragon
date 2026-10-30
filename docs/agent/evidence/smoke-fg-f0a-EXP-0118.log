@@ -1,0 +1,222 @@
+# agentflow smoke fg-f0a on EXP-0118
+# started 2026-10-30T21:06:14.703+08:00  verdict=FAIL elapsed=90s
+# tree e6b4881c502e2e7b  head fb3210ac
+# dll d9a2d01b7d9a389b
+# profile D:\Documents\NeuroDragon\main\scripts\agentflow\smoke\fg-f0a.json
+# requires=['\\[fg\\] swapchain probe installed', '\\[fg\\] (CreateSwapChainForHwnd|CreateSwapChain) req .*[0-9]{3,4}x[0-9]{3,4}']
+# missing=['\\[fg\\] swapchain probe installed']  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 33265 -> 61711
+[2026-10-30 21:06:25.066 IFO][LeviLamina]                                                                       
+[2026-10-30 21:06:25.066 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-30 21:06:25.066 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-30 21:06:25.066 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-30 21:06:25.066 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-30 21:06:25.066 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-30 21:06:25.066 IFO][LeviLamina]                                                                       
+[2026-10-30 21:06:25.066 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-30 21:06:25.066 IFO][LeviLamina]                                                                       
+[2026-10-30 21:06:25.066 IFO][LeviLamina]                                                                       
+[2026-10-30 21:06:25.066 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-30 21:06:25.066 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-30 21:06:25.079 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-30 21:06:25.080 IFO][LeviLamina] 正在加载模组……
+[2026-10-30 21:06:25.081 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-30 21:06:25.615 DBG][NeuroDragon] NR model already in place, skipping (E:\LeviLauncher\versions\1.26.51.01\nvngx_dlssnr.dll , 254 MB)
+[2026-10-30 21:06:25.615 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-30 21:06:25.615 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-30 21:06:31.792 WRN][Server] <LVL|794074784> Migration started
+[2026-10-30 21:06:31.794 WRN][Server] <LVL|794074784> Migration completed in 0.002000 seconds
+[2026-10-30 21:06:31.915 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=17204.5ms tid=2900 hr=0x00000000 factory=0x2ea38f5e150 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x29082 <- Minecraft.Windows.exe +0xe00f420 <- Minecraft.Windows.exe +0xdf90ef7 <- Minecraft.Windows.exe +0xdfc61ce <- Minecraft.Windows.exe +0xdfc4991
+[2026-10-30 21:06:31.972 DBG][NeuroDragon] [fg] hook IDXGIFactory::CreateSwapChain at 0x7ffa4940f1a0
+[2026-10-30 21:06:32.028 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForHwnd at 0x7ffa49411040
+[2026-10-30 21:06:32.106 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForCoreWindow at 0x7ffa49482c40
+[2026-10-30 21:06:32.224 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForComposition at 0x7ffa49411340
+[2026-10-30 21:06:32.281 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=17571.0ms tid=2900 hr=0x00000000 factory=0x2ea3a373010 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x290f2 <- D3D12Core.dll +0x6116e <- D3D12Core.dll +0x78aac <- D3D12Core.dll +0x6b315 <- D3D12Core.dll +0x6b138
+[2026-10-30 21:06:32.799 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=18088.9ms tid=2900 hr=0x00000000 factory=0x2ea3aca4b90 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x29082 <- NvCamera64.dll +0x1eace1 <- NvCamera64.dll +0x6d762 <- NvCamera64.dll +0x6d071 <- NvCamera64.dll +0x2e4ff
+[2026-10-30 21:06:33.049 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd req t=18338.9ms tid=2900 factory=0x2ea38f5e150 device=0x2ea328354d0 hwnd=0x70f7a 2560x1494 fmt=28 buffers=3 usage=0x20 flags=0x42 effect=3 scaling=0 caller=NeuroDragon.dll +0x2aa90 <- NeuroDragon.dll +0x2a821 <- Minecraft.Windows.exe +0xe00fd69 <- Minecraft.Windows.exe +0xdf939c2 <- Minecraft.Windows.exe +0xdfc61ce <- Minecraft.Windows.exe +0xdfc4991
+[2026-10-30 21:06:33.057 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd done t=18346.9ms hr=0x00000000 chain=0x2eaff81ddc0
+[2026-10-30 21:06:33.102 DBG][NeuroDragon] [fg] first flip t=18391.9ms context=0x2ea4802d040 swapChain=0x2eaff81ddc0
+[2026-10-30 21:06:34.910 WRN][Server] <LVL|68042000> Time played notifier not required for 'zh_CN'
+[2026-10-30 21:06:34.929 IFO][LeviLamina] 正在启用模组……
+[2026-10-30 21:06:34.929 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-30 21:06:34.929 DBG][NeuroDragon] [probe] 模块已 PIN（禁用后仍需重启游戏才能彻底卸载）
+[2026-10-30 21:06:34.929 IFO][NeuroDragon] NR 已启用（config/config.json：nr.enabled = true）
+[2026-10-30 21:06:35.118 DBG][NeuroDragon] [nr] level 监听 join=true exit=true
+[2026-10-30 21:06:35.200 DBG][NeuroDragon] [sr] frame-context hook @ 0x7ff7036553c0
+[2026-10-30 21:06:35.268 DBG][NeuroDragon] [vv] taau hooked at 0x7ff700ddf860 (rva 0xb74f860)
+[2026-10-30 21:06:35.330 DBG][NeuroDragon] [vv] level listeners join=true exit=true tick=true
+[2026-10-30 21:06:35.389 DBG][NeuroDragon] [vv] taau draw hooked at 0x7ff700de2820 (rva 0xb752820)
+[2026-10-30 21:06:35.389 DBG][NeuroDragon] [vv] texture table: layout ok (rva 0xdfa4214 -> global 0x12006060); ctx resolved on first sample
+[2026-10-30 21:06:35.446 DBG][NeuroDragon] [vv] material texture hooked at 0x7ff7036864e0 (rva 0xdff64e0)
+[2026-10-30 21:06:35.508 DBG][NeuroDragon] [vv] D3D12CreateDevice hooked
+[2026-10-30 21:06:35.508 IFO][NeuroDragon] [vv] options: marker './mods/NeuroDragon\config\force_bilinear.flag' present=0 (mod dir './mods/NeuroDragon'), 'E:\LeviLauncher\versions\1.26.51.01\force_bilinear.flag' present=0
+[2026-10-30 21:06:35.655 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-30 21:06:35.658 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=20947.8ms tid=2900 hr=0x00000000 factory=0x2ea1e9f2480 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x290f2 <- D3D12Core.dll +0x6116e <- D3D12Core.dll +0x78aac <- D3D12Core.dll +0x6b315 <- D3D12Core.dll +0x6b138
+[2026-10-30 21:06:35.660 DBG][NeuroDragon] [vv] device created 0x2ea3a631b50
+[2026-10-30 21:06:35.728 DBG][NeuroDragon] [vv] CreateRenderTargetView hooked on device 0x2ea3a631b50 (target 0x7ff98ab04700)
+[2026-10-30 21:06:35.794 DBG][NeuroDragon] [vv] CreateDepthStencilView hooked on device 0x2ea3a631b50 (target 0x7ff98ab11d90)
+[2026-10-30 21:06:35.883 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=21172.2ms tid=2900 hr=0x00000000 factory=0x2ea1e9f3400 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x29082 <- NeuroDragon.dll +0x71f32 <- NeuroDragon.dll +0x2d864 <- NeuroDragon.dll +0x2e54d <- LeviLamina.dll +0xa376c
+[2026-10-30 21:06:35.883 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd req t=21172.2ms tid=2900 factory=0x2ea1e9f3400 device=0x2ec0b11e490 hwnd=0x630f98 8x8 fmt=28 buffers=2 usage=0x20 flags=0x0 effect=4 scaling=0 caller=NeuroDragon.dll +0x2aa90 <- NeuroDragon.dll +0x2a821 <- NeuroDragon.dll +0x71fbd <- NeuroDragon.dll +0x2d864 <- NeuroDragon.dll +0x2e54d <- LeviLamina.dll +0xa376c
+[2026-10-30 21:06:35.887 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd done t=21176.3ms hr=0x00000000 chain=0x2ec0492c680
+[2026-10-30 21:06:36.439 DBG][NeuroDragon] overlay: ready (End opens the panel)
+[2026-10-30 21:06:36.439 IFO][NeuroDragon] 安装游戏内面板：完成，用时 784 ms
+[2026-10-30 21:06:36.439 IFO][LeviLamina] 已在 1.5 秒内启用 1 个模组
+[2026-10-30 21:06:36.485 DBG][NeuroDragon] [vv] taau #1 viewport=2560x1600+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=14 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=0 lists=0
+[2026-10-30 21:06:36.485 DBG][NeuroDragon] [vv] texture table ctx=0x2ea4802d040 (global rva 0x12006060); handle->native is a plain read
+[2026-10-30 21:06:36.487 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x2ea20c289f0 1920x1200 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 21:06:36.488 DBG][NeuroDragon] [vv] chain: now buffers=3 2560x1600 fmt=28 flags=0x42 effect=3 usage=0x20
+[2026-10-30 21:06:36.488 DBG][NeuroDragon] [vv] 3 back buffer(s) excluded from the render-target inventory
+[2026-10-30 21:06:36.488 DBG][NeuroDragon] [vv] presents=1 submits=0 lists=0 maxListsPerSubmit=0 taau=1 draws=1 | submits/frame=0.00 lists/frame=0.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:36.488 DBG][NeuroDragon] [vv] arg10 write armed=1
+[2026-10-30 21:06:36.488 DBG][NeuroDragon] [vv] d-suppress armed=1
+[2026-10-30 21:06:36.488 IFO][NeuroDragon] [vvsr] sr enabled (armed; TAAU runs until the first arg10 frame)
+[2026-10-30 21:06:36.488 DBG][NeuroDragon] [vv] submit #1 tid=29908 lists=1
+[2026-10-30 21:06:36.489 DBG][NeuroDragon] [vv] rtv res=0x2ea20c23d70 2560x1600 fmt=26
+[2026-10-30 21:06:36.489 IFO][NeuroDragon] [sr] ctx call #1 engine=000002EA4802D040 ctx=000002EA3B2D8DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:36.489 IFO][NeuroDragon] [sr] ctx #1 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:36.491 DBG][NeuroDragon] [vv] submit #2 tid=29908 lists=47
+[2026-10-30 21:06:36.491 DBG][NeuroDragon] [vv] engine list vtable=0x7ff98adca830 slot9=D3D12Core.dll+0x232dd0 slot12=D3D12Core.dll+0x234f30 slot13=D3D12Core.dll+0x234c80 slot25=D3D12Core.dll+0x238f50 slot28=D3D12Core.dll+0x238900
+[2026-10-30 21:06:36.491 DBG][NeuroDragon] [vv] engine device 0x2ea3a631b50
+[2026-10-30 21:06:36.491 DBG][NeuroDragon] [vv] device created 0x2ea3a631b50
+[2026-10-30 21:06:36.645 DBG][NeuroDragon] [vv] command list slot 12 (DrawInstanced) hooked
+[2026-10-30 21:06:36.796 DBG][NeuroDragon] [vv] command list slot 13 (DrawIndexedInstanced) hooked
+[2026-10-30 21:06:36.945 DBG][NeuroDragon] [vv] command list slot 46 (OMSetRenderTargets) hooked
+[2026-10-30 21:06:36.945 DBG][NeuroDragon] [vv] inject pipeline ready
+[2026-10-30 21:06:36.945 WRN][NeuroDragon] [vv] inject: arg10 writer not found yet (split=0/47); TAAU runs this frame
+[2026-10-30 21:06:36.945 WRN][NeuroDragon] [vv] inject skipped (1): no arg10 writer in this submission; TAAU restored
+[2026-10-30 21:06:36.946 DBG][NeuroDragon] [vv] taau #2 viewport=2560x1600+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=15 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=2 lists=48
+[2026-10-30 21:06:36.950 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x2ea20c289f0 1920x1200 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 21:06:36.951 DBG][NeuroDragon] [vv] presents=2 submits=2 lists=48 maxListsPerSubmit=47 taau=2 draws=2 | submits/frame=1.00 lists/frame=24.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:36.951 DBG][NeuroDragon] [vv] long frame 463.5 ms at present #2
+[2026-10-30 21:06:36.951 IFO][NeuroDragon] [vv] frame time: avg=463.53 ms min=463.53 max=463.53 over 1 presents
+[2026-10-30 21:06:36.952 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=22241.7ms tid=29908 hr=0x00000000 factory=0x2ea1e9f3400 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x290f2 <- d3d11.dll +0xacdf0 <- d3d11.dll +0xaf476 <- NeuroDragon.dll +0x75cca <- NeuroDragon.dll +0x7514a
+[2026-10-30 21:06:36.969 DBG][NeuroDragon] [vv] rtv res=0x0 0x0 fmt=0
+[2026-10-30 21:06:36.987 DBG][NeuroDragon] overlay: ImGui context created on window 0x70f7a
+[2026-10-30 21:06:37.026 DBG][NeuroDragon] [vv] submit #3 tid=29908 lists=1
+[2026-10-30 21:06:37.026 DBG][NeuroDragon] [vv] submit #4 tid=29908 lists=1
+[2026-10-30 21:06:37.028 DBG][NeuroDragon] [vv] rtv res=0x2ea20c20410 2560x1600 fmt=26
+[2026-10-30 21:06:37.028 IFO][NeuroDragon] [sr] ctx call #2 engine=000002EA4802D040 ctx=000002EA3C159780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.028 IFO][NeuroDragon] [sr] ctx #2 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:37.028 DBG][NeuroDragon] [vv] om rt #1 list=0x2eafe94dda0 count=1 single=1 handle0=0x2ea04e188d0 increment=32
+[2026-10-30 21:06:37.028 DBG][NeuroDragon] [vv] om rt #2 list=0x2eafe94dda0 count=1 single=1 handle0=0x2ea04e188d0 increment=32
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #2 this=0x2eafe956380 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #6 this=0x2eafe955060 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #5 this=0x2eaff44c540 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #4 this=0x2eafe9503e0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #7 this=0x2eaff4511c0 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #3 this=0x2eafe953d40 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #1 this=0x2eafe94ca80 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.030 DBG][NeuroDragon] [vv] slot13 raw #8 this=0x2eaff450830 indices=6 instances=1 startIndex=37 baseVertex=0 startInstance=0
+[2026-10-30 21:06:37.131 DBG][NeuroDragon] [nr] timestamp 频率 1000000000
+[2026-10-30 21:06:37.131 DBG][NeuroDragon] [vv] submit #5 tid=29908 lists=47
+[2026-10-30 21:06:37.140 DBG][NeuroDragon] [vvsr] sr pipeline ready (prep + DLSS -> arg10)
+[2026-10-30 21:06:37.145 DBG][NeuroDragon] [vvsr] sr buffers 1920x1200 -> 2560x1600
+[2026-10-30 21:06:37.145 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1200 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 21:06:37.145 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-30 21:06:37.145 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-30 21:06:37.146 DBG][NeuroDragon] [vv] taau #3 viewport=2560x1600+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=0 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=5 lists=97
+[2026-10-30 21:06:37.147 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x2ea20c289f0 1920x1200 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 21:06:37.148 DBG][NeuroDragon] [vv] presents=3 submits=5 lists=97 maxListsPerSubmit=47 taau=3 draws=3 | submits/frame=1.67 lists/frame=32.33 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.148 DBG][NeuroDragon] [vv] long frame 196.9 ms at present #3
+[2026-10-30 21:06:37.148 IFO][NeuroDragon] [vv] frame time: avg=196.91 ms min=196.91 max=196.91 over 1 presents
+[2026-10-30 21:06:37.148 DBG][NeuroDragon] [vv] submit #6 tid=29908 lists=1
+[2026-10-30 21:06:37.150 IFO][NeuroDragon] [sr] ctx call #3 engine=000002EA4802D040 ctx=000002EA3B2D8DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.150 IFO][NeuroDragon] [sr] ctx #3 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:37.152 DBG][NeuroDragon] [vv] submit #7 tid=29908 lists=48
+[2026-10-30 21:06:37.152 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1200 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 21:06:37.152 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-30 21:06:37.152 WRN][NeuroDragon] [vv] inject skipped (3): recording the injected work failed
+[2026-10-30 21:06:37.160 DBG][NeuroDragon] [vv] taau #4 viewport=2560x1600+0,0 mode=0(Taau) factor=0.7500 dynScale=1.0000 jitter=1 clipping=true mvFilter=false varianceBias=0.750..1.250 minFactor=0.250 targetFps=30.0 pixelScaling=5.000 smoothing=0.300 submits=7 lists=146
+[2026-10-30 21:06:37.162 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x2ea20c289f0 1920x1200 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 21:06:37.163 DBG][NeuroDragon] [vv] presents=4 submits=7 lists=146 maxListsPerSubmit=48 taau=4 draws=4 | submits/frame=1.75 lists/frame=36.50 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.163 IFO][NeuroDragon] [vv] frame time: avg=14.13 ms min=14.13 max=14.13 over 1 presents
+[2026-10-30 21:06:37.163 DBG][NeuroDragon] [vv] submit #8 tid=29908 lists=1
+[2026-10-30 21:06:37.164 IFO][NeuroDragon] [sr] ctx call #4 engine=000002EA4802D040 ctx=000002EA3C159780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.164 IFO][NeuroDragon] [sr] ctx #4 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:37.176 DBG][NeuroDragon] [vv] submit #9 tid=29908 lists=48
+[2026-10-30 21:06:37.176 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1200 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 21:06:37.176 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-30 21:06:37.338 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x2ea20c289f0 1920x1200 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 21:06:37.338 DBG][NeuroDragon] [vv] presents=5 submits=9 lists=195 maxListsPerSubmit=48 taau=5 draws=5 | submits/frame=1.80 lists/frame=39.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.338 DBG][NeuroDragon] [vv] long frame 176.2 ms at present #5
+[2026-10-30 21:06:37.338 IFO][NeuroDragon] [vv] frame time: avg=176.21 ms min=176.21 max=176.21 over 1 presents
+[2026-10-30 21:06:37.338 DBG][NeuroDragon] [vv] submit #10 tid=29908 lists=1
+[2026-10-30 21:06:37.340 IFO][NeuroDragon] [sr] ctx call #5 engine=000002EA4802D040 ctx=000002EA3B2D8DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.340 IFO][NeuroDragon] [sr] ctx #5 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:37.343 DBG][NeuroDragon] [vv] submit #11 tid=29908 lists=48
+[2026-10-30 21:06:37.343 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1200 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 21:06:37.345 DBG][NeuroDragon] [vv] arg11 mv material handle=0x002A native=0x2ea20c289f0 1920x1200 fmt=10 (role=InputBufferMotionVectors)
+[2026-10-30 21:06:37.346 DBG][NeuroDragon] [vv] presents=6 submits=11 lists=244 maxListsPerSubmit=48 taau=6 draws=6 | submits/frame=1.83 lists/frame=40.67 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.346 IFO][NeuroDragon] [vv] frame time: avg=7.49 ms min=7.49 max=7.49 over 1 presents
+[2026-10-30 21:06:37.346 DBG][NeuroDragon] [vv] submit #12 tid=29908 lists=1
+[2026-10-30 21:06:37.347 IFO][NeuroDragon] [sr] ctx call #6 engine=000002EA4802D040 ctx=000002EA3C159780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.356 DBG][NeuroDragon] [vv] submit #13 tid=29908 lists=48
+[2026-10-30 21:06:37.356 DBG][NeuroDragon] [vvsr] sr pick: render=1920x1200 colourTargets=0 fmt26=0 depthTargets=0
+[2026-10-30 21:06:37.358 DBG][NeuroDragon] [vv] presents=7 submits=13 lists=293 maxListsPerSubmit=48 taau=7 draws=7 | submits/frame=1.86 lists/frame=41.86 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.358 IFO][NeuroDragon] [vv] frame time: avg=12.95 ms min=12.95 max=12.95 over 1 presents
+[2026-10-30 21:06:37.358 DBG][NeuroDragon] [vv] submit #14 tid=45988 lists=1
+[2026-10-30 21:06:37.362 IFO][NeuroDragon] [sr] ctx call #7 engine=000002EA4802D040 ctx=000002EA3B2D8DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.364 DBG][NeuroDragon] [vv] submit #15 tid=45988 lists=48
+[2026-10-30 21:06:37.368 DBG][NeuroDragon] [vv] presents=8 submits=15 lists=342 maxListsPerSubmit=48 taau=8 draws=8 | submits/frame=1.88 lists/frame=42.75 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.368 IFO][NeuroDragon] [vv] frame time: avg=8.34 ms min=8.34 max=8.34 over 1 presents
+[2026-10-30 21:06:37.368 DBG][NeuroDragon] [vv] submit #16 tid=29908 lists=1
+[2026-10-30 21:06:37.374 IFO][NeuroDragon] [sr] ctx call #8 engine=000002EA4802D040 ctx=000002EA3C159780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.375 DBG][NeuroDragon] [vv] submit #17 tid=29908 lists=48
+[2026-10-30 21:06:37.380 DBG][NeuroDragon] [vv] presents=9 submits=17 lists=391 maxListsPerSubmit=48 taau=9 draws=9 | submits/frame=1.89 lists/frame=43.44 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.380 IFO][NeuroDragon] [vv] frame time: avg=12.39 ms min=12.39 max=12.39 over 1 presents
+[2026-10-30 21:06:37.380 DBG][NeuroDragon] [vv] submit #18 tid=29908 lists=1
+[2026-10-30 21:06:37.387 IFO][NeuroDragon] [sr] ctx call #9 engine=000002EA4802D040 ctx=000002EA3B2D8DC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.388 DBG][NeuroDragon] [vv] submit #19 tid=29908 lists=48
+[2026-10-30 21:06:37.392 DBG][NeuroDragon] [vv] presents=10 submits=19 lists=440 maxListsPerSubmit=48 taau=10 draws=10 | submits/frame=1.90 lists/frame=44.00 taau/frame=1.00 draws/frame=1.00
+[2026-10-30 21:06:37.392 IFO][NeuroDragon] [vv] frame time: avg=11.79 ms min=11.79 max=11.79 over 1 presents
+[2026-10-30 21:06:37.392 DBG][NeuroDragon] [vv] submit #20 tid=29908 lists=1
+[2026-10-30 21:06:37.401 IFO][NeuroDragon] [sr] ctx call #10 engine=000002EA4802D040 ctx=000002EA3C159780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000 valid=1
+[2026-10-30 21:06:37.402 DBG][NeuroDragon] [vv] submit #21 tid=29908 lists=48
+[2026-10-30 21:06:37.407 DBG][NeuroDragon] [vv] submit #22 tid=29908 lists=1
+[2026-10-30 21:06:37.417 DBG][NeuroDragon] [vv] submit #23 tid=29908 lists=48
+[2026-10-30 21:06:37.429 DBG][NeuroDragon] [vv] submit #24 tid=29908 lists=1
+[2026-10-30 21:06:37.476 WRN][Server] <LVL|519558384> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-30 21:06:37.476 WRN][Server] <LVL|519558384> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-30 21:06:37.553 DBG][NeuroDragon] [vv] TAAU timing available: 0.269312 ms (26 samples)
+[2026-10-30 21:06:37.979 WRN][Server] <LVL|569366256> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect
+[2026-10-30 21:06:41.007 IFO][NeuroDragon] [vv] frame time: avg=6.13 ms min=3.16 max=21.96 over 590 presents
+[2026-10-30 21:06:41.007 IFO][NeuroDragon] [sr] ctx #600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:44.648 IFO][NeuroDragon] [vv] frame time: avg=6.07 ms min=3.30 max=9.03 over 600 presents
+[2026-10-30 21:06:44.650 IFO][NeuroDragon] [sr] ctx #1200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:48.284 IFO][NeuroDragon] [vv] frame time: avg=6.06 ms min=3.21 max=9.78 over 600 presents
+[2026-10-30 21:06:48.285 IFO][NeuroDragon] [sr] ctx #1800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:51.936 IFO][NeuroDragon] [vv] frame time: avg=6.09 ms min=3.70 max=9.06 over 600 presents
+[2026-10-30 21:06:51.937 IFO][NeuroDragon] [sr] ctx #2400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:53.817 DBG][NeuroDragon] [input] t=39756593 key msg=WM_SYSKEYDOWN vk=0x12(18) name="Alt" state=down repeat=0 held="-" panel=0 imgui=1 capture=0
+[2026-10-30 21:06:53.817 DBG][NeuroDragon] [input] t=39756593 dispatch forward msg=WM_SYSKEYDOWN vk=0x12(18) reason=panel-closed panel=0
+[2026-10-30 21:06:53.817 DBG][NeuroDragon] [input] t=39756593 hid vk=0x12(18) name="Alt" state=down origin=1 action=forwarded
+[2026-10-30 21:06:54.019 DBG][NeuroDragon] [input] t=39756796 focus lost msg=0x001C: held keys and any running capture were dropped
+[2026-10-30 21:06:54.021 DBG][NeuroDragon] [input] t=39756812 focus lost msg=0x0008: held keys and any running capture were dropped
+[2026-10-30 21:06:55.646 IFO][NeuroDragon] [vv] frame time: avg=6.18 ms min=3.68 max=20.18 over 600 presents
+[2026-10-30 21:06:55.646 IFO][NeuroDragon] [sr] ctx #3000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:06:59.323 IFO][NeuroDragon] [vv] frame time: avg=6.13 ms min=3.61 max=10.99 over 600 presents
+[2026-10-30 21:06:59.324 IFO][NeuroDragon] [sr] ctx #3600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:03.078 IFO][NeuroDragon] [vv] frame time: avg=6.26 ms min=3.58 max=10.64 over 600 presents
+[2026-10-30 21:07:03.078 IFO][NeuroDragon] [sr] ctx #4200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:06.785 IFO][NeuroDragon] [vv] frame time: avg=6.18 ms min=3.65 max=9.44 over 600 presents
+[2026-10-30 21:07:06.786 IFO][NeuroDragon] [sr] ctx #4800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:10.517 IFO][NeuroDragon] [vv] frame time: avg=6.22 ms min=3.80 max=9.61 over 600 presents
+[2026-10-30 21:07:10.518 IFO][NeuroDragon] [sr] ctx #5400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:14.211 IFO][NeuroDragon] [vv] frame time: avg=6.16 ms min=3.85 max=9.36 over 600 presents
+[2026-10-30 21:07:14.211 IFO][NeuroDragon] [sr] ctx #6000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:18.024 IFO][NeuroDragon] [vv] frame time: avg=6.35 ms min=3.74 max=14.99 over 600 presents
+[2026-10-30 21:07:18.024 IFO][NeuroDragon] [sr] ctx #6600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:21.763 IFO][NeuroDragon] [vv] frame time: avg=6.23 ms min=3.90 max=13.51 over 600 presents
+[2026-10-30 21:07:21.763 IFO][NeuroDragon] [sr] ctx #7200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:25.471 IFO][NeuroDragon] [vv] frame time: avg=6.18 ms min=3.91 max=13.20 over 600 presents
+[2026-10-30 21:07:25.471 IFO][NeuroDragon] [sr] ctx #7800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:29.139 IFO][NeuroDragon] [vv] frame time: avg=6.11 ms min=3.60 max=9.40 over 600 presents
+[2026-10-30 21:07:29.140 IFO][NeuroDragon] [sr] ctx #8400 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:32.810 IFO][NeuroDragon] [vv] frame time: avg=6.12 ms min=3.84 max=10.30 over 600 presents
+[2026-10-30 21:07:32.810 IFO][NeuroDragon] [sr] ctx #9000 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:36.486 IFO][NeuroDragon] [vv] frame time: avg=6.13 ms min=3.49 max=9.18 over 600 presents
+[2026-10-30 21:07:36.487 IFO][NeuroDragon] [sr] ctx #9600 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:40.156 IFO][NeuroDragon] [vv] frame time: avg=6.12 ms min=3.64 max=8.80 over 600 presents
+[2026-10-30 21:07:40.157 IFO][NeuroDragon] [sr] ctx #10200 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000
+[2026-10-30 21:07:43.801 IFO][NeuroDragon] [vv] frame time: avg=6.07 ms min=3.77 max=8.64 over 600 presents
+[2026-10-30 21:07:43.801 IFO][NeuroDragon] [sr] ctx #10800 q=0 f=-1.000 extra=1.000 flags=0x0 | engine aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1600 tail=1.000

@@ -1,0 +1,42 @@
+# agentflow smoke fg-f0a on EXP-0119
+# started 2026-10-30T21:09:31.947+08:00  verdict=PASS elapsed=17s
+# tree 80323e4c4ada2af7  head fb3210ac
+# dll 94475d7a1082d79b
+# profile D:\Documents\NeuroDragon\main\scripts\agentflow\smoke\fg-f0a.json
+# requires=['\\[fg\\] swapchain probe installed', '\\[fg\\] (CreateSwapChainForHwnd|CreateSwapChain) req .*[0-9]{3,4}x[0-9]{3,4}']
+# missing=[]  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01\logs\latest.log offset 0 -> 4416
+[2026-10-30 21:09:42.508 IFO][LeviLamina]                                                                       
+[2026-10-30 21:09:42.508 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-30 21:09:42.508 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-30 21:09:42.508 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-30 21:09:42.508 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-30 21:09:42.508 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-30 21:09:42.508 IFO][LeviLamina]                                                                       
+[2026-10-30 21:09:42.508 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-30 21:09:42.508 IFO][LeviLamina]                                                                       
+[2026-10-30 21:09:42.508 IFO][LeviLamina]                                                                       
+[2026-10-30 21:09:42.508 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-30 21:09:42.508 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-30 21:09:42.517 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-30 21:09:42.518 IFO][LeviLamina] 正在加载模组……
+[2026-10-30 21:09:42.518 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-30 21:09:42.898 DBG][NeuroDragon] [fg] hook CreateDXGIFactory at 0x7ffa4943de50
+[2026-10-30 21:09:42.953 DBG][NeuroDragon] [fg] hook CreateDXGIFactory1 at 0x7ffa4943df80
+[2026-10-30 21:09:43.021 DBG][NeuroDragon] [fg] hook CreateDXGIFactory2 at 0x7ffa49442e80
+[2026-10-30 21:09:43.021 DBG][NeuroDragon] [fg] swapchain probe installed t=11067.3ms hooks=1 dxgi=0x7ffa493f0000
+[2026-10-30 21:09:43.023 DBG][NeuroDragon] NR model already in place, skipping (E:\LeviLauncher\versions\1.26.51.01\nvngx_dlssnr.dll , 254 MB)
+[2026-10-30 21:09:43.023 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-30 21:09:43.023 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-30 21:09:46.092 WRN][Server] <LVL|3202150960> Migration started
+[2026-10-30 21:09:46.094 WRN][Server] <LVL|3202150960> Migration completed in 0.002000 seconds
+[2026-10-30 21:09:46.203 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=14249.2ms tid=32688 hr=0x00000000 factory=0x2bec9ac3230 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x29082 <- Minecraft.Windows.exe +0xe00f420 <- Minecraft.Windows.exe +0xdf90ef7 <- Minecraft.Windows.exe +0xdfc61ce <- Minecraft.Windows.exe +0xdfc4991
+[2026-10-30 21:09:46.261 DBG][NeuroDragon] [fg] hook IDXGIFactory::CreateSwapChain at 0x7ffa4940f1a0
+[2026-10-30 21:09:46.313 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForHwnd at 0x7ffa49411040
+[2026-10-30 21:09:46.384 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForCoreWindow at 0x7ffa49482c40
+[2026-10-30 21:09:46.528 DBG][NeuroDragon] [fg] hook IDXGIFactory2::CreateSwapChainForComposition at 0x7ffa49411340
+[2026-10-30 21:09:46.596 DBG][NeuroDragon] [fg] factory CreateDXGIFactory2 t=14642.5ms tid=32688 hr=0x00000000 factory=0x2bec9affa10 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x290f2 <- D3D12Core.dll +0x6116e <- D3D12Core.dll +0x78aac <- D3D12Core.dll +0x6b315 <- D3D12Core.dll +0x6b138
+[2026-10-30 21:09:47.115 DBG][NeuroDragon] [fg] factory CreateDXGIFactory1 t=15161.0ms tid=32688 hr=0x00000000 factory=0x2beca3119c0 caller=NeuroDragon.dll +0x2940b <- NeuroDragon.dll +0x29082 <- NvCamera64.dll +0x1eace1 <- NvCamera64.dll +0x6d762 <- NvCamera64.dll +0x6d071 <- NvCamera64.dll +0x2e4ff
+[2026-10-30 21:09:47.379 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd req t=15424.7ms tid=32688 factory=0x2bec9ac3230 device=0x2bebee7c930 hwnd=0xc20f42 2560x1494 fmt=28 buffers=3 usage=0x20 flags=0x42 effect=3 scaling=0 caller=NeuroDragon.dll +0x2aa90 <- NeuroDragon.dll +0x2a821 <- Minecraft.Windows.exe +0xe00fd69 <- Minecraft.Windows.exe +0xdf939c2 <- Minecraft.Windows.exe +0xdfc61ce <- Minecraft.Windows.exe +0xdfc4991
+[2026-10-30 21:09:47.386 DBG][NeuroDragon] [fg] CreateSwapChainForHwnd done t=15431.7ms hr=0x00000000 chain=0x2be93d3c100
+[2026-10-30 21:09:47.428 DBG][NeuroDragon] [fg] first flip t=15474.1ms context=0x2bed77b7040 swapChain=0x2be93d3c100

@@ -113,11 +113,26 @@ P6 flip / Present：FG dispatch → 原始 Present
 - 现有面板已有 `Present/Present1/ResizeBuffers*` 与游戏 direct queue。
 - 现有 NGX 日志出现过 `nvngx_dlssg.dll doesn't exist in any of the search paths`；
   驱动目录里存在文件不等于 NGX/Streamline 的搜索路径能找到它。
+- 2026-10-30（EXP-0119）：模组 `load()` 早于游戏创建 swapchain（probe install t=11.07 s，
+  游戏 `CreateDXGIFactory1` t=14.25 s，`CreateSwapChainForHwnd` t=15.42 s，首次 flip t=15.47 s）；
+  创建请求 = 2560x1494、3 buffers、`FLIP_DISCARD`、`flags=0x42`
+  （`ALLOW_MODE_SWITCH | FRAME_LATENCY_WAITABLE_OBJECT`，**没有 `ALLOW_TEARING`**）；
+  首次 Present 时后缓冲已是 2560x1600（创建后、面板装钩子前发生过一次尺寸变化）。
+  `enable()` 太晚（首次 flip t=15.0 s，enable t=17.0 s），factory 钩子必须放在 `load()`。
+- 2026-10-30（EXP-0121）：世界帧 71 个 list；在 `listCount-3`（世界写入后缓冲的 1-draw list
+  之后、UI list 之前）拷贝得到**无 HUD 的最终 LDR**；`listCount-2`（UI list，44 draws）
+  之后含 HUD（toast / 头像 / 快捷栏 / 准星全在）。`listCount-6` 读到的是上一帧（仍带 UI），
+  所以边界必须晚于世界写入。
 
 ### 4.2 未解决，不能当事实写死
 
-- Windows 26.51 的 P3/P5 精确签名，以及 Gameface/常驻 UI 是否都落在同一 hudless 边界之后。
-- 游戏实际使用哪个 swapchain 创建入口，以及模组能否在它之前装好 factory 钩子。
+- ~~Windows 26.51 的 P3/P5 精确签名，以及 Gameface/常驻 UI 是否都落在同一 hudless 边界之后~~
+  **已答（2026-10-30，EXP-0121）**：不需要 UI pass 的符号；list 级边界 `listCount-3`
+  已经给出无 HUD 的最终 LDR，观感上的 UI 全在它之后。UI 之后还有一条 170-draw list
+  （绑定另一个 handle），不影响 hudless。
+- ~~游戏实际使用哪个 swapchain 创建入口~~ **已答（2026-10-30，EXP-0119）**：
+  `CreateDXGIFactory1` → `CreateSwapChainForHwnd`；钩子装在 `load()` 就早于创建。
+  剩下的是 Streamline 包装这条已存在的链（F1），不是时序。
 - Streamline DLSS-G 与当前直连 NGX 的 VV DLSS-SR 是否能在同一进程稳定共存。
 - SL 常量与 VV 矩阵、MV 坐标、reversed-Z 的完整对应。
 - MPO/DWM、VRR、全屏切换与输入延迟的实机表现。
@@ -138,7 +153,9 @@ fg/Config.*         开关、固定 2x、诊断状态（也可并入现有 confi
 
 与现有代码的接线：
 
-- `NeuroDragon::enable()`：FG 的 factory 早期钩子必须先于 Overlay 的临时 DXGI 对象和晚期 Present 安装。
+- `NeuroDragon::load()`：FG 的 factory 早期钩子装在日志级别设置之后、任何 bootstrap
+  之前（EXP-0119 证明早于游戏创建）；`enable()` 太晚。Overlay 的临时 DXGI 对象必须绕过
+  升级后的 factory（F1）。
 - `vv/VvSr.cpp`：只发布已经验证的 Depth/MV 与帧常量，不让 SR 拥有 FG 生命周期。
 - P3/P5 新钩子：复制最终 LDR hudless；不拿 `arg10` 冒充。
 - `ui/Overlay.cpp`：面板绘制后、原始 `Present/Present1` 前调用 FG dispatch。
@@ -150,13 +167,16 @@ fg/Config.*         开关、固定 2x、诊断状态（也可并入现有 confi
 
 **唯一目标**：证明“能创建 FG 交换链，也能在正确边界取得 hudless”。
 
-1. 由锚点会话定位 Windows P3/P5，确认最终 LDR 与全部 UI 的先后。
-2. 确认实际 swapchain 创建 API（Hwnd / 旧式 / CoreWindow）。
-3. 将 factory 早期钩子放到模组启用前段，记录它与游戏首次创建的先后。
+1. ✅ 已答（EXP-0121）：不走 P3/P5 符号；list 级边界 `listCount-3`（世界写入后、UI 前）
+   给出无 HUD 的最终 LDR，toast / 头像 / 快捷栏 / 准星都在 UI list（N-2）里。
+2. ✅ 已答（EXP-0119）：`CreateSwapChainForHwnd`；请求 2560x1494 / 3 buffers /
+   `FLIP_DISCARD` / `flags=0x42`，没有 `ALLOW_TEARING`。
+3. ✅ 已答（EXP-0119）：factory 钩子装在 `load()` 开头，早于游戏首次创建
+   （11.07 s vs 14.25 s）；`enable()` 太晚。
 
-**通过**：创建钩子命中游戏链；P3/P5 能取得正确 LDR hudless。  
-**停止**：模组加载已经晚于链创建，或找不到可靠 pre-UI LDR 点。先修启动/点位，
-不强毁现有交换链，不拿 `arg10` 或带 UI 后缓冲冒充正式输入。
+**通过**：创建钩子命中游戏链；hudless 取得正确 LDR（两条都已满足，2026-10-30）。  
+**停止**：模组加载已经晚于链创建（已排除：`load()` 早于创建），或找不到可靠 pre-UI LDR 点。
+先修启动/点位，不强毁现有交换链，不拿 `arg10` 或带 UI 后缓冲冒充正式输入。
 
 ### F1：Streamline 与交换链透传
 

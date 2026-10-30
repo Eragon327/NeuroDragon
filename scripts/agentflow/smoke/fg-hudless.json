@@ -1,0 +1,14 @@
+{
+  "name": "fg-hudless",
+  "tier": "L1",
+  "timeout_s": 60,
+  "why": "F0-b step 1: the engine submission tail is logged so the pre-UI list boundary can be read from the shape of the last lists.",
+  "requires": [
+    "\\[fg\\] hudless scan #"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ]
+}

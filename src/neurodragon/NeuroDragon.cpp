@@ -2,6 +2,8 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
+#include "neurodragon/fg/HudlessProbe.h"
+#include "neurodragon/fg/SwapchainProbe.h"
 #include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/RuntimeOptions.h"
 #include "neurodragon/probe/VvProbe.h"
@@ -47,6 +49,13 @@ bool NeuroDragon::load() {
     getSelf().getLogger().setLevel(ll::io::LogLevel::Debug);
     getSelf().getLogger().setFlushLevel(ll::io::LogLevel::Debug);
 #endif
+
+    // F0-a: the renderer is already presenting when enable() runs (EXP-0117: first
+    // flip at t=15.0 s, enable() at t=17.0 s), so the DXGI factory hook has to be
+    // installed at the earliest point the mod controls. It sits after the log-level
+    // block on purpose: installed before it, the probe's own install line was written
+    // at debug level while debug was still off and vanished from latest.log.
+    fg::probe::install();
 
     // Everything the release build prints goes through lang/<locale>.json, so the
     // catalogue must be in place before the first message (the model bootstrap
@@ -95,6 +104,9 @@ bool NeuroDragon::load() {
 }
 
 bool NeuroDragon::enable() {
+    // F0-b: arm the world-gated hudless capture probe (TEST only).
+    fg::hudless::install();
+
     // Locate + hook dragon::framerenderer::modules::taau without any PDB.
     probe::install();
 
@@ -159,9 +171,12 @@ bool NeuroDragon::enable() {
 }
 
 bool NeuroDragon::disable() {
-    // Take the panel down first: it owns the window procedure and hooks Present,
-    // both of which must be in their original state before the NR hooks are dropped.
+    // Take the panel down first: it owns the window procedure, the Present hook and
+    // the ExecuteCommandLists hook the hudless probe records into.
     ui::Overlay::getInstance().uninstall();
+    // Then release the copy probe's D3D12 objects, then the F0 factory detours.
+    fg::hudless::uninstall();
+    fg::probe::uninstall();
     // Stop the product action first: the render thread may still be recording an
     // injected list, and vv::sr::release() waits for that record before freeing the
     // textures/PSO. Releasing first left the DLSS evaluate reading a dead colorHalf at

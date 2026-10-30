@@ -1,0 +1,15 @@
+{
+  "name": "fg-f0a",
+  "tier": "L1",
+  "timeout_s": 90,
+  "why": "F0-a: the factory probe installed before the game's own swap-chain creation, and the game's real request (not the overlay's 8x8 temporary one) is visible in the log.",
+  "requires": [
+    "\\[fg\\] swapchain probe installed",
+    "\\[fg\\] (CreateSwapChainForHwnd|CreateSwapChain) req .*[0-9]{3,4}x[0-9]{3,4}"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ]
+}

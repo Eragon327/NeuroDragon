@@ -69,6 +69,8 @@ void setGameQueue(void* queue);
 // resolution (viewport x factor) and the display viewport.
 [[nodiscard]] void*    engineDevice();
 [[nodiscard]] void*    gameQueue();
+/// The game's swap chain, from the overlay's Present hook (null until the first Present).
+[[nodiscard]] void*    swapChain();
 [[nodiscard]] unsigned renderWidth();
 [[nodiscard]] unsigned renderHeight();
 [[nodiscard]] unsigned displayWidth();
