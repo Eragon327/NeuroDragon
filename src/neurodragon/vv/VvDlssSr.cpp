@@ -419,7 +419,11 @@ bool ensureSrFeature(void* deviceVoid, void* commandList, unsigned renderWidth, 
         gSrState.ready = false;
         return false;
     }
-    ND_DEBUG(
+    // Info, not debug: this feature's evaluate is what triggers NR's create gate
+    // (see the OwnEvaluateScope call below), so "does the VV upscaler even have a
+    // feature" is the first thing a missing [nr] line has to be checked against
+    // (EXP-0117: a debug-only line made it unknowable in a release build).
+    utils::logger().info(
         "[vvsr] sr CreateFeature(1) ret=0x{:08X} {}x{} -> {}x{}",
         static_cast<unsigned>(ret),
         renderWidth,

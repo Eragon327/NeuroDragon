@@ -5,6 +5,8 @@
             "disabled": "NR disabled: nr.enabled is false in config/config.json",
             "modelCopied": "NR model copied next to the game executable: {0} ({1})",
             "unloaded": "NR unloaded: feature, textures and model released (enabling it again rebuilds them)",
+            "created": "NR feature created ({0}x{1}, via {2})",
+            "gate": "NR is enabled but creation has not started: params={0} color={1} depth={2} mv={3} out={4} size={5} (the missing one is the blocker; printed once per combination)",
             "hotkeyOn": "NR enabled (hotkey)",
             "hotkeyOff": "NR disabled (hotkey)",
             "hotkeyReset": "NR and engine DLSS history reset (hotkey)"

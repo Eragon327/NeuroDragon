@@ -1,6 +1,8 @@
 #include "neurodragon/probe/VvProbe.h"
 
+#include "neurodragon/Config.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/RuntimeOptions.h"
 #include "neurodragon/probe/VvCalibrate.h"
 #include "neurodragon/probe/VvInject.h"
@@ -1771,6 +1773,34 @@ void onPresent() {
     // the arming itself is four injector switches, so it is applied here - every frame,
     // and only when the value changed. A no-op otherwise.
     neurodragon::vv::sr::syncConfig();
+    // EXP-0118: in VV the engine never loads NGX (that only happens in RT mode), so
+    // NR's create gate only runs inside our VV SR evaluate. "Configured, never
+    // created" therefore has a second cause besides a missing input: no evaluate at
+    // all. Name it once, after enough world presents that a working injection would
+    // have evaluated hundreds of times.
+    {
+        static std::atomic<bool> logged{false};
+        static std::uint64_t     lastSerial = 0;
+        static unsigned          quiet      = 0;
+        if (!config::get().nr.enabled) {
+            quiet = 0;
+        } else if (!logged.load(std::memory_order_relaxed)
+                   && gWorldLoaded.load(std::memory_order_relaxed)) {
+            std::uint64_t const serial = neurodragon::probe::nrEvaluateSerial();
+            if (serial != lastSerial) {
+                lastSerial = serial;
+                quiet      = 0;
+            } else if (++quiet >= 300) {
+                logged.store(true, std::memory_order_relaxed);
+                utils::logger().warn(
+                    "[nr] no NGX evaluate in {} presents: in VV, NR is created inside the VV SR "
+                    "evaluate - turn on VV super resolution (or use RT mode); if it is already "
+                    "on, the injection is not running (see the [vv] inject lines)",
+                    quiet
+                );
+            }
+        }
+    }
     // Frame-time marker. A hitch is a fact the user can feel, so it is measured here
     // instead of guessed at; the line is a debug-level one, so a release build pays
     // neither the formatting nor the log volume.

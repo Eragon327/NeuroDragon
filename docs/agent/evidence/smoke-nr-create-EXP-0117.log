@@ -1,0 +1,72 @@
+# agentflow smoke nr-create on EXP-0117
+# started 2026-10-31T01:00:27.100+08:00  verdict=PASS elapsed=56s
+# tree 5335635de7008712  head fb3210ac
+# dll 53ffa10db13a5050
+# profile D:\Documents\NeuroDragon\agent2\scripts\agentflow\smoke\nr-create.json
+# requires=['(NR 功能已创建|NR 已启用但还没开始创建)']
+# missing=[]  forbidden=[]
+# log E:\LeviLauncher\versions\1.26.51.01-agent2\logs\latest.log offset 31762 -> 39962
+[2026-10-31 01:00:37.086 IFO][LeviLamina]                                                                       
+[2026-10-31 01:00:37.086 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-31 01:00:37.086 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-31 01:00:37.086 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-31 01:00:37.086 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-31 01:00:37.086 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-31 01:00:37.086 IFO][LeviLamina]                                                                       
+[2026-10-31 01:00:37.086 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-31 01:00:37.086 IFO][LeviLamina]                                                                       
+[2026-10-31 01:00:37.086 IFO][LeviLamina]                                                                       
+[2026-10-31 01:00:37.086 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-31 01:00:37.086 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://translate.levimc.org/
+[2026-10-31 01:00:37.105 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-31 01:00:37.105 IFO][LeviLamina] 正在加载模组……
+[2026-10-31 01:00:37.106 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-31 01:00:37.128 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-31 01:00:37.128 IFO][LeviLamina] 已加载 1 个模组
+[2026-10-31 01:00:39.040 WRN][Server] <LVL|2679902544> Migration started
+[2026-10-31 01:00:39.044 WRN][Server] <LVL|2679902544> Migration completed in 0.002000 seconds
+[2026-10-31 01:00:41.471 WRN][Server] <LVL|2492457552> Time played notifier not required for 'zh_CN'
+[2026-10-31 01:00:41.487 IFO][LeviLamina] 正在启用模组……
+[2026-10-31 01:00:41.487 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-31 01:00:41.487 IFO][NeuroDragon] NR 已启用（config/config.json：nr.enabled = true）
+[2026-10-31 01:00:42.112 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-31 01:00:42.963 IFO][NeuroDragon] 安装游戏内面板：完成，用时 852 ms
+[2026-10-31 01:00:42.963 IFO][LeviLamina] 已在 1.5 秒内启用 1 个模组
+[2026-10-31 01:00:43.032 IFO][NeuroDragon] [vvsr] sr enabled (armed; TAAU runs until the first arg10 frame)
+[2026-10-31 01:00:43.033 IFO][NeuroDragon] [sr] ctx call #1 engine=000001BDB74BC040 ctx=000001BDAB600780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.472 WRN][NeuroDragon] [vv] inject: arg10 writer not found yet (split=0/47); TAAU runs this frame
+[2026-10-31 01:00:43.472 WRN][NeuroDragon] [vv] inject skipped (1): no arg10 writer in this submission; TAAU restored
+[2026-10-31 01:00:43.561 IFO][NeuroDragon] [sr] ctx call #2 engine=000001BDB74BC040 ctx=000001BDAA77FDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.682 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-31 01:00:43.682 WRN][NeuroDragon] [vv] inject skipped (2): recording the injected work failed
+[2026-10-31 01:00:43.688 IFO][NeuroDragon] [sr] ctx call #3 engine=000001BDB74BC040 ctx=000001BDAB600780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.691 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-31 01:00:43.691 WRN][NeuroDragon] [vv] inject skipped (3): recording the injected work failed
+[2026-10-31 01:00:43.701 IFO][NeuroDragon] [sr] ctx call #4 engine=000001BDB74BC040 ctx=000001BDAA77FDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.707 WRN][NeuroDragon] [vvsr] sr: no render-resolution colour/depth in the inventory yet - press F11 once (fullscreen toggle) so the engine rebuilds its render graph
+[2026-10-31 01:00:43.711 IFO][NeuroDragon] [sr] ctx call #5 engine=000001BDB74BC040 ctx=000001BDAB600780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.720 IFO][NeuroDragon] [sr] ctx call #6 engine=000001BDB74BC040 ctx=000001BDAA77FDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.732 IFO][NeuroDragon] [sr] ctx call #7 engine=000001BDB74BC040 ctx=000001BDAB600780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.741 IFO][NeuroDragon] [sr] ctx call #8 engine=000001BDB74BC040 ctx=000001BDAA77FDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.750 IFO][NeuroDragon] [sr] ctx call #9 engine=000001BDB74BC040 ctx=000001BDAB600780 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:43.761 IFO][NeuroDragon] [sr] ctx call #10 engine=000001BDB74BC040 ctx=000001BDAA77FDC0 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=2560x1369 tail=1.000 valid=1
+[2026-10-31 01:00:44.036 WRN][Server] <LVL|2351585760> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-31 01:00:44.036 WRN][Server] <LVL|2351585760> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-31 01:00:45.877 WRN][Server] <LVL|2444221248> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect
+[2026-10-31 01:01:15.802 WRN][Server] <LVL|2945897040> Packet rate limiting enabled
+[2026-10-31 01:01:15.819 WRN][Server] <LVL|2941741920> Pack Stack - None
+[2026-10-31 01:01:16.940 WRN][Server] <LVL|2280266848> Signing into signaling service using JsonRpc signaling, and sign-in ID: c87e50e5-338a-0d8e-c1f1-1d3fb7e3403f
+[2026-10-31 01:01:17.153 WRN][Server] <LVL|3199746608> Player connected: Eragon3276538, xuid: 2535409079292133
+[2026-10-31 01:01:17.318 WRN][Server] <LVL|2832661792> Player PartyIdUpdate:  pfid: 123BB64BF366A90D, partyid: , isLeader: false
+[2026-10-31 01:01:18.633 WRN][Server] <LVL|2462478080> Player Spawned: Eragon3276538 xuid: 2535409079292133, pfid: 123BB64BF366A90D
+[2026-10-31 01:01:19.748 IFO][NeuroDragon] [sr] DLSS runtime: E:\LeviLauncher\versions\1.26.51.01-agent2\nvngx_dlss.dll (54779504 bytes)
+[2026-10-31 01:01:20.783 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 1689x903 -> 2560x1369
+[2026-10-31 01:01:20.783 IFO][NeuroDragon] [sr] fb factor table_rva=0xe9776e0 index=1 current=0.580
+[2026-10-31 01:01:20.783 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：开始…
+[2026-10-31 01:01:21.062 IFO][NeuroDragon] [nr] encode shader compile diagnostics: E:\LeviLauncher\versions\1.26.51.01-agent2\nr_encode(176,16-32): warning X3571: pow(f, e) will not work for negative f, use abs(f) or conditionally handle negative values if you expect them
+E:\LeviLauncher\versions\1.26.51.01-agent2\nr_encode(92,5): warning X4000: use of potentially uninitialized variable (HueGuard)
+
+[2026-10-31 01:01:21.325 IFO][NeuroDragon] NR 功能已创建（1689x903，经 core）
+[2026-10-31 01:01:21.325 IFO][NeuroDragon] 创建 NR 功能（纹理、着色器、模型）：完成，用时 542 ms
+[2026-10-31 01:01:21.345 IFO][NeuroDragon] [vv] inject: arg10 captured (split=35/58); the TAAU draw is skipped from here
+[2026-10-31 01:01:23.298 WRN][Server] <LVL|2528633168> Player disconnected: Eragon3276538, xuid: 2535409079292133, pfid: 123BB64BF366A90D

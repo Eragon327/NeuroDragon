@@ -74,7 +74,7 @@ void syncConfig();
 enum class Rung : int { Full = 0, NoNr = 1, NoSharp = 2, EngineTaau = 3 };
 enum class RungReason : int { None = 0, Create = 1, Eval = 2, Retry = 3 };
 #ifdef TEST
-enum class Fault : int { None = 0, Create = 1, Eval = 2 }; // session-only, TEST panel
+enum class Fault : int { None = 0, Create = 1, Eval = 2, Signal = 3 }; // session-only, TEST panel
 #endif
 
 struct Fallback {

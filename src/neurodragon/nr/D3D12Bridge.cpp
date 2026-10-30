@@ -2158,6 +2158,11 @@ bool nrCreate(
                     reinterpret_cast<ReleaseFeatureFn>(GetProcAddress(core, "NVSDK_NGX_D3D12_ReleaseFeature"));
             }
             gNr.created = true;
+            // Info, not debug: "was a feature created at all, and through which API"
+            // is the first question a log has to answer; the panel only says
+            // "已配置 · 未创建" and the empty stage pair means nothing was attempted
+            // (EXP-0117).
+            neurodragon::log::write(0, "nr.info.created"_tr(featureWidth, featureHeight, tag));
             return true;
         }
         gNr.lastError = ret;

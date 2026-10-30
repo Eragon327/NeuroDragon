@@ -1,0 +1,19 @@
+{
+  "name": "vv-stall-recover",
+  "tier": "L1",
+  "timeout_s": 420,
+  "why": "EXP-0118: one dropped Signal used to poison fenceValue for the rest of the process (one arg10 capture, then FenceBusy forever, and in VV that also starves NR's create gate). The TEST fault drops one Signal; the run must recover by itself and say so.",
+  "requires": [
+    "\\[vv\\] inject: TEST fault - dropped Signal",
+    "\\[vv\\] inject: the fence stayed at [0-9]+ of [0-9]+",
+    "\\[vv\\] inject: recovered after a rebuild \\(injected=[1-9]"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[vv\\] inject: recovered after a rebuild \\(injected=[1-9]": 1
+  }
+}

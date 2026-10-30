@@ -1147,6 +1147,35 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         nr::nrUnload();
         gNrStartTried = false;
     }
+    // "Configured · never created" had no evidence at all in a release build: every
+    // line between here and nrCreate was TEST-only, so a log could not say whether NR
+    // never asked or asked and failed (EXP-0117, 2026-10-31: a 5090 sat on the panel's
+    // "已配置 · 未创建" with no [nr] line anywhere). These six inputs are the whole
+    // gate, so one info line per distinct blocker answers it. The all-good state is
+    // not logged here - that is the create call, which has its own stage pair.
+    if (gNrEnabled && !gNrStartTried) {
+        bool const     paramsOk = validParamObj(const_cast<void*>(params));
+        unsigned const mask     = (color ? 1u : 0u) | (depth ? 2u : 0u) | (mv ? 4u : 0u) | (out ? 8u : 0u)
+                            | ((width && height) ? 16u : 0u);
+        unsigned const  state    = mask | (paramsOk ? 0u : 0x100u);
+        static unsigned reported = ~0u;
+        if (state != 0x1Fu && state != reported) {
+            reported = state;
+            char size[32]{};
+            std::snprintf(size, sizeof(size), "%ux%u", width, height);
+            neurodragon::log::write(
+                0,
+                "nr.info.gate"_tr(
+                    paramsOk ? "ok" : "invalid",
+                    color ? "ok" : "-",
+                    depth ? "ok" : "-",
+                    mv ? "ok" : "-",
+                    out ? "ok" : "-",
+                    size
+                )
+            );
+        }
+    }
     if (gNrEnabled && validParamObj(const_cast<void*>(params))) {
         // Entering/leaving a world only restarts the window schedule: the menu's
         // frames must not consume the ten slots.
@@ -1638,5 +1667,7 @@ void uninstall() {
 }
 
 bool isInstalled() { return gNgxHooked.load(std::memory_order_relaxed); }
+
+std::uint64_t nrEvaluateSerial() { return gFrame.load(std::memory_order_relaxed); }
 
 } // namespace neurodragon::probe

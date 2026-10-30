@@ -1,0 +1,17 @@
+{
+  "name": "nr-create",
+  "tier": "L2",
+  "timeout_s": 420,
+  "why": "EXP-0117: NR's creation gate was silent in release builds, so 'configured - never created' had no evidence. Either the gate names the missing input or the create succeeded - both are answers; which one appears is the experiment's result.",
+  "requires": [
+    "(NR 功能已创建|NR 已启用但还没开始创建)"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "(NR 功能已创建|NR 已启用但还没开始创建)": 1
+  }
+}

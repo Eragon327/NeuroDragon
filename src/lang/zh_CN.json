@@ -5,6 +5,8 @@
             "disabled": "NR 未启用：config/config.json 里 nr.enabled = false",
             "modelCopied": "NR 模型已复制到游戏目录：{0}（{1}）",
             "unloaded": "NR 已卸载：feature、纹理与模型都已释放（重新启用会重建）",
+            "created": "NR 功能已创建（{0}x{1}，经 {2}）",
+            "gate": "NR 已启用但还没开始创建：params={0} color={1} depth={2} mv={3} out={4} 尺寸={5}（缺哪项就是卡点，每次组合变化打印一次）",
             "hotkeyOn": "NR 已启用（热键）",
             "hotkeyOff": "NR 已关闭（热键）",
             "hotkeyReset": "NR 与引擎 DLSS 的历史已重置（热键）"
