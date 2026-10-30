@@ -665,9 +665,10 @@ RTV 在 resize 钩子之前创建，已由 `gHeld` 修复。
   **不要**在未 Init 的 core 上直接建 feature；自建会话只在确认引擎没有 Init 时执行。
 - **core 路径（2026-10-30 定）**：`_nvngx.dll` 由驱动提供，所以先找**驱动目录**：
   `System32\DriverStore\FileRepository\nv*.inf_amd64_*\_nvngx.dll`，多个命中时取**写入时间最新**的
-  那一份（升级驱动会留下旧包）。包目录名跟着驱动 INF 走，官方但不固定：本机是
-  `nvami.inf_amd64_*`，华硕定制驱动那台是 `nv_dispi.inf_amd64_*`；以前写死成 `nvami`，于是文件
-  明明在却报 `no _nvngx.dll found`（2026-10-30 反馈）。之后是 `System32` 的 `_nvngx.dll` /
+  那一份（升级驱动会留下旧包）。包目录名跟着驱动 INF 走，官方但不固定：英伟达默认驱动是
+  `nv_dispi.inf_amd64_*`，本机（华硕天选，厂商定制驱动）是 `nvami.inf_amd64_*`；以前写死成
+  `nvami`，于是在默认路径的机器上文件明明在却报 `no _nvngx.dll found`（2026-10-30 反馈：
+  那台是默认驱动，本机反而一直是"碰巧"能跑）。之后是 `System32` 的 `_nvngx.dll` /
   `nvngx.dll`，最后手段才是**模组自己的目录**（NeuroDragon.dll 旁边）。**游戏根目录故意不查**：
   分发核心是驱动的职责，塞一份到 `Minecraft.Windows.exe` 旁边只会在每次升级驱动后被旧副本遮蔽。
   TEST 构建的 `[vvsr] sr core:` 会打出最终选中的路径。
@@ -704,8 +705,9 @@ RTV 在 resize 钩子之前创建，已由 `gHeld` 修复。
 - 面板 `诊断 → VV DLSS B1a (TEST)` 一个按钮 `Probe self-init NGX + CreateFeature(1)`；
   `requestProbe()` 只置原子位，真正的工作在下一个 Present 的 `runPending()` 里做；
 - core 路径：`System32\_nvngx.dll` → `System32\nvngx.dll` → DriverStore 的
-  `nvami.inf_amd64_*\_nvngx.dll`（本机实际走最后一条）；2026-10-30 起改成
-  驱动目录 `nv*.inf_amd64_*`（最新一份）→ System32 → 模组目录，见 §13.6 的 core 路径那一条；
+  `nvami.inf_amd64_*\_nvngx.dll`（本机是华硕定制驱动，包名正好是 `nvami`，所以当时"碰巧"能跑）；
+  2026-10-30 起改成驱动目录 `nv*.inf_amd64_*`（最新一份）→ System32 → 模组目录，
+  见 §13.6 的 core 路径那一条；
 - 会话：`NVSDK_NGX_D3D12_Init_Ext(0x0876232C, %TEMP%\NeuroDragon\NGX, engineDevice, 0x15, null)`；
   失败再试 `Init_ProjectID`（不带 FeatureCommonInfo）；
 - `GetCapabilityParameters` → 写 `Width/Height/OutWidth/OutHeight`、`PerfQualityValue=3`、

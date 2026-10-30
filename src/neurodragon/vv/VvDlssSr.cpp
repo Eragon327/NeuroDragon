@@ -70,10 +70,11 @@ FeatureCommonInfo  gCommon{};
 // _nvngx.dll is NVIDIA's NGX core. The engine loads it in RT mode; VV substitutes
 // the upscaler, so this file has to load the core itself. The driver provides it,
 // so the driver store comes first - the package directory is named after the INF
-// that shipped the file, and that name is vendor/branch specific: nvami.inf_amd64_*
-// on this machine, nv_dispi.inf_amd64_* on an ASUS-customised driver (2026-10-30,
-// "no _nvngx.dll found" while the file was right there). Both are official, so the
-// glob is nv*.inf_amd64_* and every match is probed instead of assuming one name.
+// that shipped the file, and that name is vendor/branch specific: nv_dispi.inf_amd64_*
+// on NVIDIA's default package, nvami.inf_amd64_* on an ASUS-customised one (this
+// machine). 2026-10-30: "no _nvngx.dll found" came from a default-driver machine
+// while this one had been working by luck. Both are official, so the glob is
+// nv*.inf_amd64_* and every match is probed instead of assuming one name.
 //   1. driver store, newest copy wins (a driver upgrade leaves older packages);
 //   2. System32, where some installs keep a copy;
 //   3. the mod's own directory, only as a last resort. The game root is not searched
