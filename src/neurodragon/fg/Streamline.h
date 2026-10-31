@@ -18,13 +18,25 @@ bool init(std::wstring const& modDir);
 /// the swap-chain methods are hooked.
 bool upgradeFactory(void** factory);
 
-/// slSetD3DDevice, once: the game's device is only known when its swap chain is created.
+/// Replace the game's native D3D12 device with SL's proxy so CreateCommandQueue
+/// reaches Streamline; slSetD3DDevice still receives the native device.
+bool upgradeDevice(void** device);
+
+/// Give Streamline the native device captured by D3D12CreateDevice.
 bool ensureDevice(void* device);
 
 /// The D3D12CreateDevice hook reports the game's device here (the swap-chain `device`
 /// argument is the command queue, not the device - passing it to slSetD3DDevice
 /// returned eErrorUnsupportedInterface).
 void noteDevice(void* device);
+
+/// Count flips and log the DLSS-G chain state at 1/600/1200… frames. The eOff
+/// options are set once before the chain is created; repeating them on every flip
+/// raced SL's own Present bookkeeping and brought the exit hang back (EXP-0143).
+void presentFrame();
+
+/// Log a non-S_OK removed reason for the native game device.
+void logDeviceRemovedReason(char const* when);
 
 /// Fallback for the swap-chain path: the queue's device via ID3D12CommandQueue::GetDevice.
 bool ensureDeviceFromQueue(void* queue);

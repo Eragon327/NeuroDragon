@@ -393,6 +393,14 @@ constexpr int           kNrWindows       = 10;
 constexpr std::uint64_t kNrWindowLength  = 60;
 constexpr std::uint64_t kNrWindowSpacing = 900;
 constexpr std::uint64_t kNrReportTail    = 4; // let the last timestamp pair retire
+// EXP-0147: the window dumps copy NR/the engine's Output and transition them with
+// an assumed ALL_SHADER_RESOURCE state. The shrink flashes line up with the window
+// schedule, so keep the dump path out of the render run until that is disproved.
+constexpr bool          kNrDumps         = false;
+// A sentinel that does not wrap: `gNrDumpFrame + 36` has to stay far away from any
+// real frame number. ~0ull + 2 wrapped to 1 and made the window-#0 dumps fire at
+// frames 1..35 (EXP-0147).
+constexpr std::uint64_t kNoDumpFrame    = ~std::uint64_t{0} - 4096;
 
 #ifdef TEST
 void nrDumpName(char* buffer, std::size_t size, char const* stem, int index) {
@@ -881,18 +889,20 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
 
         // Diagnostic readback: dump the DLSS input and output once, then write them
         // as BMP next to the executable. Only meaningful inside a world - RT is off
-        // in the main menu, where Color is entirely zero.
-        if (n == 2400) {
+        // in the main menu, where Color is entirely zero. Off with kNrDumps: every
+        // shrink flash in EXP-0147 landed on a dump frame (window #0 dumps at
+        // 0:25, color_dump at 1:12, output_dump at 1:19).
+        if (kNrDumps && n == 2400) {
             nr::queueColorDump(cmdList, color, "color_dump.bmp");
-        } else if (n == 2600) {
+        } else if (kNrDumps && n == 2600) {
             float         peak = -1.0f;
             std::uint32_t nz   = 0;
             if (nr::flushColorDump(&peak, &nz)) {
                 ND_DEBUG("[dump] color_dump.bmp written max={} nz={}", peak, nz);
             }
-        } else if (n == 2800) {
+        } else if (kNrDumps && n == 2800) {
             nr::queueColorDump(cmdList, out, "output_dump.bmp");
-        } else if (n == 3000) {
+        } else if (kNrDumps && n == 3000) {
             float         peak = -1.0f;
             std::uint32_t nz   = 0;
             if (nr::flushColorDump(&peak, &nz)) {
@@ -1188,15 +1198,24 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
                 gNrWindowOpen  = true;
                 gNrWindowStart = n;
                 gNrWindowEnd   = n + kNrWindowLength;
-                gNrDumpFrame   = n + 30;
+                gNrDumpFrame   = kNrDumps ? n + 30 : kNoDumpFrame;
                 nr::nrSetWindowIndex(gNrWindowIndex);
-                ND_DEBUG(
-                    "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（每次求值都合成，窗口只影响计时/dump）",
-                    gNrWindowIndex,
-                    gNrWindowStart,
-                    gNrWindowEnd - 1,
-                    gNrDumpFrame
-                );
+                if (kNrDumps) {
+                    ND_DEBUG(
+                        "[nr] 窗口 #{} 开始 f={}..{}，dump 于 {}（每次求值都合成，窗口只影响计时/dump）",
+                        gNrWindowIndex,
+                        gNrWindowStart,
+                        gNrWindowEnd - 1,
+                        gNrDumpFrame
+                    );
+                } else {
+                    ND_DEBUG(
+                        "[nr] 窗口 #{} 开始 f={}..{}，dump 关闭（EXP-0147）",
+                        gNrWindowIndex,
+                        gNrWindowStart,
+                        gNrWindowEnd - 1
+                    );
+                }
             }
 
             nrInWindow = gNrWindowOpen && n >= gNrWindowStart && n < gNrWindowEnd;

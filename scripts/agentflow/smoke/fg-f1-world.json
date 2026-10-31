@@ -1,0 +1,25 @@
+{
+  "name": "fg-f1-world",
+  "tier": "L2",
+  "timeout_s": 420,
+  "why": "F1: DLSS-G stays loaded in pass-through mode while VV SR evaluates and the proxy chain survives startup plus another ResizeBuffers1.",
+  "requires": [
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)",
+    "\\[vvsr\\] sr pick: .*colourTargets=[1-9]",
+    "\\[fg\\] streamline: DLSS_G present options frame=1 set=0 state=0 mode=0 ",
+    "\\[fg\\] proxy ResizeBuffers1 fallback .*hr=0x00000000"
+  ],
+  "forbids": [
+    "0x887A0005",
+    "cmdQ.pacer",
+    "\\[vvsr\\] sr CreateFeature\\(1\\) failed",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)": 3,
+    "\\[vvsr\\] sr pick: .*colourTargets=[1-9]": 1,
+    "\\[fg\\] proxy ResizeBuffers1 fallback .*hr=0x00000000": 2
+  }
+}

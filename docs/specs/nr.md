@@ -370,6 +370,13 @@ EXP-0085 又暴露两条 NR 侧问题（均已修）：
 **EXP-0088 通过**（2026-10-29）：`[nr] MV scale 1.000,1.000 (guide 1280x720)`，用户确认
 移动无闪动、退出不崩。NR 在 VV 的接入到此可用；`nr.enabled` 仍是 opt-in。
 
+**EXP-0147/0148（2026-10-31）**：诊断窗口与一次性 `color_dump`/`output_dump` 会在 dump 帧
+造成可见的「画面缩小、右侧/下方黑边」闪动。dump 对 Color/Output 做 `transition → copy →
+transition` 时假定 `ALL_SHADER_RESOURCE`，并在渲染线程阻塞写 BMP。实测三次闪动逐次对上
+窗口 #0 的 dump 风暴、`color_dump` 写出、`output_dump` 写出；全部 dump 关闭后站定与移动
+均不再闪（注入保持 1:1）。`kNrDumps = false` 现在是默认；要重新启用 dump，先把
+transition 的 StateBefore 换成资源的真实状态再验证。
+
 ## 8. 已完成 / 未完成
 
 ### 8.1 已完成

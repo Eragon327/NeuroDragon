@@ -1,0 +1,38 @@
+EXP-0143 postmortem input (created after reading the raw logs of 0142/0143).
+
+User report: "还是闪，并且又关不掉游戏了" (EXP-0143, per-frame slDLSSGSetOptions).
+
+1. Per-frame options are not the alternative-frame cause.
+   docs/agent/evidence/fg-f1-world-EXP-0143-full.log:
+   02:51:25.959/33.288/43.000/52.342
+   [fg] streamline: DLSS_G present options frame=1/600/1200/1800 set=0 state=0 mode=0 frames=1 presented=1
+   mode stayed 0 in the flip thread, yet the user still saw the frozen/current alternation.
+
+2. Fence-busy injection skips only exist when Streamline wraps the chain.
+   Across docs/agent/evidence/*.log the text "the previous injection is still on the GPU"
+   appears 9 times, all in fg-f1-world-EXP-0141/0142 (SL sessions). No VV-only session has it.
+
+3. The skip rate is about one world frame in two.
+   fg-f1-world-EXP-0142-full.log (session 02:40):
+   02:40:21.650 skipped n=1046 (fence busy)
+   02:40:37.108 skipped n=1675 (fence busy)
+   02:40:40.555 skipped n=1801 (fence busy)
+   No reason-change line between 21.650 and 36.775 -> the 629 increments in 15.1 s
+   (~41.6/s) are all fence-busy. The same session's [vv] frame time lines advance
+   600 presents per ~7.4 s (~81/s). So roughly every second world frame skips injection.
+
+4. Why that shows as a frozen frame.
+   The draw gate suppresses TAAU on frame N from "frame N-1 injected". If frame N then
+   skips injection, nobody writes arg10 in frame N, so that present shows the previous
+   arg10 (frozen world) with current UI; the next frame runs TAAU again. Alternating
+   injection failure therefore produces exactly "one frozen frame and the current frame
+   swapping" at ~40 Hz.
+
+5. Also confirmed in the same session.
+   First injection succeeded at 02:51:37.108 (arg10 split=35/58, eval=1) and the very
+   next frame was skipped with fence busy; the engine's arg10 injection path is now
+   reachable in-game, which it was not in EXP-0140 (CreateFeature 0xBAD0000B).
+
+6. Exit hang correlates with the per-frame SetOptions call.
+   EXP-0142 (startup-only eOff) exited normally; EXP-0143 (per-frame set on the flip
+   thread) hung again and had to be killed. Remove the per-frame set before the next run.

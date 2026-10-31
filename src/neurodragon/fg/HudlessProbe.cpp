@@ -27,9 +27,9 @@
 namespace neurodragon::fg::hudless {
 namespace {
 
-// Six frames: two rounds of the three candidate boundaries. The menu and the world
-// share the display/UI tail, so the same offsets apply; only world frames are used.
-constexpr unsigned kMaxCaptures = 6;
+// F0 captures are disabled for F1: a pending capture holds a back buffer across
+// Present, which races the proxy chain's Resize path (EXP-0139).
+constexpr unsigned kMaxCaptures = 0;
 constexpr int      kOffsets[3]  = {-6, -3, -2};
 
 struct State {

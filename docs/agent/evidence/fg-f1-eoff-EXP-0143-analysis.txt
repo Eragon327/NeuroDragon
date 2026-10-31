@@ -1,0 +1,12 @@
+EXP-0142 postmortem input (created after reviewing the original log).
+
+User report: “还是闪，没有卡死”.
+
+Relevant raw log facts from docs/agent/evidence/fg-f1-world-EXP-0142-full.log:
+- 02:40:08.825 [fg] streamline: DLSS_G options set=0 state=0 mode=0 frames=1 status=0x0 presented=0
+- 02:40:21.098 [vvsr] sr CreateFeature(1) ret=0x00000001 1920x1080 -> 2560x1440
+- 02:40:21.620 / .666 / .686 [eval] f=1/2/3 ret=0x1
+- 02:40:36.763 and 02:40:40.297 proxy ResizeBuffers1 fallback hr=0x00000000
+- Normal mod disable and overlay uninstall followed.
+
+Conclusion: setting eOff once before chain creation is not sufficient to eliminate the visible alternating stale/current frames. The next single variable is asserting eOff on the actual present thread and reading state after chain creation.

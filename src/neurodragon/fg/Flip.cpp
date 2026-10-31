@@ -1,3 +1,4 @@
+#include "neurodragon/fg/Streamline.h"
 #include "neurodragon/fg/SwapchainProbe.h"
 #include "neurodragon/utils/Utils.h"
 
@@ -30,7 +31,10 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
             static_cast<void*>(this->m_swapChain)
         );
     }
+    ::neurodragon::fg::probe::installSwapChainHook(this->m_swapChain);
+    ::neurodragon::fg::streamline::presentFrame();
     origin();
+    ::neurodragon::fg::streamline::logDeviceRemovedReason("flip");
 }
 
 #endif

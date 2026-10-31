@@ -534,6 +534,7 @@ extern std::atomic<bool>     gDrawSuppressArmed;
 extern std::atomic<bool>     gLastInjectionOk;
 extern std::atomic<unsigned> gDrawSuppressSkips;
 extern std::atomic<unsigned> gInjectedGeneration;
+extern std::atomic<unsigned> gTaauRuns;
 
 void omSetRtvDetour(void* list, unsigned count, std::uintptr_t const* rtvs, int single, std::uintptr_t const* dsv) {
     // Pure forward: nothing here changes an argument or a state. What it adds is the
@@ -724,14 +725,14 @@ void drawIndexedInstancedDetour(void* list, unsigned indexCount, unsigned instan
     // restores TAAU on the frame after any failed injection; the generation checks keep
     // a resize frame on TAAU until a correctly sized injection exists (rapid F11 used to
     // leave a stale/truncated arg10, EXP-0075).
-    bool skipped = false;
-    if (isTaauDraw
-        && gDrawSuppressArmed.load(std::memory_order_acquire)
-        && gProductArmed.load(std::memory_order_acquire)
-        && gLastInjectionOk.load(std::memory_order_acquire)
-        && gInjectedGeneration.load(std::memory_order_acquire)
-               == gRenderGeneration.load(std::memory_order_relaxed)
-        && gMotionVectorNative.load(std::memory_order_acquire)) {
+    bool const armed = gDrawSuppressArmed.load(std::memory_order_acquire)
+                    && gProductArmed.load(std::memory_order_acquire);
+    bool const injected   = gLastInjectionOk.load(std::memory_order_acquire);
+    bool const generation = gInjectedGeneration.load(std::memory_order_acquire)
+                            == gRenderGeneration.load(std::memory_order_relaxed);
+    bool const motion = gMotionVectorNative.load(std::memory_order_acquire) != nullptr;
+    bool       skipped = false;
+    if (isTaauDraw && armed && injected && generation && motion) {
         unsigned const n = gDrawSuppressSkips.fetch_add(1, std::memory_order_relaxed) + 1;
         if (n <= 8) {
             ND_DEBUG(
@@ -741,6 +742,22 @@ void drawIndexedInstancedDetour(void* list, unsigned indexCount, unsigned instan
             );
         }
         skipped = true;
+    } else if (isTaauDraw && armed) {
+        // The draw runs while the product is armed: either the previous frame did not
+        // inject (and TAAU must fill arg10), or the gate refused for a reason worth
+        // seeing. A running TAAU draw is the only pass besides our injection that
+        // writes arg10, so these frames are the shrink-frame candidates (EXP-0145).
+        unsigned const n = gTaauRuns.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (n <= 16 || n % 600 == 0) {
+            ND_DEBUG(
+                "[vv] d-suppress: TAAU draw ran #{} injected={} gen={}/{} mv={}",
+                n,
+                injected ? 1 : 0,
+                gInjectedGeneration.load(std::memory_order_relaxed),
+                gRenderGeneration.load(std::memory_order_relaxed),
+                motion ? 1 : 0
+            );
+        }
     }
     if (auto* const sig = sigFor(list)) {
         ++sig->draws;
@@ -1073,6 +1090,9 @@ std::atomic<void*>          gMotionVectorNative{nullptr};
 std::atomic<bool>     gDrawSuppressArmed{false};
 std::atomic<bool>     gLastInjectionOk{false};
 std::atomic<unsigned> gDrawSuppressSkips{0};
+// TAAU draws that ran while the product was armed (EXP-0145). The engine's own
+// upscale writes arg10 too, so these are the frames that can replace our image.
+std::atomic<unsigned> gTaauRuns{0};
 // Generation of the last injection that really wrote arg10. A render-graph rebuild
 // (resize/F11/world enter) bumps renderGeneration(); until a frame has injected under
 // the new generation the draw is NOT skipped, so a resize can never leave a stale or

@@ -17,6 +17,7 @@ double msSinceProcessStart();
 /// call, not here. Calling LoadLibrary/WinVerifyTrust from load() deadlocked the
 /// client (EXP-0122/0123: 0-byte log, no window), which is the loader-lock shape.
 void install(std::wstring const& modDir);
+void installSwapChainHook(void* swapChain);
 void uninstall();
 
 } // namespace neurodragon::fg::probe

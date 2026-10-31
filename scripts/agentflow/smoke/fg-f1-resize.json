@@ -1,0 +1,20 @@
+{
+  "name": "fg-f1-resize",
+  "tier": "L2",
+  "timeout_s": 300,
+  "why": "F1 regression: the F0 hudless capture probe stays disabled while the proxy chain survives startup and a world/F11 ResizeBuffers1.",
+  "requires": [
+    "\\[fg\\] proxy ResizeBuffers1 fallback .*hr=0x00000000"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless capture",
+    "0x887A0005",
+    "cmdQ.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] proxy ResizeBuffers1 fallback .*hr=0x00000000": 2
+  }
+}

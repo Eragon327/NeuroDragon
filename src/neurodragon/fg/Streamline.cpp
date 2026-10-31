@@ -1,6 +1,7 @@
 #include "neurodragon/fg/Streamline.h"
 
 #include "neurodragon/fg/streamline-sdk/sl.h"
+#include "neurodragon/fg/streamline-sdk/sl_dlss_g.h"
 #include "neurodragon/utils/Utils.h"
 
 #include <Windows.h>
@@ -36,7 +37,10 @@ struct State {
     PFun_slUpgradeInterface*       upgrade{};
     PFun_slSetD3DDevice*           setDevice{};
     PFun_slSetFeatureLoaded*       setFeatureLoaded{};
-    std::vector<sl::Feature>       features{sl::kFeatureReflex, sl::kFeaturePCL};
+    PFun_slGetFeatureFunction*     getFeatureFunction{};
+    PFun_slDLSSGSetOptions*        dlssgSetOptions{};
+    PFun_slDLSSGGetState*          dlssgGetState{};
+    std::vector<sl::Feature>       features{sl::kFeatureReflex, sl::kFeaturePCL, sl::kFeatureDLSS_G};
     std::vector<std::wstring>      paths;
     std::vector<wchar_t const*>    pathPtrs;
     std::wstring                   logDir;
@@ -47,6 +51,7 @@ struct State {
 };
 
 State g;
+std::atomic<uint32_t> gPresentFrames{};
 
 void logMessage(sl::LogType type, char const* msg) {
     ND_DEBUG("[sl] lv={} {}", static_cast<int>(type), msg ? msg : "");
@@ -182,11 +187,17 @@ bool init(std::wstring const& modDir) {
         || !resolve("slIsFeatureLoaded", g.isLoaded) || !resolve("slGetFeatureVersion", g.featureVersion)
         || !resolve("slGetFeatureRequirements", g.featureRequirements)
         || !resolve("slUpgradeInterface", g.upgrade) || !resolve("slSetD3DDevice", g.setDevice)
-        || !resolve("slSetFeatureLoaded", g.setFeatureLoaded)) {
+        || !resolve("slSetFeatureLoaded", g.setFeatureLoaded)
+        || !resolve("slGetFeatureFunction", g.getFeatureFunction)) {
         return false;
     }
 
     g.paths.push_back(runtime);
+    std::wstring const gameDir = utils::applicationDirectory();
+    if (!gameDir.empty()) {
+        g.paths.push_back(gameDir);
+        ND_DEBUG("[fg] streamline: shared NGX search {}", std::string(gameDir.begin(), gameDir.end()));
+    }
     std::wstring const driver = findNvngxDirectory();
     if (!driver.empty()) {
         g.paths.push_back(driver);
@@ -255,6 +266,21 @@ bool upgradeFactory(void** factory) {
     return result == sl::Result::eOk && *factory;
 }
 
+bool upgradeDevice(void** device) {
+    if (!g.ready || !g.upgrade || !device || !*device) {
+        return false;
+    }
+    void* const      native = *device;
+    sl::Result const result = g.upgrade(device);
+    ND_DEBUG(
+        "[fg] streamline: slUpgradeInterface device 0x{:x} -> 0x{:x} result={}",
+        reinterpret_cast<std::uintptr_t>(native),
+        reinterpret_cast<std::uintptr_t>(*device),
+        static_cast<int>(result)
+    );
+    return result == sl::Result::eOk && *device;
+}
+
 bool ensureDevice(void* device) {
     if (!g.ready || !g.setDevice || !device) {
         return false;
@@ -270,10 +296,6 @@ bool ensureDevice(void* device) {
     );
     g.deviceSet = result == sl::Result::eOk;
     if (g.deviceSet && g.setFeatureLoaded) {
-        // DLSS-G is loaded only now: its plugin creates an internal pacer command
-        // queue, and activating it before the device existed produced
-        // "createCommandQueue nv.sl.dlss_g.cmdQ.pacer" + a failed proxy chain
-        // (EXP-0126/0127).
         sl::Result const loadResult = g.setFeatureLoaded(sl::kFeatureDLSS_G, true);
         bool              loaded     = false;
         g.isLoaded(sl::kFeatureDLSS_G, loaded);
@@ -282,6 +304,42 @@ bool ensureDevice(void* device) {
             static_cast<int>(loadResult),
             loaded ? 1 : 0
         );
+        if (loaded && g.getFeatureFunction) {
+            void* setOptionsFn = nullptr;
+            void* getStateFn   = nullptr;
+            sl::Result const setResolve =
+                g.getFeatureFunction(sl::kFeatureDLSS_G, "slDLSSGSetOptions", setOptionsFn);
+            sl::Result const getResolve =
+                g.getFeatureFunction(sl::kFeatureDLSS_G, "slDLSSGGetState", getStateFn);
+            if (setResolve == sl::Result::eOk && getResolve == sl::Result::eOk && setOptionsFn && getStateFn) {
+                g.dlssgSetOptions = reinterpret_cast<PFun_slDLSSGSetOptions*>(setOptionsFn);
+                g.dlssgGetState   = reinterpret_cast<PFun_slDLSSGGetState*>(getStateFn);
+                sl::ViewportHandle viewport{0};
+                sl::DLSSGOptions   options{};
+                options.mode                 = sl::DLSSGMode::eOff;
+                options.numFramesToGenerate  = 1;
+                options.queueParallelismMode = sl::DLSSGQueueParallelismMode::eBlockPresentingClientQueue;
+                sl::Result const optionsResult = g.dlssgSetOptions(viewport, options);
+                sl::DLSSGState   state{};
+                sl::DLSSGOptions current{};
+                sl::Result const stateResult = g.dlssgGetState(viewport, state, &current);
+                ND_DEBUG(
+                    "[fg] streamline: DLSS_G options set={} state={} mode={} frames={} status=0x{:x} presented={}",
+                    static_cast<int>(optionsResult),
+                    static_cast<int>(stateResult),
+                    static_cast<int>(current.mode),
+                    current.numFramesToGenerate,
+                    static_cast<unsigned>(state.status),
+                    state.numFramesActuallyPresented
+                );
+            } else {
+                ND_DEBUG(
+                    "[fg] streamline: DLSS_G options unavailable set={} get={}",
+                    static_cast<int>(setResolve),
+                    static_cast<int>(getResolve)
+                );
+            }
+        }
         if (loaded && g.featureVersion) {
             sl::FeatureVersion version{};
             if (g.featureVersion(sl::kFeatureDLSS_G, version) == sl::Result::eOk) {
@@ -307,6 +365,46 @@ void noteDevice(void* device) {
     g.pendingDevice = device;
     if (g.ready) {
         ensureDevice(device);
+    }
+}
+
+void presentFrame() {
+    if (!g.dlssgGetState) {
+        return;
+    }
+    // The eOff options are set once before the chain exists. Repeating the call on
+    // every flip raced SL's own Present bookkeeping ("Repeated slDLSSGSetOptions")
+    // and brought the exit hang back (EXP-0143); only count and read state here.
+    uint32_t const frame = gPresentFrames.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (frame == 1 || frame % 600 == 0) {
+        sl::ViewportHandle viewport{0};
+        sl::DLSSGState     state{};
+        sl::DLSSGOptions   current{};
+        sl::Result const   stateResult = g.dlssgGetState(viewport, state, &current);
+        ND_DEBUG(
+            "[fg] streamline: DLSS_G state frame={} result={} mode={} frames={} status=0x{:x} presented={}",
+            frame,
+            static_cast<int>(stateResult),
+            static_cast<int>(current.mode),
+            current.numFramesToGenerate,
+            static_cast<unsigned>(state.status),
+            state.numFramesActuallyPresented
+        );
+    }
+}
+
+void logDeviceRemovedReason(char const* when) {
+    if (!g.pendingDevice) {
+        return;
+    }
+    auto*        device = static_cast<ID3D12Device*>(g.pendingDevice);
+    HRESULT const reason = device->GetDeviceRemovedReason();
+    if (FAILED(reason)) {
+        ND_DEBUG(
+            "[fg] device removed reason after {}: 0x{:08x}",
+            when ? when : "unknown",
+            static_cast<unsigned>(reason)
+        );
     }
 }
 

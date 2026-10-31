@@ -23,13 +23,24 @@ namespace {
 // written from the render thread and read from the panel; the panel turns the code
 // into text (stats()).
 
-struct Injector {
-    ID3D12Device*              device{};
-    ID3D12CommandQueue*        queue{};
+// The fence only guards allocator reuse, but under Streamline's proxy queue it can
+// still be unsignalled on the next world frame (EXP-0142: ~42 fence-busy skips/s
+// against ~81 presents/s), and a skipped frame after an injected one presents the
+// previous arg10 unchanged. Three slots let one rest for two frames.
+constexpr unsigned kSlots = 3;
+
+struct Slot {
     ID3D12CommandAllocator*    allocator{};
     ID3D12GraphicsCommandList* list{};
     ID3D12Fence*               fence{};
     UINT64                     fenceValue{};
+};
+
+struct Injector {
+    ID3D12Device*              device{};
+    ID3D12CommandQueue*        queue{};
+    Slot                       slots[kSlots];
+    unsigned                   slot{};
     IDXGISwapChain*            swapChain{};
     ID3D12Resource*            pending{}; ///< back buffer handed to the split submission
     std::atomic<bool>          pipelineReady{false};
@@ -80,28 +91,40 @@ void setReason(SkipReason reason) {
 
 void noteListCount(unsigned listCount) { gLists.store(listCount, std::memory_order_relaxed); }
 
+bool anySlotBusy() {
+    for (Slot const& slot : g.slots) {
+        if (slot.fence && slot.fence->GetCompletedValue() < slot.fenceValue) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool buildPipeline() {
     if (!g.device) {
         return false;
     }
-    if (FAILED(g.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&g.allocator)))
-        || FAILED(g.device->CreateCommandList(
-            0,
-            D3D12_COMMAND_LIST_TYPE_DIRECT,
-            g.allocator,
-            nullptr,
-            IID_PPV_ARGS(&g.list)
-        ))
-        || FAILED(g.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g.fence)))) {
-        return false;
+    for (Slot& slot : g.slots) {
+        if (FAILED(g.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&slot.allocator)))
+            || FAILED(g.device->CreateCommandList(
+                0,
+                D3D12_COMMAND_LIST_TYPE_DIRECT,
+                slot.allocator,
+                nullptr,
+                IID_PPV_ARGS(&slot.list)
+            ))
+            || FAILED(g.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&slot.fence)))) {
+            return false;
+        }
+        // The list is handed to us in the recording state; a fresh list that has never
+        // been closed cannot be Reset on every platform, so close it once here.
+        if (FAILED(slot.list->Close())) {
+            return false;
+        }
     }
-    // The list is handed to us in the recording state; a fresh list that has never
-    // been closed cannot be Reset on every platform, so close it once here.
-    if (FAILED(g.list->Close())) {
-        return false;
-    }
+    g.slot = kSlots - 1; // the first prepare() advances to slot 0
     g.pipelineReady.store(true, std::memory_order_release);
-    ND_DEBUG("[vv] inject pipeline ready");
+    ND_DEBUG("[vv] inject pipeline ready slots={}", kSlots);
     return true;
 }
 
@@ -127,7 +150,7 @@ ID3D12Resource* currentBackBuffer() {
 // sub-record failed, which kept its allocator busy and made every later Reset fail -
 // injection died for the rest of the session with "record failed", no device error.
 bool finish(bool ok) {
-    HRESULT const closed = g.list->Close();
+    HRESULT const closed = g.slots[g.slot].list->Close();
     if (FAILED(closed)) {
         static std::atomic<unsigned> failures{0};
         unsigned const               n = failures.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -143,10 +166,11 @@ bool finish(bool ok) {
 }
 
 bool record() {
+    Slot&         slot = g.slots[g.slot];
     // A list left recording by an earlier failed frame has to be closed before its
     // allocator can be reset again; without this the first failure is permanent.
-    g.list->Close();
-    if (FAILED(g.allocator->Reset()) || FAILED(g.list->Reset(g.allocator, nullptr))) {
+    slot.list->Close();
+    if (FAILED(slot.allocator->Reset()) || FAILED(slot.list->Reset(slot.allocator, nullptr))) {
         return false;
     }
     if (gAction.load(std::memory_order_relaxed) != static_cast<int>(Action::DlssArg10)) {
@@ -155,7 +179,7 @@ bool record() {
     // prep + DLSS evaluate, then a PS that writes the DLSS output into the engine's
     // arg10. No white point, no encode, no back-buffer copy.
     void* const target = probe::vv::arg10Target();
-    if (!target || !neurodragon::vv::sr::recordArg10(g.list, target)) {
+    if (!target || !neurodragon::vv::sr::recordArg10(slot.list, target)) {
         return finish(false);
     }
     return finish(true);
@@ -232,7 +256,7 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         // frame (EXP-0092). Wait for the old queue's last injection to finish, then
         // rebind. While it is still pending, report a failed injection so the draw
         // suppress releases TAAU next frame instead of freezing.
-        if (g.fence && g.fence->GetCompletedValue() < g.fenceValue) {
+        if (anySlotBusy()) {
             setReason(SkipReason::FenceBusy);
             return 0;
         }
@@ -261,12 +285,6 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     }
     if (!g.pipelineReady.load(std::memory_order_acquire) && !buildPipeline()) {
         setReason(SkipReason::PipelineFailed);
-        return 0;
-    }
-    // An allocator may not be reset while the GPU is still executing a list recorded
-    // from it. One frame of delay is invisible here and far safer than waiting.
-    if (g.fence && g.fence->GetCompletedValue() < g.fenceValue) {
-        setReason(SkipReason::FenceBusy);
         return 0;
     }
     if (!gUseArg10.load(std::memory_order_relaxed) || !lists) {
@@ -307,6 +325,15 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         setReason(SkipReason::NoBoundary);
         return 0;
     }
+    // Rotate only here: a submission that will not record must not consume a slot,
+    // or two in-flight injections could share one allocator. The target slot's fence
+    // is the one that matters; with three slots it normally has two frames to finish.
+    unsigned const next = (g.slot + 1) % kSlots;
+    if (g.slots[next].fence && g.slots[next].fence->GetCompletedValue() < g.slots[next].fenceValue) {
+        setReason(SkipReason::FenceBusy);
+        return 0;
+    }
+    g.slot = next;
     ID3D12Resource* buffer = currentBackBuffer();
     if (!buffer) {
         setReason(SkipReason::NoBackBuffer);
@@ -322,8 +349,17 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
 
     gSplit.store(split, std::memory_order_relaxed);
     gReason.store(static_cast<unsigned>(SkipReason::None), std::memory_order_relaxed);
-    gInjected.fetch_add(1, std::memory_order_relaxed);
+    unsigned const injected = gInjected.fetch_add(1, std::memory_order_relaxed) + 1;
     probe::vv::noteInjectionResult(true);
+    if (injected % 600 == 0) {
+        // One line per 600 world frames: read it against the present counter to see
+        // whether injection kept a 1:1 pace (EXP-0144's acceptance signal).
+        utils::logger().info(
+            "[vv] inject: {} injected, {} skipped since arm",
+            injected,
+            gSkipped.load(std::memory_order_relaxed)
+        );
+    }
     unsigned const n = gContentLogs.fetch_add(1, std::memory_order_relaxed);
     if (n < 4) {
         ND_DEBUG("[vv] inject: arg10 boundary split={}/{}", split, listCount);
@@ -340,16 +376,24 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     return split;
 }
 
-void* list() { return g.list; }
+void* list() { return g.slots[g.slot].list; }
 
-bool isOwnList(void* list) { return list && list == g.list; }
+bool isOwnList(void* list) {
+    for (Slot const& slot : g.slots) {
+        if (list && list == slot.list) {
+            return true;
+        }
+    }
+    return false;
+}
 
 bool recordingOwnView() { return gRecordingView.load(std::memory_order_relaxed); }
 void setRecordingOwnView(bool recording) { gRecordingView.store(recording, std::memory_order_relaxed); }
 
 void submitted() {
-    if (g.queue && g.fence) {
-        g.queue->Signal(g.fence, ++g.fenceValue);
+    Slot& slot = g.slots[g.slot];
+    if (g.queue && slot.fence) {
+        g.queue->Signal(slot.fence, ++slot.fenceValue);
     }
     // The reference has to go now: ResizeBuffers fails while any reference to a back
     // buffer is outstanding, and that failure ends in abort() (docs/specs/vv.md §9).
@@ -360,17 +404,20 @@ void submitted() {
 }
 
 void release() {
-    if (g.list) {
-        g.list->Release();
-        g.list = nullptr;
-    }
-    if (g.allocator) {
-        g.allocator->Release();
-        g.allocator = nullptr;
-    }
-    if (g.fence) {
-        g.fence->Release();
-        g.fence = nullptr;
+    for (Slot& slot : g.slots) {
+        if (slot.list) {
+            slot.list->Release();
+            slot.list = nullptr;
+        }
+        if (slot.allocator) {
+            slot.allocator->Release();
+            slot.allocator = nullptr;
+        }
+        if (slot.fence) {
+            slot.fence->Release();
+            slot.fence = nullptr;
+        }
+        slot.fenceValue = 0;
     }
     if (g.pending) {
         g.pending->Release();

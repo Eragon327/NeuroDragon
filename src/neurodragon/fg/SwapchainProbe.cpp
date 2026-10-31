@@ -36,7 +36,7 @@ double msSinceProcessStart() {
 #ifdef TEST
 
 #include <MinHook.h>
-#include <dxgi1_2.h>
+#include <dxgi1_4.h>
 
 #include <atomic>
 #include <mutex>
@@ -73,6 +73,9 @@ using CreateForComposeFn = HRESULT(STDMETHODCALLTYPE*)(
     IDXGIOutput*,
     IDXGISwapChain1**
 );
+using ResizeBuffers1Fn   = HRESULT(STDMETHODCALLTYPE*)(
+    IDXGISwapChain3*, UINT, UINT, UINT, DXGI_FORMAT, UINT, UINT const*, IUnknown* const*
+);
 
 // IDXGIFactory / IDXGIFactory2 vtable slots. Every Windows 10+ factory implements
 // IDXGIFactory7, so all four slots exist on the object the game actually receives.
@@ -80,6 +83,7 @@ constexpr size_t kCreateSwapChainSlot      = 10;
 constexpr size_t kCreateForHwndSlot        = 15;
 constexpr size_t kCreateForCoreWindowSlot  = 16;
 constexpr size_t kCreateForCompositionSlot = 24;
+constexpr size_t kResizeBuffers1Slot       = 39;
 
 // One original per hooked entry point: MH_CreateHook stores the trampoline through
 // the pointer it is given, so sharing one between two targets would leave the first
@@ -92,11 +96,13 @@ CreateSwapChainFn  gCreateSwapChain{};
 CreateForHwndFn    gCreateForHwnd{};
 CreateForWindowFn  gCreateForWindow{};
 CreateForComposeFn gCreateForComposition{};
+ResizeBuffers1Fn   gProxyResizeBuffers1{};
 
 std::atomic_bool gInstalled{};
 std::atomic_bool gFactoryHooked{};
+std::atomic_bool gProxyChainHooked{};
 std::mutex       gHookMutex;
-void*            gHookedTargets[8]{};
+void*            gHookedTargets[16]{};
 int              gHookedCount{};
 std::wstring     gModDir;
 
@@ -269,7 +275,7 @@ bool hookTarget(char const* name, void* target, void* detour, void** original) {
         ND_DEBUG("[fg] hook {} failed enable status={}", name, static_cast<int>(status));
         return false;
     }
-    if (gHookedCount < 8) gHookedTargets[gHookedCount++] = target;
+    if (gHookedCount < 16) gHookedTargets[gHookedCount++] = target;
     ND_DEBUG("[fg] hook {} at 0x{:x}", name, reinterpret_cast<std::uintptr_t>(target));
     return true;
 }
@@ -443,9 +449,20 @@ HRESULT WINAPI createFactory2Detour(UINT flags, REFIID riid, void** out) {
 HRESULT WINAPI createDeviceDetour(IUnknown* adapter, int level, REFIID riid, void** device) {
     HRESULT const hr = gCreateDevice ? gCreateDevice(adapter, level, riid, device) : E_FAIL;
     if (SUCCEEDED(hr) && device && *device) {
-        ND_DEBUG("[fg] device created 0x{:x}", reinterpret_cast<std::uintptr_t>(*device));
-        // The swap-chain `device` argument is the queue; this is the real device.
-        neurodragon::fg::streamline::noteDevice(*device);
+        void* const native = *device;
+        ND_DEBUG(
+            "[fg] device created 0x{:x} caller={}",
+            reinterpret_cast<std::uintptr_t>(native),
+            callerStack()
+        );
+        if (gameCaller() && neurodragon::fg::streamline::upgradeDevice(device)) {
+            ND_DEBUG(
+                "[fg] device upgraded to SL proxy 0x{:x} (native 0x{:x})",
+                reinterpret_cast<std::uintptr_t>(*device),
+                reinterpret_cast<std::uintptr_t>(native)
+            );
+        }
+        neurodragon::fg::streamline::noteDevice(native);
     }
     return hr;
 }
@@ -484,11 +501,6 @@ HRESULT STDMETHODCALLTYPE createForHwndDetour(
 ) {
     if (desc) {
         if (viaInterposer()) {
-            // The proxy chain is the game's: SL needs the device. ALLOW_TEARING is
-            // not added yet: the game's ResizeBuffers1 still passes its original
-            // flags, and the proxy's resize (which bypasses the overlay's vtable
-            // hook) then fails with DXGI_ERROR_INVALID_CALL (EXP-0129). Tearing comes
-            // back once the resize path can carry it.
             neurodragon::fg::streamline::ensureDeviceFromQueue(device);
         }
         logRequest(
@@ -571,7 +583,51 @@ HRESULT STDMETHODCALLTYPE createForCompositionDetour(
     return hr;
 }
 
+HRESULT STDMETHODCALLTYPE proxyResizeBuffers1Detour(
+    IDXGISwapChain3* self,
+    UINT             bufferCount,
+    UINT             width,
+    UINT             height,
+    DXGI_FORMAT      format,
+    UINT             flags,
+    UINT const*,
+    IUnknown* const*
+) {
+    UINT const adjustedFlags = flags | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    HRESULT const hr = self ? self->ResizeBuffers(bufferCount, width, height, format, adjustedFlags) : E_FAIL;
+    ND_DEBUG(
+        "[fg] proxy ResizeBuffers1 fallback buffers={} {}x{} flags=0x{:x}->0x{:x} hr=0x{:08x}",
+        bufferCount,
+        width,
+        height,
+        flags,
+        adjustedFlags,
+        static_cast<unsigned>(hr)
+    );
+    return hr;
+}
+
 } // namespace
+
+void installSwapChainHook(void* swapChain) {
+    if (!swapChain || gProxyChainHooked.exchange(true, std::memory_order_acq_rel)) return;
+
+    auto*           base = static_cast<IUnknown*>(swapChain);
+    IDXGISwapChain3* chain3{};
+    if (FAILED(base->QueryInterface(IID_PPV_ARGS(&chain3))) || !chain3) {
+        gProxyChainHooked.store(false, std::memory_order_release);
+        return;
+    }
+    void** vtbl = *reinterpret_cast<void***>(chain3);
+    bool const ok = hookTarget(
+        "SL proxy IDXGISwapChain3::ResizeBuffers1",
+        vtbl[kResizeBuffers1Slot],
+        reinterpret_cast<void*>(&proxyResizeBuffers1Detour),
+        reinterpret_cast<void**>(&gProxyResizeBuffers1)
+    );
+    chain3->Release();
+    if (!ok) gProxyChainHooked.store(false, std::memory_order_release);
+}
 
 void install(std::wstring const& modDir) {
     gModDir = modDir;
@@ -653,6 +709,7 @@ void uninstall() {
     }
     gHookedCount = 0;
     gFactoryHooked.store(false, std::memory_order_release);
+    gProxyChainHooked.store(false, std::memory_order_release);
 }
 
 } // namespace neurodragon::fg::probe
@@ -662,6 +719,7 @@ void uninstall() {
 namespace neurodragon::fg::probe {
 
 void install(std::wstring const&) {}
+void installSwapChainHook(void*) {}
 void uninstall() {}
 
 } // namespace neurodragon::fg::probe

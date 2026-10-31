@@ -2,14 +2,20 @@
   "name": "fg-wrap",
   "tier": "L1",
   "timeout_s": 120,
-  "why": "F1 step 2: the game receives Streamline's proxy factory, the chain carries ALLOW_TEARING, and Present still runs through the overlay.",
+  "why": "F1: proxy device and factory satisfy manual hooking, DLSS-G wraps the main chain, and Present still reaches the overlay.",
   "requires": [
+    "\\[fg\\] device upgraded to SL proxy",
     "\\[fg\\] factory upgraded to SL proxy",
-    "\\[fg\\] CreateSwapChainForHwnd req .*flags=0x42",
+    "\\[fg\\] CreateSwapChainForHwnd req .*flags=0x842",
+    "\\[fg\\] proxy ResizeBuffers1 fallback .*hr=0x00000000",
     "\\[fg\\] streamline: slSetD3DDevice",
+    "\\[fg\\] streamline: DLSS_G load-after-device result=0 loaded=1",
+    "\\[fg\\] streamline: DLSS_G present options frame=1 set=0 state=0 mode=0 ",
     "\\[vv\\] frame time: avg="
   ],
   "forbids": [
+    "0x887A0005",
+    "cmdQ.pacer",
     "Unhandled exception",
     "Panic:",
     "Assertion failed"
