@@ -2406,7 +2406,9 @@ bool nrEnsureRenderSize(
     }
     if (!placementChange && gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
         device->Release();
-        return false; // the size is still moving; try again once it settles
+        // Defer only the rebuild. Refusing to record would also stop evalCount, so the
+        // throttle could never expire and NR stayed on "created, waiting" forever.
+        return true;
     }
 
     ID3D12Resource* newOutput  = nullptr;
@@ -3379,6 +3381,11 @@ bool nrRecord(
     nrStampEnd(cmd, frame, 3);
     if (evaluateRet == 1) {
         ++gNr.evalCount;
+#ifdef TEST
+        if (gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
+            NR_DEBUG("[nr] resize throttle: evaluated current extent (evalCount=%u)", gNr.evalCount);
+        }
+#endif
     } else {
         ++gNr.evalFailures;
         // Never silently accept a failed network evaluation: the output texture then
@@ -4359,8 +4366,9 @@ SrStats srPanelStats() {
 
 PanelStats nrPanelStats() {
     PanelStats stats;
-    stats.featureCreated = gNr.created;
-    stats.stampsActive   = gStamps.active;
+    stats.featureAttempted = gNr.attempted;
+    stats.featureCreated   = gNr.created;
+    stats.stampsActive     = gStamps.active;
     stats.evalCount      = gNr.evalCount;
     stats.evalFailures   = gNr.evalFailures;
     stats.lastError      = gNr.lastError;

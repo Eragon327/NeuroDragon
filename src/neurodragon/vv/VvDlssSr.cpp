@@ -1,6 +1,7 @@
 #include "neurodragon/vv/VvDlssSr.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/sr/SrSharpening.h"
 
@@ -285,6 +286,7 @@ bool ensureSession(ID3D12Device* device) {
             return false;
         }
     }
+    probe::ensureNgxHooks();
     auto const caps = reinterpret_cast<GetCapsFn>(::GetProcAddress(gCore, "NVSDK_NGX_D3D12_GetCapabilityParameters"));
     gCreate   = reinterpret_cast<CreateFn>(::GetProcAddress(gCore, "NVSDK_NGX_D3D12_CreateFeature"));
     gEvaluate = reinterpret_cast<EvaluateFn>(::GetProcAddress(gCore, "NVSDK_NGX_D3D12_EvaluateFeature"));

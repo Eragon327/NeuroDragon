@@ -293,8 +293,9 @@ void nrStampClearReported();
 // published atomically once per measurement window; nothing here is a guess.
 // ---------------------------------------------------------------------------
 struct PanelStats {
-    bool     featureCreated = false;
-    bool     stampsActive   = false; // false = GPU timing unavailable this run
+    bool     featureAttempted = false;
+    bool     featureCreated   = false;
+    bool     stampsActive     = false; // false = GPU timing unavailable this run
     unsigned evalCount      = 0;
     unsigned evalFailures   = 0; // telemetry (docs/L 3.3)
     int      lastError      = 0;

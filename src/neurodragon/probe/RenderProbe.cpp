@@ -375,9 +375,10 @@ void hookInitOn(HMODULE module, [[maybe_unused]] char const* which) {
 // NR never upscales - the engine's DLSS still does the upscaling).
 // ---------------------------------------------------------------------------
 
-bool          gNrEnabled     = false;
-bool          gNrStartTried  = false;
-bool          gNrWindowOpen  = false;
+bool                   gNrEnabled    = false;
+bool                   gNrStartTried = false;
+std::atomic<unsigned>  gNrDiagState{0};
+bool                   gNrWindowOpen = false;
 int           gNrWindowIndex = -1;
 std::uint64_t gWindowAnchor  = 0;
 std::uint64_t gNrWindowStart = 0;
@@ -1352,6 +1353,11 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             static_cast<unsigned>(result)
         );
     }
+    unsigned const diagState = (color ? 1u : 0u) | (depth ? 2u : 0u) | (mv ? 4u : 0u) | (out ? 8u : 0u)
+                             | ((width && height) ? 16u : 0u)
+                             | (validParamObj(const_cast<void*>(params)) ? 0x100u : 0u)
+                             | (gNrEnabled ? 0x200u : 0u) | (gNrStartTried ? 0x400u : 0u);
+    gNrDiagState.store(diagState, std::memory_order_relaxed);
     return result;
 }
 
@@ -1585,10 +1591,7 @@ void startWatcher() {
             }
             if (GetModuleHandleW(L"_nvngx.dll") && GetModuleHandleW(L"nvngx_dlss.dll")) {
                 std::this_thread::sleep_for(150ms);
-                if (gNgxHooked.exchange(true)) {
-                    break;
-                }
-                hookNgxExports();
+                ensureNgxHooks();
                 break;
             }
             std::this_thread::sleep_for(20ms);
@@ -1606,6 +1609,20 @@ void startWatcher() {
 }
 
 } // namespace
+
+bool ensureNgxHooks() {
+    if (gNgxHooked.load(std::memory_order_relaxed)) {
+        return true;
+    }
+    if (!GetModuleHandleW(L"_nvngx.dll")) {
+        return false;
+    }
+    if (gNgxHooked.exchange(true)) {
+        return true;
+    }
+    hookNgxExports();
+    return true;
+}
 
 bool install() {
     // Pin this module for the process lifetime. Unhooking while another thread is
@@ -1669,5 +1686,16 @@ void uninstall() {
 bool isInstalled() { return gNgxHooked.load(std::memory_order_relaxed); }
 
 std::uint64_t nrEvaluateSerial() { return gFrame.load(std::memory_order_relaxed); }
+
+NrDiagnostic nrDiagnostic() {
+    unsigned const state = gNrDiagState.load(std::memory_order_relaxed);
+    return {
+        gFrame.load(std::memory_order_relaxed),
+        state & 0x1Fu,
+        (state & 0x100u) != 0,
+        (state & 0x200u) != 0,
+        (state & 0x400u) != 0,
+    };
+}
 
 } // namespace neurodragon::probe

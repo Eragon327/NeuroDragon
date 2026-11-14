@@ -173,6 +173,24 @@ std::atomic<bool> gReleased{false};
 unsigned         gColorCandidates = 0;
 unsigned         gDepthCandidates = 0;
 
+// Temporary heartbeat state (EXP-0119): what the last record attempt saw. Written on
+// the render thread and read once every 600 presents, under its own lock so a torn
+// read cannot mislead the diagnostic.
+std::mutex gDiagMutex;
+Diag       gDiag;
+
+void setDiagFail(unsigned code) {
+    std::lock_guard lock(gDiagMutex);
+    gDiag.lastFail = code;
+    ++gDiag.framesSinceOk;
+}
+
+void setDiagOk() {
+    std::lock_guard lock(gDiagMutex);
+    gDiag.lastFail      = 0;
+    gDiag.framesSinceOk = 0;
+}
+
 // ---- feature-level fallback (docs/specs/vv.md §38) -------------------------
 // Three consecutive creation failures are not something the optional passes can
 // fix, so they jump straight to EngineTaau; evaluation failures walk one rung at a
@@ -914,14 +932,28 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     if (!renderWidth || !renderHeight || !displayWidth || !displayHeight) {
         return false;
     }
+    {
+        std::lock_guard lock(gDiagMutex);
+        gDiag.renderWidth   = renderWidth;
+        gDiag.renderHeight  = renderHeight;
+        gDiag.displayWidth  = displayWidth;
+        gDiag.displayHeight = displayHeight;
+    }
     if (!ensurePipeline(device) || !ensureResources(device, renderWidth, renderHeight, displayWidth, displayHeight)) {
+        setDiagFail(3);
         return false;
     }
     void*    color       = nullptr;
     void*    depth       = nullptr;
     unsigned colorFormat = 0;
     unsigned depthFormat = 0;
-    if (!pickInputs(&color, &colorFormat, &depth, &depthFormat)) {
+    bool const picked = pickInputs(&color, &colorFormat, &depth, &depthFormat);
+    {
+        std::lock_guard lock(gDiagMutex);
+        gDiag.colourCandidates = gColorCandidates;
+        gDiag.depthCandidates  = gDepthCandidates;
+    }
+    if (!picked) {
         // The engine creates its render graph before the mod loads, so the RTV
         // inventory is empty until it rebuilds once (F11 / fullscreen toggle). Say it
         // instead of failing mute.
@@ -932,6 +964,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                 " - press F11 once (fullscreen toggle) so the engine rebuilds its render graph"
             );
         }
+        setDiagFail(1);
         return false;
     }
     auto* const colorTexture = static_cast<ID3D12Resource*>(color);
@@ -974,6 +1007,12 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         auto* const               mvTexture = static_cast<ID3D12Resource*>(mvResource);
         D3D12_RESOURCE_DESC const mvDesc    = mvTexture->GetDesc();
         mvFormat                            = static_cast<unsigned>(mvDesc.Format);
+        {
+            std::lock_guard lock(gDiagMutex);
+            gDiag.mvWidth  = static_cast<unsigned>(mvDesc.Width);
+            gDiag.mvHeight = mvDesc.Height;
+            gDiag.mvFormat = mvFormat;
+        }
         DXGI_FORMAT srvFormat               = DXGI_FORMAT_UNKNOWN;
         bool        fourChannel             = false;
         if (mvDesc.Width == renderWidth && mvDesc.Height == renderHeight
@@ -982,6 +1021,11 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             device->CreateShaderResourceView(mvTexture, &srv, cpuAt(kSlotEngineMv));
             prepMode = 1u | (fourChannel ? 2u : 0u);
         }
+    } else {
+        std::lock_guard lock(gDiagMutex);
+        gDiag.mvWidth  = 0;
+        gDiag.mvHeight = 0;
+        gDiag.mvFormat = 0;
     }
     {
         static std::atomic<unsigned> mvLogs{0};
@@ -1025,6 +1069,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                 mvFormat
             );
         }
+        setDiagFail(2);
         return false;
     }
 
@@ -1254,6 +1299,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     }
     if (arg10) {
         if (!dlssEvaluated) {
+            setDiagFail(featureReady ? 5 : 4);
             return false;
         }
         D3D12_RESOURCE_DESC const targetDesc = arg10->GetDesc();
@@ -1265,6 +1311,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
                     static_cast<unsigned>(targetDesc.Format)
                 );
             }
+            setDiagFail(6);
             return false;
         }
         // Stage A proved arg10 is left in RENDER_TARGET by its writer list, so this
@@ -1304,6 +1351,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         list->SetPipelineState(gPipeline.arg10Ps);
         list->DrawInstanced(3, 1, 0, 0);
 
+        setDiagOk();
         std::lock_guard lock(gMutex);
         gStats.recorded        = true;
         gStats.frame           = frameNo;
@@ -1374,10 +1422,20 @@ void release() {
     if (gPipeline.rtvHeap) gPipeline.rtvHeap->Release();
     gPipeline = Pipeline{};
     gStats    = Stats{};
+    {
+        // The heartbeat must not describe the previous arm after a reload (EXP-0119).
+        std::lock_guard lock(gDiagMutex);
+        gDiag = Diag{};
+    }
     // Drop the saved frame so a reload starts the Previous mode from its documented
     // fallback (zero) instead of the last frame of the previous session.
     gPrevJitterX = 0.0f;
     gPrevJitterY = 0.0f;
+}
+
+Diag diag() {
+    std::lock_guard lock(gDiagMutex);
+    return gDiag;
 }
 
 } // namespace neurodragon::vv::sr

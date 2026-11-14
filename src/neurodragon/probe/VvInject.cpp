@@ -1,6 +1,9 @@
 #include "neurodragon/Config.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
+#include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/vv/VvDlssSr.h"
 #include "neurodragon/vv/VvSr.h"
 
 #include <Windows.h>
@@ -32,6 +35,7 @@ struct Injector {
     ID3D12CommandAllocator*    allocator{};
     ID3D12GraphicsCommandList* list{};
     ID3D12Fence*               fence{};
+    HANDLE                     gpuEvent{};
     UINT64                     fenceValue{};
     unsigned                   busySubmits{}; ///< consecutive submissions that found the fence unfinished
     unsigned                   rebuilds{};    ///< stall recoveries in this arm (capped)
@@ -41,10 +45,10 @@ struct Injector {
     std::atomic<bool>          pipelineReady{false};
 };
 
-// A pending fence is normal for a submission or two - the GPU is still running the
-// injection. Hundreds in a row are a lost signal or a dead queue, not latency:
-// 120 submissions is about 2 s at 60 fps and 8 s at 15 fps.
+// VvSr and NR rewrite shared descriptor heaps while recording. One in-flight list
+// keeps those descriptors valid; a persistent lack of completion still means a stall.
 constexpr unsigned kStallSubmits = 120;
+constexpr DWORD    kFenceWaitMs  = 50;
 // A stall that keeps coming back is not something a rebuild fixes; after this many
 // the product turns itself off instead of leaking an allocator per retry.
 constexpr unsigned kMaxRebuilds = 8;
@@ -61,6 +65,9 @@ std::atomic<unsigned> gSkipped{0};
 std::atomic<unsigned> gReason{static_cast<unsigned>(SkipReason::None)};
 std::atomic<bool>     gRebuild{false};   ///< re-arm asked for fresh objects
 std::atomic<bool>     gRecovered{false}; ///< report the first injection after a rebuild
+#if ND_VV_HEARTBEAT
+std::atomic<unsigned> gQueueChanges{0}; ///< direct-queue rebinds (heartbeat only)
+#endif
 // Log throttles: a broken frame would otherwise write a line per frame forever, and
 // the first few attempts are the only ones worth reading one by one.
 std::atomic<unsigned> gSkips{0};
@@ -96,6 +103,35 @@ void setReason(SkipReason reason) {
 
 void noteListCount(unsigned listCount) { gLists.store(listCount, std::memory_order_relaxed); }
 
+// Retire without resetting the allocator: its list may still be executing. D3D12 and
+// the queue keep the submitted objects alive after we drop our references.
+void retire() {
+    if (g.list) {
+        g.list->Close();
+        g.list->Release();
+        g.list = nullptr;
+    }
+    if (g.allocator) {
+        g.allocator->Release();
+        g.allocator = nullptr;
+    }
+    if (g.fence) {
+        g.fence->Release();
+        g.fence = nullptr;
+    }
+    if (g.gpuEvent) {
+        ::CloseHandle(g.gpuEvent);
+        g.gpuEvent = nullptr;
+    }
+    if (g.pending) {
+        g.pending->Release();
+        g.pending = nullptr;
+    }
+    g.fenceValue  = 0;
+    g.busySubmits = 0;
+    g.pipelineReady.store(false, std::memory_order_release);
+}
+
 bool buildPipeline() {
     if (!g.device) {
         return false;
@@ -108,45 +144,19 @@ bool buildPipeline() {
             nullptr,
             IID_PPV_ARGS(&g.list)
         ))
-        || FAILED(g.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g.fence)))) {
+        || FAILED(g.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g.fence)))
+        || FAILED(g.list->Close())) {
+        retire();
         return false;
     }
-    // The list is handed to us in the recording state; a fresh list that has never
-    // been closed cannot be Reset on every platform, so close it once here.
-    if (FAILED(g.list->Close())) {
+    g.gpuEvent = ::CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if (!g.gpuEvent) {
+        retire();
         return false;
     }
     g.pipelineReady.store(true, std::memory_order_release);
-    ND_DEBUG("[vv] inject pipeline ready");
+    ND_DEBUG("[vv] inject pipeline ready (single in-flight)");
     return true;
-}
-
-// Drops the objects a pending injection may still be using. The allocator is retired,
-// never reset: the GPU can still be executing the list recorded from it, and resetting
-// it from under the GPU is what killed injection for a whole session in EXP-0064.
-void retire() {
-    if (g.list) {
-        g.list->Close();
-        g.list->Release();
-        g.list = nullptr;
-    }
-    if (g.allocator) {
-        g.allocator->Release();
-        g.allocator = nullptr;
-    }
-    if (g.fence) {
-        // The queue keeps its own reference until a pending Signal is processed, so
-        // dropping ours cannot strand the signal.
-        g.fence->Release();
-        g.fence = nullptr;
-    }
-    if (g.pending) {
-        g.pending->Release();
-        g.pending = nullptr;
-    }
-    g.fenceValue  = 0;
-    g.busySubmits = 0;
-    g.pipelineReady.store(false, std::memory_order_release);
 }
 
 // Why the fence cannot be trusted, in one line; retires the old objects and builds a
@@ -174,19 +184,27 @@ void restart(char const* why) {
     }
 }
 
-// True when the previous injection has finished (or there is none). A stall is
-// recovered here instead of being reported forever: a Signal that never reaches the
-// queue used to leave fenceValue ahead of the fence for the rest of the process, which
-// silently killed every later injection - and in VV that also starves NR's create
-// gate, because the gate only runs inside our evaluate (EXP-0118).
 bool fenceIdle() {
     if (!g.fence) {
         return true;
     }
-    UINT64 const done = g.fence->GetCompletedValue();
+    UINT64 done = g.fence->GetCompletedValue();
     if (done >= g.fenceValue) {
         g.busySubmits = 0;
         return true;
+    }
+    // Descriptors are rewritten by VvSr and NR during recording. Waiting here keeps
+    // the previous list's descriptors alive until its GPU work has finished.
+    HRESULT hr = g.gpuEvent ? g.fence->SetEventOnCompletion(g.fenceValue, g.gpuEvent) : E_HANDLE;
+    if (FAILED(hr)) {
+        g.lastSignal = hr;
+    } else {
+        (void)::WaitForSingleObject(g.gpuEvent, kFenceWaitMs);
+        done = g.fence->GetCompletedValue();
+        if (done >= g.fenceValue) {
+            g.busySubmits = 0;
+            return true;
+        }
     }
     if (++g.busySubmits < kStallSubmits) {
         return false;
@@ -369,6 +387,9 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
             utils::logger().warn("[vv] inject: queue changed with a pending injection; retiring it");
             retire();
         }
+#if ND_VV_HEARTBEAT
+        gQueueChanges.fetch_add(1, std::memory_order_relaxed);
+#endif
         ND_DEBUG("[vv] inject: queue changed; rebinding");
         g.queue = queue;
     }
@@ -401,13 +422,6 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     }
     if (!g.pipelineReady.load(std::memory_order_acquire) && !buildPipeline()) {
         setReason(SkipReason::PipelineFailed);
-        return 0;
-    }
-    // An allocator may not be reset while the GPU is still executing a list recorded
-    // from it. One frame of delay is invisible here and far safer than waiting; a
-    // stall that lasts kStallSubmits is recovered inside fenceIdle() (EXP-0118).
-    if (!fenceIdle()) {
-        setReason(SkipReason::FenceBusy);
         return 0;
     }
     if (!gUseArg10.load(std::memory_order_relaxed) || !lists) {
@@ -451,6 +465,11 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     ID3D12Resource* buffer = currentBackBuffer();
     if (!buffer) {
         setReason(SkipReason::NoBackBuffer);
+        return 0;
+    }
+    if (!fenceIdle()) {
+        buffer->Release();
+        setReason(SkipReason::FenceBusy);
         return 0;
     }
     if (!record()) {
@@ -535,32 +554,12 @@ void submitted() {
 }
 
 void release() {
-    if (g.list) {
-        g.list->Release();
-        g.list = nullptr;
-    }
-    if (g.allocator) {
-        g.allocator->Release();
-        g.allocator = nullptr;
-    }
-    if (g.fence) {
-        g.fence->Release();
-        g.fence = nullptr;
-    }
-    if (g.pending) {
-        g.pending->Release();
-        g.pending = nullptr;
-    }
-    g.pipelineReady.store(false, std::memory_order_release);
-    // The next build makes a fence at 0; a value left over from the previous arm would
-    // make every later frame read it as busy forever (EXP-0118).
-    g.fenceValue  = 0;
-    g.busySubmits = 0;
+    retire();
     g.rebuilds    = 0;
     g.lastSignal  = S_OK;
-    g.device        = nullptr;
-    g.queue         = nullptr;
-    g.swapChain     = nullptr;
+    g.device      = nullptr;
+    g.queue       = nullptr;
+    g.swapChain   = nullptr;
     gMode.store(static_cast<int>(Mode::Off), std::memory_order_relaxed);
 }
 
@@ -574,5 +573,107 @@ Stats stats() {
     out.reason         = static_cast<SkipReason>(gReason.load(std::memory_order_relaxed));
     return out;
 }
+
+#if ND_VV_HEARTBEAT
+namespace {
+
+char const* reasonName(SkipReason reason) {
+    switch (reason) {
+    case SkipReason::None:           return "none";
+    case SkipReason::NoDevice:       return "no-device";
+    case SkipReason::NoSwapChain:    return "no-swapchain";
+    case SkipReason::FenceBusy:      return "fence-busy";
+    case SkipReason::NoBackBuffer:   return "no-backbuffer";
+    case SkipReason::PipelineFailed: return "pipeline";
+    case SkipReason::RecordFailed:   return "record-failed";
+    case SkipReason::NoBoundary:     return "no-writer";
+    }
+    return "?";
+}
+
+} // namespace
+
+// EXP-0119: one line per kHeartbeatPresents presents, while the product is armed.
+// Release logs only print on a reason change, which is exactly what made the 4K
+// machine's stall unreadable; this line is the periodic summary that replaces it.
+// Deleting this function (and the macro in VvInject.h) removes the diagnostic.
+void notePresentHeartbeat() {
+    static unsigned presents     = 0;
+    static unsigned lastInjected = 0;
+    static unsigned lastSkipped  = 0;
+    if (gMode.load(std::memory_order_relaxed) == static_cast<int>(Mode::Off)) {
+        return;
+    }
+    if (++presents % kHeartbeatPresents != 0) {
+        return;
+    }
+    unsigned const injected = gInjected.load(std::memory_order_relaxed);
+    unsigned const skipped  = gSkipped.load(std::memory_order_relaxed);
+    unsigned const injectedDelta = injected - lastInjected;
+    unsigned const skippedDelta  = skipped - lastSkipped;
+    lastInjected = injected;
+    lastSkipped  = skipped;
+
+    unsigned displayW = 0;
+    unsigned displayH = 0;
+    if (g.swapChain) {
+        DXGI_SWAP_CHAIN_DESC desc{};
+        if (SUCCEEDED(g.swapChain->GetDesc(&desc))) {
+            displayW = desc.BufferDesc.Width;
+            displayH = desc.BufferDesc.Height;
+        }
+    }
+    auto const   diag    = neurodragon::vv::sr::diag();
+    auto const   sr      = neurodragon::vv::dlss::srState();
+    auto const   nrProbe = probe::nrDiagnostic();
+    auto const   nr      = neurodragon::nr::nrPanelStats();
+    UINT64 const done     = g.fence ? g.fence->GetCompletedValue() : 0;
+    UINT64 const signaled = g.fenceValue;
+    unsigned const inFlight = g.fence && done < signaled ? 1u : 0u;
+    utils::logger().info(
+        "[vv] heartbeat: {} presents, injected +{} skipped +{} | reason={} split={}/{} "
+        "render={}x{} display={}x{} | sr colours={} depths={} mv={}x{} fmt={} fail={} sinceOk={} "
+        "ready={} create=0x{:08X} eval=0x{:08X} | ngx={} nrOn={} evalNr={} gate=0x{:02X} params={} "
+        "tried={} attempted={} created={} nrEval={} err=0x{:08X} | fence={}/{} rebuilds={} queues={} "
+        "slots={} inFlight={}",
+        presents,
+        injectedDelta,
+        skippedDelta,
+        reasonName(static_cast<SkipReason>(gReason.load(std::memory_order_relaxed))),
+        gSplit.load(std::memory_order_relaxed),
+        gLists.load(std::memory_order_relaxed),
+        probe::vv::renderWidth(),
+        probe::vv::renderHeight(),
+        displayW,
+        displayH,
+        diag.colourCandidates,
+        diag.depthCandidates,
+        diag.mvWidth,
+        diag.mvHeight,
+        diag.mvFormat,
+        diag.lastFail,
+        diag.framesSinceOk,
+        sr.ready,
+        static_cast<unsigned>(sr.createRet),
+        static_cast<unsigned>(sr.evaluateRet),
+        nrProbe.evaluateSerial,
+        config::get().nr.enabled,
+        nrProbe.enabled,
+        nrProbe.gateMask,
+        nrProbe.paramsValid,
+        nrProbe.startTried,
+        nr.featureAttempted,
+        nr.featureCreated,
+        nr.evalCount,
+        static_cast<unsigned>(nr.lastError),
+        done,
+        signaled,
+        g.rebuilds,
+        gQueueChanges.load(std::memory_order_relaxed),
+        1u,
+        inFlight
+    );
+}
+#endif
 
 } // namespace neurodragon::probe::vv::inject

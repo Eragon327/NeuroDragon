@@ -1,0 +1,9 @@
+agentflow gate: 2 finding(s), 0 error(s), 0 waived
+  WARN             shader.out-of-scope      HLSL chunk kEncodeHlsl (src/neurodragon/nr/D3D12Bridge.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+  WARN             shader.out-of-scope      HLSL chunk kRcasHlsl (src/neurodragon/sr/SrSharpening.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+agentflow gate: 2 finding(s), 0 error(s), 0 waived
+  WARN             shader.out-of-scope      HLSL chunk kEncodeHlsl (src/neurodragon/nr/D3D12Bridge.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+  WARN             shader.out-of-scope      HLSL chunk kRcasHlsl (src/neurodragon/sr/SrSharpening.cpp) is outside src/neurodragon/vv and is NOT compiled by this check
+[0m[1;32m[mod Packer]: [0mlang/ (2 files)[0m
+[0m[1;32m[mod Packer]: [0mmod already generated to D:\Documents\NeuroDragon\agent2\bin\NeuroDragon[0m
+[0m[32;1m[100%]:[0m [32;1mbuild ok, spent 0.437s[0m

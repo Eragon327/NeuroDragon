@@ -1872,7 +1872,7 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     // list runs after TAAU's writer and before whatever consumes arg10 downstream.
     // Off by default; prepare() returns 0 and the call below forwards everything
     // unchanged. It also returns 0 for every submission that must not be cut (not the
-    // engine's direct queue, no arg10 writer in this frame, fence still busy).
+    // engine's direct queue, no arg10 writer in this frame, previous injection still busy).
     unsigned const splitAt = probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
     if (splitAt != 0 && splitAt <= count) {
         if (ID3D12CommandList* const ours = static_cast<ID3D12CommandList*>(probe::vv::inject::list())) {

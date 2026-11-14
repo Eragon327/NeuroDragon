@@ -1,0 +1,55 @@
+{
+    "version": 6,
+    "nr": {
+        "enabled": false,
+        "placement": 0,
+        "replace": 6,
+        "style": 0,
+        "intensity": 1.0,
+        "localToneStrength": 1.0,
+        "localStructureStrength": 1.0,
+        "modelFile": "",
+        "skinStructure": 1.0,
+        "depthInverted": -1,
+        "inputPercent": 100,
+        "networkPreset": 0,
+        "compare": 0,
+        "compareSplit": 0.5,
+        "sweep": 0,
+        "mvecScale": -1.0,
+        "nrEncode": -1,
+        "whitePoint": 1.0,
+        "transferStrength": 1.0,
+        "colourStrength": 1.0,
+        "maxRatio": 2.0,
+        "broad": 1.0,
+        "detail": 1.0,
+        "adaptiveExposure": false,
+        "exposureBias": 0.0,
+        "resetEveryFrame": false,
+        "srResetEveryFrame": false,
+        "paramLog": false
+    },
+    "sr": {
+        "scalePercent": 0,
+        "vvPercent": 0,
+        "vvEnabled": false,
+        "preset": 0,
+        "sharpening": false,
+        "sharpness": 0.671999990940094
+    },
+    "ui": {
+        "openKeys": [
+            35
+        ],
+        "nrKeys": [
+            219
+        ],
+        "resetKeys": [
+            221
+        ],
+        "screenshotKeys": [
+            113
+        ]
+    }
+}
