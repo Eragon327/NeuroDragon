@@ -2,6 +2,6 @@
   "instance": "",
   "max_attempts_per_unknown": 3,
   "stale_experiment_hours": 12,
-  "l1_max_per_session": 4,
+  "l1_max_per_session": 10,
   "commit_hint_hours": 6
 }
