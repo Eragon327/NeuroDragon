@@ -28,6 +28,12 @@ struct NrDiagnostic {
 // available to that path as well; repeated calls are harmless.
 bool ensureNgxHooks();
 
+#ifdef TEST
+// Capture base / encoded input / raw NR output / resolved colour on the next
+// replacement frame. The screenshot hotkey requests this alongside its normal F2.
+void requestNrToneDump();
+#endif
+
 void uninstall();
 
 [[nodiscard]] bool isInstalled();

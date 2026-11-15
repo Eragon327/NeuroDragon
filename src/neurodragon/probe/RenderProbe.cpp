@@ -399,6 +399,14 @@ constexpr std::uint64_t kNrReportTail    = 4; // let the last timestamp pair ret
 void nrDumpName(char* buffer, std::size_t size, char const* stem, int index) {
     std::snprintf(buffer, size, "%s_w%d.bmp", stem, index);
 }
+
+std::atomic_bool          gNrToneDumpRequested{false};
+std::uint64_t             gNrToneDumpFrame = 0;
+unsigned long long        gNrToneDumpTick  = 0;
+
+void nrToneDumpName(char* buffer, std::size_t size, unsigned long long tick, char const* stage) {
+    std::snprintf(buffer, size, "tone_%llu_%s.bmp", tick, stage);
+}
 #endif
 
 // Color is pure black until a world is loaded (and ray tracing is on), so the
@@ -930,6 +938,31 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // Record + TEST dumps + window report. Called before the engine's own
     // EvaluateFeature for placement 0 and after it for placement 1.
     auto recordNrFrame = [&]() {
+#ifdef TEST
+        if (gNrToneDumpFrame && n >= gNrToneDumpFrame + 2) {
+            unsigned written = 0;
+            for (int slot = 0; slot < 4; ++slot) {
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDumpN(slot, &peak, &nz)) written |= 1u << slot;
+            }
+            ND_DEBUG("[nr] tone dump done tick={} f={} written={:#x}", gNrToneDumpTick, gNrToneDumpFrame, written);
+            gNrToneDumpFrame = 0;
+            gNrToneDumpTick  = 0;
+        }
+        if (!gNrToneDumpFrame && !nrInWindow && nrReplace && gNrToneDumpRequested.load(std::memory_order_acquire)) {
+            void* base = nrPlacement == 0 ? color : out;
+            if (base && nr::nrEncodedColorResource() && nr::nrOutputResource()) {
+                gNrToneDumpRequested.exchange(false, std::memory_order_acq_rel);
+                gNrToneDumpTick  = GetTickCount64();
+                gNrToneDumpFrame = n;
+                char name[96];
+                nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "base");
+                nr::queueColorDumpN(3, cmdList, base, name, 0);
+                ND_DEBUG("[nr] tone dump begin tick={} f={} placement={}", gNrToneDumpTick, n, nrPlacement);
+            }
+        }
+#endif
         bool const timed = nrInWindow || nrReplace;
         if (timed) {
             nr::nrStampBegin(cmdList, n, 0);
@@ -979,6 +1012,21 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             const_cast<void*>(out),
             n
         );
+#ifdef TEST
+        if (gNrToneDumpFrame == n) {
+            char name[96];
+            nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "color_ref");
+            nr::queueColorDumpN(0, cmdList, nr::nrEncodedColorResource(), name, 1);
+            nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "nr2");
+            nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
+            if (void* fed = nr::nrFedResource()) {
+                nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "fed");
+                nr::queueColorDumpN(2, cmdList, fed, name, nr::nrFedDomain() == 1 ? 1 : 0);
+            } else {
+                ND_DEBUG("[nr] tone dump tick={} has no fed resource", gNrToneDumpTick);
+            }
+        }
+#endif
         if (timed) {
             nr::nrStampEnd(cmdList, n, 0);
         }
@@ -1686,6 +1734,10 @@ void uninstall() {
 bool isInstalled() { return gNgxHooked.load(std::memory_order_relaxed); }
 
 std::uint64_t nrEvaluateSerial() { return gFrame.load(std::memory_order_relaxed); }
+
+#ifdef TEST
+void requestNrToneDump() { gNrToneDumpRequested.store(true, std::memory_order_release); }
+#endif
 
 NrDiagnostic nrDiagnostic() {
     unsigned const state = gNrDiagState.load(std::memory_order_relaxed);

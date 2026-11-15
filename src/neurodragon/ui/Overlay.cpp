@@ -5,6 +5,7 @@
 #include "neurodragon/Test.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/vv/VvDlssSr.h"
@@ -675,6 +676,13 @@ void performHotkeyAction(HWND window, HotkeyAction action) {
         break;
     case HotkeyAction::Screenshot:
         gScreenshotRequested.store(true, std::memory_order_release);
+#ifdef TEST
+        if (gHeldKeys[VK_CONTROL]) {
+            nr::nrRequestReset();
+            ND_DEBUG("[nr] tone dump reset requested (Ctrl+F2)");
+        }
+        probe::requestNrToneDump();
+#endif
         break;
     case HotkeyAction::None:
         break;

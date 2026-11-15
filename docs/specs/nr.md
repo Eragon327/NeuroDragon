@@ -387,7 +387,7 @@ EXP-0085 又暴露两条 NR 侧问题（均已修）：
 | 项 | 原因 | 重新评估的触发条件 |
 |---|---|---|
 | ④ 隔帧（Model rate，3–4 天） | 需 MV+depth 重投影 + change 合成两个新 pass，鬼影风险中高；输入缩放落地后 NR 已 ~1 ms | 输入缩放后 NR 仍 >2 ms，或要把「100% 内部分辨率 + NR」变常驻 |
-| ⑦ 稳态网格（1–2 天） | NR 参数表没有 jitter 输入，只能在自己降采样里反抖；且要在发布版装 `SetF` 钩子抓 `Jitter.Offset` | 输入缩放的 A/B 显示 jitter 真的让画面糊 |
+| ⑦ 稳态网格（1–2 天） | NR 参数表没有 jitter 输入，只能在自己降采样里反抖；且要在发布版装 `SetF` 钩子抓 `Jitter.Offset`。EXP-0134 已做 TEST A/B：天空植被 raw NR `Δ(R-B)` 开 −7.280 / 关 −7.571，**不是色移主因** | 仅在其他画质指标证明 jitter 确实让画面糊时；不为色调问题重开 |
 | After 档 P3（66/50 降本档） | 等拍板 | 后档 9.78 ms 的卡顿不可接受时 |
 | After 档观察项 | 分屏 / 快转鬼影 / 窗口缩放未显式跑 | 出现鬼影或花屏时按 §11 处置 |
 | P7 自适应曝光回读探针 | 肉眼无差异；结构上 Ratio 合成让白点对最终亮度基本抵消 | 要做「可测量」的验收时，先加 1×1 白点纹理回读 |
@@ -405,6 +405,7 @@ EXP-0085 又暴露两条 NR 侧问题（均已修）：
 | P6 | 小 feature + 全分辨率 guide | 实机四条验收通过：创建日志/诊断回读/三行计时/画面正常 |
 | P7 | 自适应曝光是否让室内外一致 | 用户反馈肉眼无差异；结构性原因见 §8.2，**搁置**，等白点回读探针 |
 | P8 | 深度的正反向（`near/(1−d)` vs `DepthInverted`） | **非反向（flag=0）**。① TAA context 的 VP 反推 `z_ndc = 1.0010 − 0.1001/d`（near=0.1、远平面无穷）⇒ 近 0 远 1；② 60 份 `sr_depth_*_fmt44` dump：天空恒 1.000000、地面 0.9979–0.9996 随距离单调；③ 引擎自己的 SR 创建标志=3（bit3=0）。而 SR runtime 的字符串表里**没有** `DepthInverted` 参数（正对照 `Jitter.Offset.X`/`MV.Scale.X`/`DLSS.Feature.Create.Flags` 都在）⇒ EXP-0041 改的是死键；真凶是 VV 的创建标志 `11`（=IsHDR\|MVLowRes\|**DepthInverted**，注释误标成 AutoExposure=1<<6），NGX 创建日志写着 `Depth Inverted 1`。证据：`docs/agent/evidence/depth-flag-EXP-0109-scan.txt`、`depth-flag-EXP-0109-ngx-create.log` |
+| P9 | 看天空时植被冷移在哪一级形成 | EXP-0131 同帧四级 dump：raw NR 已形成，Ratio 非起点；EXP-0133 Reset 前后 −6.894/−7.414，历史非必要条件；EXP-0134 稳态网格开/关 −7.280/−7.571，jitter 非主因；EXP-0135 离线重放同一 `color_ref` + 合成 depth/MV 仍 −7.225（游戏 −7.284）⇒ **style 0 对当前编码颜色内容的固有响应**，不是固定颜色公式、Ratio、历史或 jitter 翻译错误。证据：`2026-11-15-EXP-013{1,3,4,5}-*` |
 
 ## 10. 不做（结构性，逐条给理由）
 
