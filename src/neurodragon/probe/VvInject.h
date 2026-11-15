@@ -1,5 +1,16 @@
 #pragma once
 
+// ---------------------------------------------------------------------------
+// Heartbeat (EXP-0119, temporary)
+// ---------------------------------------------------------------------------
+// One info line every kHeartbeatPresents presents that says whether injection is
+// happening and, when it is not, which state it is stuck in. Set this to 0 (or delete
+// this block and notePresentHeartbeat) once the question it exists for is answered;
+// nothing else depends on it.
+#ifndef ND_VV_HEARTBEAT
+#define ND_VV_HEARTBEAT 1
+#endif
+
 namespace neurodragon::probe::vv::inject {
 
 // ---------------------------------------------------------------------------
@@ -21,6 +32,11 @@ namespace neurodragon::probe::vv::inject {
 //
 // There is exactly one cut point and one action. The boundary is 1-based and counts
 // *lists*: "submit the first k engine lists, then our list, then the rest".
+// Three slots alternate: a slot is only re-recorded once its own fence has completed,
+// because VvSr and NR rewrite shared descriptor heaps during recording. A fence that
+// is merely late costs one skipped frame (the previous arg10 is presented unchanged)
+// rather than a blocked render thread; a fence that never completes is a stall
+// (EXP-0118) and rebuilds the injection instead of skipping forever.
 
 enum class Mode : int {
     Off   = 0, ///< forward every submission unchanged; also clears productArmed
@@ -56,6 +72,12 @@ struct Stats {
     bool       ready{};          ///< device + swap chain seen and pipeline built
     SkipReason reason{SkipReason::None};
 };
+
+#if ND_VV_HEARTBEAT
+/// Temporary diagnostic (EXP-0119): one line per kHeartbeatPresents presents.
+constexpr unsigned kHeartbeatPresents = 600;
+void               notePresentHeartbeat();
+#endif
 
 void setMode(Mode mode);
 [[nodiscard]] Mode mode();

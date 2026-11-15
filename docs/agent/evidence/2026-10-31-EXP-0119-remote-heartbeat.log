@@ -1,0 +1,326 @@
+[2026-10-31 22:25:06.315 IFO][LeviLamina]                                                                       
+[2026-10-31 22:25:06.315 IFO][LeviLamina]          _               _ _                    _                     
+[2026-10-31 22:25:06.315 IFO][LeviLamina]         | |    _____   _(_) |    __ _ _ __ ___ (_)_ __   __ _         
+[2026-10-31 22:25:06.315 IFO][LeviLamina]         | |   / _ \ \ / / | |   / _` | '_ ` _ \| | '_ \ / _` |        
+[2026-10-31 22:25:06.315 IFO][LeviLamina]         | |__|  __/\ V /| | |__| (_| | | | | | | | | | | (_| |        
+[2026-10-31 22:25:06.315 IFO][LeviLamina]         |_____\___| \_/ |_|_____\__,_|_| |_| |_|_|_| |_|\__,_|        
+[2026-10-31 22:25:06.315 IFO][LeviLamina]                                                                       
+[2026-10-31 22:25:06.315 IFO][LeviLamina]         ------------   Light-Weight Mod Loader   -------------        
+[2026-10-31 22:25:06.315 IFO][LeviLamina]                                                                       
+[2026-10-31 22:25:06.315 IFO][LeviLamina]                                                                       
+[2026-10-31 22:25:06.315 IFO][LeviLamina] LeviLamina 是一款以 LGPLv3 许可证发布的自由软件
+[2026-10-31 22:25:06.315 IFO][LeviLamina] 帮助我们翻译和改进文本 -> https://crowdin.com/project/levilamina
+[2026-10-31 22:25:06.342 IFO][CrashLogger] CrashLogger 启用成功
+[2026-10-31 22:25:06.342 IFO][LeviLamina] 正在加载模组……
+[2026-10-31 22:25:06.344 IFO][LeviLamina] 正在加载 Lamium v0.3.0
+[2026-10-31 22:25:06.522 IFO][LeviLamina] Lamium 已加载
+[2026-10-31 22:25:06.522 IFO][LeviLamina] 正在加载 NeuroDragon v0.1.0
+[2026-10-31 22:25:06.537 IFO][LeviLamina] NeuroDragon 已加载
+[2026-10-31 22:25:06.537 IFO][LeviLamina] 正在加载 RenderDragonShaderLoader v0.2.1
+[2026-10-31 22:25:06.543 IFO][RenderDragonShaderLoader] RenderDragonShaderLoader loading...
+[2026-10-31 22:25:06.544 IFO][RenderDragonShaderLoader] UI hotkey: APOSTROPHE (vk=222)
+[2026-10-31 22:25:06.544 IFO][RenderDragonShaderLoader] forceVibrantVisuals=true graphicsModeOverride=0 autoLoadLastShader=true last='Kasumi-3.2.22-Windows-1.26.50'
+[2026-10-31 22:25:06.545 IFO][RenderDragonShaderLoader] Loaded language files from ./mods/RenderDragonShaderLoader\lang
+[2026-10-31 22:25:06.546 IFO][RenderDragonShaderLoader] vanilla merge source: F:\Games\Minecraft\LeviLauncher\versions\1.26.51.01-LeviLamina\data\renderer\materials
+[2026-10-31 22:25:06.547 IFO][RenderDragonShaderLoader] vanilla material snapshot ready: ./mods/RenderDragonShaderLoader\data\backups\vanilla-materials
+[2026-10-31 22:25:06.547 IFO][RenderDragonShaderLoader] Compiler: lazurite='py -3 toolchain/lazurite_albite.py' shaderc='./mods/RenderDragonShaderLoader\toolchain\shaderc.exe' enabled=true maxWorkers=0
+[2026-10-31 22:25:06.670 IFO][RenderDragonShaderLoader] Scanned shaderpacks ./mods/RenderDragonShaderLoader\data\shaderpacks , found 2 pack(s)
+[2026-10-31 22:25:06.670 IFO][RenderDragonShaderLoader]   - Kasumi-3.2.22-Windows-1.26.50 (163 parameter(s), first='STYLE_PRESET', preset='custom', bins='./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled')
+[2026-10-31 22:25:06.670 IFO][RenderDragonShaderLoader]   - mirai-windows-3.1.0 (0 parameter(s))
+[2026-10-31 22:25:06.680 IFO][RenderDragonShaderLoader] [startup] material redirect enabled early -> ./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled
+[2026-10-31 22:25:06.680 IFO][RenderDragonShaderLoader] shaders start disabled; open the panel (APOSTROPHE / `/shader ui`) to pick a pack
+[2026-10-31 22:25:06.680 IFO][LeviLamina] RenderDragonShaderLoader 已加载
+[2026-10-31 22:25:06.680 IFO][LeviLamina] 已加载 3 个模组
+[2026-10-31 22:25:08.752 WRN][Server] <LVL|5374233> Migration started
+[2026-10-31 22:25:08.754 WRN][Server] <LVL|6816057> Migration completed in 0.001000 seconds
+[2026-10-31 22:25:35.670 WRN][Server] <LVL|9765105> Time played notifier not required for 'zh_CN'
+[2026-10-31 22:25:35.671 IFO][LeviLamina] 正在启用模组……
+[2026-10-31 22:25:35.671 IFO][LeviLamina] 正在启用 Lamium v0.3.0
+[2026-10-31 22:25:35.671 IFO][Lamium] Compatibility: Minecraft 1.26.51+0559ac5, LeviLamina 26.51.9; loader policy 26.51.*, minimum patch 5
+[2026-10-31 22:25:38.295 IFO][Lamium] FreeCamera terrain: adapter armed; awaiting FreeCamera renderer
+[2026-10-31 22:25:49.713 IFO][Lamium] Lamium enabled. Configure features and bindings in Lamium Settings (default: L), using Features or Hotkeys.
+[2026-10-31 22:25:49.714 IFO][LeviLamina] 正在启用 NeuroDragon v0.1.0
+[2026-10-31 22:25:49.714 IFO][NeuroDragon] NR 未启用：config/config.json 里 nr.enabled = false
+[2026-10-31 22:25:50.241 IFO][NeuroDragon] 安装游戏内面板：开始…
+[2026-10-31 22:25:51.208 IFO][NeuroDragon] 安装游戏内面板：完成，用时 967 ms
+[2026-10-31 22:25:51.208 IFO][LeviLamina] 正在启用 RenderDragonShaderLoader v0.2.1
+[2026-10-31 22:25:51.208 IFO][RenderDragonShaderLoader] RenderDragonShaderLoader enabled
+[2026-10-31 22:25:51.297 IFO][RenderDragonShaderLoader] MaterialHooks: readFile hooked
+[2026-10-31 22:25:51.386 IFO][RenderDragonShaderLoader] MaterialHooks: endFrame hooked
+[2026-10-31 22:25:51.386 IFO][RenderDragonShaderLoader] Material hooks installed (hot reload available: true)
+[2026-10-31 22:25:51.720 IFO][RenderDragonShaderLoader] [ui] placeholder scene hooks installed
+[2026-10-31 22:25:51.722 IFO][RenderDragonShaderLoader] [dragdrop] enabled for game window
+[2026-10-31 22:25:51.805 IFO][RenderDragonShaderLoader] VibrantVisuals: hook installed
+[2026-10-31 22:25:51.805 IFO][RenderDragonShaderLoader] Force vibrant visuals: true
+[2026-10-31 22:25:51.805 IFO][RenderDragonShaderLoader] UI placeholder hooks installed
+[2026-10-31 22:25:51.814 IFO][LeviLamina] 已在 16.1 秒内启用 3 个模组
+[2026-10-31 22:25:51.876 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Cubemap.material.bin (22014 bytes, #1 times)
+[2026-10-31 22:25:51.878 IFO][NeuroDragon] [sr] ctx call #1 engine=000001D847400000 ctx=000001D838013D80 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.275 IFO][NeuroDragon] [sr] ctx call #2 engine=000001D847400000 ctx=000001D838E94740 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.277 IFO][NeuroDragon] [sr] ctx call #3 engine=000001D847400000 ctx=000001D838013D80 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.305 IFO][NeuroDragon] [sr] ctx call #4 engine=000001D847400000 ctx=000001D838E94740 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.305 IFO][NeuroDragon] [sr] ctx call #5 engine=000001D847400000 ctx=000001D838013D80 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.307 IFO][NeuroDragon] [sr] ctx call #6 engine=000001D847400000 ctx=000001D838E94740 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.308 IFO][NeuroDragon] [sr] ctx call #7 engine=000001D847400000 ctx=000001D838013D80 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.317 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/UIBlit.material.bin (19854 bytes, #1 times)
+[2026-10-31 22:25:52.323 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/UIText.material.bin (200342 bytes, #1 times)
+[2026-10-31 22:25:52.324 IFO][NeuroDragon] [sr] ctx call #8 engine=000001D847400000 ctx=000001D838E94740 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.613 IFO][NeuroDragon] [sr] ctx call #9 engine=000001D847400000 ctx=000001D838013D80 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:52.616 IFO][NeuroDragon] [sr] ctx call #10 engine=000001D847400000 ctx=000001D838E94740 mode=0 q=0 flags=0x0 f=-1.000 extra=1.000 | aq=0 rq=0 af=-1.000 rf=-1.000 render=3840x2071 tail=1.000 valid=1
+[2026-10-31 22:25:53.058 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Actor.material.bin (13605198 bytes, #1 times)
+[2026-10-31 22:25:53.511 IFO][NeuroDragon] [vv] frame time: avg=2.73 ms min=0.54 max=307.03 long=6 over 599 presents
+[2026-10-31 22:25:53.987 IFO][NeuroDragon] [vv] frame time: avg=0.79 ms min=0.59 max=2.80 long=0 over 600 presents
+[2026-10-31 22:25:54.041 WRN][Server] <LVL|3212262> Signing into signaling service using JsonRpc signaling, and sign-in ID: 07baafab-fb0f-40e0-80ba-0caa5e7e5889
+[2026-10-31 22:25:54.042 WRN][Server] <LVL|3408899> Signing into signaling service using JsonRpc signaling, and sign-in ID: 07baafab-fb0f-40e0-80ba-0caa5e7e5889
+[2026-10-31 22:25:54.435 IFO][NeuroDragon] [vv] frame time: avg=0.75 ms min=0.56 max=2.59 long=0 over 600 presents
+[2026-10-31 22:25:54.529 WRN][Server] <LVL|3539854> Connecting to websocket at: wss://signaling-tm-eastasia.franchise.minecraft-services.net/ws/v1.0/messaging/connect
+[2026-10-31 22:25:55.018 IFO][NeuroDragon] [vv] frame time: avg=0.97 ms min=0.57 max=1.64 long=0 over 600 presents
+[2026-10-31 22:25:55.578 IFO][NeuroDragon] [vv] frame time: avg=0.93 ms min=0.56 max=3.78 long=0 over 600 presents
+[2026-10-31 22:25:56.234 IFO][NeuroDragon] [vv] frame time: avg=1.09 ms min=0.59 max=12.33 long=0 over 600 presents
+[2026-10-31 22:25:56.874 IFO][NeuroDragon] [vv] frame time: avg=1.07 ms min=0.66 max=4.63 long=0 over 600 presents
+[2026-10-31 22:25:57.517 IFO][NeuroDragon] [vv] frame time: avg=1.07 ms min=0.63 max=2.84 long=0 over 600 presents
+[2026-10-31 22:25:58.154 IFO][NeuroDragon] [vv] frame time: avg=1.06 ms min=0.65 max=5.10 long=0 over 600 presents
+[2026-10-31 22:25:58.778 IFO][NeuroDragon] [vv] frame time: avg=1.04 ms min=0.62 max=2.18 long=0 over 600 presents
+[2026-10-31 22:25:59.386 IFO][NeuroDragon] [vv] frame time: avg=1.01 ms min=0.63 max=2.02 long=0 over 600 presents
+[2026-10-31 22:25:59.988 IFO][NeuroDragon] [vv] frame time: avg=1.00 ms min=0.63 max=1.85 long=0 over 600 presents
+[2026-10-31 22:26:00.526 IFO][NeuroDragon] [vv] frame time: avg=0.89 ms min=0.63 max=2.50 long=0 over 600 presents
+[2026-10-31 22:26:00.997 IFO][NeuroDragon] [vv] frame time: avg=0.79 ms min=0.58 max=1.29 long=0 over 600 presents
+[2026-10-31 22:26:01.513 IFO][NeuroDragon] [vv] frame time: avg=0.86 ms min=0.60 max=1.91 long=0 over 600 presents
+[2026-10-31 22:26:01.993 IFO][NeuroDragon] [vv] frame time: avg=0.80 ms min=0.58 max=1.42 long=0 over 600 presents
+[2026-10-31 22:26:02.468 IFO][NeuroDragon] [vv] frame time: avg=0.79 ms min=0.61 max=1.45 long=0 over 600 presents
+[2026-10-31 22:26:02.969 IFO][NeuroDragon] [vv] frame time: avg=0.84 ms min=0.59 max=1.92 long=0 over 600 presents
+[2026-10-31 22:26:03.434 IFO][NeuroDragon] [vv] frame time: avg=0.77 ms min=0.60 max=1.42 long=0 over 600 presents
+[2026-10-31 22:26:03.905 IFO][NeuroDragon] [vv] frame time: avg=0.78 ms min=0.62 max=1.43 long=0 over 600 presents
+[2026-10-31 22:26:04.459 IFO][NeuroDragon] [vv] frame time: avg=0.92 ms min=0.59 max=1.74 long=0 over 600 presents
+[2026-10-31 22:26:05.071 IFO][NeuroDragon] [vv] frame time: avg=1.02 ms min=0.61 max=1.60 long=0 over 600 presents
+[2026-10-31 22:26:05.681 IFO][NeuroDragon] [vv] frame time: avg=1.02 ms min=0.63 max=1.51 long=0 over 600 presents
+[2026-10-31 22:26:06.318 IFO][NeuroDragon] [vv] frame time: avg=1.06 ms min=0.63 max=1.60 long=0 over 600 presents
+[2026-10-31 22:26:06.938 IFO][NeuroDragon] [vv] frame time: avg=1.03 ms min=0.61 max=1.79 long=0 over 600 presents
+[2026-10-31 22:26:07.565 IFO][NeuroDragon] [vv] frame time: avg=1.04 ms min=0.62 max=1.58 long=0 over 600 presents
+[2026-10-31 22:26:08.166 IFO][NeuroDragon] [vv] frame time: avg=1.00 ms min=0.60 max=1.89 long=0 over 600 presents
+[2026-10-31 22:26:08.788 IFO][NeuroDragon] [vv] frame time: avg=1.04 ms min=0.65 max=1.99 long=0 over 600 presents
+[2026-10-31 22:26:09.392 IFO][NeuroDragon] [vv] frame time: avg=1.01 ms min=0.62 max=1.78 long=0 over 600 presents
+[2026-10-31 22:26:10.012 IFO][NeuroDragon] [vv] frame time: avg=1.03 ms min=0.63 max=1.83 long=0 over 600 presents
+[2026-10-31 22:26:10.550 IFO][NeuroDragon] [vv] frame time: avg=0.90 ms min=0.59 max=1.71 long=0 over 600 presents
+[2026-10-31 22:26:11.009 IFO][NeuroDragon] [vv] frame time: avg=0.77 ms min=0.59 max=1.28 long=0 over 600 presents
+[2026-10-31 22:26:11.474 IFO][NeuroDragon] [vv] frame time: avg=0.78 ms min=0.61 max=1.36 long=0 over 600 presents
+[2026-10-31 22:26:11.925 IFO][NeuroDragon] [vv] frame time: avg=0.75 ms min=0.58 max=1.04 long=0 over 600 presents
+[2026-10-31 22:26:12.387 IFO][NeuroDragon] [vv] frame time: avg=0.77 ms min=0.60 max=1.21 long=0 over 600 presents
+[2026-10-31 22:26:12.844 IFO][NeuroDragon] [vv] frame time: avg=0.76 ms min=0.61 max=1.43 long=0 over 600 presents
+[2026-10-31 22:26:13.299 IFO][NeuroDragon] [vv] frame time: avg=0.76 ms min=0.58 max=1.18 long=0 over 600 presents
+[2026-10-31 22:26:13.758 IFO][NeuroDragon] [vv] frame time: avg=0.77 ms min=0.62 max=1.11 long=0 over 600 presents
+[2026-10-31 22:26:14.247 IFO][NeuroDragon] [vv] frame time: avg=0.81 ms min=0.59 max=2.22 long=0 over 600 presents
+[2026-10-31 22:26:15.078 IFO][NeuroDragon] [vv] frame time: avg=1.38 ms min=0.63 max=35.13 long=1 over 600 presents
+[2026-10-31 22:26:15.104 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/MeshFallbackPosUVNormalColor.material.bin (5342787 bytes, #1 times)
+[2026-10-31 22:26:15.113 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/GamefaceClearQuad.material.bin (22853 bytes, #1 times)
+[2026-10-31 22:26:15.117 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/GamefaceStandard.material.bin (48322 bytes, #1 times)
+[2026-10-31 22:26:15.527 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/GamefaceStencil.material.bin (28927 bytes, #1 times)
+[2026-10-31 22:26:16.220 IFO][NeuroDragon] [vv] frame time: avg=1.90 ms min=0.45 max=208.42 long=3 over 600 presents
+[2026-10-31 22:26:16.881 IFO][NeuroDragon] [vv] frame time: avg=1.10 ms min=0.43 max=107.83 long=1 over 600 presents
+[2026-10-31 22:26:17.295 IFO][NeuroDragon] [vv] frame time: avg=0.69 ms min=0.46 max=1.17 long=0 over 600 presents
+[2026-10-31 22:26:17.762 IFO][NeuroDragon] [vv] frame time: avg=0.78 ms min=0.49 max=2.04 long=0 over 600 presents
+[2026-10-31 22:26:18.234 IFO][NeuroDragon] [vv] frame time: avg=0.78 ms min=0.45 max=27.76 long=1 over 600 presents
+[2026-10-31 22:26:18.647 IFO][NeuroDragon] [vv] frame time: avg=0.69 ms min=0.45 max=1.54 long=0 over 600 presents
+[2026-10-31 22:26:19.051 IFO][NeuroDragon] [vv] frame time: avg=0.67 ms min=0.46 max=1.37 long=0 over 600 presents
+[2026-10-31 22:26:19.475 IFO][NeuroDragon] [vv] frame time: avg=0.71 ms min=0.47 max=1.40 long=0 over 600 presents
+[2026-10-31 22:26:19.894 IFO][NeuroDragon] [vv] frame time: avg=0.70 ms min=0.46 max=1.27 long=0 over 600 presents
+[2026-10-31 22:26:20.304 IFO][NeuroDragon] [vv] frame time: avg=0.68 ms min=0.45 max=1.25 long=0 over 600 presents
+[2026-10-31 22:26:20.473 WRN][Server] <LVL|10421082> Packet rate limiting enabled
+[2026-10-31 22:26:20.512 WRN][Server] <LVL|3605349> Pack Stack - [00] 山&海：主世界高度 (id: 734125c0-ae21-4c1f-86ab-9568a521ebc0, version: 0.1.16) @ C:/Users/MRUIAW/AppData/Roaming/Minecraft Bedrock/Users/7232932124006255807/games/com.mojang/minecraftWorlds/5kL9nOfinEQ=/behavior_packs/shan-hai-build-height
+[2026-10-31 22:26:20.720 IFO][NeuroDragon] [vv] frame time: avg=0.69 ms min=0.48 max=1.37 long=0 over 600 presents
+[2026-10-31 22:26:21.124 IFO][NeuroDragon] [vv] frame time: avg=0.67 ms min=0.46 max=1.27 long=0 over 600 presents
+[2026-10-31 22:26:21.566 WRN][Server] <LVL|57017109> Signing into signaling service using JsonRpc signaling, and sign-in ID: 07baafab-fb0f-40e0-80ba-0caa5e7e5889
+[2026-10-31 22:26:21.599 IFO][NeuroDragon] [vv] frame time: avg=0.79 ms min=0.46 max=79.69 long=1 over 600 presents
+[2026-10-31 22:26:21.947 WRN][Server] <LVL|10158181> Player connected: MRUIAW, xuid: 2535457320310606
+[2026-10-31 22:26:22.295 WRN][Server] <LVL|4850358> Player PartyIdUpdate:  pfid: 4D635E3E34ED6E3F, partyid: , isLeader: false
+[2026-10-31 22:26:22.615 IFO][RenderDragonShaderLoader] [graphics] already in Fancy
+[2026-10-31 22:26:22.615 IFO][RenderDragonShaderLoader] [graphics] switch Advanced (switchOption=true, modeOption=true, screenModel=false, advanced=true, now=Fancy)
+[2026-10-31 22:26:22.615 IFO][RenderDragonShaderLoader] Restored last shader pack 'Kasumi-3.2.22-Windows-1.26.50' (deferred); materials will load with the world
+[2026-10-31 22:26:22.941 IFO][NeuroDragon] [vv] frame time: avg=2.23 ms min=0.50 max=340.88 long=5 over 600 presents
+[2026-10-31 22:26:23.379 IFO][NeuroDragon] [vv] frame time: avg=0.73 ms min=0.50 max=1.91 long=0 over 600 presents
+[2026-10-31 22:26:23.893 IFO][NeuroDragon] [vv] frame time: avg=0.86 ms min=0.49 max=6.48 long=0 over 600 presents
+[2026-10-31 22:26:24.083 IFO][Lamium] Connected Textures: texture set of textures/blocks/bookshelf: {"format_version":"1.16.100","minecraft:texture_set":{"color":"bookshelf","metalness_emissive_roughness":"bookshelf_mer","normal":"bookshelf_normal"}}
+[2026-10-31 22:26:24.224 WRN][Server] <LVL|8585530> Player Spawned: MRUIAW xuid: 2535457320310606, pfid: 4D635E3E34ED6E3F
+[2026-10-31 22:26:24.242 IFO][Lamium] Connected Textures: terrain atlas 1: 833 sprites for 21 textures, 833 texture sets with 1666 baked maps (0 skipped: missing, not RGBA or larger than 64 px)
+[2026-10-31 22:26:25.374 IFO][NeuroDragon] [vv] frame time: avg=2.47 ms min=0.54 max=602.57 long=3 over 600 presents
+[2026-10-31 22:26:25.857 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Flipbook.material.bin (21397 bytes, #1 times)
+[2026-10-31 22:26:26.159 IFO][Lamium] Shape faces use the hologram pointer material (graphics mode 1)
+[2026-10-31 22:26:26.165 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Sky.material.bin (46871 bytes, #1 times)
+[2026-10-31 22:26:26.264 IFO][Lamium] Connected Textures: 833 of 833 sprites in place; base places match
+[2026-10-31 22:26:26.264 IFO][Lamium] Waypoint markers: camera at 707.7 201.0 -3019.9 (setup -0.0 -0.0 -0.0), forward 0.04 -0.25 0.97, scale 0.411 x 0.762
+[2026-10-31 22:26:26.266 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/SunMoon.material.bin (46716 bytes, #1 times)
+[2026-10-31 22:26:26.316 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Particle.material.bin (100090 bytes, #1 times)
+[2026-10-31 22:26:26.327 IFO][Lamium] World map: saving to C:\Users\MRUIAW\AppData\Roaming\Amethyst\Launcher\ProfileData\be8decea-5a0e-46c1-b363-fdc3cba23401\Users\7232932124006255807\games\com.mojang\minecraftWorlds\5kL9nOfinEQ=\lamium\map
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: recording 512 blocks across (view distance 16 chunks, maximum 96)
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: texture textures/blocks/snow/snow_0 32x32 -> fffefef9
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: texture textures/blocks/double_plant_fern_top 32x32 -> ff7d7e7d
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: texture textures/blocks/grass/grass_top_0 32x32 -> ff939393
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: renderer tint 5 not ready at 692 160 -3024; map tint used
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: renderer tint 5 not ready at 697 162 -3023; map tint used
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: texture textures/blocks/moss/moss_block_0 32x32 -> ff2d6e59
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: renderer tint 5 not ready at 692 160 -3024; map tint used
+[2026-10-31 22:26:26.329 IFO][Lamium] Minimap: renderer tint 5 not ready at 697 162 -3023; map tint used
+[2026-10-31 22:26:26.330 IFO][Lamium] Minimap: texture uploaded in 0.04 ms
+[2026-10-31 22:26:26.333 IFO][Lamium] Offhand slot: desktop_hotbar at 229.0,322.5 size 182.0x22.0 on 640.0x346.0: slot at 201.0,322.5
+[2026-10-31 22:26:26.340 IFO][Lamium] Minimap: texture textures/blocks/tallgrass 32x32 -> ff929192
+[2026-10-31 22:26:26.340 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/UISprite.material.bin (131967 bytes, #1 times)
+[2026-10-31 22:26:26.344 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/RenderChunk.material.bin (2083270 bytes, #1 times)
+[2026-10-31 22:26:26.348 IFO][Lamium] Minimap: texture textures/blocks/log_oak 32x32 -> ff33556d
+[2026-10-31 22:26:26.348 IFO][Lamium] Minimap: texture textures/blocks/double_plant_grass_top 32x32 -> ff979597
+[2026-10-31 22:26:26.348 IFO][Lamium] Minimap: texture textures/blocks/flower_rose 32x32 -> ff264181
+[2026-10-31 22:26:26.353 IFO][Lamium] Minimap: stand-in block minecraft:client_request_placeholder_block
+[2026-10-31 22:26:26.537 IFO][NeuroDragon] [vv] frame time: avg=1.94 ms min=0.50 max=134.26 long=6 over 600 presents
+[2026-10-31 22:26:28.260 IFO][Lamium] Schematic ghosts: block entity alpha pass ran 599 times in 600 frames
+[2026-10-31 22:26:28.399 IFO][NeuroDragon] [vv] frame time: avg=3.10 ms min=2.10 max=7.59 long=0 over 600 presents
+[2026-10-31 22:26:29.861 IFO][NeuroDragon] [vv] frame time: avg=2.44 ms min=1.83 max=4.22 long=0 over 600 presents
+[2026-10-31 22:26:31.331 IFO][NeuroDragon] [vv] frame time: avg=2.45 ms min=1.82 max=4.49 long=0 over 600 presents
+[2026-10-31 22:26:32.751 IFO][NeuroDragon] [vv] frame time: avg=2.37 ms min=1.79 max=5.16 long=0 over 600 presents
+[2026-10-31 22:26:34.284 IFO][NeuroDragon] [vv] frame time: avg=2.56 ms min=1.94 max=6.54 long=0 over 600 presents
+[2026-10-31 22:26:35.855 IFO][NeuroDragon] [vv] frame time: avg=2.62 ms min=1.96 max=11.35 long=0 over 600 presents
+[2026-10-31 22:26:37.498 IFO][NeuroDragon] [vv] frame time: avg=2.74 ms min=1.99 max=5.01 long=0 over 600 presents
+[2026-10-31 22:26:39.021 IFO][NeuroDragon] [vv] frame time: avg=2.54 ms min=1.87 max=4.89 long=0 over 600 presents
+[2026-10-31 22:26:40.592 IFO][NeuroDragon] [vv] frame time: avg=2.62 ms min=1.99 max=26.24 long=1 over 600 presents
+[2026-10-31 22:26:41.984 IFO][NeuroDragon] [vv] frame time: avg=2.32 ms min=1.60 max=12.45 long=0 over 600 presents
+[2026-10-31 22:26:43.536 IFO][NeuroDragon] [vv] frame time: avg=2.59 ms min=1.65 max=16.64 long=0 over 600 presents
+[2026-10-31 22:26:43.902 IFO][RenderDragonShaderLoader] Scanned shaderpacks ./mods/RenderDragonShaderLoader\data\shaderpacks , found 2 pack(s)
+[2026-10-31 22:26:43.902 IFO][RenderDragonShaderLoader]   - Kasumi-3.2.22-Windows-1.26.50 (163 parameter(s), first='STYLE_PRESET', preset='custom', bins='./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled')
+[2026-10-31 22:26:43.902 IFO][RenderDragonShaderLoader]   - mirai-windows-3.1.0 (0 parameter(s))
+[2026-10-31 22:26:43.903 IFO][RenderDragonShaderLoader] [ui] pushed placeholder scene
+[2026-10-31 22:26:43.932 IFO][RenderDragonShaderLoader] Scanned shaderpacks ./mods/RenderDragonShaderLoader\data\shaderpacks , found 2 pack(s)
+[2026-10-31 22:26:43.932 IFO][RenderDragonShaderLoader]   - Kasumi-3.2.22-Windows-1.26.50 (163 parameter(s), first='STYLE_PRESET', preset='custom', bins='./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled')
+[2026-10-31 22:26:43.932 IFO][RenderDragonShaderLoader]   - mirai-windows-3.1.0 (0 parameter(s))
+[2026-10-31 22:26:44.903 IFO][NeuroDragon] [vv] frame time: avg=2.28 ms min=1.55 max=38.65 long=2 over 600 presents
+[2026-10-31 22:26:45.977 IFO][RenderDragonShaderLoader] [ui] button 3 clicked
+[2026-10-31 22:26:45.978 IFO][RenderDragonShaderLoader] [ui] shaders disabled
+[2026-10-31 22:26:45.978 IFO][RenderDragonShaderLoader] Remembered shader selection: pack='(vanilla)' enabled=false
+[2026-10-31 22:26:46.023 IFO][RenderDragonShaderLoader] [graphics] already in Fancy
+[2026-10-31 22:26:46.025 IFO][RenderDragonShaderLoader] Vanilla material reload queued for next frame
+[2026-10-31 22:26:46.051 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ScreenBlit.material.bin (36739 bytes, #1 times)
+[2026-10-31 22:26:46.354 IFO][NeuroDragon] [vv] frame time: avg=2.42 ms min=1.49 max=25.56 long=1 over 600 presents
+[2026-10-31 22:26:47.383 IFO][RenderDragonShaderLoader] [ui] button 3 clicked
+[2026-10-31 22:26:47.391 IFO][RenderDragonShaderLoader] [ui] shaders enabled: Kasumi-3.2.22-Windows-1.26.50
+[2026-10-31 22:26:47.392 IFO][RenderDragonShaderLoader] Remembered shader selection: pack='Kasumi-3.2.22-Windows-1.26.50' enabled=true
+[2026-10-31 22:26:47.450 IFO][RenderDragonShaderLoader] [graphics] switch Simple (switchOption=true, modeOption=true, screenModel=true, advanced=false, now=Simple)
+[2026-10-31 22:26:47.453 IFO][Lamium] Shape faces use the lightning material (graphics mode 0)
+[2026-10-31 22:26:47.453 IFO][RenderDragonShaderLoader] [reload] cleared rendering resources cache
+[2026-10-31 22:26:47.762 IFO][NeuroDragon] [vv] frame time: avg=2.35 ms min=1.44 max=30.43 long=1 over 600 presents
+[2026-10-31 22:26:48.624 IFO][RenderDragonShaderLoader] [graphics] Simple-mode Deferred material reload queued: ./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled
+[2026-10-31 22:26:48.626 IFO][RenderDragonShaderLoader] Shader material reload queued for next frame: ./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled
+[2026-10-31 22:26:48.782 IFO][RenderDragonShaderLoader] [ui] button 3 clicked
+[2026-10-31 22:26:49.163 IFO][NeuroDragon] [vv] frame time: avg=2.34 ms min=1.57 max=24.37 long=0 over 600 presents
+[2026-10-31 22:26:49.410 IFO][RenderDragonShaderLoader] [ui] key 27 mode=0 row=1 rowCount=14
+[2026-10-31 22:26:49.449 IFO][RenderDragonShaderLoader] [graphics] switch Advanced (switchOption=true, modeOption=true, screenModel=true, advanced=false, now=Fancy)
+[2026-10-31 22:26:49.449 IFO][RenderDragonShaderLoader] [graphics] Deferred pack switch restored Advanced: ./mods/RenderDragonShaderLoader\data\presets\Kasumi-3.2.22-Windows-1.26.50\custom\compiled
+[2026-10-31 22:26:49.452 IFO][Lamium] Shape faces use the hologram pointer material (graphics mode 1)
+[2026-10-31 22:26:49.529 IFO][Lamium] Shape faces use the lightning material (graphics mode 2)
+[2026-10-31 22:26:49.596 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ActorPrepass.material.bin (6563549 bytes, #1 times)
+[2026-10-31 22:26:49.605 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/ActorPrepass.material.bin (2422482 bytes, #1 times)
+[2026-10-31 22:26:49.608 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/SunMoonForwardPBR.material.bin (131320 bytes, #1 times)
+[2026-10-31 22:26:49.608 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/SunMoonForwardPBR.material.bin (46625 bytes, #1 times)
+[2026-10-31 22:26:49.611 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ParticleForwardPBR.material.bin (786142 bytes, #1 times)
+[2026-10-31 22:26:49.612 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/ParticleForwardPBR.material.bin (244324 bytes, #1 times)
+[2026-10-31 22:26:49.613 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ParticlePrepass.material.bin (219365 bytes, #1 times)
+[2026-10-31 22:26:49.613 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/ParticlePrepass.material.bin (79243 bytes, #1 times)
+[2026-10-31 22:26:49.614 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/SimpleOccluder.material.bin (16849 bytes, #1 times)
+[2026-10-31 22:26:49.631 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ActorForwardPBR.material.bin (43283171 bytes, #1 times)
+[2026-10-31 22:26:49.682 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/ActorForwardPBR.material.bin (11821483 bytes, #1 times)
+[2026-10-31 22:26:49.693 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/VolumetricsShadows.material.bin (131918 bytes, #1 times)
+[2026-10-31 22:26:49.693 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/VolumetricsShadows.material.bin (37339 bytes, #1 times)
+[2026-10-31 22:26:49.693 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/PopulateVolume.material.bin (640039 bytes, #1 times)
+[2026-10-31 22:26:49.694 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/PopulateVolume.material.bin (240318 bytes, #1 times)
+[2026-10-31 22:26:49.696 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/VolumeScattering.material.bin (27184 bytes, #1 times)
+[2026-10-31 22:26:49.697 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/DeferredMixedResolutionCaustics.material.bin (50125 bytes, #1 times)
+[2026-10-31 22:26:49.697 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/DeferredMixedResolutionCaustics.material.bin (15070 bytes, #1 times)
+[2026-10-31 22:26:49.698 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/DeferredMixedResolutionLightingPrepass.material.bin (356819 bytes, #1 times)
+[2026-10-31 22:26:49.700 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/DeferredMixedResolutionLightingPrepass.material.bin (222973 bytes, #1 times)
+[2026-10-31 22:26:49.701 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/DeferredMixedResolutionSurfaceRadiance.material.bin (128193 bytes, #1 times)
+[2026-10-31 22:26:49.709 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/DeferredMixedResolutionSurfaceRadiance.material.bin (1725805 bytes, #1 times)
+[2026-10-31 22:26:49.710 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/WaterExtinction.material.bin (31578 bytes, #1 times)
+[2026-10-31 22:26:49.710 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/WaterExtinction.material.bin (13831 bytes, #1 times)
+[2026-10-31 22:26:49.711 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/DeferredWater.material.bin (367633 bytes, #1 times)
+[2026-10-31 22:26:49.724 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/DeferredWater.material.bin (2947335 bytes, #1 times)
+[2026-10-31 22:26:49.725 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/DeferredIndirectSpecular.material.bin (186950 bytes, #1 times)
+[2026-10-31 22:26:49.727 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/DeferredIndirectSpecular.material.bin (55366 bytes, #1 times)
+[2026-10-31 22:26:49.728 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Upscaling.material.bin (53878 bytes, #1 times)
+[2026-10-31 22:26:49.729 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/LuminanceHistogram.material.bin (131843 bytes, #1 times)
+[2026-10-31 22:26:49.730 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/Bloom.material.bin (92791 bytes, #1 times)
+[2026-10-31 22:26:49.731 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/Bloom.material.bin (39374 bytes, #1 times)
+[2026-10-31 22:26:49.731 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/BilateralGrid.material.bin (81653 bytes, #1 times)
+[2026-10-31 22:26:49.731 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/LocalExposure.material.bin (48839 bytes, #1 times)
+[2026-10-31 22:26:49.733 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ColorPostProcessing.material.bin (89702 bytes, #1 times)
+[2026-10-31 22:26:49.734 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/ColorPostProcessing.material.bin (26293 bytes, #1 times)
+[2026-10-31 22:26:49.800 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ScreenSpaceReflections.material.bin (159866 bytes, #1 times)
+[2026-10-31 22:26:49.800 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/ScreenSpaceReflections.material.bin (49108 bytes, #1 times)
+[2026-10-31 22:26:49.801 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/SkyProbeDeferredShading.material.bin (190928 bytes, #1 times)
+[2026-10-31 22:26:49.820 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/SkyProbeDeferredShading.material.bin (3053892 bytes, #1 times)
+[2026-10-31 22:26:49.823 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/ChunkOccluder.material.bin (16296 bytes, #1 times)
+[2026-10-31 22:26:50.086 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/RenderChunkPrepass.material.bin (2071477 bytes, #1 times)
+[2026-10-31 22:26:50.092 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/RenderChunkPrepass.material.bin (936960 bytes, #1 times)
+[2026-10-31 22:26:50.094 IFO][RenderDragonShaderLoader] [ui] key 27 mode=0 row=1 rowCount=14
+[2026-10-31 22:26:50.109 IFO][Lamium] Minimap: recording 1536 blocks across (view distance 48 chunks, maximum 96)
+[2026-10-31 22:26:50.183 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/CubemapTransfer.material.bin (35018 bytes, #1 times)
+[2026-10-31 22:26:50.291 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/SpecularConvolution.material.bin (64373 bytes, #1 times)
+[2026-10-31 22:26:50.488 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/RenderChunkForwardPBR.material.bin (13262093 bytes, #1 times)
+[2026-10-31 22:26:50.507 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/RenderChunkForwardPBR.material.bin (4121632 bytes, #1 times)
+[2026-10-31 22:26:50.580 IFO][RenderDragonShaderLoader] [material-read] data/renderer/materials/WaterPrepass.material.bin (854902 bytes, #1 times)
+[2026-10-31 22:26:50.581 IFO][RenderDragonShaderLoader] [reload] overrode data/renderer/materials/WaterPrepass.material.bin (250106 bytes, #1 times)
+[2026-10-31 22:26:50.602 IFO][RenderDragonShaderLoader] [graphics] cleared post-switch Deferred rendering resources
+[2026-10-31 22:26:50.617 IFO][RenderDragonShaderLoader] [reload] cleared rendering resources cache
+[2026-10-31 22:26:56.012 IFO][NeuroDragon] [vv] frame time: avg=11.41 ms min=1.55 max=281.86 long=10 over 600 presents
+[2026-10-31 22:26:56.332 IFO][Lamium] Minimap: 406 composes avg 0.48 ms, 513 uploads avg 0.03 ms, 30235 chunks scanned avg 0.017 ms, 7804 tiles kept, recording range 0 unseen / 561 missing / 6023 partial / 1121 complete, reach 49 chunks
+[2026-10-31 22:27:01.730 IFO][NeuroDragon] [vv] frame time: avg=9.53 ms min=6.12 max=18.97 long=0 over 600 presents
+[2026-10-31 22:27:06.509 IFO][NeuroDragon] [vv] frame time: avg=7.96 ms min=5.42 max=12.91 long=0 over 600 presents
+[2026-10-31 22:27:11.277 IFO][NeuroDragon] [vv] frame time: avg=7.95 ms min=5.50 max=12.44 long=0 over 600 presents
+[2026-10-31 22:27:16.194 IFO][NeuroDragon] [vv] frame time: avg=8.19 ms min=5.57 max=31.09 long=1 over 600 presents
+[2026-10-31 22:27:20.884 IFO][NeuroDragon] [vv] frame time: avg=7.82 ms min=5.22 max=20.98 long=0 over 600 presents
+[2026-10-31 22:27:25.538 WRN][NeuroDragon] [nr] no NGX evaluate in 300 presents: in VV, NR is created inside the VV SR evaluate - turn on VV super resolution (or use RT mode); if it is already on, the injection is not running (see the [vv] inject lines)
+[2026-10-31 22:27:25.655 IFO][NeuroDragon] [vv] frame time: avg=7.95 ms min=5.13 max=79.56 long=1 over 600 presents
+[2026-10-31 22:27:26.332 IFO][Lamium] Minimap: 95 composes avg 0.37 ms, 95 uploads avg 0.03 ms, 50709 chunks scanned avg 0.018 ms, 7804 tiles kept, recording range 0 unseen / 24 missing / 6250 partial / 1431 complete, reach 49 chunks
+[2026-10-31 22:27:30.385 IFO][NeuroDragon] [vv] frame time: avg=7.89 ms min=5.22 max=16.28 long=0 over 600 presents
+[2026-10-31 22:27:31.514 IFO][NeuroDragon] [vvsr] sr enabled (armed; TAAU runs until the first arg10 frame)
+[2026-10-31 22:27:31.540 WRN][NeuroDragon] [vv] inject: arg10 writer not found yet (split=0/99); TAAU runs this frame
+[2026-10-31 22:27:31.540 WRN][NeuroDragon] [vv] inject skipped (1): no arg10 writer in this submission; TAAU restored
+[2026-10-31 22:27:34.511 IFO][NeuroDragon] [vvsr] sr CreateFeature(1) ret=0x00000001 2560x1380 -> 3840x2071
+[2026-10-31 22:27:34.521 IFO][NeuroDragon] [vv] inject: arg10 captured (split=77/99); the TAAU draw is skipped from here
+[2026-10-31 22:27:34.553 WRN][NeuroDragon] [vv] inject skipped (2): the previous injection is still on the GPU
+[2026-10-31 22:27:34.587 WRN][NeuroDragon] [vv] inject skipped (3): the previous injection is still on the GPU
+[2026-10-31 22:27:37.730 IFO][NeuroDragon] [vv] frame time: avg=7.27 ms min=5.22 max=28.96 long=3 over 599 presents
+[2026-10-31 22:27:38.742 IFO][NeuroDragon] [vv] heartbeat: 600 presents, injected +209 skipped +390 | reason=fence-busy split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=208/209 rebuilds=0 queues=0
+[2026-10-31 22:27:41.901 IFO][NeuroDragon] [vv] frame time: avg=6.95 ms min=4.85 max=12.93 long=0 over 600 presents
+[2026-10-31 22:27:42.907 IFO][NeuroDragon] [vv] heartbeat: 1200 presents, injected +205 skipped +395 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=413/414 rebuilds=0 queues=0
+[2026-10-31 22:27:46.070 IFO][NeuroDragon] [vv] frame time: avg=6.95 ms min=5.18 max=12.66 long=0 over 600 presents
+[2026-10-31 22:27:47.046 IFO][NeuroDragon] [vv] heartbeat: 1800 presents, injected +204 skipped +396 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=617/618 rebuilds=0 queues=0
+[2026-10-31 22:27:50.223 IFO][NeuroDragon] [vv] frame time: avg=6.92 ms min=5.00 max=12.38 long=0 over 600 presents
+[2026-10-31 22:27:51.207 IFO][NeuroDragon] [vv] heartbeat: 2400 presents, injected +204 skipped +396 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=821/822 rebuilds=0 queues=0
+[2026-10-31 22:27:54.459 IFO][NeuroDragon] [vv] frame time: avg=7.06 ms min=5.21 max=81.29 long=1 over 600 presents
+[2026-10-31 22:27:55.454 IFO][NeuroDragon] [vv] heartbeat: 3000 presents, injected +204 skipped +396 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=1025/1026 rebuilds=0 queues=0
+[2026-10-31 22:27:56.335 IFO][Lamium] Minimap: 0 composes avg 0.00 ms, 8 uploads avg 0.04 ms, 50022 chunks scanned avg 0.018 ms, 7804 tiles kept, recording range 0 unseen / 24 missing / 6250 partial / 1431 complete, reach 49 chunks
+[2026-10-31 22:27:58.615 IFO][NeuroDragon] [vv] frame time: avg=6.93 ms min=4.88 max=12.41 long=0 over 600 presents
+[2026-10-31 22:27:59.607 IFO][NeuroDragon] [vv] heartbeat: 3600 presents, injected +204 skipped +396 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=1229/1230 rebuilds=0 queues=0
+[2026-10-31 22:28:02.764 IFO][NeuroDragon] [vv] frame time: avg=6.92 ms min=5.35 max=13.53 long=0 over 600 presents
+[2026-10-31 22:28:03.773 IFO][NeuroDragon] [vv] heartbeat: 4200 presents, injected +204 skipped +396 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=1433/1434 rebuilds=0 queues=0
+[2026-10-31 22:28:06.925 IFO][NeuroDragon] [vv] frame time: avg=6.93 ms min=5.10 max=12.06 long=0 over 600 presents
+[2026-10-31 22:28:07.916 IFO][NeuroDragon] [vv] heartbeat: 4800 presents, injected +204 skipped +396 | reason=none split=77/99 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=1637/1638 rebuilds=0 queues=0
+[2026-10-31 22:28:11.100 IFO][NeuroDragon] [vv] frame time: avg=6.96 ms min=4.79 max=11.72 long=0 over 600 presents
+[2026-10-31 22:28:12.544 IFO][NeuroDragon] [vv] heartbeat: 5400 presents, injected +244 skipped +356 | reason=none split=79/101 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=1881/1882 rebuilds=0 queues=0
+[2026-10-31 22:28:15.712 IFO][NeuroDragon] [vv] frame time: avg=7.69 ms min=4.75 max=20.59 long=0 over 600 presents
+[2026-10-31 22:28:16.649 IFO][NeuroDragon] [vv] heartbeat: 6000 presents, injected +214 skipped +386 | reason=fence-busy split=76/98 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=2095/2096 rebuilds=0 queues=0
+[2026-10-31 22:28:19.703 IFO][NeuroDragon] [vv] frame time: avg=6.65 ms min=4.90 max=14.41 long=0 over 600 presents
+[2026-10-31 22:28:20.694 IFO][NeuroDragon] [vv] heartbeat: 6600 presents, injected +216 skipped +384 | reason=fence-busy split=80/102 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=2311/2312 rebuilds=0 queues=0
+[2026-10-31 22:28:23.803 IFO][NeuroDragon] [vv] frame time: avg=6.83 ms min=5.12 max=14.00 long=0 over 600 presents
+[2026-10-31 22:28:24.834 IFO][NeuroDragon] [vv] heartbeat: 7200 presents, injected +207 skipped +393 | reason=fence-busy split=75/97 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=2518/2519 rebuilds=0 queues=0
+[2026-10-31 22:28:26.338 IFO][Lamium] Minimap: 76 composes avg 0.47 ms, 2040 uploads avg 0.02 ms, 46854 chunks scanned avg 0.018 ms, 7804 tiles kept, recording range 0 unseen / 24 missing / 5815 partial / 1866 complete, reach 49 chunks
+[2026-10-31 22:28:27.943 IFO][NeuroDragon] [vv] frame time: avg=6.90 ms min=4.83 max=86.28 long=1 over 600 presents
+[2026-10-31 22:28:28.919 IFO][NeuroDragon] [vv] heartbeat: 7800 presents, injected +238 skipped +362 | reason=fence-busy split=79/101 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=2757/2757 rebuilds=0 queues=0
+[2026-10-31 22:28:32.381 IFO][NeuroDragon] [vv] frame time: avg=7.40 ms min=5.37 max=37.22 long=2 over 600 presents
+[2026-10-31 22:28:33.564 IFO][NeuroDragon] [vv] heartbeat: 8400 presents, injected +294 skipped +306 | reason=none split=82/104 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=3050/3051 rebuilds=0 queues=0
+[2026-10-31 22:28:37.168 IFO][NeuroDragon] [vv] frame time: avg=7.98 ms min=5.51 max=59.24 long=6 over 600 presents
+[2026-10-31 22:28:38.220 IFO][NeuroDragon] [vv] heartbeat: 9000 presents, injected +254 skipped +346 | reason=fence-busy split=81/103 render=2560x1380 display=3840x2071 | sr colours=0 depths=3 mv=2560x1380 fmt=10 fail=0 sinceOk=0 ready=true create=0x00000001 eval=0x00000001 | ngx=0 nrOn=true evalNr=false gate=0x00 params=false tried=false attempted=false created=false nrEval=0 err=0x00000000 | fence=3305/3305 rebuilds=0 queues=0
+[2026-10-31 22:28:41.849 IFO][NeuroDragon] [vv] frame time: avg=7.80 ms min=5.22 max=32.29 long=3 over 600 presents
+[2026-10-31 22:28:42.739 IFO][LeviLamina] 正在禁用模组……
+[2026-10-31 22:28:42.739 IFO][LeviLamina] 正在禁用 RenderDragonShaderLoader v0.2.1
+[2026-10-31 22:28:43.365 IFO][RenderDragonShaderLoader] RenderDragonShaderLoader disabled
+[2026-10-31 22:28:43.365 IFO][LeviLamina] 正在禁用 NeuroDragon v0.1.0
+[2026-10-31 22:28:44.408 IFO][NeuroDragon] [vvsr] sr disabled (TAAU draw restored)
+[2026-10-31 22:28:44.693 IFO][NeuroDragon] [sr] RCAS 已停止；纹理等 GPU 对象随进程释放（避免卸载时释放正在使用的资源）
+[2026-10-31 22:28:44.693 IFO][LeviLamina] 正在禁用 Lamium v0.3.0

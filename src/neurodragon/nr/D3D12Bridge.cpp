@@ -394,10 +394,11 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
             100.0 * static_cast<double>(aboveOne) / static_cast<double>(values)
         );
     }
-    std::uint32_t const w        = gDumpTarget->width;
-    std::uint32_t const h        = gDumpTarget->height;
-    std::uint32_t const dataSize = w * h * 3u;
-    std::uint32_t const fileSize = 54u + dataSize;
+    std::uint32_t const w           = gDumpTarget->width;
+    std::uint32_t const h           = gDumpTarget->height;
+    std::uint32_t const bmpRowPitch = (w * 3u + 3u) & ~3u;
+    std::uint32_t const dataSize    = bmpRowPitch * h;
+    std::uint32_t const fileSize    = 54u + dataSize;
 
     std::string out(54u, '\0');
     out[0]     = 'B';
@@ -418,7 +419,7 @@ bool flushColorDump(float* maxValue, std::uint32_t* nonZeroWords) {
         auto const* row = reinterpret_cast<std::uint16_t const*>(
             reinterpret_cast<std::uint8_t const*>(src) + static_cast<std::size_t>(gDumpTarget->rowPitch) * (h - 1 - y)
         );
-        std::uint8_t* dstRow = reinterpret_cast<std::uint8_t*>(out.data() + 54u + static_cast<std::size_t>(y) * w * 3u);
+        std::uint8_t* dstRow = reinterpret_cast<std::uint8_t*>(out.data() + 54u + static_cast<std::size_t>(y) * bmpRowPitch);
         for (std::uint32_t x = 0; x < w; ++x) {
             float        r    = halfToFloat(row[x * 4 + 0]);
             float        g    = halfToFloat(row[x * 4 + 1]);
@@ -877,7 +878,7 @@ float3 GamutClip(float3 c) {
                   dot(wide, float3(-0.130255997, 1.14080501, -0.0105480002)),
                   dot(wide, float3(-0.0240030009, -0.128968999, 1.15297198)));
 }
-// NR's model carries a small, consistent colour bias (a green cast on grey shading).
+// NR's model has a content-dependent colour response (including a cast on grey shading).
 // Where the original is near neutral, keep the result's chroma on the original's own
 // hue axis instead of letting the model rotate it, and release the guard as the
 // original carries chroma of its own (OkLab 0.02-0.08). Lightness is kept. Ported
@@ -2158,6 +2159,11 @@ bool nrCreate(
                     reinterpret_cast<ReleaseFeatureFn>(GetProcAddress(core, "NVSDK_NGX_D3D12_ReleaseFeature"));
             }
             gNr.created = true;
+            // Info, not debug: "was a feature created at all, and through which API"
+            // is the first question a log has to answer; the panel only says
+            // "已配置 · 未创建" and the empty stage pair means nothing was attempted
+            // (EXP-0117).
+            neurodragon::log::write(0, "nr.info.created"_tr(featureWidth, featureHeight, tag));
             return true;
         }
         gNr.lastError = ret;
@@ -2401,7 +2407,9 @@ bool nrEnsureRenderSize(
     }
     if (!placementChange && gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
         device->Release();
-        return false; // the size is still moving; try again once it settles
+        // Defer only the rebuild. Refusing to record would also stop evalCount, so the
+        // throttle could never expire and NR stayed on "created, waiting" forever.
+        return true;
     }
 
     ID3D12Resource* newOutput  = nullptr;
@@ -3109,7 +3117,20 @@ bool nrRecord(
     paramSetI32(params, "DLSSNR.UICorrection", 0);
     int const inverted = config::get().nr.depthInverted >= 0 ? config::get().nr.depthInverted : (depthInverted ? 1 : 0);
     paramSetI32(params, "DLSSNR.DepthInverted", inverted ? 1 : 0);
-    paramSetI32(params, "DLSSNR.Reset", (reset || userReset || (config::get().nr.resetEveryFrame != 0)) ? 1 : 0);
+    bool const resetEveryFrame = config::get().nr.resetEveryFrame != 0;
+    bool const effectiveReset  = reset || userReset || resetEveryFrame;
+    paramSetI32(params, "DLSSNR.Reset", effectiveReset ? 1 : 0);
+#ifdef TEST
+    if (effectiveReset) {
+        NR_DEBUG(
+            "[nr] reset f=%llu user=%d scheduled=%d everyFrame=%d",
+            static_cast<unsigned long long>(frame),
+            userReset ? 1 : 0,
+            reset ? 1 : 0,
+            resetEveryFrame ? 1 : 0
+        );
+    }
+#endif
     // 310.x reads both of these as int as well; 0 = keep the axis unflipped.
     paramSetI32(params, "DLSS.Indicator.Invert.X.Axis", 0);
     paramSetI32(params, "DLSS.Indicator.Invert.Y.Axis", 0);
@@ -3374,6 +3395,11 @@ bool nrRecord(
     nrStampEnd(cmd, frame, 3);
     if (evaluateRet == 1) {
         ++gNr.evalCount;
+#ifdef TEST
+        if (gNr.rebuilds > 0 && gNr.evalCount - gNr.lastRebuildEval < kMinEvalsBetweenRebuilds) {
+            NR_DEBUG("[nr] resize throttle: evaluated current extent (evalCount=%u)", gNr.evalCount);
+        }
+#endif
     } else {
         ++gNr.evalFailures;
         // Never silently accept a failed network evaluation: the output texture then
@@ -4354,8 +4380,9 @@ SrStats srPanelStats() {
 
 PanelStats nrPanelStats() {
     PanelStats stats;
-    stats.featureCreated = gNr.created;
-    stats.stampsActive   = gStamps.active;
+    stats.featureAttempted = gNr.attempted;
+    stats.featureCreated   = gNr.created;
+    stats.stampsActive     = gStamps.active;
     stats.evalCount      = gNr.evalCount;
     stats.evalFailures   = gNr.evalFailures;
     stats.lastError      = gNr.lastError;

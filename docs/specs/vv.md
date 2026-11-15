@@ -433,8 +433,10 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 - **我们自己的 list** 建在引擎设备上（allocator / list / fence / 1 个 RTV 描述符堆，需要时才建）：
   取 `GetCurrentBackBufferIndex()` 那块后缓冲，`PRESENT → RENDER_TARGET → ClearRenderTargetView(洋红) → PRESENT`，
   再 `Close`。同一队列三次提交，顺序就是 GPU 的执行顺序。
-- **生命周期**：后缓冲引用在提交后当场 `Release`（§9 第一条崩溃的成因）；allocator 复用前用自建 fence
-  确认上一次注入已执行完，没完就跳过该帧（**不等待**，避免把帧时间拖长）。
+- **生命周期**：后缓冲引用在提交后当场 `Release`（§9 第一条崩溃的成因）。只允许一条注入 list 在飞，
+  复用前等待其 fence 完成，避免常规 `FenceBusy` 直接切回 TAAU。VvSr 与 NR 在录制时会重写共享
+  SRV/UAV 描述符堆和 arg10 RTV，EXP-0122 证明只给 allocator/list 做四槽会让后录帧覆盖先录帧
+  尚未执行的描述符（75% 输入图贴左上的黑边帧）。持续 120 次提交仍未完成仍按 EXP-0118 的路径重建。
 - **不污染探针读数**：`Close` 钩子会看到我们自己的 list，`isOwnList()` 把它排除，§3 的「每帧 49 次 Close」
   仍然是引擎的数字。
 

@@ -1,6 +1,8 @@
 #include "neurodragon/probe/VvProbe.h"
 
+#include "neurodragon/Config.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/RuntimeOptions.h"
 #include "neurodragon/probe/VvCalibrate.h"
 #include "neurodragon/probe/VvInject.h"
@@ -2047,6 +2049,37 @@ void onPresent() {
     // the arming itself is four injector switches, so it is applied here - every frame,
     // and only when the value changed. A no-op otherwise.
     neurodragon::vv::sr::syncConfig();
+#if ND_VV_HEARTBEAT
+    inject::notePresentHeartbeat();
+#endif
+    // EXP-0118: in VV the engine never loads NGX (that only happens in RT mode), so
+    // NR's create gate only runs inside our VV SR evaluate. "Configured, never
+    // created" therefore has a second cause besides a missing input: no evaluate at
+    // all. Name it once, after enough world presents that a working injection would
+    // have evaluated hundreds of times.
+    {
+        static std::atomic<bool> logged{false};
+        static std::uint64_t     lastSerial = 0;
+        static unsigned          quiet      = 0;
+        if (!config::get().nr.enabled) {
+            quiet = 0;
+        } else if (!logged.load(std::memory_order_relaxed)
+                   && gWorldLoaded.load(std::memory_order_relaxed)) {
+            std::uint64_t const serial = neurodragon::probe::nrEvaluateSerial();
+            if (serial != lastSerial) {
+                lastSerial = serial;
+                quiet      = 0;
+            } else if (++quiet >= 300) {
+                logged.store(true, std::memory_order_relaxed);
+                utils::logger().warn(
+                    "[nr] no NGX evaluate in {} presents: in VV, NR is created inside the VV SR "
+                    "evaluate - turn on VV super resolution (or use RT mode); if it is already "
+                    "on, the injection is not running (see the [vv] inject lines)",
+                    quiet
+                );
+            }
+        }
+    }
     // Frame-time marker. A hitch is a fact the user can feel, so it is measured here
     // instead of guessed at; the line is a debug-level one, so a release build pays
     // neither the formatting nor the log volume.
@@ -2060,26 +2093,30 @@ void onPresent() {
     }
     LARGE_INTEGER now{};
     QueryPerformanceCounter(&now);
-#ifdef TEST
+#if defined(TEST) || ND_VV_HEARTBEAT
     // Present-to-present average/min/max over ~10 s: the contract's "frame time is
     // recorded" (S6) needs a number, not a frame count. Values outside 0..1000 ms are
-    // alt-tab or loading hitches, not frames. TEST only: the panel already shows
-    // fps/frame time, and a release log stays free of per-frame aggregation.
-    static std::uint64_t frames = 0;
-    static double        sumMs  = 0.0;
-    static double        minMs  = 0.0;
-    static double        maxMs  = 0.0;
+    // alt-tab or loading hitches, not frames. TEST always reports it; a release build
+    // reports it only while the temporary heartbeat is enabled.
+    static std::uint64_t frames     = 0;
+    static double        sumMs      = 0.0;
+    static double        minMs      = 0.0;
+    static double        maxMs      = 0.0;
+    static unsigned      longFrames = 0;
 #endif
     if (frequency && lastPresent.QuadPart) {
         double const ms = 1000.0 * static_cast<double>(now.QuadPart - lastPresent.QuadPart)
                         / static_cast<double>(frequency);
         if (ms >= 25.0) {
-            static unsigned long long longFrames = 0;
+#if defined(TEST) || ND_VV_HEARTBEAT
             if (++longFrames <= 10) {
                 ND_DEBUG("[vv] long frame {:.1f} ms at present #{}", ms, presents);
             }
+#else
+            ND_DEBUG("[vv] long frame {:.1f} ms at present #{}", ms, presents);
+#endif
         }
-#ifdef TEST
+#if defined(TEST) || ND_VV_HEARTBEAT
         if (ms > 0.0 && ms < 1000.0) {
             sumMs += ms;
             if (frames == 0 || ms < minMs) {
@@ -2090,18 +2127,25 @@ void onPresent() {
             }
             ++frames;
         }
-        if (frames > 0 && (presents <= 10 || presents % 600 == 0)) {
+#ifdef TEST
+        bool const report = presents <= 10 || presents % 600 == 0;
+#else
+        bool const report = presents % 600 == 0;
+#endif
+        if (frames > 0 && report) {
             utils::logger().info(
-                "[vv] frame time: avg={:.2f} ms min={:.2f} max={:.2f} over {} presents",
+                "[vv] frame time: avg={:.2f} ms min={:.2f} max={:.2f} long={} over {} presents",
                 sumMs / static_cast<double>(frames),
                 minMs,
                 maxMs,
+                longFrames,
                 frames
             );
-            sumMs  = 0.0;
-            minMs  = 0.0;
-            maxMs  = 0.0;
-            frames = 0;
+            sumMs      = 0.0;
+            minMs      = 0.0;
+            maxMs      = 0.0;
+            frames     = 0;
+            longFrames = 0;
         }
 #endif
     }

@@ -1,6 +1,7 @@
 #include "neurodragon/vv/VvDlssSr.h"
 
 #include "neurodragon/Config.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/sr/SrSharpening.h"
 
@@ -285,6 +286,7 @@ bool ensureSession(ID3D12Device* device) {
             return false;
         }
     }
+    probe::ensureNgxHooks();
     auto const caps = reinterpret_cast<GetCapsFn>(::GetProcAddress(gCore, "NVSDK_NGX_D3D12_GetCapabilityParameters"));
     gCreate   = reinterpret_cast<CreateFn>(::GetProcAddress(gCore, "NVSDK_NGX_D3D12_CreateFeature"));
     gEvaluate = reinterpret_cast<EvaluateFn>(::GetProcAddress(gCore, "NVSDK_NGX_D3D12_EvaluateFeature"));
@@ -419,7 +421,11 @@ bool ensureSrFeature(void* deviceVoid, void* commandList, unsigned renderWidth, 
         gSrState.ready = false;
         return false;
     }
-    ND_DEBUG(
+    // Info, not debug: this feature's evaluate is what triggers NR's create gate
+    // (see the OwnEvaluateScope call below), so "does the VV upscaler even have a
+    // feature" is the first thing a missing [nr] line has to be checked against
+    // (EXP-0117: a debug-only line made it unknowable in a release build).
+    utils::logger().info(
         "[vvsr] sr CreateFeature(1) ret=0x{:08X} {}x{} -> {}x{}",
         static_cast<unsigned>(ret),
         renderWidth,

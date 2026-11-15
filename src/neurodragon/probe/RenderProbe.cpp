@@ -375,9 +375,10 @@ void hookInitOn(HMODULE module, [[maybe_unused]] char const* which) {
 // NR never upscales - the engine's DLSS still does the upscaling).
 // ---------------------------------------------------------------------------
 
-bool          gNrEnabled     = false;
-bool          gNrStartTried  = false;
-bool          gNrWindowOpen  = false;
+bool                   gNrEnabled    = false;
+bool                   gNrStartTried = false;
+std::atomic<unsigned>  gNrDiagState{0};
+bool                   gNrWindowOpen = false;
 int           gNrWindowIndex = -1;
 std::uint64_t gWindowAnchor  = 0;
 std::uint64_t gNrWindowStart = 0;
@@ -405,6 +406,14 @@ constexpr std::uint64_t kNoDumpFrame    = ~std::uint64_t{0} - 4096;
 #ifdef TEST
 void nrDumpName(char* buffer, std::size_t size, char const* stem, int index) {
     std::snprintf(buffer, size, "%s_w%d.bmp", stem, index);
+}
+
+std::atomic_bool          gNrToneDumpRequested{false};
+std::uint64_t             gNrToneDumpFrame = 0;
+unsigned long long        gNrToneDumpTick  = 0;
+
+void nrToneDumpName(char* buffer, std::size_t size, unsigned long long tick, char const* stage) {
+    std::snprintf(buffer, size, "tone_%llu_%s.bmp", tick, stage);
 }
 #endif
 
@@ -939,6 +948,31 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
     // Record + TEST dumps + window report. Called before the engine's own
     // EvaluateFeature for placement 0 and after it for placement 1.
     auto recordNrFrame = [&]() {
+#ifdef TEST
+        if (gNrToneDumpFrame && n >= gNrToneDumpFrame + 2) {
+            unsigned written = 0;
+            for (int slot = 0; slot < 4; ++slot) {
+                float         peak = -1.0f;
+                std::uint32_t nz   = 0;
+                if (nr::flushColorDumpN(slot, &peak, &nz)) written |= 1u << slot;
+            }
+            ND_DEBUG("[nr] tone dump done tick={} f={} written={:#x}", gNrToneDumpTick, gNrToneDumpFrame, written);
+            gNrToneDumpFrame = 0;
+            gNrToneDumpTick  = 0;
+        }
+        if (!gNrToneDumpFrame && !nrInWindow && nrReplace && gNrToneDumpRequested.load(std::memory_order_acquire)) {
+            void* base = nrPlacement == 0 ? color : out;
+            if (base && nr::nrEncodedColorResource() && nr::nrOutputResource()) {
+                gNrToneDumpRequested.exchange(false, std::memory_order_acq_rel);
+                gNrToneDumpTick  = GetTickCount64();
+                gNrToneDumpFrame = n;
+                char name[96];
+                nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "base");
+                nr::queueColorDumpN(3, cmdList, base, name, 0);
+                ND_DEBUG("[nr] tone dump begin tick={} f={} placement={}", gNrToneDumpTick, n, nrPlacement);
+            }
+        }
+#endif
         bool const timed = nrInWindow || nrReplace;
         if (timed) {
             nr::nrStampBegin(cmdList, n, 0);
@@ -988,6 +1022,21 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             const_cast<void*>(out),
             n
         );
+#ifdef TEST
+        if (gNrToneDumpFrame == n) {
+            char name[96];
+            nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "color_ref");
+            nr::queueColorDumpN(0, cmdList, nr::nrEncodedColorResource(), name, 1);
+            nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "nr2");
+            nr::queueColorDumpN(1, cmdList, nr::nrOutputResource(), name, 1);
+            if (void* fed = nr::nrFedResource()) {
+                nrToneDumpName(name, sizeof(name), gNrToneDumpTick, "fed");
+                nr::queueColorDumpN(2, cmdList, fed, name, nr::nrFedDomain() == 1 ? 1 : 0);
+            } else {
+                ND_DEBUG("[nr] tone dump tick={} has no fed resource", gNrToneDumpTick);
+            }
+        }
+#endif
         if (timed) {
             nr::nrStampEnd(cmdList, n, 0);
         }
@@ -1156,6 +1205,35 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
         // them resident so toggling NR while tuning stays instant.
         nr::nrUnload();
         gNrStartTried = false;
+    }
+    // "Configured · never created" had no evidence at all in a release build: every
+    // line between here and nrCreate was TEST-only, so a log could not say whether NR
+    // never asked or asked and failed (EXP-0117, 2026-10-31: a 5090 sat on the panel's
+    // "已配置 · 未创建" with no [nr] line anywhere). These six inputs are the whole
+    // gate, so one info line per distinct blocker answers it. The all-good state is
+    // not logged here - that is the create call, which has its own stage pair.
+    if (gNrEnabled && !gNrStartTried) {
+        bool const     paramsOk = validParamObj(const_cast<void*>(params));
+        unsigned const mask     = (color ? 1u : 0u) | (depth ? 2u : 0u) | (mv ? 4u : 0u) | (out ? 8u : 0u)
+                            | ((width && height) ? 16u : 0u);
+        unsigned const  state    = mask | (paramsOk ? 0u : 0x100u);
+        static unsigned reported = ~0u;
+        if (state != 0x1Fu && state != reported) {
+            reported = state;
+            char size[32]{};
+            std::snprintf(size, sizeof(size), "%ux%u", width, height);
+            neurodragon::log::write(
+                0,
+                "nr.info.gate"_tr(
+                    paramsOk ? "ok" : "invalid",
+                    color ? "ok" : "-",
+                    depth ? "ok" : "-",
+                    mv ? "ok" : "-",
+                    out ? "ok" : "-",
+                    size
+                )
+            );
+        }
     }
     if (gNrEnabled && validParamObj(const_cast<void*>(params))) {
         // Entering/leaving a world only restarts the window schedule: the menu's
@@ -1342,6 +1420,11 @@ int         ngxEvaluateDetour(void* cmdList, void* handle, void const* params, v
             static_cast<unsigned>(result)
         );
     }
+    unsigned const diagState = (color ? 1u : 0u) | (depth ? 2u : 0u) | (mv ? 4u : 0u) | (out ? 8u : 0u)
+                             | ((width && height) ? 16u : 0u)
+                             | (validParamObj(const_cast<void*>(params)) ? 0x100u : 0u)
+                             | (gNrEnabled ? 0x200u : 0u) | (gNrStartTried ? 0x400u : 0u);
+    gNrDiagState.store(diagState, std::memory_order_relaxed);
     return result;
 }
 
@@ -1575,10 +1658,7 @@ void startWatcher() {
             }
             if (GetModuleHandleW(L"_nvngx.dll") && GetModuleHandleW(L"nvngx_dlss.dll")) {
                 std::this_thread::sleep_for(150ms);
-                if (gNgxHooked.exchange(true)) {
-                    break;
-                }
-                hookNgxExports();
+                ensureNgxHooks();
                 break;
             }
             std::this_thread::sleep_for(20ms);
@@ -1596,6 +1676,20 @@ void startWatcher() {
 }
 
 } // namespace
+
+bool ensureNgxHooks() {
+    if (gNgxHooked.load(std::memory_order_relaxed)) {
+        return true;
+    }
+    if (!GetModuleHandleW(L"_nvngx.dll")) {
+        return false;
+    }
+    if (gNgxHooked.exchange(true)) {
+        return true;
+    }
+    hookNgxExports();
+    return true;
+}
 
 bool install() {
     // Pin this module for the process lifetime. Unhooking while another thread is
@@ -1657,5 +1751,22 @@ void uninstall() {
 }
 
 bool isInstalled() { return gNgxHooked.load(std::memory_order_relaxed); }
+
+std::uint64_t nrEvaluateSerial() { return gFrame.load(std::memory_order_relaxed); }
+
+#ifdef TEST
+void requestNrToneDump() { gNrToneDumpRequested.store(true, std::memory_order_release); }
+#endif
+
+NrDiagnostic nrDiagnostic() {
+    unsigned const state = gNrDiagState.load(std::memory_order_relaxed);
+    return {
+        gFrame.load(std::memory_order_relaxed),
+        state & 0x1Fu,
+        (state & 0x100u) != 0,
+        (state & 0x200u) != 0,
+        (state & 0x400u) != 0,
+    };
+}
 
 } // namespace neurodragon::probe

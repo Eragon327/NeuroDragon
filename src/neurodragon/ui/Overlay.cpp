@@ -7,6 +7,7 @@
 #include "neurodragon/fg/HudlessProbe.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
+#include "neurodragon/probe/RenderProbe.h"
 #include "neurodragon/probe/VvInject.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/vv/VvDlssSr.h"
@@ -677,6 +678,13 @@ void performHotkeyAction(HWND window, HotkeyAction action) {
         break;
     case HotkeyAction::Screenshot:
         gScreenshotRequested.store(true, std::memory_order_release);
+#ifdef TEST
+        if (gHeldKeys[VK_CONTROL]) {
+            nr::nrRequestReset();
+            ND_DEBUG("[nr] tone dump reset requested (Ctrl+F2)");
+        }
+        probe::requestNrToneDump();
+#endif
         break;
     case HotkeyAction::None:
         break;
@@ -1900,7 +1908,7 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     // list runs after TAAU's writer and before whatever consumes arg10 downstream.
     // Off by default; prepare() returns 0 and the call below forwards everything
     // unchanged. It also returns 0 for every submission that must not be cut (not the
-    // engine's direct queue, no arg10 writer in this frame, fence still busy).
+    // engine's direct queue, no arg10 writer in this frame, previous injection still busy).
     unsigned const injectSplit =
         probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
     // F2: the injected list is about to rewrite the shared Depth/MV textures. If DLSS-G

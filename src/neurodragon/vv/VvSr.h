@@ -39,6 +39,24 @@ struct Stats {
     int      dlssEvaluateRet{};
 };
 
+/// What the last record attempt saw. Pure read-out for the temporary heartbeat
+/// (EXP-0119); nothing here is used by a decision.
+struct Diag {
+    unsigned renderWidth{};
+    unsigned renderHeight{};
+    unsigned displayWidth{};
+    unsigned displayHeight{};
+    unsigned colourCandidates{};
+    unsigned depthCandidates{};
+    unsigned mvWidth{};
+    unsigned mvHeight{};
+    unsigned mvFormat{};
+    unsigned lastFail{};      ///< 0 ok, 1 no colour/depth, 2 no usable arg11, 3 pipeline, 4 create, 5 eval, 6 format
+    unsigned framesSinceOk{}; ///< record attempts since the last one that returned true
+};
+
+[[nodiscard]] Diag diag();
+
 /// R3 stage B: prep + DLSS evaluate, then a PS writes the DLSS output into the
 /// engine's arg10 with an RTV (no tonemap, no encode, no back-buffer copy).
 /// The resource is left in RENDER_TARGET; a missing DLSS evaluation fails instead
@@ -74,7 +92,7 @@ void syncConfig();
 enum class Rung : int { Full = 0, NoNr = 1, NoSharp = 2, EngineTaau = 3 };
 enum class RungReason : int { None = 0, Create = 1, Eval = 2, Retry = 3 };
 #ifdef TEST
-enum class Fault : int { None = 0, Create = 1, Eval = 2 }; // session-only, TEST panel
+enum class Fault : int { None = 0, Create = 1, Eval = 2, Signal = 3 }; // session-only, TEST panel
 #endif
 
 struct Fallback {

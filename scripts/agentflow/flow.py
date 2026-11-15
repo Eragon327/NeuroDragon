@@ -762,8 +762,15 @@ def cmd_review(root: Path, args) -> int:
         if event.get("kind") == "accept":
             accepts[event["criterion"]] = event
 
+    # Only the criteria in the current contract gate this review. Accepts from an
+    # earlier contract are history: they may point at files that no longer exist in
+    # this checkout, and they cannot be re-accepted because the criterion is gone.
+    current_ids = {c["id"] for c in con["criteria"]}
+    superseded = sorted(cid for cid in accepts if cid not in current_ids)
     stale = []
     for cid, event in accepts.items():
+        if cid not in current_ids:
+            continue
         for entry in event.get("evidence", []):
             if not evidence_still_matches(entry):
                 stale.append((cid, entry["path"]))
@@ -773,6 +780,9 @@ def cmd_review(root: Path, args) -> int:
     print(f"  contract stage  {con['stage']} - {STAGES.get(con['stage'], '?')}")
     print(f"  checks          {len(errors)} error(s), {sum(1 for f in findings if f.get('waived'))} waived")
     print_findings(findings)
+    if superseded:
+        print(f"  superseded      {len(superseded)} accept(s) from earlier contracts ignored: "
+              f"{', '.join(superseded)}")
     if stale:
         for cid, path in stale:
             print(f"  STALE EVIDENCE  {cid}: {path} changed after it was accepted")
@@ -781,7 +791,7 @@ def cmd_review(root: Path, args) -> int:
         append(root, {"kind": "review", "ok": ok, "tree": tree_digest(root),
                       "checks": [f["id"] for f in findings],
                       "evidence": {cid: [e["sha256"] for e in ev.get("evidence", [])]
-                                   for cid, ev in accepts.items()}})
+                                   for cid, ev in accepts.items() if cid in current_ids}})
         print(f"  recorded        ok={ok}")
     return 0 if ok else 1
 

@@ -1,0 +1,17 @@
+{
+  "name": "nr-resize-throttle",
+  "tier": "L1",
+  "timeout_s": 240,
+  "why": "EXP-0125: changing render size twice within 20 NR evaluations must not deadlock the counter. The run must evaluate the current feature while the next rebuild is deferred.",
+  "requires": [
+    "\\[nr\\] resize throttle: evaluated current extent"
+  ],
+  "forbids": [
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[nr\\] resize throttle: evaluated current extent": 1
+  }
+}
