@@ -102,6 +102,40 @@ void setFault(Fault fault);
 /// keeps the render size stable while the engine rebinds its native-size motion vectors.
 [[nodiscard]] bool live();
 
+/// F2 (EXP-0150): the inputs of the last frame that really wrote arg10, published for
+/// the FG marker. Read-only from the reader's side and never read back by SR: SR owns
+/// the buffers, FG owns the tagging, and neither drives the other's lifetime.
+///
+/// `serial` is the SR frame number that published this (0 = nothing yet), so a reader
+/// can tell "this frame's record" from "the last one's". The resources are in
+/// `depthState`/`motionState` (ALL_SHADER_RESOURCE after a successful record) and the
+/// matrices are the TAA snapshot that frame ran with, camera-relative, row-major, with
+/// the camera origins in `camera` (current xyz, previous xyz).
+struct FrameSnapshot {
+    unsigned serial{};
+    unsigned generation{};
+    unsigned renderWidth{};
+    unsigned renderHeight{};
+    unsigned displayWidth{};
+    unsigned displayHeight{};
+    void*    depth{};         ///< depthR32, DXGI_FORMAT_R32_FLOAT
+    void*    motion{};        ///< mvRg32, DXGI_FORMAT_R16G16_FLOAT
+    unsigned depthFormat{};
+    unsigned motionFormat{};
+    unsigned depthState{};
+    unsigned motionState{};
+    bool     reset{};         ///< the frame was fed to DLSS-SR as a history reset
+    bool     matrices{};      ///< the TAA snapshot below was valid for that frame
+    unsigned taaSerial{};     ///< which TAA snapshot (see probe::vv::taaSnapshotSerial)
+    float    current[16]{};   ///< TAAContext +0x200, camera-relative view-projection
+    float    previous[16]{};  ///< TAAContext +0x240, the same for the previous frame
+    float    camera[6]{};     ///< TAAContext +0x280: current xyz, then previous xyz
+    float    jitter[2]{};     ///< +0x1e4; recorded only, the FG constants pin jitter to 0
+};
+
+/// Copy of the last published snapshot. False until a frame recorded successfully.
+[[nodiscard]] bool frameSnapshot(FrameSnapshot* out);
+
 /// What Jitter.Offset DLSS is told. Zero by default (EXP-0098: the engine value makes
 /// the picture wobble, zero is stable, and the value is already in DLSS's space -
 /// docs/research/2026-10-29-taau-jitter-dlss-contract.md).

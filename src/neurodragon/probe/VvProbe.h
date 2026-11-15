@@ -123,6 +123,11 @@ struct RenderTargetInfo {
 // Returns false when no draw has been seen yet. Read-only.
 bool taaMatrices(float* current, float* previous, float* camera, float* jitter);
 
+// How many times the snapshot above has been replaced. A reader that needs "this frame's
+// matrices" compares it with the value it saw last, instead of trusting `valid` (a stale
+// snapshot is still valid).
+[[nodiscard]] unsigned taaSnapshotSerial();
+
 struct TaauDrawStats {
     std::uint64_t declared{};  ///< the engine declared the pass (once per frame)
     std::uint64_t callbacks{}; ///< the pass' draw callback ran
@@ -146,6 +151,14 @@ struct TaauDrawStats {
 [[nodiscard]] void*    arg10WriterList();
 void                   setProductArmed(bool armed);
 [[nodiscard]] bool     productArmed();
+
+// F2 (EXP-0150): the frame's pre-UI hudless boundary, recognised from the submission
+// itself instead of a fixed offset. The last adjacent pair of lists in the tail that
+// both write the same swap-chain RTV, where the first has at most two draws (the world
+// display write) and the second at least eight (the UI composite). The value counts the
+// lists before the cut, i.e. "cut after this many lists"; 0 means the submission does
+// not have that shape, and then there is no safe hudless cut for it.
+[[nodiscard]] unsigned preUiSplit();
 
 // True when the submission just observed followed a new arg10 declaration (i.e. it
 // is the world frame, not a UI submission reusing the previous native).

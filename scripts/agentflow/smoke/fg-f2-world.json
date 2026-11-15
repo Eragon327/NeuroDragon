@@ -1,0 +1,34 @@
+{
+  "name": "fg-f2-world",
+  "tier": "L2",
+  "timeout_s": 420,
+  "dwell_s": 20,
+  "why": "F2 in world: fg::inputs submits slSetConstants and the Depth/MotionVectors/HUDLessColor tags for a fresh frame and both return 0 (frame=, const=0, tag=0), the constants line shows the near/far/fov/aspect decoded from that frame's TAA matrices, DLSS-G stays eOff (status=0x0, mode=0) and SR keeps working (engine eval ret=0x1, arg10 write eval=1 with engine MV). Trigger is a human step (launch, enter a world, walk a few seconds); a run that never enters a world reads as ABORTED because every require below is world-only. Transient 'skip=3 no-fresh-sr' / 'skip=4 no-fresh-hudless' frames at world entry, pause or resize are expected and deliberately not forbidden; the hard submit failures (token/constants/tag) are.",
+  "requires": [
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+ depth=0x[0-9a-f]+ mv=0x[0-9a-f]+ hud=0x[0-9a-f]+ const=0(?:x0+)?\\b.*\\btag=0(?:x0+)?\\b",
+    "\\[fg\\] inputs: constants frame=\\d+ near=-?\\d+\\.\\d+ far=(?:-?\\d+\\.\\d+|inf) fov=-?\\d+\\.\\d+ aspect=-?\\d+\\.\\d+ scaleZ=-?\\d+\\.\\d+ bbi=\\d+ reset=[01] gen=\\d+",
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)",
+    "\\[vvsr\\] sr arg10 #\\d+: .*eval=1\\b"
+  ],
+  "forbids": [
+    "0x887A0005",
+    "\\[fg\\] device removed",
+    "cmdQ\\.pacer",
+    "\\[fg\\] inputs: frame=\\d+ .*\\bskip=\\d+ .*\\breason=(?:token-failed|constants-failed|tag-failed)\\b",
+    "\\[fg\\] inputs: frame=\\d+ .*\\bconst=(?:0x)?[0-9a-f]*[1-9a-f]",
+    "\\[fg\\] inputs: frame=\\d+ .*\\btag=(?:0x)?[0-9a-f]*[1-9a-f]",
+    "\\[fg\\] inputs: .*\\bstatus=0x0*[1-9a-f]",
+    "\\[fg\\] inputs: dlssg state .*\\bmode=[1-9]",
+    "\\[fg\\] streamline: DLSS_G (?:options|state) .*\\bstatus=0x0*[1-9a-f]",
+    "\\[fg\\] streamline: DLSS_G (?:options|state) .*\\bmode=[1-9]",
+    "\\[vvsr\\] sr CreateFeature\\(1\\) failed",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+ depth=0x[0-9a-f]+ mv=0x[0-9a-f]+ hud=0x[0-9a-f]+ const=0(?:x0+)?\\b.*\\btag=0(?:x0+)?\\b": 3,
+    "\\[eval\\] f=\\d+ .*ret=0x0*1(?:\\s|$)": 3,
+    "\\[vvsr\\] sr arg10 #\\d+: .*eval=1\\b": 2
+  }
+}

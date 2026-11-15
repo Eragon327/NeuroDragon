@@ -40,6 +40,9 @@ struct State {
     PFun_slGetFeatureFunction*     getFeatureFunction{};
     PFun_slDLSSGSetOptions*        dlssgSetOptions{};
     PFun_slDLSSGGetState*          dlssgGetState{};
+    PFun_slGetNewFrameToken*       newFrameToken{};
+    PFun_slSetConstants*           setConstants{};
+    PFun_slSetTagForFrame*         setTagForFrame{};
     std::vector<sl::Feature>       features{sl::kFeatureReflex, sl::kFeaturePCL, sl::kFeatureDLSS_G};
     std::vector<std::wstring>      paths;
     std::vector<wchar_t const*>    pathPtrs;
@@ -47,6 +50,7 @@ struct State {
     bool                           ready{};
     bool                           attempted{};
     bool                           deviceSet{};
+    bool                           offAccepted{}; ///< the eOff options were set exactly once
     void*                          pendingDevice{};
 };
 
@@ -191,6 +195,14 @@ bool init(std::wstring const& modDir) {
         || !resolve("slGetFeatureFunction", g.getFeatureFunction)) {
         return false;
     }
+    // F2's three per-frame exports are core ones, so they can be resolved before the
+    // device exists; a missing one leaves frameFunctions() false and the marker off.
+    if (!resolve("slGetNewFrameToken", g.newFrameToken) || !resolve("slSetConstants", g.setConstants)
+        || !resolve("slSetTagForFrame", g.setTagForFrame)) {
+        g.newFrameToken = nullptr;
+        g.setConstants   = nullptr;
+        g.setTagForFrame = nullptr;
+    }
 
     g.paths.push_back(runtime);
     std::wstring const gameDir = utils::applicationDirectory();
@@ -320,6 +332,7 @@ bool ensureDevice(void* device) {
                 options.numFramesToGenerate  = 1;
                 options.queueParallelismMode = sl::DLSSGQueueParallelismMode::eBlockPresentingClientQueue;
                 sl::Result const optionsResult = g.dlssgSetOptions(viewport, options);
+                g.offAccepted                  = optionsResult == sl::Result::eOk;
                 sl::DLSSGState   state{};
                 sl::DLSSGOptions current{};
                 sl::Result const stateResult = g.dlssgGetState(viewport, state, &current);
@@ -435,5 +448,18 @@ void shutdown() {
 }
 
 bool ready() { return g.ready; }
+
+bool frameFunctions(FrameFunctions* out) {
+    if (!out) {
+        return false;
+    }
+    out->newFrameToken  = g.newFrameToken;
+    out->setConstants   = g.setConstants;
+    out->setTagForFrame = g.setTagForFrame;
+    out->dlssgGetState  = g.dlssgGetState;
+    return g.newFrameToken && g.setConstants && g.setTagForFrame;
+}
+
+bool dlssgOff() { return g.offAccepted; }
 
 } // namespace neurodragon::fg::streamline

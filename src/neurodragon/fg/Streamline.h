@@ -35,6 +35,26 @@ void noteDevice(void* device);
 /// raced SL's own Present bookkeeping and brought the exit hang back (EXP-0143).
 void presentFrame();
 
+/// F2: the per-frame exports a frame-input submission needs, resolved here and cast back
+/// by fg/FrameInputs.cpp. Opaque on purpose - this header is included by files that must
+/// not pull the Streamline SDK (the engine headers stub three d3d12 structs, so sl.h's
+/// conversion operators do not compile there).
+struct FrameFunctions {
+    void* newFrameToken{};  ///< PFun_slGetNewFrameToken*
+    void* setConstants{};   ///< PFun_slSetConstants*
+    void* setTagForFrame{}; ///< PFun_slSetTagForFrame*
+    void* dlssgGetState{};  ///< PFun_slDLSSGGetState*
+};
+
+/// True once the three per-frame exports exist. They arrive in two steps - the core
+/// three at slInit, the DLSS-G state query only after slSetD3DDevice - so a caller must
+/// ask each frame instead of latching a false. `dlssgGetState` may stay null; the
+/// input fence is then simply not tracked.
+[[nodiscard]] bool frameFunctions(FrameFunctions* out);
+
+/// True when the DLSS-G options were accepted with `eOff` exactly once (never repeated).
+[[nodiscard]] bool dlssgOff();
+
 /// Log a non-S_OK removed reason for the native game device.
 void logDeviceRemovedReason(char const* when);
 

@@ -2,6 +2,7 @@
 
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
+#include "neurodragon/fg/FrameInputs.h"
 #include "neurodragon/fg/HudlessProbe.h"
 #include "neurodragon/fg/Streamline.h"
 #include "neurodragon/fg/SwapchainProbe.h"
@@ -110,8 +111,11 @@ bool NeuroDragon::load() {
 }
 
 bool NeuroDragon::enable() {
-    // F0-b: arm the world-gated hudless capture probe (TEST only).
+    // F0-b: the hudless copy path (F2: a per-frame input, not a BMP probe).
     fg::hudless::install();
+    // F2: the per-present frame-input marker (constants + Depth/MV/HUD-less tags, DLSS-G
+    // stays eOff).
+    fg::inputs::install();
 
     // Locate + hook dragon::framerenderer::modules::taau without any PDB.
     probe::install();
@@ -177,6 +181,10 @@ bool NeuroDragon::enable() {
 }
 
 bool NeuroDragon::disable() {
+    // F2 order: the frame inputs go first (they name SR textures and a DLSS-G fence),
+    // then the panel that calls the marker, then the resources themselves. Nothing here
+    // waits on the GPU on purpose - the process keeps its GPU objects (see below).
+    fg::inputs::uninstall();
     // Take the panel down first: it owns the window procedure, the Present hook and
     // the ExecuteCommandLists hook the hudless probe records into.
     ui::Overlay::getInstance().uninstall();

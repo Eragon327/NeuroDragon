@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/Test.h"
+#include "neurodragon/fg/FrameInputs.h"
 #include "neurodragon/fg/HudlessProbe.h"
 #include "neurodragon/input/KeyBind.h"
 #include "neurodragon/nr/D3D12Bridge.h"
@@ -1743,15 +1744,19 @@ HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT fla
     logSwapChainChange(swapChain);
     probe::vv::noteSwapChain(swapChain);
     probe::vv::onPresent();
-    fg::hudless::poll();
+    // The panel draws on the back buffer here. F2's frame inputs are NOT submitted here:
+    // this Present is Streamline's proxy, i.e. already inside SL's present path, which is
+    // too late for slSetConstants/slSetTagForFrame. fg::inputs::presentFrame() runs at
+    // the engine's $flip entry, before the proxy (fg/Flip.cpp).
     render(swapChain);
     return gOriginalPresent(swapChain, interval, flags);
 }
 
 HRESULT __stdcall
 present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT_PARAMETERS const* parameters) {
+    // Same order as presentHook: the chain's size/buffers feed the hudless cut.
+    probe::vv::noteSwapChain(swapChain);
     probe::vv::onPresent();
-    fg::hudless::poll();
     render(static_cast<IDXGISwapChain*>(swapChain));
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
@@ -1827,6 +1832,11 @@ resizeBuffersHook(IDXGISwapChain* swapChain, UINT count, UINT width, UINT height
     // the steady-state per-frame code, not this hook.
     logBackBufferRefs("entry", swapChain);
     std::unique_lock lock(gResourceMutex);
+    // F2: the input snapshots name textures of the graph that is about to be rebuilt, and
+    // the cached DLSS-G fence belongs to frames that are gone. Invalidate before anything
+    // of ours is released, not after.
+    fg::inputs::invalidate("resize");
+    fg::hudless::invalidate("resize");
     // The probe holds references into the old render graph; release them before
     // ResizeBuffers or the engine aborts on its failure (2026-10-25 03:14).
     probe::vv::onSwapChainResize();
@@ -1853,6 +1863,8 @@ HRESULT __stdcall resizeBuffers1Hook(
 ) {
     logBackBufferRefs("entry", swapChain);
     std::unique_lock lock(gResourceMutex);
+    fg::inputs::invalidate("resize");
+    fg::hudless::invalidate("resize");
     probe::vv::onSwapChainResize();
     releaseGraphics();
     lock.unlock();
@@ -1891,6 +1903,12 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     // engine's direct queue, no arg10 writer in this frame, fence still busy).
     unsigned const injectSplit =
         probe::vv::inject::prepare(queue, count, reinterpret_cast<void* const*>(lists));
+    // F2: the injected list is about to rewrite the shared Depth/MV textures. If DLSS-G
+    // reported an input fence with a non-zero value, the queue takes a GPU wait before
+    // any of this frame's lists are submitted (null/0 = no-op).
+    if (injectSplit) {
+        fg::inputs::awaitInputsFence(queue);
+    }
     // F0-b: the hudless copy is a *second* cut (after the display write, before UI), so
     // it is recorded independently of the arg10 injection. Both lists can be submitted
     // in one frame: [0..a) inject [a..b) copy [b..end). It declines outside a world.

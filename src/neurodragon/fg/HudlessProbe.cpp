@@ -4,10 +4,9 @@
 
 #include <Windows.h>
 
-#ifdef TEST
-
 // utils/Utils.h pulls the engine headers, which stub three d3d12 structs. Rename the
-// d3d12.h copies (the same trick ui/Overlay.cpp uses) so both can live in one TU.
+// d3d12.h copies (the same trick ui/Overlay.cpp and fg/Streamline.cpp use) so both can
+// live in one translation unit.
 #define D3D12_FEATURE_DATA_D3D12_OPTIONS D3D12_FEATURE_DATA_D3D12_OPTIONS_LEGACY
 #define D3D12_FEATURE_DATA_ARCHITECTURE  D3D12_FEATURE_DATA_ARCHITECTURE_LEGACY
 #define D3D12_RAYTRACING_GEOMETRY_DESC   D3D12_RAYTRACING_GEOMETRY_DESC_LEGACY
@@ -19,76 +18,80 @@
 
 #include "neurodragon/utils/Utils.h"
 
+#include <atomic>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <string>
+#include <mutex>
 
 namespace neurodragon::fg::hudless {
 namespace {
 
-// F0 captures are disabled for F1: a pending capture holds a back buffer across
-// Present, which races the proxy chain's Resize path (EXP-0139).
-constexpr unsigned kMaxCaptures = 0;
-constexpr int      kOffsets[3]  = {-6, -3, -2};
+// Three targets, not one: the copy of frame N is still readable at frame N's Present
+// (eValidUntilPresent), so frame N+1 must not write the same texture. A slot is reused
+// only after its own fence completed - the render thread never waits for the GPU, it
+// skips the frame instead.
+constexpr unsigned kSlots = 3;
 
-struct State {
-    ID3D12Device*              device{};
+struct Slot {
     ID3D12CommandAllocator*    allocator{};
     ID3D12GraphicsCommandList* list{};
-    ID3D12Fence*               fence{};
-    UINT64                     fenceValue{};
-    ID3D12Resource*            texture{};   ///< R8G8B8A8 copy of the back buffer
-    ID3D12Resource*            readback{};
-    ID3D12Resource*            pendingBuffer{}; ///< held until the copy's fence completes
-    ID3D12CommandQueue*        queue{};         ///< not owned
+    ID3D12Resource*            texture{};
+    D3D12_RESOURCE_STATES      state{D3D12_RESOURCE_STATE_COMMON};
     UINT                       width{};
     UINT                       height{};
-    UINT                       rowPitch{};
-    unsigned                   captures{};
-    int                        pendingSplit{};
-    unsigned                   pendingLists{};
-    std::wstring               pendingFile;
-    bool                       pending{};
+    DXGI_FORMAT                format{DXGI_FORMAT_UNKNOWN};
+    UINT64                     fenceValue{}; ///< 0 = never submitted
+    unsigned                   generation{}; ///< the invalidate() epoch of `texture`
 };
 
+struct State {
+    ID3D12Device*       device{};
+    ID3D12Fence*        fence{};
+    ID3D12CommandQueue* queue{}; ///< not owned; latched by prepare() for submitted()
+    UINT64              fenceNext{};
+    unsigned            nextSlot{};
+    unsigned            activeSlot{};
+    bool                active{};
+    unsigned            serial{};
+    std::atomic<unsigned> generation{1}; ///< invalidate() epoch; new targets per epoch
+    unsigned            skips{};
+};
+
+Slot  gSlots[kSlots]{};
 State g;
 
-void releaseResources() {
-    if (g.pendingBuffer) {
-        g.pendingBuffer->Release();
-        g.pendingBuffer = nullptr;
+std::mutex gFrameMutex;
+Frame      gFrame{};
+
+void transition(ID3D12GraphicsCommandList* list, ID3D12Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
+    if (!resource || before == after) {
+        return;
     }
-    if (g.texture) {
-        g.texture->Release();
-        g.texture = nullptr;
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource   = resource;
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    barrier.Transition.StateBefore = before;
+    barrier.Transition.StateAfter  = after;
+    list->ResourceBarrier(1, &barrier);
+}
+
+// The copy target takes the back buffer's own format: DLSS-G compares the hudless
+// input against the presented colour, and a converted copy would change the pixels'
+// domain. Typeless formats are mapped to their typed sibling, which is what a copy
+// destination and a shader read both accept.
+DXGI_FORMAT copyFormat(DXGI_FORMAT format) {
+    switch (format) {
+    case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+        return DXGI_FORMAT_R10G10B10A2_UNORM;
+    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+        return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    default:
+        return format;
     }
-    if (g.readback) {
-        g.readback->Release();
-        g.readback = nullptr;
-    }
-    if (g.list) {
-        g.list->Release();
-        g.list = nullptr;
-    }
-    if (g.allocator) {
-        g.allocator->Release();
-        g.allocator = nullptr;
-    }
-    if (g.fence) {
-        g.fence->Release();
-        g.fence = nullptr;
-    }
-    if (g.device) {
-        g.device->Release();
-        g.device = nullptr;
-    }
-    g.width        = 0;
-    g.height       = 0;
-    g.rowPitch     = 0;
-    g.pending      = false;
-    g.pendingSplit = 0;
-    g.captures     = 0;
 }
 
 bool ensureDevice(ID3D12CommandQueue* queue) {
@@ -100,99 +103,77 @@ bool ensureDevice(ID3D12CommandQueue* queue) {
     }
     ID3D12Device* device = nullptr;
     if (FAILED(queue->GetDevice(IID_PPV_ARGS(&device))) || !device) {
+        ND_DEBUG("[fg] hudless: queue has no device");
+        return false;
+    }
+    bool ok = SUCCEEDED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g.fence)));
+    for (unsigned i = 0; ok && i < kSlots; ++i) {
+        Slot& slot = gSlots[i];
+        ok = ok && SUCCEEDED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&slot.allocator)));
+        ok = ok && SUCCEEDED(device->CreateCommandList(
+                     0,
+                     D3D12_COMMAND_LIST_TYPE_DIRECT,
+                     slot.allocator,
+                     nullptr,
+                     IID_PPV_ARGS(&slot.list)
+                 ));
+        // A list that is created but never closed cannot be Reset; closing it once here
+        // puts every slot in the state record() expects.
+        if (ok) {
+            slot.list->Close();
+        }
+    }
+    if (!ok) {
+        ND_DEBUG("[fg] hudless: device objects unavailable");
+        device->Release();
         return false;
     }
     g.device = device;
-    if (FAILED(g.device->CreateCommandAllocator(
-            D3D12_COMMAND_LIST_TYPE_DIRECT,
-            IID_PPV_ARGS(&g.allocator)
-        ))
-        || FAILED(g.device->CreateCommandList(
-            0,
-            D3D12_COMMAND_LIST_TYPE_DIRECT,
-            g.allocator,
-            nullptr,
-            IID_PPV_ARGS(&g.list)
-        ))) {
-        releaseResources();
-        return false;
-    }
-    g.list->Close();
-    if (FAILED(g.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g.fence)))) {
-        releaseResources();
-        return false;
-    }
+    ND_DEBUG("[fg] hudless: copy path ready ({} slots)", kSlots);
     return true;
 }
 
-bool ensureTargets(UINT width, UINT height) {
-    if (g.texture && g.width == width && g.height == height) {
+bool ensureTarget(Slot& slot, UINT width, UINT height, DXGI_FORMAT format) {
+    if (slot.texture && slot.width == width && slot.height == height && slot.format == format
+        && slot.generation == g.generation.load(std::memory_order_relaxed)) {
         return true;
     }
-    if (g.texture) {
-        g.texture->Release();
-        g.texture = nullptr;
-    }
-    if (g.readback) {
-        g.readback->Release();
-        g.readback = nullptr;
+    if (slot.texture) {
+        slot.texture->Release();
+        slot.texture = nullptr;
+        slot.state   = D3D12_RESOURCE_STATE_COMMON;
     }
     if (!width || !height) {
         return false;
     }
-
-    D3D12_RESOURCE_DESC texture{};
-    texture.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    texture.Width            = width;
-    texture.Height           = height;
-    texture.DepthOrArraySize = 1;
-    texture.MipLevels        = 1;
-    texture.Format           = DXGI_FORMAT_R8G8B8A8_UNORM;
-    texture.SampleDesc       = {1, 0};
-    texture.Layout           = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    texture.Flags            = D3D12_RESOURCE_FLAG_NONE;
-
+    D3D12_RESOURCE_DESC desc{};
+    desc.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Width            = width;
+    desc.Height           = height;
+    desc.DepthOrArraySize = 1;
+    desc.MipLevels        = 1;
+    desc.Format           = format;
+    desc.SampleDesc       = {1, 0};
+    desc.Layout           = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags            = D3D12_RESOURCE_FLAG_NONE;
     D3D12_HEAP_PROPERTIES heap{};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     if (FAILED(g.device->CreateCommittedResource(
             &heap,
             D3D12_HEAP_FLAG_NONE,
-            &texture,
-            D3D12_RESOURCE_STATE_COPY_DEST,
+            &desc,
+            D3D12_RESOURCE_STATE_COMMON,
             nullptr,
-            IID_PPV_ARGS(&g.texture)
+            IID_PPV_ARGS(&slot.texture)
         ))) {
+        ND_DEBUG("[fg] hudless: target allocation failed {}x{} fmt={}", width, height, static_cast<unsigned>(format));
         return false;
     }
-
-    UINT const rowPitch = (width * 4u + 255u) & ~255u;
-
-    D3D12_RESOURCE_DESC buffer{};
-    buffer.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-    buffer.Width            = static_cast<UINT64>(rowPitch) * height;
-    buffer.Height           = 1;
-    buffer.DepthOrArraySize = 1;
-    buffer.MipLevels        = 1;
-    buffer.Format           = DXGI_FORMAT_UNKNOWN;
-    buffer.SampleDesc       = {1, 0};
-    buffer.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-    D3D12_HEAP_PROPERTIES readback{};
-    readback.Type = D3D12_HEAP_TYPE_READBACK;
-    if (FAILED(g.device->CreateCommittedResource(
-            &readback,
-            D3D12_HEAP_FLAG_NONE,
-            &buffer,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_PPV_ARGS(&g.readback)
-        ))) {
-        return false;
-    }
-
-    g.width    = width;
-    g.height   = height;
-    g.rowPitch = rowPitch;
+    slot.width      = width;
+    slot.height     = height;
+    slot.format     = format;
+    slot.state      = D3D12_RESOURCE_STATE_COMMON;
+    slot.generation = g.generation.load(std::memory_order_relaxed);
     return true;
 }
 
@@ -214,135 +195,76 @@ ID3D12Resource* currentBackBuffer() {
     return buffer;
 }
 
-bool record(ID3D12Resource* backBuffer) {
-    if (FAILED(g.allocator->Reset()) || FAILED(g.list->Reset(g.allocator, nullptr))) {
+// One list: back buffer -> COPY_SOURCE, full copy, back buffer back to
+// RENDER_TARGET (the UI lists that follow still render into it), copy target ends in
+// ALL_SHADER_RESOURCE - the state the FG tag declares for it.
+bool record(Slot& slot, ID3D12Resource* backBuffer) {
+    if (FAILED(slot.allocator->Reset()) || FAILED(slot.list->Reset(slot.allocator, nullptr))) {
         return false;
     }
-
-    D3D12_RESOURCE_BARRIER barrier{};
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource   = backBuffer;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    g.list->ResourceBarrier(1, &barrier);
-
-    g.list->CopyResource(g.texture, backBuffer);
-
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    g.list->ResourceBarrier(1, &barrier);
-
-    barrier.Transition.pResource   = g.texture;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    g.list->ResourceBarrier(1, &barrier);
-
-    D3D12_TEXTURE_COPY_LOCATION source{};
-    source.pResource        = g.texture;
-    source.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    source.SubresourceIndex = 0;
-
-    D3D12_TEXTURE_COPY_LOCATION destination{};
-    destination.pResource = g.readback;
-    destination.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    destination.PlacedFootprint.Footprint.Format   = DXGI_FORMAT_R8G8B8A8_UNORM;
-    destination.PlacedFootprint.Footprint.Width    = g.width;
-    destination.PlacedFootprint.Footprint.Height   = g.height;
-    destination.PlacedFootprint.Footprint.Depth    = 1;
-    destination.PlacedFootprint.Footprint.RowPitch = g.rowPitch;
-    g.list->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
-
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-    g.list->ResourceBarrier(1, &barrier);
-
-    return SUCCEEDED(g.list->Close());
-}
-
-bool writeBmp(std::wstring const& path, void const* data, UINT width, UINT height, UINT rowPitch) {
-    std::ofstream out(std::filesystem::path(path), std::ios::binary);
-    if (!out) {
+    transition(slot.list, backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    transition(slot.list, slot.texture, slot.state, D3D12_RESOURCE_STATE_COPY_DEST);
+    slot.list->CopyResource(slot.texture, backBuffer);
+    transition(slot.list, backBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    transition(slot.list, slot.texture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+    // The tracked state may only advance once the list is really closed: a failed Close
+    // discards everything recorded above, so the texture is still in the state it had on
+    // entry and the next attempt must transition from there.
+    if (FAILED(slot.list->Close())) {
         return false;
     }
-    BITMAPFILEHEADER file{};
-    BITMAPINFOHEADER info{};
-    info.biSize        = sizeof(info);
-    info.biWidth       = static_cast<LONG>(width);
-    info.biHeight      = static_cast<LONG>(height);
-    info.biPlanes      = 1;
-    info.biBitCount    = 32;
-    info.biCompression = BI_RGB;
-    file.bfType        = 0x4D42;
-    file.bfOffBits     = sizeof(file) + sizeof(info);
-    file.bfSize        = file.bfOffBits + width * height * 4u;
-    out.write(reinterpret_cast<char const*>(&file), sizeof(file));
-    out.write(reinterpret_cast<char const*>(&info), sizeof(info));
-
-    auto const* base = static_cast<std::uint8_t const*>(data);
-    for (int y = static_cast<int>(height) - 1; y >= 0; --y) {
-        auto const* row = base + static_cast<std::size_t>(rowPitch) * y;
-        for (UINT x = 0; x < width; ++x) {
-            out.put(static_cast<char>(row[x * 4 + 2]));
-            out.put(static_cast<char>(row[x * 4 + 1]));
-            out.put(static_cast<char>(row[x * 4 + 0]));
-            out.put(static_cast<char>(255));
-        }
-    }
-    return out.good();
+    slot.state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+    return true;
 }
 
 } // namespace
 
 void install() {
-    g.captures = 0;
-    g.pending  = false;
+    std::lock_guard lock(gFrameMutex);
+    g.active = false;
+    gFrame   = Frame{};
 }
 
 void uninstall() {
-    // Deliberately does not release the D3D12 objects: the process is going away and
-    // the project's exit path already learned that releasing in-flight GPU objects
-    // hangs the driver (NR/SR keep theirs for the same reason). EXP-0121's exit hung
-    // right after this call; the objects are small and die with the process.
-    //
-    // The one reference that must go is the swap-chain back buffer: a held one makes
-    // the engine's ResizeBuffers fail.
-    if (g.pendingBuffer) {
-        g.pendingBuffer->Release();
-        g.pendingBuffer = nullptr;
-    }
-    g.pending  = false;
-    g.captures = 0;
+    // Deliberately does not release the GPU objects: the process is going away and
+    // freeing in-flight D3D12 resources is what hung the exit before (EXP-0121 for this
+    // probe, EXP-0085 for the SR pipeline). Only the published reference goes.
+    invalidate("uninstall");
 }
 
 unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
     (void)lists;
-    if (g.captures >= kMaxCaptures || !queueVoid || listCount <= 8) {
+    auto* const queue = static_cast<ID3D12CommandQueue*>(queueVoid);
+    if (!queue || listCount < 4) {
         return 0;
     }
-    // Write the previous capture before reusing the readback buffer: the same buffer
-    // backs every capture, so recording a second one first throws the first away
-    // (EXP-0121 wrote only #5).
-    poll();
-    if (g.pending) {
-        return 0;
-    }
-    // A world frame only: the menu tail has the same shape, but only the world path
-    // is the product. The copy is submitted between engine lists, so no engine list
-    // is modified. The first 120 world submissions are the load (terrain, chunk
-    // meshes); capturing those would photograph the loading screen.
+    // A prepare that ends up returning 0 must not leave a previous frame's "active" copy
+    // behind: submitted() would then signal and publish a list that was not submitted.
+    g.active = false;
+    // Outside a world the display write is a panorama/title frame, not a world image.
     if (!probe::vv::worldLoaded()) {
         return 0;
     }
-    static unsigned worldFrames = 0;
-    if (++worldFrames < 120) {
+    unsigned const split = probe::vv::preUiSplit();
+    if (!split || split >= listCount) {
         return 0;
     }
-    auto* queue = static_cast<ID3D12CommandQueue*>(queueVoid);
     if (!ensureDevice(queue)) {
         return 0;
     }
-    if (g.pending && g.fence && g.fence->GetCompletedValue() < g.fenceValue) {
+
+    Slot* slot = nullptr;
+    for (unsigned i = 0; i < kSlots; ++i) {
+        unsigned const index = (g.nextSlot + i) % kSlots;
+        Slot&          candidate = gSlots[index];
+        if (candidate.fenceValue == 0 || g.fence->GetCompletedValue() >= candidate.fenceValue) {
+            slot      = &candidate;
+            g.nextSlot = (index + 1) % kSlots;
+            break;
+        }
+    }
+    if (!slot) {
+        ++g.skips;
         return 0;
     }
 
@@ -351,95 +273,89 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         return 0;
     }
     D3D12_RESOURCE_DESC const desc = buffer->GetDesc();
-    if (!ensureTargets(static_cast<UINT>(desc.Width), desc.Height)) {
-        buffer->Release();
-        return 0;
-    }
-
-    int const offset = kOffsets[g.captures % 3];
-    int const split  = static_cast<int>(listCount) + offset;
-    if (split <= 0 || split > static_cast<int>(listCount)) {
-        buffer->Release();
-        return 0;
-    }
-    if (!record(buffer)) {
-        buffer->Release();
-        return 0;
-    }
-
-    unsigned const capture = g.captures++;
-    std::wstring   name    = L"hudless_c" + std::to_wstring(capture) + L"_s" + std::to_wstring(split) + L".bmp";
-    std::filesystem::path dir = std::filesystem::path(utils::applicationDirectory()) / "screenshots";
-    std::error_code       error;
-    std::filesystem::create_directories(dir, error);
-
-    g.queue        = queue;
-    g.pendingBuffer = buffer;
-    g.pendingSplit  = split;
-    g.pendingLists  = listCount;
-    g.pendingFile   = (dir / name).wstring();
-    g.pending       = true;
-
-    ND_DEBUG(
-        "[fg] hudless capture #{} split={}/{} size={}x{} file={}",
-        capture,
-        split,
-        listCount,
-        g.width,
-        g.height,
-        std::string(name.begin(), name.end())
+    bool const ready = ensureTarget(
+        *slot,
+        static_cast<UINT>(desc.Width),
+        desc.Height,
+        copyFormat(desc.Format)
     );
-    return static_cast<unsigned>(split);
-}
-
-void* list() { return g.list; }
-
-void submitted() {
-    if (g.queue && g.fence) {
-        g.queue->Signal(g.fence, ++g.fenceValue);
+    if (!ready || !record(*slot, buffer)) {
+        // The back buffer reference must go before anything else: holding it makes the
+        // engine's ResizeBuffers fail (EXP-0139/EXP-0078).
+        buffer->Release();
+        return 0;
     }
-}
+    buffer->Release();
 
-void poll() {
-    if (!g.pending || !g.fence) {
-        return;
-    }
-    if (g.fence->GetCompletedValue() < g.fenceValue) {
-        return;
-    }
-    D3D12_RANGE const range{0, static_cast<SIZE_T>(g.rowPitch) * g.height};
-    void*             mapped = nullptr;
-    if (SUCCEEDED(g.readback->Map(0, &range, &mapped)) && mapped) {
-        bool const ok = writeBmp(g.pendingFile, mapped, g.width, g.height, g.rowPitch);
-        g.readback->Unmap(0, nullptr);
+    g.queue      = queue;
+    g.activeSlot = static_cast<unsigned>(slot - gSlots);
+    g.active     = true;
+    static std::atomic<unsigned> logged{0};
+    if (logged.fetch_add(1, std::memory_order_relaxed) < 3) {
         ND_DEBUG(
-            "[fg] hudless wrote #{} split={}/{} ok={}",
-            g.captures - 1,
-            g.pendingSplit,
-            g.pendingLists,
-            ok ? 1 : 0
+            "[fg] hudless: copy split={}/{} {}x{} fmt={}",
+            split,
+            listCount,
+            slot->width,
+            slot->height,
+            static_cast<unsigned>(slot->format)
         );
     }
-    if (g.pendingBuffer) {
-        g.pendingBuffer->Release();
-        g.pendingBuffer = nullptr;
+    return split;
+}
+
+void* list() {
+    return g.active ? gSlots[g.activeSlot].list : nullptr;
+}
+
+void submitted() {
+    if (!g.active || !g.queue || !g.fence) {
+        return;
     }
-    g.pending = false;
+    Slot&      slot  = gSlots[g.activeSlot];
+    UINT64 const value = ++g.fenceNext;
+    if (FAILED(g.queue->Signal(g.fence, value))) {
+        g.active = false;
+        return;
+    }
+    slot.fenceValue = value;
+    g.active        = false;
+
+    Frame published{};
+    published.texture = slot.texture;
+    published.serial  = ++g.serial;
+    published.width   = slot.width;
+    published.height  = slot.height;
+    published.format  = static_cast<unsigned>(slot.format);
+    published.state   = static_cast<unsigned>(slot.state);
+    std::lock_guard lock(gFrameMutex);
+    gFrame = published;
+}
+
+bool frame(Frame* out) {
+    if (!out) {
+        return false;
+    }
+    std::lock_guard lock(gFrameMutex);
+    if (!gFrame.texture || !gFrame.serial) {
+        return false;
+    }
+    *out = gFrame;
+    return true;
+}
+
+void invalidate(char const* why) {
+    {
+        std::lock_guard lock(gFrameMutex);
+        gFrame = Frame{};
+    }
+    // A new epoch: every slot's target is re-allocated at the size/format the next frame
+    // produces. Nothing is released here, so an in-flight texture is never freed under
+    // the GPU; the slot's own fence decides when it may be replaced.
+    g.generation.fetch_add(1, std::memory_order_relaxed);
+    if (why) {
+        ND_DEBUG("[fg] hudless: inputs invalidated ({})", why);
+    }
 }
 
 } // namespace neurodragon::fg::hudless
-
-#else
-
-namespace neurodragon::fg::hudless {
-
-void install() {}
-void uninstall() {}
-unsigned prepare(void*, unsigned, void* const*) { return 0; }
-void*    list() { return nullptr; }
-void     submitted() {}
-void     poll() {}
-
-} // namespace neurodragon::fg::hudless
-
-#endif

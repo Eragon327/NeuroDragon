@@ -1,0 +1,32 @@
+{
+  "name": "fg-f2-armed",
+  "tier": "L1",
+  "timeout_s": 150,
+  "dwell_s": 30,
+  "why": "F2 armed (menu only): fg::inputs resolved slGetNewFrameToken/slSetConstants/slSetTagForFrame/slDLSSGGetState (the one-shot '[fg] inputs: ready=1' line), DLSS-G is loaded but still eOff (options/state read back mode=0, status=0x0), the SL proxy still owns the game chain and the panel's Present hook still fires. dwell_s=30 because the F1 failure modes (cmdQ.pacer, device removed) landed ~2 s after the chain existed. Every require is a menu-time line on purpose: an L1 run never enters a world, so 'frame=' with a valid tag, '[eval]' and 'arg10' must not be asserted here.",
+  "requires": [
+    "\\[fg\\] inputs: ready=1\\b",
+    "\\[fg\\] streamline: DLSS_G load-after-device result=0 loaded=1",
+    "\\[fg\\] streamline: DLSS_G options set=0 state=0 mode=0\\b",
+    "\\[fg\\] factory upgraded to SL proxy",
+    "\\[fg\\] CreateSwapChainForHwnd req .*[0-9]{3,4}x[0-9]{3,4}",
+    "\\[vv\\] frame time: avg="
+  ],
+  "forbids": [
+    "0x887A0005",
+    "\\[fg\\] device removed",
+    "cmdQ\\.pacer",
+    "\\[fg\\] inputs: frame=\\d+ .*\\bconst=(?:0x)?[0-9a-f]*[1-9a-f]",
+    "\\[fg\\] inputs: frame=\\d+ .*\\btag=(?:0x)?[0-9a-f]*[1-9a-f]",
+    "\\[fg\\] inputs: .*\\bstatus=0x0*[1-9a-f]",
+    "\\[fg\\] inputs: dlssg state .*\\bmode=[1-9]",
+    "\\[fg\\] streamline: DLSS_G (?:options|state) .*\\bstatus=0x0*[1-9a-f]",
+    "\\[fg\\] streamline: DLSS_G (?:options|state) .*\\bmode=[1-9]",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b": 2
+  }
+}

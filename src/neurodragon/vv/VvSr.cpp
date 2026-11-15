@@ -139,6 +139,9 @@ struct Pipeline {
 std::mutex       gMutex;
 Pipeline         gPipeline{};
 Stats            gStats{};
+// F2: the last frame that really wrote arg10, for fg::inputs (guarded by gMutex).
+FrameSnapshot    gSnapshot{};
+std::atomic<bool> gSnapshotValid{false};
 // Frames of forced Reset requested from the panel. Two, not one: the first frame after
 // a rebuild may still be the one the engine had already recorded before the request.
 std::atomic<unsigned> gManualReset{0};
@@ -807,6 +810,9 @@ struct MvFrame {
     float jitterX{};
     float jitterY{};
     float delta[3]{};    ///< camera-origin delta (previous -> current); evidence only
+    float current[16]{};  ///< TAAContext +0x200 as delivered (camera-relative VP)
+    float previous[16]{}; ///< TAAContext +0x240
+    float camera[6]{};    ///< +0x280: current xyz, previous xyz
     bool  reset{true};
     bool  valid{false};
     bool  prevSame{true}; ///< the two 16-float halves are identical (no camera motion,
@@ -834,6 +840,9 @@ MvFrame decodeMvFrame() {
     frame.delta[2] = cam[2] - cam[5];
     frame.jitterX  = jitter[0];
     frame.jitterY  = jitter[1];
+    std::memcpy(frame.current, cur, sizeof(cur));
+    std::memcpy(frame.previous, prev, sizeof(prev));
+    std::memcpy(frame.camera, cam, sizeof(cam));
     frame.valid    = true;
     return frame;
 }
@@ -1087,6 +1096,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     bool dlssEvaluated = false;
     bool featureReady  = false;
     bool sharpened     = false;
+    bool historyReset  = false;
     int  dlssCreateRet = 0;
     int  dlssEvalRet   = 0;
     {
@@ -1128,6 +1138,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // (EXP-0074); if the panorama's MV does not describe its rotation this
             // smears, which is what the next run checks.
             bool const reset = spatial || pending > 0 || manual > 0 || !mv.valid || gap;
+            historyReset     = reset;
             // NR is driven by the RT probe's EvaluateFeature detour: it sees this
             // call's Color/Depth/MotionVectors from the parameter object, records
             // feature 0x12 on this same command list, and points Color at its
@@ -1304,6 +1315,9 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         list->SetPipelineState(gPipeline.arg10Ps);
         list->DrawInstanced(3, 1, 0, 0);
 
+        // One lock for both the stats and the F2 snapshot: a second `lock_guard` on the
+        // same non-recursive mutex in this scope self-deadlocks on the first successful
+        // arg10 write (review finding, EXP-0150).
         std::lock_guard lock(gMutex);
         gStats.recorded        = true;
         gStats.frame           = frameNo;
@@ -1338,6 +1352,31 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             );
         }
         gLive.store(true, std::memory_order_release);
+        // F2: publish the frame's proven inputs for the FG marker. Same critical section
+        // as the stats above (one lock, one scope), so a reader never sees a half-written
+        // matrix set and the record path never re-enters gMutex.
+        FrameSnapshot snapshot{};
+        snapshot.serial        = frameNo;
+        snapshot.generation    = probe::vv::renderGeneration();
+        snapshot.renderWidth   = renderWidth;
+        snapshot.renderHeight  = renderHeight;
+        snapshot.displayWidth  = displayWidth;
+        snapshot.displayHeight = displayHeight;
+        snapshot.depth         = gPipeline.depthR32;
+        snapshot.motion        = gPipeline.mvRg32;
+        snapshot.depthFormat   = static_cast<unsigned>(DXGI_FORMAT_R32_FLOAT);
+        snapshot.motionFormat  = static_cast<unsigned>(DXGI_FORMAT_R16G16_FLOAT);
+        snapshot.depthState    = static_cast<unsigned>(gPipeline.depthState);
+        snapshot.motionState   = static_cast<unsigned>(gPipeline.mvState);
+        snapshot.reset         = historyReset;
+        snapshot.matrices      = mv.valid;
+        snapshot.taaSerial     = probe::vv::taaSnapshotSerial();
+        std::memcpy(snapshot.current, mv.current, sizeof(snapshot.current));
+        std::memcpy(snapshot.previous, mv.previous, sizeof(snapshot.previous));
+        std::memcpy(snapshot.camera, mv.camera, sizeof(snapshot.camera));
+        std::memcpy(snapshot.jitter, &mv.jitterX, sizeof(snapshot.jitter));
+        gSnapshot = snapshot;
+        gSnapshotValid.store(true, std::memory_order_release);
         return true;
     }
     // R3 writes arg10 only; there is no back-buffer path left (EXP-0067).
@@ -1353,13 +1392,27 @@ Stats stats() {
     return gStats;
 }
 
+bool frameSnapshot(FrameSnapshot* out) {
+    if (!out || !gSnapshotValid.load(std::memory_order_acquire)) {
+        return false;
+    }
+    std::lock_guard lock(gMutex);
+    *out = gSnapshot;
+    return true;
+}
+
 void release() {
     // Stop new records first, then wait for the one that may already be running. The
     // detour/NR state is left to nrShutdown(); here only our own pipeline goes away.
     gLive.store(false, std::memory_order_release);
     gReleased.store(true, std::memory_order_release);
+    // F2: the snapshot names the textures freed below, so it has to go *first*. Doing it
+    // after the Release() calls leaves a window where a reader could tag a freed
+    // resource if it slipped in between (review finding).
+    gSnapshotValid.store(false, std::memory_order_release);
     std::lock_guard recordLock(gRecordMutex);
     std::lock_guard lock(gMutex);
+    gSnapshot = FrameSnapshot{};
     for (ID3D12Resource** resource :
          {&gPipeline.colorHalf, &gPipeline.depthR32, &gPipeline.mvRg32, &gPipeline.dlssOut, &gPipeline.sharpOut}) {
         if (*resource) {

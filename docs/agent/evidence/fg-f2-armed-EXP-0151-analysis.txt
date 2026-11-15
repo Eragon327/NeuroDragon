@@ -1,0 +1,14 @@
+EXP-0150 / fg-f2-armed 原始日志：docs/agent/evidence/smoke-fg-f2-armed-EXP-0150.log
+
+已确认：
+- 主菜单 L1 PASS；slGetNewFrameToken/slSetConstants/slSetTagForFrame 接线完成，DLSS-G options/state 均为 mode=0、status=0x0。
+- frame/token 在 600、1200、1800…6000 同步增长；no-world 帧不提交输入。
+- eOff 下 inputsProcessingCompletionFence 非空，但 lastPresentInputsProcessingCompletionFenceValue=0（日志 fence=1/0），本轮没有发生 GPU 等待。
+- pre-UI 内容识别在菜单提交中命中 target=handle；这只证明边界识别可执行，不证明世界内 copy/tag。
+
+尚未验证：
+- 世界内 SR 成功写 arg10 后 Depth/MV 快照是否新鲜。
+- 世界内 hudless copy 是否提交，三类 tag 与 constants 是否持续返回 0。
+- TAA 矩阵解出的 near/far/fov/aspect 是否被 SL 接受，以及 SR 在世界内是否保持成功。
+
+下一步只验证上述世界内未知项：沿用同一 DLL（sha256=7da93e3ad36d51b5），不改代码、不重启，在当前客户端进世界、站定后移动转视角，保存完整日志。

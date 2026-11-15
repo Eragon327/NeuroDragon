@@ -219,6 +219,7 @@ struct TaaSnapshot {
 };
 TaaSnapshot       gTaaSnapshot{};
 std::atomic<bool> gTaaSnapshotValid{false};
+std::atomic<unsigned> gTaaSnapshotSerial{0};
 void*              gExcluded[4]{};
 bool               gLoggedExclusion = false;
 unsigned           gExcludedCount = 0;
@@ -1071,6 +1072,8 @@ std::atomic<unsigned>       gArg10WriterSplit{0};
 std::atomic<unsigned>       gArg10DeclaredSerial{0};
 std::atomic<unsigned>       gArg10ConsumedSerial{0};
 std::atomic<bool>           gArg10FreshSubmission{false};
+// F2: the pre-UI hudless boundary of the submission just analysed (see preUiSplit()).
+std::atomic<unsigned>       gPreUiSplit{0};
 // A world submission that had a new declaration but no writer: the DLSS history must
 // not span that gap (the camera moved while no frame was upscaled).
 std::atomic<bool>           gArg10Gap{false};
@@ -1502,6 +1505,9 @@ void drawDetour(void* self, void* context, void* third, void* fourth) {
         std::memcpy(snap.jitter, base + 0x1e4, sizeof(snap.jitter));
         gTaaSnapshot = snap;
         gTaaSnapshotValid.store(true, std::memory_order_release);
+        // F2: the snapshot's age. The marker must not reproject with a matrix from a frame
+        // whose TAAU draw never ran, and "valid" alone cannot tell the two apart.
+        gTaaSnapshotSerial.fetch_add(1, std::memory_order_release);
     }
     gDrawForwarded.fetch_add(1, std::memory_order_relaxed);
     // The MV / colour role split is captured from the material bindings the original
@@ -1707,6 +1713,190 @@ void uninstall() {
 
 bool isInstalled() { return gInstalled.load(std::memory_order_acquire); }
 
+// ---------------------------------------------------------------------------
+// F2: the pre-UI boundary, recognised from the submission
+// ---------------------------------------------------------------------------
+//
+// EXP-0121 found the shape once - a 1-draw list that presents the world into the back
+// buffer, then the 44-draw UI list - and F0-b cut at a constant `listCount-3`. A
+// constant is only right for the frame it was measured on: one extra engine list in
+// the tail moves the cut into the HUD, and a hudless tag that contains the HUD is
+// worse than no tag (the interpolation then smears text and the crosshair). So the
+// cut is derived from what the lists did:
+//   * both write the same swap-chain target (that is what makes them "the display"),
+//   * the first has at most two draws (a blit/copy of the world image),
+//   * the second has at least one draw (the UI composite),
+//   * the two are adjacent and inside the tail.
+// No match = no cut; an unmarked frame is recoverable, a mis-marked one is not.
+namespace {
+
+constexpr unsigned kPreUiTail       = 12; ///< lists considered at the submission tail
+constexpr unsigned kWorldWriteDraws = 2;  ///< draws a world display write may have
+// One draw, not eight: the real submissions' UI list can be as thin as a single draw, and
+// the earlier `>= 8` rejected every frame the engine actually produced (EXP-0150 review).
+constexpr unsigned kUiDrawsMinimum = 1;
+
+ListSig const* sigAt(unsigned listCount, void* const* lists, unsigned index) {
+    if (!lists || index >= listCount) {
+        return nullptr;
+    }
+    unsigned const sigs = gSigCount.load(std::memory_order_relaxed);
+    for (unsigned s = 0; s < sigs && s < kSigSlots; ++s) {
+        if (gSigs[s].list == lists[index]) {
+            return &gSigs[s];
+        }
+    }
+    return nullptr;
+}
+
+enum class TargetMatch : unsigned {
+    None     = 0,
+    Resolved = 1, ///< a shared RTV resolves (now) to one of the chain's back buffers
+    Handle   = 2, ///< same literal RTV handle in both lists, resolution unavailable
+};
+
+// Both lists must write the same swap-chain RTV. There are two layers of evidence, and
+// the second one is not optional: the back buffer's view is created *before* our device
+// hook exists, so `lookupRtv` usually cannot resolve that handle at submission time (see
+// the tail scan further down, which says exactly that). Requiring resolution therefore
+// found no cut at all.
+//   * Resolved: a shared handle resolves to a chain buffer, or both sides resolve to the
+//     same resource through different views.
+//   * Handle:   the two lists name the same literal RTV handle and it cannot be resolved.
+//     Together with adjacency, the tail window and the draw counts that is the bind
+//     evidence for "these two lists write the same target".
+// Kept to the tail: resolving a handle means a cache lookup plus, when it misses, a
+// GetBuffer/Release round trip on the chain.
+TargetMatch sharedSwapChainTarget(ListSig const* left, ListSig const* right, std::uintptr_t* handleOut) {
+    if (!left || !right) {
+        return TargetMatch::None;
+    }
+    unsigned const leftCount =
+        left->rtvSeenCount < std::size(left->rtvSeen) ? left->rtvSeenCount : std::size(left->rtvSeen);
+    unsigned const rightCount =
+        right->rtvSeenCount < std::size(right->rtvSeen) ? right->rtvSeenCount : std::size(right->rtvSeen);
+    std::uintptr_t unresolved = 0;
+    for (unsigned i = 0; i < leftCount; ++i) {
+        std::uintptr_t const handle   = left->rtvSeen[i];
+        void* const          resource = lookupRtv(handle);
+        for (unsigned j = 0; j < rightCount; ++j) {
+            if (handle != right->rtvSeen[j]) {
+                continue;
+            }
+            if (resource && isSwapChainBuffer(resource)) {
+                *handleOut = handle;
+                return TargetMatch::Resolved;
+            }
+            if (!resource && !unresolved) {
+                unresolved = handle;
+            }
+        }
+    }
+    // Different views of the same back buffer: the resource, not the handle, decides.
+    for (unsigned i = 0; i < leftCount; ++i) {
+        void* const resource = lookupRtv(left->rtvSeen[i]);
+        if (!resource || !isSwapChainBuffer(resource)) {
+            continue;
+        }
+        for (unsigned j = 0; j < rightCount; ++j) {
+            if (lookupRtv(right->rtvSeen[j]) == resource) {
+                *handleOut = left->rtvSeen[i];
+                return TargetMatch::Resolved;
+            }
+        }
+    }
+    // The fallback only claims a swap-chain target when the chain is known at all;
+    // without it "unresolvable" would also match any other view the two lists share.
+    if (unresolved && gSwapChain.load(std::memory_order_relaxed)) {
+        *handleOut = unresolved;
+        return TargetMatch::Handle;
+    }
+    return TargetMatch::None;
+}
+
+// Throttled evidence: one info line for the first accepted cut and for the first miss,
+// then debug detail only when the split or the kind of evidence changes. Without this a
+// "preUiSplit is 0" run cannot be told apart from "the tag path never ran".
+void logPreUiCut(
+    bool           found,
+    unsigned       split,
+    unsigned       listCount,
+    unsigned       world,
+    std::uintptr_t handle,
+    TargetMatch    match
+) {
+    static unsigned matches   = 0;
+    static unsigned misses    = 0;
+    static unsigned lastSplit = ~0u;
+    static unsigned lastMatch = 0;
+    if (found) {
+        ++matches;
+        bool const changed = split != lastSplit || static_cast<unsigned>(match) != lastMatch;
+        lastSplit          = split;
+        lastMatch          = static_cast<unsigned>(match);
+        if (matches == 1 || (matches <= 3 && changed)) {
+            utils::logger().info(
+                "[fg] hudless cut: split={}/{} world={} handle={:#x} target={}",
+                split,
+                listCount,
+                world + 1, // 1-based, like every other list index in these logs
+                handle,
+                match == TargetMatch::Resolved ? "resolved" : "handle"
+            );
+        } else if (changed) {
+            ND_DEBUG(
+                "[fg] hudless cut: split={}/{} world={} handle={:#x} target={}",
+                split,
+                listCount,
+                world + 1,
+                handle,
+                match == TargetMatch::Resolved ? "resolved" : "handle"
+            );
+        }
+        return;
+    }
+    ++misses;
+    if (misses == 1) {
+        utils::logger().info(
+            "[fg] hudless cut: none lists={} (no adjacent world-write/UI pair on a shared target in the tail)",
+            listCount
+        );
+    } else if (misses <= 3) {
+        ND_DEBUG("[fg] hudless cut: none lists={}", listCount);
+    }
+}
+
+unsigned findPreUiSplit(void* const* lists, unsigned listCount) {
+    if (listCount < 4) {
+        return 0;
+    }
+    unsigned const tail           = listCount > kPreUiTail ? kPreUiTail : listCount;
+    unsigned const firstCandidate = listCount - tail;
+    // `world` is the 0-based index of the world display write, `ui` the next list.
+    for (unsigned world = listCount - 1; world-- > firstCandidate;) {
+        ListSig const* const worldSig = sigAt(listCount, lists, world);
+        ListSig const* const uiSig    = sigAt(listCount, lists, world + 1);
+        if (!worldSig || !uiSig) {
+            continue;
+        }
+        if (worldSig->draws > kWorldWriteDraws || uiSig->draws < kUiDrawsMinimum) {
+            continue;
+        }
+        std::uintptr_t    handle = 0;
+        TargetMatch const match  = sharedSwapChainTarget(worldSig, uiSig, &handle);
+        if (match == TargetMatch::None) {
+            continue;
+        }
+        // The cut is *after* the world write, i.e. after `world + 1` lists.
+        logPreUiCut(true, world + 1, listCount, world, handle, match);
+        return world + 1;
+    }
+    logPreUiCut(false, 0, listCount, 0, 0, TargetMatch::None);
+    return 0;
+}
+
+} // namespace
+
 void onExecuteCommandLists(void* const* lists, unsigned listCount) {
     auto const index = gSubmits.fetch_add(1, std::memory_order_relaxed) + 1;
     gSubmittedLists.fetch_add(listCount, std::memory_order_relaxed);
@@ -1821,11 +2011,20 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                 }
             }
 #endif
+            // F2: the hudless cut is read from this submission's shape, before the table
+            // below is reused by the next one.
+            gPreUiSplit.store(findPreUiSplit(lists, listCount), std::memory_order_release);
             // The per-frame list table is rebuilt from scratch on every engine
             // submission: lists are pooled by the engine, and a stale entry would make
             // the writer proof match a list that is not in this frame.
             gSigCount.store(0, std::memory_order_relaxed);
+        } else {
+            // A short submission carries no frame (the overlay's own D3D11On12 list, a
+            // UI-only flush): it must not inherit the previous frame's boundary.
+            gPreUiSplit.store(0, std::memory_order_release);
         }
+    } else {
+        gPreUiSplit.store(0, std::memory_order_release);
     }
     unsigned previous = gMaxListsPerSubmit.load(std::memory_order_relaxed);
     while (listCount > previous
@@ -1999,6 +2198,8 @@ bool taaMatrices(float* current, float* previous, float* camera, float* jitter) 
     return true;
 }
 
+unsigned taaSnapshotSerial() { return gTaaSnapshotSerial.load(std::memory_order_acquire); }
+
 void* gameQueue() { return gGameQueue.load(std::memory_order_relaxed); }
 void* swapChain() { return gSwapChain.load(std::memory_order_relaxed); }
 unsigned renderWidth() { return gRenderWidth.load(std::memory_order_relaxed); }
@@ -2094,6 +2295,7 @@ unsigned renderGeneration() { return gRenderGeneration.load(std::memory_order_re
 void* arg10Target() { return gArg10Native.load(std::memory_order_acquire); }
 unsigned arg10WriterSplit() { return gArg10WriterSplit.load(std::memory_order_acquire); }
 void*    arg10WriterList() { return gArg10WriterList.load(std::memory_order_acquire); }
+unsigned preUiSplit() { return gPreUiSplit.load(std::memory_order_acquire); }
 
 void setProductArmed(bool armed) {
     bool const previous = gProductArmed.exchange(armed, std::memory_order_acq_rel);
