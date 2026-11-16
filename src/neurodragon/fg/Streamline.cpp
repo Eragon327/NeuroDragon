@@ -2,6 +2,8 @@
 
 #include "neurodragon/fg/streamline-sdk/sl.h"
 #include "neurodragon/fg/streamline-sdk/sl_dlss_g.h"
+#include "neurodragon/fg/streamline-sdk/sl_pcl.h"
+#include "neurodragon/fg/streamline-sdk/sl_reflex.h"
 #include "neurodragon/utils/Utils.h"
 
 #include <Windows.h>
@@ -35,11 +37,15 @@ struct State {
     PFun_slGetFeatureVersion*      featureVersion{};
     PFun_slGetFeatureRequirements* featureRequirements{};
     PFun_slUpgradeInterface*       upgrade{};
+    PFun_slGetNativeInterface*     getNative{};
     PFun_slSetD3DDevice*           setDevice{};
     PFun_slSetFeatureLoaded*       setFeatureLoaded{};
     PFun_slGetFeatureFunction*     getFeatureFunction{};
     PFun_slDLSSGSetOptions*        dlssgSetOptions{};
     PFun_slDLSSGGetState*          dlssgGetState{};
+    PFun_slReflexSetOptions*       reflexSetOptions{};
+    PFun_slReflexSleep*            reflexSleep{};
+    PFun_slPCLSetMarker*           pclSetMarker{};
     PFun_slGetNewFrameToken*       newFrameToken{};
     PFun_slSetConstants*           setConstants{};
     PFun_slSetTagForFrame*         setTagForFrame{};
@@ -50,7 +56,8 @@ struct State {
     bool                           ready{};
     bool                           attempted{};
     bool                           deviceSet{};
-    bool                           offAccepted{}; ///< the eOff options were set exactly once
+    int                            dlssgMode{-1}; ///< last accepted DLSSGMode; -1 = not established
+    bool                           dlssgRunAccepted{};
     void*                          pendingDevice{};
 };
 
@@ -190,8 +197,8 @@ bool init(std::wstring const& modDir) {
     if (!resolve("slInit", g.init) || !resolve("slShutdown", g.shutdown)
         || !resolve("slIsFeatureLoaded", g.isLoaded) || !resolve("slGetFeatureVersion", g.featureVersion)
         || !resolve("slGetFeatureRequirements", g.featureRequirements)
-        || !resolve("slUpgradeInterface", g.upgrade) || !resolve("slSetD3DDevice", g.setDevice)
-        || !resolve("slSetFeatureLoaded", g.setFeatureLoaded)
+        || !resolve("slUpgradeInterface", g.upgrade) || !resolve("slGetNativeInterface", g.getNative)
+        || !resolve("slSetD3DDevice", g.setDevice) || !resolve("slSetFeatureLoaded", g.setFeatureLoaded)
         || !resolve("slGetFeatureFunction", g.getFeatureFunction)) {
         return false;
     }
@@ -293,6 +300,30 @@ bool upgradeDevice(void** device) {
     return result == sl::Result::eOk && *device;
 }
 
+void* nativeInterface(void* proxy) {
+    if (!proxy || !g.getNative) {
+        return proxy;
+    }
+    void* native = nullptr;
+    sl::Result const result = g.getNative(proxy, &native);
+    if (result != sl::Result::eOk || !native) {
+        static std::atomic<bool> warned{false};
+        if (!warned.exchange(true, std::memory_order_relaxed)) {
+            ND_DEBUG("[fg] streamline: slGetNativeInterface failed ({})", static_cast<int>(result));
+        }
+        return proxy;
+    }
+    static std::atomic<bool> logged{false};
+    if (!logged.exchange(true, std::memory_order_relaxed)) {
+        ND_DEBUG(
+            "[fg] streamline: native swapchain 0x{:x} <- proxy 0x{:x}",
+            reinterpret_cast<std::uintptr_t>(native),
+            reinterpret_cast<std::uintptr_t>(proxy)
+        );
+    }
+    return native;
+}
+
 bool ensureDevice(void* device) {
     if (!g.ready || !g.setDevice || !device) {
         return false;
@@ -307,6 +338,37 @@ bool ensureDevice(void* device) {
         static_cast<int>(result)
     );
     g.deviceSet = result == sl::Result::eOk;
+    if (g.deviceSet && g.getFeatureFunction && !g.pclSetMarker) {
+        // DLSS-G matches common constants to the presented frame through the PCL
+        // PresentStart/PresentEnd markers; without them every present reports the
+        // constants as missing (EXP-0190). PCL is loaded by default and only needs
+        // the device, unlike the DLSS-G feature functions below.
+        void* pclSetMarkerFn = nullptr;
+        sl::Result const pclResolve =
+            g.getFeatureFunction(sl::kFeaturePCL, "slPCLSetMarker", pclSetMarkerFn);
+        if (pclResolve == sl::Result::eOk && pclSetMarkerFn) {
+            g.pclSetMarker = reinterpret_cast<PFun_slPCLSetMarker*>(pclSetMarkerFn);
+        } else {
+            ND_DEBUG(
+                "[fg] streamline: PCL slPCLSetMarker unavailable result={}",
+                static_cast<int>(pclResolve)
+            );
+        }
+    }
+    if (g.deviceSet && g.getFeatureFunction && !g.reflexSleep) {
+        // Reflex LowLatency uses one slReflexSleep call per presented frame (EXP-0192).
+        void* reflexSleepFn = nullptr;
+        sl::Result const reflexResolve =
+            g.getFeatureFunction(sl::kFeatureReflex, "slReflexSleep", reflexSleepFn);
+        if (reflexResolve == sl::Result::eOk && reflexSleepFn) {
+            g.reflexSleep = reinterpret_cast<PFun_slReflexSleep*>(reflexSleepFn);
+        } else {
+            ND_DEBUG(
+                "[fg] streamline: Reflex slReflexSleep unavailable result={}",
+                static_cast<int>(reflexResolve)
+            );
+        }
+    }
     if (g.deviceSet && g.setFeatureLoaded) {
         sl::Result const loadResult = g.setFeatureLoaded(sl::kFeatureDLSS_G, true);
         bool              loaded     = false;
@@ -332,7 +394,9 @@ bool ensureDevice(void* device) {
                 options.numFramesToGenerate  = 1;
                 options.queueParallelismMode = sl::DLSSGQueueParallelismMode::eBlockPresentingClientQueue;
                 sl::Result const optionsResult = g.dlssgSetOptions(viewport, options);
-                g.offAccepted                  = optionsResult == sl::Result::eOk;
+                if (optionsResult == sl::Result::eOk) {
+                    g.dlssgMode = static_cast<int>(options.mode);
+                }
                 sl::DLSSGState   state{};
                 sl::DLSSGOptions current{};
                 sl::Result const stateResult = g.dlssgGetState(viewport, state, &current);
@@ -436,6 +500,27 @@ bool ensureDeviceFromQueue(void* queue) {
     return ok;
 }
 
+bool unloadDlssg() {
+    if (!g.setFeatureLoaded) {
+        return false;
+    }
+    ND_DEBUG("[fg] streamline: DLSS_G unload begin");
+    sl::Result const result = g.setFeatureLoaded(sl::kFeatureDLSS_G, false);
+    ND_DEBUG("[fg] streamline: DLSS_G unload result={}", static_cast<int>(result));
+    if (result == sl::Result::eOk) {
+        if (g.shutdown) {
+            ND_DEBUG("[fg] streamline: shutdown after DLSS_G unload begin");
+            sl::Result const shutdownResult = g.shutdown();
+            ND_DEBUG("[fg] streamline: shutdown after DLSS_G unload result={}", static_cast<int>(shutdownResult));
+        }
+        g.dlssgMode        = -1;
+        g.dlssgRunAccepted = false;
+        g.dlssgSetOptions  = nullptr;
+        g.dlssgGetState    = nullptr;
+    }
+    return result == sl::Result::eOk;
+}
+
 void shutdown() {
     if (g.shutdown) {
         g.shutdown();
@@ -457,9 +542,65 @@ bool frameFunctions(FrameFunctions* out) {
     out->setConstants   = g.setConstants;
     out->setTagForFrame = g.setTagForFrame;
     out->dlssgGetState  = g.dlssgGetState;
+    out->pclSetMarker   = g.pclSetMarker;
+    out->reflexSleep    = g.reflexSleep;
     return g.newFrameToken && g.setConstants && g.setTagForFrame;
 }
 
-bool dlssgOff() { return g.offAccepted; }
+bool dlssgOff() { return g.dlssgMode == static_cast<int>(sl::DLSSGMode::eOff); }
+
+bool dlssgOn() { return g.dlssgRunAccepted; }
+
+bool setDlssgEnabled(bool enabled) {
+    sl::DLSSGMode const desired = enabled ? sl::DLSSGMode::eOn : sl::DLSSGMode::eOff;
+    if (g.dlssgMode == static_cast<int>(desired)) {
+        return desired == sl::DLSSGMode::eOff || g.dlssgRunAccepted;
+    }
+    if (!g.dlssgSetOptions) {
+        return false;
+    }
+    sl::ViewportHandle viewport{0};
+    sl::DLSSGOptions   options{};
+    options.mode                 = desired;
+    options.numFramesToGenerate  = 1;
+    options.queueParallelismMode = sl::DLSSGQueueParallelismMode::eBlockPresentingClientQueue;
+    sl::Result const optionsResult = g.dlssgSetOptions(viewport, options);
+    if (optionsResult == sl::Result::eOk) {
+        g.dlssgMode = static_cast<int>(desired);
+    }
+
+    if (!g.reflexSetOptions && g.getFeatureFunction) {
+        void* fn = nullptr;
+        if (g.getFeatureFunction(sl::kFeatureReflex, "slReflexSetOptions", fn) == sl::Result::eOk && fn) {
+            g.reflexSetOptions = reinterpret_cast<PFun_slReflexSetOptions*>(fn);
+        }
+    }
+    sl::Result reflexResult = enabled && !g.reflexSetOptions ? sl::Result::eErrorFeatureMissing : sl::Result::eOk;
+    if (g.reflexSetOptions) {
+        sl::ReflexOptions reflex{};
+        reflex.mode         = enabled ? sl::ReflexMode::eLowLatency : sl::ReflexMode::eOff;
+        reflex.frameLimitUs = 0;
+        reflexResult        = g.reflexSetOptions(reflex);
+    }
+    if (enabled && optionsResult == sl::Result::eOk && reflexResult != sl::Result::eOk) {
+        // Do not leave a half-enabled generator running without its required Reflex mode.
+        options.mode = sl::DLSSGMode::eOff;
+        sl::Result const rollback = g.dlssgSetOptions(viewport, options);
+        if (rollback == sl::Result::eOk) {
+            g.dlssgMode = static_cast<int>(sl::DLSSGMode::eOff);
+        }
+        ND_DEBUG("[fg] streamline: Reflex unavailable; DLSS_G rolled back to eOff ({})", static_cast<int>(rollback));
+    }
+    g.dlssgRunAccepted = enabled && optionsResult == sl::Result::eOk && reflexResult == sl::Result::eOk;
+    ND_DEBUG(
+        "[fg] streamline: DLSS_G transition mode={} options={} reflex={} frames={} accepted={}",
+        static_cast<int>(desired),
+        static_cast<int>(optionsResult),
+        static_cast<int>(reflexResult),
+        options.numFramesToGenerate,
+        g.dlssgRunAccepted ? 1 : 0
+    );
+    return g.dlssgRunAccepted || !enabled;
+}
 
 } // namespace neurodragon::fg::streamline

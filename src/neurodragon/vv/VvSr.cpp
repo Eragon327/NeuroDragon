@@ -109,6 +109,8 @@ enum : unsigned {
     kSlotCount       = 13,
 };
 
+constexpr unsigned kDescriptorFrames = 3;
+
 struct Pipeline {
     ID3D12Device*               device{};
     ID3D12RootSignature*        root{};
@@ -120,6 +122,8 @@ struct Pipeline {
     D3D12_CPU_DESCRIPTOR_HANDLE cpu{};
     D3D12_GPU_DESCRIPTOR_HANDLE gpu{};
     unsigned                    increment{};
+    unsigned                    rtvIncrement{};
+    unsigned                    activeSlot{};
     ID3D12Resource*             colorHalf{};
     ID3D12Resource*             depthR32{};
     ID3D12Resource*             mvRg32{}; ///< R16G16_FLOAT: DLSS accepts this, not RG32F
@@ -145,14 +149,14 @@ std::atomic<bool> gSnapshotValid{false};
 // Frames of forced Reset requested from the panel. Two, not one: the first frame after
 // a rebuild may still be the one the engine had already recorded before the request.
 std::atomic<unsigned> gManualReset{0};
-// What DLSS is told as Jitter.Offset. Default is zero: EXP-0098's A/B showed the engine
-// value makes the picture wobble and zero is stable, and the value itself is already in
-// DLSS's space (Halton(2,3)-0.5, render pixels, y-down - see
+// What DLSS is told as Jitter.Offset. The persisted default is Engine by user request
+// (2026-11-15); EXP-0098's A/B still establishes Zero as the stable choice. The value
+// itself is already in DLSS's space (Halton(2,3)-0.5, render pixels, y-down - see
 // docs/research/2026-10-29-taau-jitter-dlss-contract.md). The three non-default modes
 // are the discriminating experiment of that document §7: which of "the frame is not
 // rendered with it", "the sign is flipped in our hand-off" or "the context value is one
 // frame ahead of the render" is true.
-std::atomic<int> gJitterSource{static_cast<int>(JitterSource::Zero)};
+std::atomic<int> gJitterSource{static_cast<int>(JitterSource::Engine)};
 // Last frame's context jitter, so the Previous mode can feed j(n-1). Zero until the
 // first recorded frame saves one, which is the safe fallback the panel's "previous"
 // entry needs on a fresh session (and after `release()`, since these are file-scope).
@@ -582,17 +586,18 @@ bool ensurePipeline(ID3D12Device* device) {
 
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
     rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtvHeapDesc.NumDescriptors = 1;
+    rtvHeapDesc.NumDescriptors = kDescriptorFrames;
     hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&gPipeline.rtvHeap));
     if (FAILED(hr)) {
         setError(hr, "CreateDescriptorHeap(rtv)");
         return false;
     }
-    gPipeline.arg10Rtv = gPipeline.rtvHeap->GetCPUDescriptorHandleForHeapStart();
+    gPipeline.arg10Rtv     = gPipeline.rtvHeap->GetCPUDescriptorHandleForHeapStart();
+    gPipeline.rtvIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
     heapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    heapDesc.NumDescriptors = kSlotCount;
+    heapDesc.NumDescriptors = kSlotCount * kDescriptorFrames;
     heapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&gPipeline.heap));
     if (FAILED(hr)) {
@@ -611,13 +616,19 @@ bool ensurePipeline(ID3D12Device* device) {
 
 D3D12_CPU_DESCRIPTOR_HANDLE cpuAt(unsigned slot) {
     D3D12_CPU_DESCRIPTOR_HANDLE handle = gPipeline.cpu;
-    handle.ptr += static_cast<SIZE_T>(slot) * gPipeline.increment;
+    handle.ptr += static_cast<SIZE_T>(gPipeline.activeSlot * kSlotCount + slot) * gPipeline.increment;
     return handle;
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE gpuAt(unsigned slot) {
     D3D12_GPU_DESCRIPTOR_HANDLE handle = gPipeline.gpu;
-    handle.ptr += static_cast<UINT64>(slot) * gPipeline.increment;
+    handle.ptr += static_cast<UINT64>(gPipeline.activeSlot * kSlotCount + slot) * gPipeline.increment;
+    return handle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE arg10RtvAt() {
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = gPipeline.arg10Rtv;
+    handle.ptr += static_cast<SIZE_T>(gPipeline.activeSlot) * gPipeline.rtvIncrement;
     return handle;
 }
 
@@ -695,12 +706,12 @@ void requestReset() {
 }
 
 void setJitterSource(JitterSource source) {
-    // The panel's four entries; anything outside the enum folds to Zero so a stale
-    // draft (or a future edit) cannot leave the pipeline on a value with no branch.
+    // The panel's four entries; anything outside the enum folds to the configured
+    // default so a stale draft cannot leave the pipeline on a value with no branch.
     int const raw   = static_cast<int>(source);
     int const value = raw >= static_cast<int>(JitterSource::Zero) && raw <= static_cast<int>(JitterSource::Previous)
                         ? raw
-                        : static_cast<int>(JitterSource::Zero);
+                        : static_cast<int>(JitterSource::Engine);
     int const previous = gJitterSource.exchange(value, std::memory_order_relaxed);
     if (previous == value) {
         return;
@@ -818,6 +829,10 @@ void syncConfig() {
     if (wanted != gEnabled.load(std::memory_order_relaxed)) {
         setEnabled(wanted);
     }
+    auto const configured = static_cast<JitterSource>(config::get().sr.jitterSource);
+    if (configured != jitterSource()) {
+        setJitterSource(configured);
+    }
 }
 
 // The per-frame TAAContext parameters that are still consumed: the sub-pixel jitter fed
@@ -865,7 +880,7 @@ MvFrame decodeMvFrame() {
     return frame;
 }
 
-bool recordInternal(void* commandListVoid, void* arg10Void) {
+bool recordInternal(void* commandListVoid, void* arg10Void, unsigned descriptorSlot) {
     if (gReleased.load(std::memory_order_acquire)) {
         return false;
     }
@@ -880,6 +895,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     if (!list || !arg10 || !device) {
         return false;
     }
+    gPipeline.activeSlot = descriptorSlot % kDescriptorFrames;
     // World presence is deliberately not a gate: since the user's 2026-10-28 decision the
     // pipeline keeps running after leaving a save, so the menu background is processed by
     // the same DLSS -> arg10 path instead of falling back to TAAU.
@@ -1141,9 +1157,11 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     bool dlssEvaluated = false;
     bool featureReady  = false;
     bool sharpened     = false;
-    bool historyReset  = false;
-    int  dlssCreateRet = 0;
-    int  dlssEvalRet   = 0;
+    bool  historyReset = false;
+    int   dlssCreateRet = 0;
+    int   dlssEvalRet   = 0;
+    float jitterX       = 0.0f;
+    float jitterY       = 0.0f;
     {
         // DLSS-SR: our prepared colour/depth/motion are already in a shader-readable
         // state above, which is what NGX expects of its inputs.
@@ -1189,12 +1207,10 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             // feature 0x12 on this same command list, and points Color at its
             // composite before the original evaluate runs. The VV side only has to
             // leave the prepared inputs in ALL_SHADER_RESOURCE (above).
-            // Jitter handed to DLSS. Default 0 (see gJitterSource); the other three modes
-            // are the §7 discrimination the panel still offers. Only applied inside a
+            // Jitter handed to DLSS. The persisted default is Engine by user request;
+            // Zero remains the EXP-0100 stable choice. Only applied inside a
             // world: outside it the panorama was not rendered with the world jitter and
             // feeding it back shifts the image every frame (EXP-0073).
-            float jitterX = 0.0f;
-            float jitterY = 0.0f;
             if (world) {
                 switch (gJitterSource.load(std::memory_order_relaxed)) {
                 case static_cast<int>(JitterSource::Engine):
@@ -1333,8 +1349,9 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
             transition(list, gPipeline.dlssOut, gPipeline.dlssState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             gPipeline.dlssState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         }
+        D3D12_CPU_DESCRIPTOR_HANDLE const rtv = arg10RtvAt();
         probe::vv::inject::setRecordingOwnView(true);
-        device->CreateRenderTargetView(arg10, nullptr, gPipeline.arg10Rtv);
+        device->CreateRenderTargetView(arg10, nullptr, rtv);
         probe::vv::inject::setRecordingOwnView(false);
         D3D12_VIEWPORT const viewport{
             0.0f,
@@ -1356,7 +1373,7 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         // The DLSS output was written to descriptor slot 2 by the evaluate branch;
         // the graphics table starts there, so the PS sees it as t0.
         list->SetGraphicsRootDescriptorTable(1, gpuAt(kSlotColorSrv));
-        list->OMSetRenderTargets(1, &gPipeline.arg10Rtv, FALSE, nullptr);
+        list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
         list->RSSetViewports(1, &viewport);
         list->RSSetScissorRects(1, &scissor);
         list->SetPipelineState(gPipeline.arg10Ps);
@@ -1422,7 +1439,8 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
         std::memcpy(snapshot.current, mv.current, sizeof(snapshot.current));
         std::memcpy(snapshot.previous, mv.previous, sizeof(snapshot.previous));
         std::memcpy(snapshot.camera, mv.camera, sizeof(snapshot.camera));
-        std::memcpy(snapshot.jitter, &mv.jitterX, sizeof(snapshot.jitter));
+        snapshot.jitter[0] = jitterX;
+        snapshot.jitter[1] = jitterY;
         gSnapshot = snapshot;
         gSnapshotValid.store(true, std::memory_order_release);
         return true;
@@ -1431,8 +1449,8 @@ bool recordInternal(void* commandListVoid, void* arg10Void) {
     return false;
 }
 
-bool recordArg10(void* commandList, void* arg10) {
-    return recordInternal(commandList, arg10);
+bool recordArg10(void* commandList, void* arg10, unsigned descriptorSlot) {
+    return recordInternal(commandList, arg10, descriptorSlot);
 }
 
 Stats stats() {

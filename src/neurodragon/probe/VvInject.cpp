@@ -29,10 +29,6 @@ namespace {
 // written from the render thread and read from the panel; the panel turns the code
 // into text (stats()).
 
-// The fence only guards allocator reuse, but under Streamline's proxy queue it can
-// still be unsignalled on the next world frame (EXP-0142: ~42 fence-busy skips/s
-// against ~81 presents/s), and a skipped frame after an injected one presents the
-// previous arg10 unchanged. Three slots let one rest for two frames.
 constexpr unsigned kSlots = 3;
 
 struct Slot {
@@ -55,12 +51,7 @@ struct Injector {
     std::atomic<bool>          pipelineReady{false};
 };
 
-// A slot has to be re-recordable within a few frames: VvSr and NR rewrite shared
-// descriptor heaps while recording, so a list still executing is why prepare() rotates
-// instead of reusing the last slot. Three slots give one two frames, which is why a
-// fence that is merely late never has to be waited on. A fence that stays unfinished
-// for this many attempts is not latency but a stall (EXP-0118): the Signal never
-// reached the queue, or the queue meant to run it has been retired.
+// Each slot owns its VvSr/NR descriptor set. A fence that never completes is a stall.
 constexpr unsigned kStallSubmits = 120;
 // A stall that keeps coming back is not something a rebuild fixes; after this many
 // the product turns itself off instead of leaking an allocator per retry.
@@ -166,8 +157,6 @@ bool buildPipeline() {
                 IID_PPV_ARGS(&slot.list)
             ))
             || FAILED(g.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&slot.fence)))
-            // The list is handed to us in the recording state; a fresh list that has never
-            // been closed cannot be Reset on every platform, so close it once here.
             || FAILED(slot.list->Close())) {
             retire();
             return false;
@@ -175,9 +164,9 @@ bool buildPipeline() {
         slot.fenceValue  = 0;
         slot.busySubmits = 0;
     }
-    g.slot = kSlots - 1; // the first prepare() advances to slot 0
+    g.slot = kSlots - 1;
     g.pipelineReady.store(true, std::memory_order_release);
-    ND_DEBUG("[vv] inject pipeline ready slots={}", kSlots);
+    ND_DEBUG("[vv] inject pipeline ready slots={} with per-frame descriptors", kSlots);
     return true;
 }
 
@@ -206,12 +195,6 @@ void restart(char const* why) {
     }
 }
 
-// Whether slot `index` may be recorded into again. With three slots the target last ran
-// two frames ago, so the ordinary answer costs one GetCompletedValue and no wait. An
-// unfinished fence means the GPU is behind, and one skipped frame - which presents the
-// previous arg10 unchanged - is cheaper than blocking the render thread on an event
-// (EXP-0142). A fence that never finishes is the EXP-0118 stall: rather than skipping
-// forever with no picture, the injection is rebuilt.
 bool slotIdle(unsigned index) {
     Slot& slot = g.slots[index];
     if (!slot.fence) {
@@ -307,7 +290,7 @@ bool finish(bool ok) {
 }
 
 bool record() {
-    Slot&         slot = g.slots[g.slot];
+    Slot& slot = g.slots[g.slot];
     // A list left recording by an earlier failed frame has to be closed before its
     // allocator can be reset again; without this the first failure is permanent.
     slot.list->Close();
@@ -320,7 +303,7 @@ bool record() {
     // prep + DLSS evaluate, then a PS that writes the DLSS output into the engine's
     // arg10. No white point, no encode, no back-buffer copy.
     void* const target = probe::vv::arg10Target();
-    if (!target || !neurodragon::vv::sr::recordArg10(slot.list, target)) {
+    if (!target || !neurodragon::vv::sr::recordArg10(slot.list, target, g.slot)) {
         return finish(false);
     }
     return finish(true);
@@ -401,7 +384,7 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         // the frame graph has already retired never advances it, so the wait is forever
         // and the picture stays frozen. Retire instead - the old allocators are never
         // reset (see retire), so the GPU finishes whatever it still holds untouched
-        // (EXP-0118). The rebind below then rebuilds the slots on the next frame.
+        // (EXP-0118). The rebind below then rebuilds the injection on the next frame.
         if (anySlotBusy()) {
             utils::logger().warn("[vv] inject: queue changed with a pending injection; retiring it");
             retire();
@@ -481,9 +464,6 @@ unsigned prepare(void* queueVoid, unsigned listCount, void* const* lists) {
         setReason(SkipReason::NoBoundary);
         return 0;
     }
-    // Rotate only here: a submission that will not record must not consume a slot,
-    // or two in-flight injections could share one allocator. The target slot's fence
-    // is the one that matters; with three slots it normally has two frames to finish.
     unsigned const next = (g.slot + 1) % kSlots;
     if (!slotIdle(next)) {
         setReason(SkipReason::FenceBusy);
@@ -550,6 +530,8 @@ bool isOwnList(void* list) {
     }
     return false;
 }
+
+unsigned descriptorSlot() { return g.slot; }
 
 bool recordingOwnView() { return gRecordingView.load(std::memory_order_relaxed); }
 void setRecordingOwnView(bool recording) { gRecordingView.store(recording, std::memory_order_relaxed); }
@@ -667,8 +649,6 @@ void notePresentHeartbeat() {
     auto const   sr      = neurodragon::vv::dlss::srState();
     auto const   nrProbe = probe::nrDiagnostic();
     auto const   nr      = neurodragon::nr::nrPanelStats();
-    // The fence columns describe the slot the next injection would use; inFlight is how
-    // many of the kSlots still have GPU work outstanding.
     Slot const&  slot     = g.slots[g.slot];
     UINT64 const done     = slot.fence ? slot.fence->GetCompletedValue() : 0;
     UINT64 const signaled = slot.fenceValue;

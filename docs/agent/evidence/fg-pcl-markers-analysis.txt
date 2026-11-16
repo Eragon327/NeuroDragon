@@ -1,0 +1,30 @@
+EXP-0190 依据：DLSS-G 的 Present 标记缺失
+
+EXP-0189 原始证据（fg-token-EXP-0189-session.log）
+- 23:30:14.711 首次 eOn：options=0 reflex=0 accepted=1，同毫秒出现两次
+  "missing common constants - Frame Generation will be disabled for the frame"。
+- 全 session 无 mode=1、无 presented=2；状态采样在两次 eOn 内均为 mode=0 presented=1。
+- 23:30:53 第二次 eOn 不再打印告警，但 presented 仍=1；告警消失不等于常量被消费。
+- token 由 slGetNewFrameToken(token, nullptr) 取得，无 token 失败。token 序号假设被证伪。
+
+Streamline 官方文档（2.14.16，与运行时 2.14.1 同代）
+- docs/ProgrammingGuideDLSS_G.md §8.0 "Integrate SL Reflex"：
+  DLSS-G 要求 sl.reflex 集成；eReflexMarkerPresentStart / eReflexMarkerPresentEnd
+  必须提供正确的 frame index，以便与 §7 的 common constants 帧号匹配。
+  文中明确：出现 "common constants cannot be found for frame N" 告警，说明
+  PresentStart/PresentEnd 标记与被呈现的帧不同步。
+  https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_G.md
+- docs/ProgrammingGuidePCL.md：Present 标记由 slPCLSetMarker(sl::PCLMarker::ePresentStart/ePresentEnd,
+  frameToken) 发送；marker 必须始终发送，与 Reflex Low Latency 是否开启无关。
+  https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuidePCL.md
+
+与当前实现的差距（静态确认）
+- src/neurodragon/fg 只调用了 slReflexSetOptions；全仓库没有 slPCLSetMarker，
+  也没有 ePresentStart/ePresentEnd。Streamline 的 kFeaturePCL 已加载，但没有 usage。
+- 因此 DLSS-G present 路径拿不到与 constants 同一 frame index 的 Present 标记，
+  与 EXP-0188/0189 的 missing constants 现象一致。
+
+EXP-0190 唯一改动
+- 解析 kFeaturePCL 的 slPCLSetMarker；在每帧 constants/tags 之后、origin() 之前发送
+  ePresentStart，在 origin() 返回后发送 ePresentEnd，frame token 与 constants 相同。
+- 不同时加入 slReflexSleep、不同时改 options/常量内容，避免多变量。

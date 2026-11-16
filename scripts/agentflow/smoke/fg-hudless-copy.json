@@ -1,0 +1,29 @@
+{
+  "name": "fg-hudless-copy",
+  "tier": "L2",
+  "timeout_s": 240,
+  "dwell_s": 10,
+  "why": "EXP-0180: add CopyResource only after EXP-0179 proved the tracked source and RT barrier pair safe. Require both recorded tracked-copy lists and published frames; GetBuffer is never a copy source.",
+  "requires": [
+    "\\[fg\\] hudless: tracked-copy split=\\d+/\\d+ resource=0x[0-9a-f]+ listIndex=\\d+ size=\\d+x\\d+ fmt=\\d+",
+    "\\[fg\\] hudless: published serial=[1-9]\\d* size=\\d+x\\d+ fmt=\\d+",
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless: tracked-copy split=\\d+/\\d+ none",
+    "\\[fg\\] hudless: barrier-only split=",
+    "\\[fg\\] hudless[^\\r\\n]*copy path ready",
+    "\\[fg\\] hudless: copy split=\\d+/\\d+",
+    "0x887A002B",
+    "0x887A0005",
+    "device removed",
+    "cmdQ\\.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] hudless: tracked-copy split=\\d+/\\d+ resource=0x[0-9a-f]+ listIndex=\\d+ size=\\d+x\\d+ fmt=\\d+": 2,
+    "\\[fg\\] hudless: published serial=[1-9]\\d* size=\\d+x\\d+ fmt=\\d+": 2
+  }
+}

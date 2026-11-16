@@ -1,0 +1,15 @@
+EXP-0178 真实资源/状态证据与 EXP-0179 单变量设计
+
+原始会话：docs/agent/evidence/fg-hudless-state-EXP-0178-session.log（replay PASS）
+
+连续三帧：
+- GetBuffer index=0/1 的资源在跨提交最近记录中均为 before=0x400(COPY_DEST)、after=0x0(PRESENT)。
+- 本提交显示尺寸 fmt28 的资源是另一指针（same=0），记录为 before=0x4(RENDER_TARGET)、after=0x0(PRESENT)。
+
+结论：EXP-0176 对 GetBuffer fake buffer 假定 RENDER_TARGET 并 transition，选错了资源，也猜错了状态。不能再把 GetBuffer 当 hudless copy 源。
+
+EXP-0179 仅验证正确资源/状态下的 barrier 对：
+1. 在本提交 barrier trace 中选择 display 尺寸/格式匹配、before=RT、after=PRESENT 的资源；其 transition 所在 list 必须位于 preUiSplit 或之后，保证切点执行时状态仍为 RT。
+2. 对该资源记录 RT→COPY_SOURCE→RT 两条 transition，独立 list 提交并 Signal；不使用 GetBuffer，不 CopyResource，不创建 hudless target，不发布 Frame。
+3. 找不到满足全部条件的资源就跳过并记录，不回退到 GetBuffer，不猜状态。
+若仍 ACCESS_DENIED，则第三方 transition/独立提交是剩余病因；若稳定，下一轮才恢复 CopyResource。

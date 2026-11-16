@@ -1,0 +1,17 @@
+EXP-0195 smoke 复核与 EXP-0196 画面验收依据
+
+原始证据：docs/agent/evidence/smoke-vv-stall-recover-EXP-0195.log
+- 19:22:11.220：inject pipeline ready (single in-flight)。
+- 19:22:44.016：TEST fault - dropped Signal(1)，故障确实触发。
+- 19:22:51.089：fence 0/1 持续 120 submissions，rebuild #1。
+- 19:22:51.090：重新 ready (single in-flight)。
+- 19:22:51.098：recovered after a rebuild (injected=2 ... rebuilds=1)。
+
+结论边界
+- 单在飞与故障恢复有效，EXP-0195 的 L1 部分通过。
+- 该 smoke 没有分析屏幕帧，也没有覆盖 EXP-0194 的 1920x1080 左上黑边判据；不能把自动 close pass 当成画面验收。
+
+EXP-0196
+- 零代码变更，复用 19:21 部署的 e829f126b0d32c62c9c8c704da58ca6c966a669e483f8721e7f2127661e0177d。
+- 唯一未知项不变：单在飞是否消除 EXP-0194 的 75% 黑边。
+- 站立 10 秒 + 移动转视角 20 秒；FG fence/2x 与退出状态另行读取日志，不让用户判断技术原因。

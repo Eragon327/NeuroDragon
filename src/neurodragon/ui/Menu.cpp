@@ -41,30 +41,20 @@ using namespace theme;
 
 config::Nr     gDraft{};
 config::Sr     gDraftSr{};
+config::Fg     gDraftFg{};
 config::Config gSavedConfig{};
 bool           gSavedConfigInitialized{};
-// Jitter is staged like every other control but has no config entry: Apply writes the
-// running pipeline, Save as default leaves it out, and closing without applying leaves
-// the running value alone. Zero suits preset K; preset M can self-oscillate with Zero
-// and should use Engine. Other preset/source combinations are still being validated.
-int gDraftJitter{static_cast<int>(vv::sr::JitterSource::Zero)};
+// Jitter uses gDraftSr.jitterSource, with no second draft variable to drift out of sync.
+// Engine is the default requested on 2026-11-15; Zero remains the previously verified
+// stable choice (EXP-0100). Other preset/source combinations are still being validated.
 
-// Unknown values fall back to Zero; all four known sources remain normal choices.
-int stagedJitter(vv::sr::JitterSource running) {
-    switch (running) {
-    case vv::sr::JitterSource::Engine:
-    case vv::sr::JitterSource::Negated:
-    case vv::sr::JitterSource::Previous:
-        return static_cast<int>(running);
-    case vv::sr::JitterSource::Zero:
-    default:
-        return static_cast<int>(vv::sr::JitterSource::Zero);
-    }
+// Unknown values fall back to the configured default; all four sources remain choices.
+int stagedJitter(int configured) {
+    return configured >= static_cast<int>(vv::sr::JitterSource::Zero)
+                && configured <= static_cast<int>(vv::sr::JitterSource::Previous)
+             ? configured
+             : static_cast<int>(vv::sr::JitterSource::Engine);
 }
-
-// Re-reads the running value: the panel's "start from what is running" rule, used when
-// it opens and when Discard is pressed.
-void stageJitterDraft() { gDraftJitter = stagedJitter(vv::sr::jitterSource()); }
 
 // A percentage saved by an older build (75%) is no longer offered. Treat any
 // unknown value as "follow the engine" so the dropdown and the live config agree.
@@ -85,6 +75,7 @@ int sanitizedSrPercent(int percent) {
 config::Sr sanitizedSr(config::Sr sr) {
     sr.scalePercent = sanitizedSrPercent(sr.scalePercent);
     sr.vvPercent    = sanitizedSrPercent(sr.vvPercent);
+    sr.jitterSource = stagedJitter(sr.jitterSource);
     // A hand-edited config can carry anything; the render thread reads the strength
     // every frame, so keep one sanitised copy at the panel boundary as well.
     if (!std::isfinite(sr.sharpness) || sr.sharpness < 0.0f || sr.sharpness > 1.0f) {
@@ -394,7 +385,8 @@ bool same(config::Nr const& a, config::Nr const& b) {
 
 bool same(config::Sr const& a, config::Sr const& b) {
     return a.scalePercent == b.scalePercent && a.vvPercent == b.vvPercent && a.vvEnabled == b.vvEnabled
-        && a.preset == b.preset && a.sharpening == b.sharpening && a.sharpness == b.sharpness;
+        && a.preset == b.preset && a.jitterSource == b.jitterSource && a.sharpening == b.sharpening
+        && a.sharpness == b.sharpness;
 }
 
 bool same(config::Ui const& a, config::Ui const& b) {
@@ -403,17 +395,17 @@ bool same(config::Ui const& a, config::Ui const& b) {
 }
 
 bool same(config::Config const& a, config::Config const& b) {
-    return a.version == b.version && same(a.nr, b.nr) && same(a.sr, b.sr) && same(a.ui, b.ui);
+    return a.version == b.version && same(a.nr, b.nr) && same(a.sr, b.sr)
+        && a.fg.enabled == b.fg.enabled && same(a.ui, b.ui);
 }
 
 bool hasUnsavedChanges() { return gSavedConfigInitialized && !same(config::get(), gSavedConfig); }
 
 bool hasUnappliedChanges() {
     auto const& running = config::get();
-    return !same(gDraft, running.nr) || !same(gDraftSr, running.sr)
+    return !same(gDraft, running.nr) || !same(gDraftSr, running.sr) || gDraftFg.enabled != running.fg.enabled
         || gDraftPanelKeys.keys() != running.ui.openKeys || gDraftNrKeys.keys() != running.ui.nrKeys
-        || gDraftResetKeys.keys() != running.ui.resetKeys || gDraftScreenshotKeys.keys() != running.ui.screenshotKeys
-        || gDraftJitter != stagedJitter(vv::sr::jitterSource());
+        || gDraftResetKeys.keys() != running.ui.resetKeys || gDraftScreenshotKeys.keys() != running.ui.screenshotKeys;
 }
 
 bool mappedCombo(char const* label, int* value, char const* const* items, int const* values, int count) {
@@ -1079,8 +1071,8 @@ void drawTabSr(Live const& live) {
         // All four sources are normal choices. Zero is best with K and Engine is best with
         // M; the best source for other preset combinations is not yet known.
         //
-        // The combo edits the draft. Apply affects this run; Save as default does not
-        // persist jitter because it has no config entry.
+        // The combo edits the draft. Apply affects this run; Save as default persists
+        // sr.jitterSource for subsequent launches.
         std::string const jitterItems[4] = {
             "ui.sr.jitterZero"_tr(),
             "ui.sr.jitterEngine"_tr(),
@@ -1100,7 +1092,7 @@ void drawTabSr(Live const& live) {
             static_cast<int>(vv::sr::JitterSource::Previous),
         };
         if (!vvMode) ImGui::BeginDisabled();
-        if (mappedCombo("ui.sr.jitterSource"_tr().c_str(), &gDraftJitter, jitterPointers, jitterValues, 4)) {
+        if (mappedCombo("ui.sr.jitterSource"_tr().c_str(), &gDraftSr.jitterSource, jitterPointers, jitterValues, 4)) {
             onDraftEdited();
         }
         widgets::tip("ui.sr.jitterTip"_tr().c_str());
@@ -1159,8 +1151,10 @@ void drawTabSr(Live const& live) {
 
 void drawTabFrameGeneration() {
     widgets::sectionHeader("ui.tab.fg"_tr().c_str());
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", "ui.fg.unavailable"_tr().c_str());
+    if (widgets::toggle("ui.fg.enable"_tr().c_str(), &gDraftFg.enabled)) onDraftEdited();
+    widgets::tip("ui.fg.enableTip"_tr().c_str());
     ImGui::Spacing();
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", "ui.fg.fixed2x"_tr().c_str());
     widgets::hint("ui.fg.description"_tr().c_str());
 }
 
@@ -1377,17 +1371,18 @@ void applyDraft(bool persist) {
 
     config::get().nr                = gDraft;
     config::get().sr                = gDraftSr;
+    config::get().fg                = gDraftFg;
     config::get().ui.openKeys       = gDraftPanelKeys.keys();
     config::get().ui.nrKeys         = gDraftNrKeys.keys();
     config::get().ui.resetKeys      = gDraftResetKeys.keys();
     config::get().ui.screenshotKeys = gDraftScreenshotKeys.keys();
     Overlay::getInstance().refreshKeys();
 
-    // SR jitter is the one staged value without a config entry, so this write *is* its
-    // persistence: it reaches the render thread here and survives only this run.
-    // setJitterSource() is a no-op when the value did not change (no history wipe), so
-    // every Apply can write it unconditionally.
-    vv::sr::setJitterSource(static_cast<vv::sr::JitterSource>(gDraftJitter));
+    // Apply updates the running config and renderer without writing the file. Save as
+    // default persists the same sr.jitterSource through the normal config::save() path.
+    // setJitterSource() is a no-op when the value did not change (no history wipe).
+    config::get().sr.jitterSource = stagedJitter(gDraftSr.jitterSource);
+    vv::sr::setJitterSource(static_cast<vv::sr::JitterSource>(config::get().sr.jitterSource));
 
     // A model preset is only read at CreateFeature, so applying a new one has to
     // make the feature rebuild. Each backend owns its own feature: the engine's on the
@@ -1462,8 +1457,8 @@ void drawFooter(Layout const& layout) {
     if (menuButton("ui.footer.discard"_tr().c_str(), ImVec2(buttonWidth, buttonHeight))) {
         gDraft   = sanitizedNr(config::get().nr);
         gDraftSr = sanitizedSr(config::get().sr);
+        gDraftFg = config::get().fg;
         reloadKeyDrafts();
-        stageJitterDraft();
         setStatus("ui.footer.discarded"_tr());
     }
     if (actionsDisabled) ImGui::EndDisabled();
@@ -1625,7 +1620,7 @@ void onOpened() {
     }
     gDraft   = sanitizedNr(config::get().nr);
     gDraftSr = sanitizedSr(config::get().sr);
-    stageJitterDraft();
+    gDraftFg = config::get().fg;
     reloadKeyDrafts();
     gModelFiles = utils::listNrModelFiles();
     gStatus.clear();

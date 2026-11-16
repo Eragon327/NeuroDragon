@@ -1,0 +1,26 @@
+EXP-0198 通过项与 EXP-0199 独立崩溃依据
+
+EXP-0198 已通过
+- 21:51:34.219 DLSS_G unload result=0。
+- 21:51:34.219 shutdown after DLSS_G unload begin；21:51:35.189 result=0。
+- SL onShutdown 完成，后续无新 nvngx ReleaseInstance dump。
+- 用户原话“已完成，无异常”。该修复保留。
+
+另一个同构建失败（19:43）
+- trace_2026-11-16_19-43-35.log：0xC0000005，RIP不在已命名模块，下一帧为 NeuroDragon.dll executeCommandListsHook+0x2A6（Overlay.cpp:1955）。
+- 该点是对 injectList 调 gOriginalExecuteCommandLists(queue,1,&injectList)，不是 DLSS-G ReleaseInstance。
+
+代码机制
+- executeCommandListsHook 可在引擎渲染线程执行。
+- Overlay::uninstall 在另一线程设置 gShuttingDown 后立即 removeHook(gExecuteCommandListsTarget)。
+- MinHook 的 MH_RemoveHook 会释放原函数 trampoline；若渲染线程已在 hook 内，随后对 gOriginalExecuteCommandLists 的调用即进入已释放内存。
+- RenderProbe.cpp 的卸载注释已给出同类原则：进程退出时 hook 必须保留并转为 pass-through，真实 unload 只能重启。
+
+EXP-0199 唯一改动
+- executeCommandListsHook 入口检查 gShuttingDown：为真时仅调用原始 ExecuteCommandLists 并返回，不再跑 probe/inject/hudless。
+- uninstall 不再 MH_RemoveHook(gExecuteCommandListsTarget)，保留 trampoline 供在飞及后续直通调用。
+- 其他 Present/Resize 卸载、slShutdown顺序和画面路径不变。
+
+验证
+- 进入世界并移动后正常退出，无 executeCommandListsHook dump、无 nvngx ReleaseInstance dump。
+- 日志仍有 unload result=0 与 shutdown result=0；世界内无新增闪动。

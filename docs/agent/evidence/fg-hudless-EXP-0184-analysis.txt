@@ -1,0 +1,10 @@
+EXP-0183 直接传递 split 仍失败后的入口取证
+
+- 有效会话 fg-f2-inputs-EXP-0183-session.log 中，world=1 的提交尾形仍是 world d1 + UI d28，cut 应非0；SR arg10 正常。
+- onExecuteCommandLists 已返回局部 split，Overlay 已传给 prepare，但仍无 gate/tracked-copy/published，只有 no-hudless-copy。
+- 因而全局竞态不是全部原因，且当前日志无法区分：返回值实际为0、prepare 未调用、world 门、split 边界或 queue/listCount 早退。
+
+EXP-0184 只加两层入口日志：
+1. Overlay 在调用 inject/hudless 前记录本次 onExecuteCommandLists 返回的 split/listCount/world。
+2. HudlessProbe::prepare 在任何 return 前记录收到的 split/listCount/world/queue，并在各早退点输出。
+增加采样上限，避免此前前3次全局门控掩盖后续世界；GPU/SL/SR 行为完全不变。

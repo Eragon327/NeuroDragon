@@ -1,0 +1,43 @@
+EXP-0193 用户提供的 Visual Studio 异常与调用栈（原始文本）
+
+193，还是闪，退出崩溃，但是看起来2x帧率有了。
+
+[0x00007FFFDF8B6C50 (nvngx_dlssg.dll)处(位于 Minecraft.Windows.exe 中)引发的异常: 0xC0000005: 读取位置 0x0000000000000078 时发生访问冲突。]
+
+> nvngx_dlssg.dll!00007fffdf8b6c50() 未知
+  nvngx_dlssg.dll!00007fffdf8b3cb3() 未知
+  _nvngx.dll!00007fffe5b9aaad() 未知
+  sl.common.dll!00007fffe5d8b0fc() 未知
+  sl.dlss_g.dll!00007fffe5d118f4() 未知
+  sl.dlss_g.dll!00007fffe5cf2a5b() 未知
+  sl.dlss_g.dll!00007fffe5cc55ad() 未知
+  sl.dlss_g.dll!00007fffe5d1c446() 未知
+  sl.dlss_g.dll!00007fffe5d1b2ad() 未知
+  sl.dlss_g.dll!00007fffe5d0c7e6() 未知
+  sl.dlss_g.dll!00007fffe5d01725() 未知
+  sl.dlss_g.dll!00007fffe5d00d07() 未知
+  sl.dlss_g.dll!00007fffe5d023be() 未知
+  sl.dlss_g.dll!00007fffe5d1c7a7() 未知
+  ntdll.dll!00007ff968d7147a() 未知
+  ntdll.dll!00007ff968c6b2e3() 未知
+  ntdll.dll!00007ff968d1b08f() 未知
+  ntdll.dll!00007ff968d19d9e() 未知
+  kernel32.dll!00007ff9676c17ab() 未知
+  ucrtbase.dll!00007ff9660f0813() 未知
+  Minecraft.Windows.exe!00007ff74060b7b7() 未知
+  Minecraft.Windows.exe!00007ff73fd1ca66() 未知
+  Minecraft.Windows.exe!00007ff73fd151f4() 未知
+  Minecraft.Windows.exe!00007ff74e225442() 未知
+  kernel32.dll!00007ff9676adda7() 未知
+  ntdll.dll!00007ff968d19c5c() 未知
+
+RAX = 000000000000000E RBX = 0000000000000007 RCX = 8D1ACE904A398D17 RDX = 0000000000000B00
+RSI = 00007FFFDFFCF470 RDI = 0000000B00000002 R8 = 00000000000B0000 R9 = 000000000B000000
+R10 = 00000FFFFBF21566 R11 = 0000005110000000 R12 = 00000100000001B3 R13 = CBF29CE484222325
+R14 = 00007FFFDFFCF3E0 R15 = 0000000000000000 RIP = 00007FFFDF8B6C50 RSP = 0000008791EFE630
+RBP = 000000000000000B EFL = 00010202
+
+0x0000000000000078 = 0000000000000000
+
+与 EXP-0191/0192 的 0xC0000409 不同：本轮是 nvngx_dlssg 内部对空对象偏移 0x78 的读取访问冲突。
+本轮由 Visual Studio 捕获，游戏 logs/crash 下没有新的 CrashLogger minidump。

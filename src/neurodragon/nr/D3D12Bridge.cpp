@@ -3,6 +3,7 @@
 #include "neurodragon/Config.h"
 #include "neurodragon/Log.h"
 #include "neurodragon/Test.h"
+#include "neurodragon/probe/VvInject.h"
 
 #include <Windows.h>
 
@@ -755,6 +756,9 @@ ID3D12RootSignature* gEncodeRoot = nullptr;
 // load, and the only things that change these values afterwards are the panel's
 // "Apply" (in memory) and "Save as default" (memory + file).
 
+constexpr unsigned kNrPassDescriptors = 24;
+constexpr unsigned kNrDescriptorFrames = 3;
+
 ID3D12PipelineState*  gEncodePso    = nullptr;
 ID3D12DescriptorHeap* gEncodeHeap   = nullptr;
 ID3D12Resource*       gEncodedColor = nullptr;
@@ -1249,7 +1253,7 @@ bool ensureEncoder(ID3D12Device* device, D3D12_RESOURCE_DESC const& colorDesc) {
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
     heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     // Six descriptors per pass: 0-5 exposure, 6-11 encode, 12-17 composite.
-    heapDesc.NumDescriptors = 24;
+    heapDesc.NumDescriptors = kNrPassDescriptors * kNrDescriptorFrames;
     heapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     if (FAILED(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&gEncodeHeap)))) {
         nrLog(1, "[nr] encode descriptor heap failed");
@@ -1285,7 +1289,7 @@ void writeDescriptors(
     // CPU wrote LAST, so the encode pass silently wrote into the composite's target
     // and gEncodedColor never got refreshed after the first frame.
     D3D12_CPU_DESCRIPTOR_HANDLE handle  = gEncodeHeap->GetCPUDescriptorHandleForHeapStart();
-    handle.ptr                         += static_cast<SIZE_T>(slotBase) * gEncodeStride;
+    handle.ptr                         += static_cast<SIZE_T>(slotBase + kNrPassDescriptors * probe::vv::inject::descriptorSlot()) * gEncodeStride;
     D3D12_SHADER_RESOURCE_VIEW_DESC srv{};
     srv.ViewDimension                = D3D12_SRV_DIMENSION_TEXTURE2D;
     srv.Shader4ComponentMapping      = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1316,7 +1320,7 @@ void writeDescriptors(
 
 D3D12_GPU_DESCRIPTOR_HANDLE gpuTable(int slotBase) {
     D3D12_GPU_DESCRIPTOR_HANDLE handle  = gEncodeHeap->GetGPUDescriptorHandleForHeapStart();
-    handle.ptr                         += static_cast<UINT64>(slotBase) * gEncodeStride;
+    handle.ptr                         += static_cast<UINT64>(slotBase + kNrPassDescriptors * probe::vv::inject::descriptorSlot()) * gEncodeStride;
     return handle;
 }
 

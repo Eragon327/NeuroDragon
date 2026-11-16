@@ -1,0 +1,12 @@
+EXP-0179 已通过：真实显示资源的 barrier 对安全
+
+原始会话：docs/agent/evidence/fg-hudless-tracked-EXP-0179-session.log（replay PASS）
+- 连续三次 tracked-barrier split=45/48，resource 不同但均为真实显示资源，transition listIndex=47（切点45之后），before=0x4 RT、after=0x0 PRESENT。
+- 独立 list 的 RT→COPY_SOURCE→RT 后无 ACCESS_DENIED/device removed，正常退出。
+- 资源身份与状态不再是猜测；GetBuffer 的 COPY_DEST fake buffer 未使用。
+
+EXP-0180 只新增 CopyResource：
+- 沿用 trackedDisplayResource 的全部硬门控，源在切点执行时为 RT。
+- 源 RT→COPY_SOURCE→RT，自有目标 COPY_DEST→ALL_SHADER_RESOURCE，提交、Signal 并发布 Frame。
+- 不调用 GetBuffer，不改变 FG constants/tag 逻辑，不要求本轮 F2 验收（SR inventory 可能仍未建立）。
+- 若崩，剩余变量是 CopyResource/自有目标或发布生命周期；若稳定且 published serial 连续，才进入完整 F2 输入验证。

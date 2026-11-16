@@ -35,9 +35,16 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
     ::neurodragon::fg::probe::installSwapChainHook(this->m_swapChain);
     // F1 bookkeeping: flip counter + the DLSS-G state readback every 600 flips.
     ::neurodragon::fg::streamline::presentFrame();
-    // F2: constants + the three tags, once per frame, before the original flip (and thus
+    // F2: constants + Depth/MV tags, once per frame, before the original flip (and thus
     // before Streamline's proxy Present).
     ::neurodragon::fg::inputs::presentFrame(this->m_swapChain);
+    // EXP-0190: DLSS-G finds the frame's common constants through these two markers;
+    // they must carry the same token and sit around the actual present.
+    ::neurodragon::fg::inputs::presentMarker(true);
     origin();
+    ::neurodragon::fg::inputs::presentMarker(false);
+    // EXP-0192: same order as the working reference integration - the present has
+    // returned, so Reflex can pace the next frame.
+    ::neurodragon::fg::inputs::reflexSleep();
     ::neurodragon::fg::streamline::logDeviceRemovedReason("flip");
 }

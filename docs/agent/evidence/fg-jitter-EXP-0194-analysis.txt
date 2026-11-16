@@ -1,0 +1,33 @@
+EXP-0193 复盘与 EXP-0194 单变量依据
+
+EXP-0190～0193 审查结论
+- EXP-0190：PCL PresentStart/PresentEnd 消除了 missing common constants，presented=2 证明生成路径已打开；保留。
+- EXP-0191：移除 HUDLessColor 后仍闪。该改动没有修复问题，但也说明不能只凭“热栏仍在”排除全部颜色路径问题。
+- EXP-0192：slReflexSleep 已调用，闪烁无变化；pacing 不是唯一根因。其源码注释把“已调用”写成“未调用就必然 unpaced”，超出证据，后续应收敛注释。
+- EXP-0193：sl.log 的 NGXSecureLoadFeature 明确选择游戏根目录 nvngx_dlssg.dll 310.9.16；不是仍在运行 310.2.1。仍闪 ⇒ 运行时版本不是根因。
+- 193 退出崩溃是 0xC0000005、读取 0x78；191/192 是 0xC0000409。不得再合并成“同一既有崩溃”。本轮没有新 CrashLogger dump，只有用户贴的 VS 栈。
+
+排除一个伪线索
+- OptiScaler 对 display-resolution MV 使用 motionVectorsDilated=true，对 low-res MV 使用 false。
+- 193 的 FG 输入为 1920x1026，显示为 2560 宽，属于 low-res MV；当前 false 正确，不做该实验。
+
+EXP-0194 的唯一未知项：SR/FG jitter 输入不一致是否导致生成帧时域不稳
+原始证据
+- 游戏 config.json：sr.jitterSource=1（Engine），fg.enabled=true。
+- VvSr.cpp：Engine 分支把 mv.jitterX/Y 交给 DLSS-SR evaluateSr；FrameSnapshot 保存同一组 jitter。
+- FrameInputs.cpp：buildConstants 无视 resources.sr.jitter，固定写 jitterOffset=(0,0)。
+- RTXPT Sample.cpp:3672/3689：DLSS-G jitterOffset 使用当前帧实际 pixel offset，而非固定 0。
+- 旧注释引用 EXP-0100 的“Zero 稳定”已不符合当前用户明确选择并持久化的 Engine 默认；它不能证明 FG 在当前配置下也应固定 0。
+
+唯一改动
+- constants.jitterOffset 改为 resources.sr.jitter[0]/[1]。
+- 不改 motionVectorsJittered、MV、矩阵、HUDLess tag、PCL、Reflex、运行时和退出路径。
+- 在常量的抽样日志中增加 jitter 值，确认运行时实际传入非零序列，而不是仅凭源码推断。
+
+判据
+- 通过：日志显示 FG 收到逐帧 jitter，presented=2/生成 fence 继续推进，用户报告闪烁明显减轻或消失。
+- 失败：jitter 已落地但仍闪 ⇒ 此不一致不是唯一根因；下一步用同帧矩阵/MV证据查 clipToPrevClip，不再重复颜色、运行时或 sleep。
+- 若画面更差：关闭 FG 即回到原始 Present；恢复构建只需把该行改回 0。
+
+退出崩溃
+- 与 jitter 实验分开。193 栈只证明 nvngx_dlssg 在退出/卸载期解引用空对象；尚未证明具体对象，不在本轮猜测性调用 slShutdown 或卸载 feature。

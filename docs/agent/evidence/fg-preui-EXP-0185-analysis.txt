@@ -1,0 +1,9 @@
+EXP-0184 入口证据与 handle 判据缺陷
+
+有效会话：fg-hudless-entry-EXP-0184-session.log
+- Overlay submit split=0/48，prepare split=0/48，world=1，故断点在 findPreUiSplit，不在传参、queue 或 world 门。
+- 世界尾形连续为 45:d1:r1:hX、46:d24:r1:hX，完全满足 world<=2、UI>=1、相邻、同句柄。
+
+sharedSwapChainTarget 当前只在 `!resource` 时记录 unresolved handle。若 lookupRtv 返回非空但 isSwapChainBuffer=false（SL fake chain/枚举不完整时可能），unresolved 保持0并返回 None，把“同一 RTV 视图”错误否决。
+
+EXP-0185 仅改这一处：每个相同字面 handle 都保留为候选；resolved 仍用于能确认 chain buffer 的情况，但非 resolved 不再抹掉 handle 证据。继续保留 tail、相邻、draw 数和已知 swapchain 门，不恢复固定 N-3。验证 split 恢复、tracked-copy/published 与完整 F2。

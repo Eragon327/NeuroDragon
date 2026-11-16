@@ -200,10 +200,10 @@ bool NeuroDragon::disable() {
     vv::dlss::releaseSr();
     probe::vv::uninstall();
     probe::uninstall();
-    // SL is deliberately NOT shut down: slShutdown() waits for its plugin threads
-    // while the proxy swap chain is still alive, and the client hangs on exit
-    // (2026-10-30). The OS reclaims the DLLs and threads with the process; an
-    // in-process mod reload is not supported.
+    // Release DLSS-G before the NGX instance manager is destroyed during DLL unload.
+    // Unload the feature first so the full SL shutdown does not repeat EXP-0131's
+    // loaded-feature wait; the interposer stays loaded for the proxy chain.
+    fg::streamline::unloadDlssg();
     return true;
 }
 

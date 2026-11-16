@@ -23,6 +23,11 @@ struct FrameStats {
 // replaced.
 [[nodiscard]] void* overlayGameQueue();
 
+// F3 proxy Present: draw the panel once before Streamline evaluates the frame. The
+// native Present hook consumes the marker so it does not draw the same panel twice.
+void renderForFg(void* swapChain);
+[[nodiscard]] bool consumeRenderedForFg();
+
 // ---------------------------------------------------------------------------
 // Hotkeys
 // ---------------------------------------------------------------------------

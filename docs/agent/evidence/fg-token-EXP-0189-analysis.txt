@@ -1,0 +1,8 @@
+EXP-0188 无实际2x的证据与 token 单变量实验
+
+- End 菜单已恢复，FG 开关可执行。
+- eOn transition options=0/reflex=0/accepted=1，但随后每帧仍 `missing common constants - Frame Generation will be disabled for the frame`。
+- DLSS_G state 持续 mode=0、numFramesActuallyPresented=1，英伟达悬浮窗不涨帧与日志一致。
+- 当前 slGetNewFrameToken 使用自维护 presentSequence。F2 在 eOff 下只验证 setConstants/tag 返回0，没有验证 proxy Present 是否实际消费对应 token，因此序号不对应仍是可能原因。
+
+EXP-0189 唯一改动：api.getToken(token, nullptr)，由 SL 内部分配帧号。保留 tokenIndex 日志以观察实际分配值。若仍 missing constants，再查 Constants 结构/内容或消费线程，不回退到逐帧 options。

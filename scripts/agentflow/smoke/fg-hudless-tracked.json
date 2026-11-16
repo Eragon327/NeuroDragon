@@ -1,0 +1,31 @@
+{
+  "name": "fg-hudless-tracked",
+  "tier": "L2",
+  "timeout_s": 240,
+  "dwell_s": 10,
+  "why": "EXP-0179: submit barriers only for the actual display resource selected by engine-owned RT -> PRESENT evidence at or after the pre-UI cut. Never use the GetBuffer COPY_DEST fake buffer, never CopyResource, and never publish a hudless Frame.",
+  "requires": [
+    "\\[fg\\] hudless: tracked-barrier split=\\d+/\\d+ resource=0x[0-9a-f]+ listIndex=\\d+ before=0x4 after=0x0\\b",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*",
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless: tracked-barrier split=\\d+/\\d+ none",
+    "\\[fg\\] hudless: barrier-only split=",
+    "\\[fg\\] hudless[^\\r\\n]*copy path ready",
+    "\\[fg\\] hudless[^\\r\\n]*copy split=\\d+/\\d+",
+    "\\[fg\\] hudless[^\\r\\n]*\\bCopyResource\\b",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+",
+    "0x887A002B",
+    "0x887A0005",
+    "device removed",
+    "cmdQ\\.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] hudless: tracked-barrier split=\\d+/\\d+ resource=0x[0-9a-f]+ listIndex=\\d+ before=0x4 after=0x0\\b": 2,
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*": 2
+  }
+}

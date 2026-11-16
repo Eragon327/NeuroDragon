@@ -2,6 +2,8 @@
 
 #include "neurodragon/fg/streamline-sdk/sl.h"
 #include "neurodragon/fg/streamline-sdk/sl_dlss_g.h"
+#include "neurodragon/fg/streamline-sdk/sl_pcl.h"
+#include "neurodragon/fg/streamline-sdk/sl_reflex.h"
 
 #include "neurodragon/fg/HudlessProbe.h"
 #include "neurodragon/fg/Streamline.h"
@@ -20,6 +22,7 @@
 #undef D3D12_FEATURE_DATA_ARCHITECTURE
 #undef D3D12_RAYTRACING_GEOMETRY_DESC
 
+#include "neurodragon/Config.h"
 #include "neurodragon/probe/VvProbe.h"
 #include "neurodragon/utils/Utils.h"
 #include "neurodragon/vv/VvSr.h"
@@ -181,6 +184,8 @@ struct Api {
     PFun_slSetConstants*     setConstants{};
     PFun_slSetTagForFrame*   setTagForFrame{};
     PFun_slDLSSGGetState*    getState{};
+    PFun_slPCLSetMarker*     pclSetMarker{};
+    PFun_slReflexSleep*      reflexSleep{};
 };
 
 // Non-zero codes are what the failure lines print (the smoke asserts "non-zero code and
@@ -225,16 +230,20 @@ char const* skipReason(Skip skip) {
 }
 
 struct State {
-    std::atomic<unsigned> presentSequence{0};
-    std::atomic<void*>    fence{nullptr};
-    std::atomic<uint64_t> fenceValue{0};
-    bool                  readyLogged{};
+    std::atomic<unsigned>       presentSequence{0};
+    std::atomic<void*>          fence{nullptr};
+    std::atomic<uint64_t>       fenceValue{0};
+    std::atomic<bool>           requestedEnabled{true};
+    std::atomic<sl::FrameToken*> lastToken{nullptr}; ///< this flip's token, for the PCL markers
+    int                         attemptedMode{0}; ///< 0=eOff, 1=eOn; one attempt per transition
+    bool                        readyLogged{};
     // The fields below are written from two threads - the flip/present thread and the
     // resize/disable path (invalidate) - so they live behind gStateMutex. Nothing that
     // can re-enter or block on another module's lock (Streamline calls, SR snapshot,
     // hudless) is ever called with it held.
     std::mutex            stateMutex{};
     bool                  taggedLastFrame{};
+    unsigned              validSequence{};
     // Freshness is "changed since this reader last looked", not "old enough": a frame
     // whose inputs were consumed (even into a failed submission) must not be reused by
     // the next Present.
@@ -266,6 +275,8 @@ Api refreshApi() {
         api.setTagForFrame = static_cast<PFun_slSetTagForFrame*>(functions.setTagForFrame);
     }
     api.getState = static_cast<PFun_slDLSSGGetState*>(functions.dlssgGetState);
+    api.pclSetMarker = static_cast<PFun_slPCLSetMarker*>(functions.pclSetMarker);
+    api.reflexSleep = static_cast<PFun_slReflexSleep*>(functions.reflexSleep);
     return api;
 }
 
@@ -470,7 +481,7 @@ struct Resources {
     hudless::Frame        hud{};
 };
 
-// Everything the three tags need to be truthful: the SR frame's resources and matrices,
+// Everything the input tags need to be truthful: the SR frame's resources and matrices,
 // the hudless copy of the same frame, and the desc/state each of them has right now.
 // `why` carries the specific reason for the log, so a skipped frame names the exact
 // check that failed instead of only its category.
@@ -568,11 +579,9 @@ sl::Resource makeResource(void* native, unsigned width, unsigned height, unsigne
     return resource;
 }
 
-// Every required field is filled from the frame itself. Nothing here is a default that
-// merely makes the call succeed: jitter is 0 because EXP-0100 showed the colour layer is
-// not rasterised with the engine jitter, the motion vectors are the engine's own
-// render-pixel vectors (so mvecScale normalises them by the render size), and depth is
-// standard Z with the near plane decoded from the matrix (depthInverted = eFalse).
+// Every required field is filled from the frame itself. The motion vectors are the
+// engine's own render-pixel vectors (so mvecScale normalises them by the render size),
+// and depth is standard Z with the near plane decoded from the matrix.
 sl::Constants buildConstants(Decoded const& decoded, Resources const& resources) {
     sl::Constants constants{};
     constants.cameraViewToClip = toSl(decoded.cameraViewToClip);
@@ -582,7 +591,7 @@ sl::Constants buildConstants(Decoded const& decoded, Resources const& resources)
     // No lens distortion is applied by the engine at this point of its chain.
     constants.clipToLensClip = toSl(identity());
 
-    constants.jitterOffset = sl::float2(0.0f, 0.0f);
+    constants.jitterOffset = sl::float2(resources.sr.jitter[0], resources.sr.jitter[1]);
     constants.mvecScale    = sl::float2(
         1.0f / static_cast<float>(resources.sr.renderWidth),
         1.0f / static_cast<float>(resources.sr.renderHeight)
@@ -715,12 +724,35 @@ bool logFrame(
     return true;
 }
 
+void updateMode(bool validFrame) {
+    int const desired = g.requestedEnabled.load(std::memory_order_relaxed) ? 1 : 0;
+    if (desired && !validFrame) {
+        return;
+    }
+    {
+        std::lock_guard lock(g.stateMutex);
+        if (g.attemptedMode == desired) {
+            return;
+        }
+        // One attempt per transition, success or failure. A failed option call is never
+        // retried every frame (EXP-0143); it is retried only after another transition.
+        g.attemptedMode = desired;
+    }
+    streamline::setDlssgEnabled(desired != 0);
+}
+
+struct ModeUpdate {
+    bool valid{};
+    ~ModeUpdate() { updateMode(valid); }
+};
+
 } // namespace
 
 void install() {
     // presentSequence is deliberately NOT reset: it is the DLSS-G frame index and has to
     // stay monotonic for the life of the process, including across a mod reload.
-    g.readyLogged     = false;
+    g.readyLogged = false;
+    g.requestedEnabled.store(config::get().fg.enabled, std::memory_order_relaxed);
     {
         std::lock_guard lock(g.stateMutex);
         g.taggedLastFrame = false;
@@ -730,13 +762,23 @@ void install() {
 }
 
 void uninstall() {
+    g.requestedEnabled.store(false, std::memory_order_relaxed);
     // invalidate() already clears the shared flags under gStateMutex.
     invalidate("uninstall");
 }
 
 void presentFrame(void* swapChain) {
+    g.requestedEnabled.store(config::get().fg.enabled, std::memory_order_relaxed);
+    // A failed token this flip must not leave the previous frame's token for the
+    // markers; presentMarker() is called after this function returns.
+    g.lastToken.store(nullptr, std::memory_order_release);
+    ModeUpdate   modeUpdate;
     unsigned const sequence = g.presentSequence.fetch_add(1, std::memory_order_relaxed) + 1;
-    Api const      api      = refreshApi();
+    {
+        std::lock_guard lock(g.stateMutex);
+        g.validSequence = 0;
+    }
+    Api const api = refreshApi();
 
     if (!ready(api)) {
         if (shouldLog(sequence, false, static_cast<unsigned>(Skip::NotReady), 0, 0, false)) {
@@ -781,16 +823,16 @@ void presentFrame(void* swapChain) {
         }
     }
 
-    // One token per Present, with the Present sequence as the frame index: the mapping
-    // "token <-> presented frame" then holds by construction instead of by hope.
-    uint32_t const   index    = static_cast<uint32_t>(sequence);
+    // EXP-0189: let SL own the frame index. The previous explicit Present sequence could
+    // make constants/tags valid calls that the proxy never associates with its Present.
     sl::FrameToken*  token    = nullptr;
-    sl::Result const tokenResult = api.getToken(token, &index);
+    sl::Result const tokenResult = api.getToken(token, nullptr);
     if (tokenResult != sl::Result::eOk || !token) {
         logFrame(sequence, 0, false, Skip::TokenFailed, static_cast<int>(tokenResult), 0, Resources{}, 0);
         return;
     }
     uint32_t const tokenIndex = static_cast<uint32_t>(*token);
+    g.lastToken.store(token, std::memory_order_release);
 
     // DLSS-G's input fence, read once per present. Kept even at eOff: the plugin reports
     // the fence it would use, and the marker must not assume it is 0. A failed query
@@ -862,25 +904,21 @@ void presentFrame(void* swapChain) {
         resources.sr.motionFormat,
         resources.sr.motionState
     );
-    sl::Resource hudless = makeResource(
-        resources.hud.texture,
-        resources.hud.width,
-        resources.hud.height,
-        resources.hud.format,
-        resources.hud.state
-    );
-    sl::ResourceTag tags[3] = {
+    // EXP-0191 removed the HUDLessColor tag: DLSS-G uses the intercepted final
+    // backbuffer (world + UI) as its colour input. The hudless copy is still collected
+    // for frame freshness and resource lifecycle checks.
+    sl::ResourceTag tags[2] = {
         {&depth, sl::kBufferTypeDepth, sl::ResourceLifecycle::eValidUntilPresent},
         {&motion, sl::kBufferTypeMotionVectors, sl::ResourceLifecycle::eValidUntilPresent},
-        {&hudless, sl::kBufferTypeHUDLessColor, sl::ResourceLifecycle::eValidUntilPresent},
     };
     sl::Result tagResult = sl::Result::eErrorMissingInputParameter;
     if (constantsResult == sl::Result::eOk) {
-        tagResult = api.setTagForFrame(*token, viewport, tags, 3, nullptr);
+        tagResult = api.setTagForFrame(*token, viewport, tags, 2, nullptr);
     }
 
     bool const ok = constantsResult == sl::Result::eOk && tagResult == sl::Result::eOk;
     if (ok) {
+        modeUpdate.valid = true;
         // The first three frames the marker really marks are always logged: a run that
         // spends a few seconds in the world must still produce the success lines a smoke
         // assertion needs, not only the 600th frame's.
@@ -888,6 +926,7 @@ void presentFrame(void* swapChain) {
         {
             std::lock_guard lock(g.stateMutex);
             g.taggedLastFrame = true;
+            g.validSequence   = sequence;
             marked            = ++g.validFrames;
         }
         bool const logged = logFrame(
@@ -907,13 +946,15 @@ void presentFrame(void* swapChain) {
         // frame in a run that lasts minutes.
         if (logged) {
             ND_DEBUG(
-                "[fg] inputs: constants frame={} near={:.4f} far={:.2f} fov={:.4f} aspect={:.4f} scaleZ={:.6f} bbi={} reset={} gen={}",
+                "[fg] inputs: constants frame={} near={:.4f} far={:.2f} fov={:.4f} aspect={:.4f} scaleZ={:.6f} jitter={:.4f},{:.4f} bbi={} reset={} gen={}",
                 sequence,
                 decoded.nearPlane,
                 decoded.farPlane,
                 decoded.fov,
                 decoded.aspect,
                 decoded.scaleZ,
+                resources.sr.jitter[0],
+                resources.sr.jitter[1],
                 haveIndex ? backBufferIndex : 0u,
                 resources.sr.reset ? 1 : 0,
                 resources.sr.generation
@@ -932,6 +973,53 @@ void presentFrame(void* swapChain) {
         dlssgStatus
     );
     clearTagsIfMarked(api, *token, sequence);
+}
+
+void presentMarker(bool start) {
+    Api const api = refreshApi();
+    if (!api.pclSetMarker) {
+        return;
+    }
+    sl::FrameToken* const token = g.lastToken.load(std::memory_order_acquire);
+    if (!token) {
+        return;
+    }
+    sl::Result const result =
+        api.pclSetMarker(start ? sl::PCLMarker::ePresentStart : sl::PCLMarker::ePresentEnd, *token);
+    if (result != sl::Result::eOk) {
+        static std::atomic<unsigned> logged{0};
+        if (logged.fetch_add(1, std::memory_order_relaxed) < 3) {
+            utils::logger().warn(
+                "[fg] inputs: PCL {} marker failed result={}",
+                start ? "present-start" : "present-end",
+                static_cast<int>(result)
+            );
+        }
+    }
+}
+
+void reflexSleep() {
+    if (!streamline::dlssgOn()) {
+        return;
+    }
+    Api const api = refreshApi();
+    if (!api.reflexSleep) {
+        return;
+    }
+    sl::FrameToken* const token = g.lastToken.load(std::memory_order_acquire);
+    if (!token) {
+        return;
+    }
+    sl::Result const result = api.reflexSleep(*token);
+    if (result != sl::Result::eOk) {
+        static std::atomic<unsigned> logged{0};
+        if (logged.fetch_add(1, std::memory_order_relaxed) < 3) {
+            utils::logger().warn(
+                "[fg] inputs: Reflex sleep failed result={}",
+                static_cast<int>(result)
+            );
+        }
+    }
 }
 
 void awaitInputsFence(void* queue) {
@@ -971,7 +1059,26 @@ void awaitInputsFence(void* queue) {
     }
 }
 
+void setEnabled(bool enabled) { g.requestedEnabled.store(enabled, std::memory_order_relaxed); }
+
+bool enabled() { return g.requestedEnabled.load(std::memory_order_relaxed); }
+
+bool frameReady() {
+    std::lock_guard lock(g.stateMutex);
+    return g.requestedEnabled.load(std::memory_order_relaxed) && streamline::dlssgOn()
+        && g.validSequence == g.presentSequence.load(std::memory_order_relaxed);
+}
+
 void invalidate(char const* why) {
+    bool disable = false;
+    {
+        std::lock_guard lock(g.stateMutex);
+        disable          = g.attemptedMode != 0;
+        g.attemptedMode  = 0;
+    }
+    if (disable) {
+        streamline::setDlssgEnabled(false);
+    }
     g.fence.store(nullptr, std::memory_order_release);
     g.fenceValue.store(0, std::memory_order_release);
     // Whatever is published right now belongs to the old graph; the next frame's record
@@ -992,6 +1099,7 @@ void invalidate(char const* why) {
         }
         g.lastTaaSerial   = taaSerial;
         g.taggedLastFrame = false;
+        g.validSequence   = 0;
     }
     if (why) {
         ND_DEBUG("[fg] inputs: invalidated ({})", why);

@@ -45,14 +45,8 @@
     }
   ],
   "out_of_scope": [
-    "MFG/多倍帧",
-    "动态倍率",
-    "FSR-FG/XeFG",
-    "RT 线",
-    "驱动内核补丁/.trpk/INT8",
-    "NR/SR 功能改动",
-    "发布与打包"
+    "MFG/多倍帧|动态倍率|FSR-FG/XeFG|RT 线|驱动内核补丁/.trpk/INT8|除用户明确要求的 jitter 持久化与默认 Engine 外的 NR/SR 功能改动|发布与打包"
   ],
   "stage": 6,
-  "updated": "2026-10-30T20:58:38.328+08:00"
+  "updated": "2026-11-15T19:47:14.281+08:00"
 }

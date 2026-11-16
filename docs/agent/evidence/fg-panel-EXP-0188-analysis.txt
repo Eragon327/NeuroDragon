@@ -1,0 +1,7 @@
+EXP-0187 原生链接口仍未恢复菜单
+
+- slGetNativeInterface 成功（日志有 native swapchain <- proxy），但在原始 proxy Present 之前仍无可用 backbuffer，End 在 F11 前已打不开。
+- 提前绘制不是单纯 fake/native 类型问题，而是该时机根本没有可用于 D3D11On12 的呈现目标。
+
+EXP-0188 安全回退：proxy detour 不再调用 noteSwapChain/onPresent/renderForFg；原生 Overlay Present 恢复“noteSwapChain/onPresent/render”各一次。frameReady 仅用于 interval=0，其他 FG/F2 路径不变。
+目标顺序：先恢复 End 菜单，再验证 FG。面板暂不要求进入生成帧，不能把菜单可用性当作交换条件。

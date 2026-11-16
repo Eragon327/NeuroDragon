@@ -1,0 +1,14 @@
+EXP-0176 barrier-only 失败证据与 EXP-0177 设计
+
+原始日志：docs/agent/evidence/fg-hudless-barrier-EXP-0176-full.log
+- 21:04:11.008 首个世界帧记录 device objects ready (barrier-only, 3 slots) 与 barrier-only split=45/49，backbuffer=0x160094c29f0。
+- 21:04:11.015 出现 RSYNC Unrequested drop、Present 0x887A0005，随后 removed reason=0x887a002b（ACCESS_DENIED）。
+- 本轮没有 CopyResource、hudless target 或 Frame 发布；因此“barrier 对单独安全”被证伪。
+- 仍未分离：StateBefore=RENDER_TARGET 是否猜错、第三方 transition 是否被 SL 禁止、拆分 ExecuteCommandLists 是否改变 SL 记账。
+
+EXP-0177 只读观测，不恢复任何自定义 GPU 动作：
+1. HudlessProbe 回 ProbeOnly，prepare 返回 0，不建 list、不 transition、不 CopyResource、不 Signal。
+2. 在既有 D3D12Core command-list vtable 钩子上增加 slot 26 ResourceBarrier detour。slot 26 由 SDK 继承顺序与已验证的 12/13/46 锚点交叉确认。
+3. detour 只复制 POD 字段到固定环并原样转发；不 AddRef/GetDesc/logger/分配/修改参数。记录 resource/list/type/flags/subresource/StateBefore/StateAfter/seq，读时按本提交 lists 过滤。
+4. ProbeOnly 输出 barrier calls/records 与当前 GetBuffer 指针匹配的最新真实状态，并标明是否来自世界写屏 list。calls=0 与没有匹配记录必须区分。
+5. 只有本轮安全取得真实状态后，才决定空 list 或按真实状态 copy；不得直接恢复 FullCopy。

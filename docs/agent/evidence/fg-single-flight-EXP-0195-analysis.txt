@@ -1,0 +1,40 @@
+EXP-0194 结果与 EXP-0195 单变量依据
+
+用户原话
+- “还是闪，还是崩溃。”
+- “其实一直说的闪都是这个问题，掉超分了。”
+
+录屏证据（_local/scratch/minecraft_20261116_190016）
+- 全部 2977 帧中筛出 6 帧：126、2112、2113、2651、2681、2682。
+- 原图均为 2560x1440；世界只有 1920x1080，贴左上，右侧/底部约 25% 为黑。
+- 总览与 CSV 已归档为 fg-jitter-EXP-0194-black-borders.jpg/.csv，六张原图在 fg-jitter-EXP-0194-frames/。
+- 因而此前的“闪”是偶发掉超分，不是 jitter 导致的普通插值软化。
+
+EXP-0194 已证伪
+- constants 日志出现实际非零 jitter（6642=-0.3125,-0.3519；6643=0.1875,-0.0185；6644=-0.0625,0.3148）。
+- 18:59:50 FG eOn 成功，fence 从 7799/8399/8999/9599 持续推进。
+- 改动已落地但黑边仍发生 ⇒ jitter 不一致不是根因，不再调整 jitter/MV/颜色输入。
+
+新增日志证据
+- 19:00:18 SL waitCPUFence 500ms timeout，之后反复 interpolation enabled→disabled→enabled。
+- 19:00:51.49 的黑边双帧与 19:00:51.650 flush、19:00:51.694 disabled、19:00:51.820 enabled 相邻。
+- 退出 dump：nvngx_dlssg base 0x7ff82e0e0000，RIP 0x7ff82e0f6c50 ⇒ RVA 0x16c50。
+  R15=0、RAX=8，指令 mov rcx,[r15+rax*8+0x08] ⇒ 读取 0x48。这是空表/数组指针，不是 jitter 问题。
+
+根因代码证据：bb6121d 合并回退
+- EXP-0157 已记录：多槽只扩 allocator/list，VvSr/NR 描述符仍共享，导致同样的 75% 黑边。
+- EXP-0158/0159/0161 已验证：单槽在飞 + 录制前 fence 等待消除该问题。
+- acb27a6 的 VvInject.cpp：Injector 只有一个 allocator/list/fence/gpuEvent；fenceIdle() 在录制前 SetEventOnCompletion + WaitForSingleObject(50ms)。
+- 当前 main 的 bb6121d 合并说明明确列出 VvInject.cpp 冲突；冲突结果重新采用 kSlots=3 和 slotIdle() 非等待轮询。
+- 当前 VvSr.cpp 每帧在同一个 gPipeline.heap 重写 kSlotEngineColor/Depth/MV、Color/Depth/MV UAV，并在只有一个元素的 rtvHeap 重写 arg10 RTV。
+- 因此前一命令列表尚未执行完成时，后一帧可覆盖其描述符；黑边与 EXP-0157 同形态。不是推测新算法，而是恢复已验证的同步边界。
+
+EXP-0195 唯一改动
+- 恢复 acb27a6 的单在飞 Injector 与 fenceIdle()；保留 main 后来的每 600 次注入计数、queue retire、Signal 故障恢复与 heartbeat。
+- 不改 FG jitter（保留 194 的有效快照语义）、MV、矩阵、HUDLess tag、DLSS-G options 或运行时。
+- 更新 VvInject.h 中“三槽”的过期契约注释。
+
+验证
+- L1：vv-stall-recover，证明丢失 Signal 后仍可 rebuild/recovered。
+- L2：75% 世界内移动/静止，确认不再出现 1920x1080 左上黑边帧；presented/fence 继续。
+- 退出崩溃尚未被证明与描述符竞争同源；本轮只观察，不预先宣称修复。

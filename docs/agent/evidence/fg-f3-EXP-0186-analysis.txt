@@ -1,0 +1,9 @@
+FG-F2 已验收后的 F3 实施依据
+
+- EXP-0185：preUiSplit、TrackedFullCopy 与完整输入标记均通过，有效帧 const=0/tag=0、DLSSG status=0，SR 正常。
+- DLSSGSetOptions 文档允许运行时 on/off；EXP-0143 禁止的是逐帧重复 SetOptions，因此 F3 只在状态切换时调用一次。
+- D3D 参考实现由 Streamline proxy Present 自动执行生成，不需要另调 slEvaluateFeature。
+- F3 固定2x：numFramesToGenerate=1、Reflex eLowLatency、frameLimitUs=0。输入缺失/菜单/加载/Resize/tag失败时清 tag并直通，不沿用旧输入。
+- 面板顺序需要 proxy Present：在转发给 SL 前绘制一次面板，原生 Overlay Present 跳过该次重复绘制；F2 的 flip 前 constants/tag 保持不变。
+
+EXP-0186 验收：实际呈现2帧、真实帧推进、HUD/面板无新增异常；关闭后恢复原始Present；无设备错误或退出挂死。

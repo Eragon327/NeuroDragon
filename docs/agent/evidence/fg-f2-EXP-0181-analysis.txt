@@ -1,0 +1,8 @@
+完整 F2 前置证据（EXP-0179/0180）
+
+- EXP-0178：GetBuffer 是 COPY_DEST fake buffer；真实显示资源另有指针且切点执行时为 RENDER_TARGET。
+- EXP-0179：对真实资源执行 RT→COPY_SOURCE→RT 连续三次，无设备移除。
+- EXP-0180：同一 tracked 资源的 CopyResource 与 Frame published 连续成功，replay PASS，无设备移除。
+- 因而 EXP-0151 的 hudless 阻断已消除：不再使用 GetBuffer，资源与状态来自引擎自身 barrier 记录。
+
+EXP-0181 不改代码，复用当前 TrackedFullCopy，回到 U-fg-frame-input-tagging 的完整判据：新客户端 F11 一次建立渲染资源清单后进世界，要求至少3个有效 inputs frame（const=0/tag=0）、TAA constants 有效、SR eval/arg10 持续成功、DLSSG status=0，且无设备错误。若失败，按首个持续 skip 或首个非零 SL 返回码定位，不再调整 copy。

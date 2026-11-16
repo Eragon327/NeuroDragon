@@ -1,0 +1,11 @@
+EXP-0172 退出 hang 的证据与修复假设
+
+原始证据：docs/agent/evidence/ui-jitter-EXP-0172-hang.dmp（sha256=23d3a9e93fab016ba6b94c24672fca64725d686fb3725705b65c4b6dacd7c10b）与 ui-jitter-EXP-0172.log。
+
+等待链：
+1. 禁用线程 12460：LeviLamina ModManagerRegistry::disableMod -> ModManager::disable -> Mod::onDisable -> NeuroDragon::disable -> vv::sr::release，停在 gRecordMutex（VvSr.cpp:1465）。
+2. 渲染线程 13644：recordInternal -> dlss::evaluateSr -> ngxEvaluateDetour -> watchResource -> utils::logger，随后进入 ll::mod::NativeMod::getByHandle / ModManagerRegistry::getManager，与 Streamline 日志线程 4500 等待同一个临界区 0x19a089d30f0。
+3. Streamline 日志线程 4500：fg::streamline::logMessage -> utils::logger，进入同一个 NativeMod::getByHandle / ModManagerRegistry::getManager 路径并等待同一临界区。
+4. ModManagerRegistry 的 disable 路径持有注册表锁并等待在飞渲染；渲染与 SL 日志要取得同一注册表锁才能查 logger，形成环。
+
+修复假设（EXP-0173）：utils::logger() 在首次正常调用时缓存 logger 指针，之后不再调用 NativeMod::current()。模组已被 probe PIN，禁用后仍有日志需求，缓存指针符合既有生命周期。这样渲染与 SL 日志不再依赖 ModManagerRegistry 锁，禁用线程可以等到 evaluate 完成并正常释放。

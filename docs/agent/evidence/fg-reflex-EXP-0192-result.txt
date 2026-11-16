@@ -1,0 +1,27 @@
+EXP-0192 结果：Reflex sleep 未改变闪烁；退出崩溃复现
+
+用户原话
+"已完成，还是闪，而且崩溃了"
+
+日志（fg-reflex-EXP-0192-session.log，18:19:43–18:22:14）
+- slReflexSleep 已解析成功：session 内没有 "Reflex slReflexSleep unavailable"，
+  也没有 "Reflex sleep failed"，说明每帧调用返回 eOk。
+- FG 切换：18:20:54 eOn、18:21:19 eOff、18:21:59 eOn、18:22:12 eOff（退出）。
+  18:21:08 frame=10800 采样 presented=2，生成仍在工作。
+- 闪烁无变化 ⇒ Reflex sleep / 帧节奏不是根因（至少不是唯一根因）。
+
+退出崩溃（fg-exit-crash-EXP-0192-trace.log / .dmp）
+- 18:22:16.01 0xC0000409 fail-fast，栈仍在 nvngx_dlssg.dll → sl.dlss_g.dll →
+  sl.common.dll，发生在 18:22:12 禁用模组之后约 4 秒的进程退出/卸载阶段。
+- 与 2026-11-15 23:57 和 2026-11-15 21:04 的崩溃同形态；21:04 那次 FG 并未开启。
+  ⇒ 这是 DLSS-G/SL 卸载期的既有时好时坏问题，本轮 sleep 调用不在栈上。
+
+下一步线索：DLSS-G 运行时版本
+- 本 session 日志明确写着：
+  `nvngx_dlssg.dll version: 310.2.1`
+  `dlfg.cpp:1067 checkModelVersion: FG1 DLL has been detected: forcing flip-metering off.`
+- 310.2.1 是 DLSS 3 早期的 FG1 运行时（2023）；本机 `_local/scratch/fg_sl_probe/runtime/`
+  已有一份 310.9.16（与 SR 的 310.9.1 同代，2025+），文件 7.5 MB。
+- FG1 在 SL 里会走 legacy 路径（flip-metering off），且旧运行时对
+  render-res mvec/depth + display-res color 的处理与新版本不同；新版本对
+  插值质量和 UI 处理都有改进。先换运行时，不改代码。

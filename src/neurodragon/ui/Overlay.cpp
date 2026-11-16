@@ -1748,24 +1748,30 @@ void logSwapChainChange(IDXGISwapChain* swapChain) {
     );
 }
 
+thread_local bool gRenderedForFg = false;
+
 HRESULT __stdcall presentHook(IDXGISwapChain* swapChain, UINT interval, UINT flags) {
     logSwapChainChange(swapChain);
-    probe::vv::noteSwapChain(swapChain);
-    probe::vv::onPresent();
     // The panel draws on the back buffer here. F2's frame inputs are NOT submitted here:
     // this Present is Streamline's proxy, i.e. already inside SL's present path, which is
     // too late for slSetConstants/slSetTagForFrame. fg::inputs::presentFrame() runs at
     // the engine's $flip entry, before the proxy (fg/Flip.cpp).
-    render(swapChain);
+    if (!consumeRenderedForFg()) {
+        probe::vv::noteSwapChain(swapChain);
+        probe::vv::onPresent();
+        render(swapChain);
+    }
     return gOriginalPresent(swapChain, interval, flags);
 }
 
 HRESULT __stdcall
 present1Hook(IDXGISwapChain1* swapChain, UINT interval, UINT flags, DXGI_PRESENT_PARAMETERS const* parameters) {
     // Same order as presentHook: the chain's size/buffers feed the hudless cut.
-    probe::vv::noteSwapChain(swapChain);
-    probe::vv::onPresent();
-    render(static_cast<IDXGISwapChain*>(swapChain));
+    if (!consumeRenderedForFg()) {
+        probe::vv::noteSwapChain(swapChain);
+        probe::vv::onPresent();
+        render(static_cast<IDXGISwapChain*>(swapChain));
+    }
     return gOriginalPresent1(swapChain, interval, flags, parameters);
 }
 
@@ -1891,6 +1897,10 @@ HRESULT __stdcall resizeBuffers1Hook(
 }
 
 void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID3D12CommandList* const* lists) {
+    if (gShuttingDown.load(std::memory_order_acquire)) {
+        gOriginalExecuteCommandLists(queue, count, lists);
+        return;
+    }
     if (!gGameQueue && queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
         std::lock_guard lock(gResourceMutex);
         if (!gGameQueue) {
@@ -1899,7 +1909,11 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
         }
     }
     probe::vv::setGameQueue(queue);
-    probe::vv::onExecuteCommandLists(reinterpret_cast<void* const*>(lists), count);
+    unsigned const preUiSplit = probe::vv::onExecuteCommandLists(reinterpret_cast<void* const*>(lists), count);
+    static std::atomic<unsigned> fgEntryLogs{0};
+    if (count > 8 && probe::vv::worldLoaded() && fgEntryLogs.fetch_add(1, std::memory_order_relaxed) < 20) {
+        ND_DEBUG("[fg] submit split={}/{} world=1", preUiSplit, count);
+    }
 
     // Product injection (docs/specs/vv.md §35.2): cut the engine's single per-frame
     // submission at the list that wrote this frame's arg10 into "prefix + our DLSS
@@ -1920,7 +1934,7 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
     // F0-b: the hudless copy is a *second* cut (after the display write, before UI), so
     // it is recorded independently of the arg10 injection. Both lists can be submitted
     // in one frame: [0..a) inject [a..b) copy [b..end). It declines outside a world.
-    unsigned const copySplit = fg::hudless::prepare(queue, count, reinterpret_cast<void* const*>(lists));
+    unsigned const copySplit = fg::hudless::prepare(queue, count, reinterpret_cast<void* const*>(lists), preUiSplit);
 
     if ((injectSplit || copySplit) && injectSplit <= count && copySplit <= count) {
         ID3D12CommandList* const injectList =
@@ -1975,6 +1989,17 @@ void __stdcall executeCommandListsHook(ID3D12CommandQueue* queue, UINT count, ID
 // ---------------------------------------------------------------------------
 
 void* overlayGameQueue() { return gGameQueue; }
+
+void renderForFg(void* swapChain) {
+    render(static_cast<IDXGISwapChain*>(swapChain));
+    gRenderedForFg = true;
+}
+
+bool consumeRenderedForFg() {
+    bool const rendered = gRenderedForFg;
+    gRenderedForFg      = false;
+    return rendered;
+}
 
 Overlay& Overlay::getInstance() {
     static Overlay instance;
@@ -2047,7 +2072,8 @@ void Overlay::uninstall() {
     ClipCursor(nullptr);
     cancelKeyCapture();
 
-    removeHook(gExecuteCommandListsTarget);
+    // Keep the command-queue hook and trampoline alive: a render thread may still be
+    // inside it. gShuttingDown turns every later submission into a pass-through.
     removeHook(gResizeBuffers1Target);
     removeHook(gPresent1Target);
     removeHook(gResizeBuffersTarget);

@@ -1,0 +1,12 @@
+EXP-0177 失败后的只读增强设计
+
+原始会话：docs/agent/evidence/fg-hudless-state-EXP-0177-session.log
+- 客户端正常，slot26 detour 在三帧分别记录 calls=78699/78742/78785、records=126979/127051/127123。
+- 当前 GetBuffer 指针的 barrier-state 三次均为 none，因此 EXP-0177 已按验收失败关闭，不能凭用户无异常判通过。
+- 静态复核 seqlock/ticket 与 newest-first 读取未发现记录撕裂问题；当前 API 同时要求“指定资源 + 必须属于本提交 lists”，过窄，无法回答资源身份与跨提交记录。
+
+EXP-0178 仍保持 ProbeOnly、零自定义 GPU 动作：
+1. barrierTrace 允许 resource=null 通配资源，也允许 lists=null 取消提交过滤；默认旧调用语义保持。
+2. 在本提交内枚举显示尺寸且同格式的 barrier 资源，打印 resource/list/before/after/sameAsGetBuffer，直接观察引擎真实写屏资源。
+3. 额外查询 GetBuffer 指针在不限 lists 时的最近记录，区分“记录在其他提交”与“ hooked 实现中没有该资源”。
+4. 不执行任何自定义 list/barrier/copy/Signal，不在 detour 热路径 GetDesc；desc 只在 ProbeOnly 前3帧读取侧、对当前提交资源评估。

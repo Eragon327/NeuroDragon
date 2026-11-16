@@ -1,0 +1,29 @@
+{
+  "name": "fg-hudless-barrier",
+  "tier": "L2",
+  "timeout_s": 240,
+  "dwell_s": 10,
+  "why": "EXP-0176 single-variable step after the EXP-0171 control: hudless::prepare still recognises the pre-UI cut, but instead of returning 0 it submits one list of its own that only records back buffer RENDER_TARGET->COPY_SOURCE->RENDER_TARGET, so the one GPU-visible action added against the control is the barrier pair - no CopyResource, no hudless target, no published Frame. The barrier-only line is the world anchor (prepare declines outside a world) and must appear at least twice; the regex asks for the split, a size field and the format field separately on the same line, and the size is matched as a WxH pair with at least two digits on each side so a 0x... pointer cannot stand in for it. `inputs: ... skip=` twice plus `DLSS_G state ... result=0 mode=0` show presents and tokens still advancing while no hudless frame exists: because nothing is published in this round the inputs must keep skipping, and the skip reason is left generic. Deliberately not required: const=/tag= success, any evidence that a hudless frame was published or tagged, the F11 RTV/DSV inventory and any [vvsr] sr pick line, because the question is only whether the barrier pair alone is safe. Forbidden: the EXP-0151 copy path markers (copy path ready / copy split=), the word CopyResource on a hudless line, a valid inputs frame (size=WxH) - which cannot exist without a published copy - and the device-removal aftermath (0x887A002B, 0x887A0005, device removed, cmdQ.pacer, crash/panic/assert lines). The current probe line reads `[fg] hudless: probe-only split=45/48 buffer=0x1be08c00 index=1 size=2560x1440 fmt=28 swapchain=1`, so the barrier round is expected to read the same shape with barrier-only as the word. Trigger is a human step (launch, enter a world, stand still); a run that never enters a world reads ABORTED because the barrier line is world-only. dwell_s keeps reading 10 s past the first match so the absence assertions see frames after the first barrier submission instead of the frames before it.",
+  "requires": [
+    "\\[fg\\] hudless: barrier-only split=\\d+/\\d+(?=[^\\r\\n]*\\b\\d{2,5}x\\d{2,5}\\b)(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*",
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless.*copy path ready",
+    "\\[fg\\] hudless.*copy split=\\d+/\\d+",
+    "\\[fg\\] hudless[^\\r\\n]*\\bCopyResource\\b",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+",
+    "0x887A002B",
+    "0x887A0005",
+    "device removed",
+    "cmdQ\\.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] hudless: barrier-only split=\\d+/\\d+(?=[^\\r\\n]*\\b\\d{2,5}x\\d{2,5}\\b)(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)": 2,
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*": 2
+  }
+}

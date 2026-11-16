@@ -1,0 +1,29 @@
+EXP-0193 依据：DLSS-G 运行时是 FG1 310.2.1
+
+EXP-0192 证据回顾（fg-reflex-EXP-0192-session.log）
+- slReflexSleep 已成功调用（无 unavailable/failed），闪烁不变 → 节奏不是根因。
+- 退出崩溃仍是 nvngx_dlssg 卸载期 0xC0000409，与 23:57/21:04 同形态。
+- 日志明确：
+  `NVXSecureLoadFeature:1621 ... nvngx_dlssg.dll version: 310.2.1`
+  `dlfg.cpp:1067 checkModelVersion: FG1 DLL has been detected: forcing flip-metering off.`
+
+为什么先换运行时
+- 310.2.1 是 DLSS 3 早期（2023）的 FG1 运行时。Streamline 2.14.1 的 sl.dlss_g
+  对它走 legacy 路径（flip-metering off），新运行时的插值与资源处理不同。
+- 本机已有 310.9.16（与 SR 的 310.9.1 同代，2025+）：
+  D:\Documents\NeuroDragon\_local\scratch\fg_sl_probe\runtime\nvngx_dlssg.dll
+  sha256 cadee1aa6db3907babdc3285da2aebc4553d92b89c38ba3eae8abd8bba1bea72
+  大小 7,506,544。
+- NGX 的搜索顺序包含应用程序目录；游戏根目录已有 nvngx_dlss.dll（SR 310.9.1），
+  证明该目录会被优先加载。把 310.9.16 放到游戏根目录即可换运行时，无需改代码。
+
+EXP-0193 唯一改动
+- 复制 nvngx_dlssg.dll 310.9.16 到 E:\LeviLauncher\versions\1.26.51.01\（游戏根目录），
+  不修改 NeuroDragon.dll、不改 tag/常量/颜色。
+- 可逆：实验后若无效，删除该 DLL 即回到驱动 310.2.1。
+
+判据
+- 日志出现 `nvngx_dlssg.dll version: 310.9.16`（或 310.9.x），且闪烁明显减轻/消失、
+  presented=2 保持 → 旧运行时是根因，后续决定如何正式分发该 DLL。
+- 仍闪 → 运行时版本不是根因，下一轮查 clipToPrevClip/mvec 重投影。
+- 设备错误/崩溃在运行中 → 版本不兼容，立即删除该 DLL 并回退。

@@ -28,6 +28,12 @@ namespace neurodragon::probe::vv {
 // replacement path suppresses just the original TAAU draw; all other engine
 // callbacks and command lists continue unchanged.
 //
+// EXP-0177 added one more read-only detour on the same command-list vtable:
+// ResourceBarrier (slot 26), which records the engine's own transitions into a fixed
+// ring so the hudless probe can report the real state of a resource instead of
+// guessing one (see BarrierTrace at the end of this header). It forwards every
+// argument unchanged and is the only thing in this file that observes a barrier.
+//
 // The two addresses are file offsets established offline from the shipped
 // executable (no PDB): the strings "InputFinalColor" / "InputBufferMotionVectors"
 // / "InputTAAHistory" have exactly one RIP-relative reference each and both land
@@ -39,8 +45,9 @@ void uninstall();
 [[nodiscard]] bool isInstalled();
 
 // Called from the overlay's ExecuteCommandLists detour (ui/Overlay.cpp): one call
-// per submission, with the list array and its size.
-void onExecuteCommandLists(void* const* lists, unsigned listCount);
+// per submission, with the list array and its size. Returns this submission's pre-UI
+// split directly so a concurrent short submission cannot clear it before the consumer.
+[[nodiscard]] unsigned onExecuteCommandLists(void* const* lists, unsigned listCount);
 
 // Called from the overlay's Present detours: one call per presented frame. Applies
 // the product switch (vv::sr::syncConfig) and keeps the per-frame counters.
@@ -191,5 +198,50 @@ void               setDrawSuppress(bool armed);
 [[nodiscard]] bool drawSuppressArmed();
 [[nodiscard]] unsigned drawSuppressSkips();
 void               noteInjectionResult(bool ok);
+
+// ---------------------------------------------------------------------------
+// EXP-0177: what the engine itself does to a resource (read-only)
+// ---------------------------------------------------------------------------
+//
+// The hudless path needs one fact before it may touch a back buffer again: which
+// transition the engine really recorded for it. That is `ID3D12GraphicsCommandList::
+// ResourceBarrier`, vtable slot 26 (SDK declaration order: Close 9, DrawInstanced 12,
+// DrawIndexedInstanced 13, SetPipelineState 25, ResourceBarrier 26, SetDescriptorHeaps
+// 28, OMSetRenderTargets 46).
+//
+// The detour is observation only: it copies six POD fields out of each transition
+// barrier and forwards the call with the caller's own `count`/`barriers` untouched.
+// No AddRef, no GetDesc, no logger, no allocation on the render thread - the write
+// side is a fixed ring plus one atomic ticket, and nothing in it can change engine
+// state.
+//
+// Recording is compiled in only for TEST builds (src/neurodragon/Test.h) and is
+// switched off by uninstall(); the accessors stay callable so a release build needs
+// no #ifdef at the call site and simply reads empty.
+struct BarrierTrace {
+    void*         resource{};    ///< barrier.Transition.pResource
+    void*         list{};        ///< the list that recorded it
+    unsigned      type{};        ///< D3D12_RESOURCE_BARRIER_TYPE (0 = transition)
+    unsigned      flags{};       ///< D3D12_RESOURCE_BARRIER_FLAGS
+    unsigned      subresource{}; ///< D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES (0xFFFFFFFF) or an index
+    unsigned      before{};      ///< D3D12_RESOURCE_STATES, the engine's own claim
+    unsigned      after{};
+    std::uint64_t seq{}; ///< recording ticket, strictly increasing
+};
+
+struct BarrierStats {
+    std::uint64_t calls{};   ///< detour invocations, whether or not anything was recorded
+    std::uint64_t records{}; ///< transition entries written into the ring
+    std::uint64_t ticket{};  ///< the ticket the newest record took, +1 (0 = nothing recorded)
+};
+
+// Newest first, at most `max` entries. Normally both filters apply: `resource` names
+// the resource and `lists` limits records to the submission being forwarded. EXP-0178
+// also permits a null resource wildcard (all resources) and null lists (across
+// submissions) so a miss can be attributed to resource identity or submission scope.
+// Zero matches remains distinct from calls == 0, which means the hook never ran.
+[[nodiscard]] unsigned
+barrierTrace(void const* resource, void* const* lists, unsigned count, BarrierTrace* out, unsigned max);
+[[nodiscard]] BarrierStats barrierStats();
 
 } // namespace neurodragon::probe::vv

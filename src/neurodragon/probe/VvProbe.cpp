@@ -815,12 +815,139 @@ void drawIndexedInstancedDetour(void* list, unsigned indexCount, unsigned instan
 #endif
 }
 
+// ---------------------------------------------------------------------------
+// EXP-0177: ResourceBarrier observation (vtable slot 26)
+// ---------------------------------------------------------------------------
+//
+// One `D3D12_RESOURCE_BARRIER` is 32 bytes on x64 and the transition arm starts at
+// +8: { Type @0, Flags @4, pResource @8, Subresource @16, StateBefore @20,
+// StateAfter @24 }. The mirror below is exactly that layout, so the detour can read
+// the fields with one guarded memcpy per barrier instead of touching a D3D12 type
+// (this translation unit deliberately stays free of the SDK's headers).
+//
+// The hot path is: bump a counter, copy 32-byte PODs into a preallocated slot, store
+// a ticket. No logger, no AddRef, no GetDesc, no allocation and no argument change -
+// the engine's own recording is what the caller sees either way.
+
+#ifdef TEST
+struct BarrierMirror {
+    unsigned type;
+    unsigned flags;
+    void*    resource;
+    unsigned subresource;
+    unsigned before;
+    unsigned after;
+    unsigned reserved;
+};
+static_assert(sizeof(BarrierMirror) == 32, "D3D12_RESOURCE_BARRIER is 32 bytes on x64");
+// The offsets the transition arm is specified with (SDK: Type, Flags, then the
+// transition union). Spelled out so a compiler that pads differently fails the build
+// instead of reading a pointer out of a state enum.
+static_assert(offsetof(BarrierMirror, resource) == 8, "pResource is at +8");
+static_assert(offsetof(BarrierMirror, subresource) == 16, "Subresource is at +16");
+static_assert(offsetof(BarrierMirror, before) == 20, "StateBefore is at +20");
+static_assert(offsetof(BarrierMirror, after) == 24, "StateAfter is at +24");
+
+// 64, as asked: a larger sparse-barrier array is not what a per-frame submission
+// carries, and refusing it costs nothing (the call is still forwarded).
+constexpr unsigned kBarrierMaxPerCall = 64;
+// Power of two so the ticket maps with a mask. The ring is written by the render
+// thread(s) and read by the thread that prepares the same submission, and 1024
+// entries survive a whole frame's submissions with room to spare.
+constexpr unsigned kBarrierSlots = 1024;
+
+struct BarrierEntry {
+    void*    resource;
+    void*    list;
+    unsigned type;
+    unsigned flags;
+    unsigned subresource;
+    unsigned before;
+    unsigned after;
+};
+
+struct BarrierSlot {
+    // Seqlock: 0 = never written, odd = being written, even = committed ticket.
+    // A reader that sees an even value twice around its copy, with the ticket it
+    // expected, got a whole record; anything else is skipped, so a torn record can
+    // never be published as this frame's state.
+    std::atomic<std::uint64_t> seq;
+    BarrierEntry               entry;
+};
+
+BarrierSlot                gBarrierRing[kBarrierSlots]{};
+std::atomic<std::uint64_t> gBarrierCalls{0};
+std::atomic<std::uint64_t> gBarrierRecords{0};
+std::atomic<std::uint64_t> gBarrierTicket{0};
+std::atomic<bool>          gBarrierRecording{true};
+#endif
+
+// Signature of slot 26: (this, NumBarriers, pBarriers). Forwarded verbatim.
+using ResourceBarrierFn = void (*)(void* list, unsigned count, void const* barriers);
+ResourceBarrierFn gOriginalResourceBarrier{};
+
+#ifdef TEST
+void publishBarrier(void* list, BarrierMirror const& barrier) {
+    std::uint64_t const ticket = gBarrierTicket.fetch_add(1, std::memory_order_relaxed);
+    BarrierSlot&        slot   = gBarrierRing[ticket & (kBarrierSlots - 1)];
+    slot.seq.store(ticket * 2 + 1, std::memory_order_relaxed);
+    slot.entry = BarrierEntry{
+        barrier.resource,
+        list,
+        barrier.type,
+        barrier.flags,
+        barrier.subresource,
+        barrier.before,
+        barrier.after,
+    };
+    slot.seq.store(ticket * 2 + 2, std::memory_order_release);
+    gBarrierRecords.fetch_add(1, std::memory_order_relaxed);
+}
+
+void recordBarriers(void* list, unsigned count, void const* barriers) {
+    // Aliasing/UAV barriers do not carry the transition arm, so they are seen by the
+    // call counter only and never published: the reader only asks about state.
+    if (!gBarrierRecording.load(std::memory_order_relaxed) || !list || !barriers || !count
+        || count > kBarrierMaxPerCall) {
+        return;
+    }
+    if (!readable(barriers, static_cast<std::size_t>(count) * sizeof(BarrierMirror))) {
+        return;
+    }
+    for (unsigned i = 0; i < count; ++i) {
+        BarrierMirror barrier{};
+        std::memcpy(&barrier, static_cast<unsigned char const*>(barriers) + i * sizeof(BarrierMirror), sizeof(barrier));
+        if (barrier.type != 0) {
+            continue;
+        }
+        publishBarrier(list, barrier);
+    }
+}
+#endif
+
+void resourceBarrierDetour(void* list, unsigned count, void const* barriers) {
+#ifdef TEST
+    gBarrierCalls.fetch_add(1, std::memory_order_relaxed);
+    recordBarriers(list, count, barriers);
+#endif
+    // A hook whose original never resolved must not be called at all: an address in
+    // gOriginalResourceBarrier is only ever written by MinHook, so a failed hook means
+    // this detour cannot have been installed - the guard is the belt to that braces.
+    if (gOriginalResourceBarrier) {
+        gOriginalResourceBarrier(list, count, barriers);
+    }
+}
+
+// 47 slots: the deepest slot this file reads is OMSetRenderTargets (46). Reading past
+// the end of a vtable is a fault, not a miss, so the bound has to cover every index.
+constexpr unsigned kCommandListSlots = 47;
+
 void hookCommandList(void* list) {
     if (!list || gListHooked.exchange(true, std::memory_order_acq_rel)) {
         return;
     }
     auto* const* vtbl = *reinterpret_cast<void* const* const*>(list);
-    if (!vtbl || !readable(vtbl, 29 * sizeof(void*))) {
+    if (!vtbl || !readable(vtbl, kCommandListSlots * sizeof(void*))) {
         utils::logger().warn("[vv] command list vtable unreadable; no pass boundaries");
         return;
     }
@@ -833,14 +960,16 @@ void hookCommandList(void* list) {
         return;
     }
     // Identity, not behaviour: which vtable the engine's lists actually use, and what
-    // its slots point at. Pure reads, only logged.
+    // its slots point at. Pure reads, only logged. Slot 26 is the one EXP-0177 needs to
+    // see named here: it has to be D3D12Core like its neighbours before it is hooked.
     ND_DEBUG(
-        "[vv] engine list vtable={:#x} slot9={} slot12={} slot13={} slot25={} slot28={}",
+        "[vv] engine list vtable={:#x} slot9={} slot12={} slot13={} slot25={} slot26={} slot28={}",
         reinterpret_cast<std::uintptr_t>(vtbl),
         moduleOf(reinterpret_cast<std::uint64_t>(vtbl[9])),
         moduleOf(reinterpret_cast<std::uint64_t>(vtbl[12])),
         moduleOf(reinterpret_cast<std::uint64_t>(vtbl[13])),
         moduleOf(reinterpret_cast<std::uint64_t>(vtbl[25])),
+        moduleOf(reinterpret_cast<std::uint64_t>(vtbl[26])),
         moduleOf(reinterpret_cast<std::uint64_t>(vtbl[28]))
     );
 
@@ -877,6 +1006,33 @@ void hookCommandList(void* list) {
     hookAt(12, reinterpret_cast<void*>(&drawInstancedDetour), reinterpret_cast<void**>(&gOriginalDrawInstanced), "DrawInstanced");
     hookAt(13, reinterpret_cast<void*>(&drawIndexedInstancedDetour), reinterpret_cast<void**>(&gOriginalDrawIndexed), "DrawIndexedInstanced");
     hookAt(46, reinterpret_cast<void*>(&omSetRtvDetour), reinterpret_cast<void**>(&gOriginalOmSetRtv), "OMSetRenderTargets");
+    // EXP-0177: ResourceBarrier is slot 26, between SetPipelineState (25) and
+    // SetDescriptorHeaps (28) in the SDK's declaration order - the same order that made
+    // 12/13/46 work. The neighbours are the argument: a slot read one off would land on
+    // a method with a different signature (25 takes a single pointer, 28 takes two), so
+    // the address must be a D3D12Core one *and* distinct from every slot already hooked
+    // or verified. hookAt is used unchanged; a refused hook only warns, and the
+    // recording then stays empty instead of forwarding anything wrong.
+    {
+        auto* const target   = vtbl[26];
+        bool const  distinct = target && target != vtbl[9] && target != vtbl[12] && target != vtbl[13]
+                            && target != vtbl[25] && target != vtbl[28] && target != vtbl[46];
+        bool const  inCore =
+            target && moduleOf(reinterpret_cast<std::uint64_t>(target)).find("D3D12Core") != std::string::npos;
+        if (!distinct || !inCore) {
+            utils::logger().warn(
+                "[vv] command list slot 26 (ResourceBarrier) rejected ({}); barriers are not recorded",
+                inCore ? "shared with another slot" : "not D3D12Core"
+            );
+        } else {
+            hookAt(
+                26,
+                reinterpret_cast<void*>(&resourceBarrierDetour),
+                reinterpret_cast<void**>(&gOriginalResourceBarrier),
+                "ResourceBarrier"
+            );
+        }
+    }
 }
 
 long WINAPI createDeviceDetour(void* adapter, int minFeatureLevel, void const* riid, void** device) {
@@ -1668,6 +1824,12 @@ bool install() {
 
 void uninstall() {
     uninstallSetTextureHook();
+#ifdef TEST
+    // EXP-0177: stop writing barrier records. The ring holds raw pointers only, so
+    // nothing has to be released - the reader just stops seeing fresh tickets and the
+    // detour (which stays installed) turns into a pure forward.
+    gBarrierRecording.store(false, std::memory_order_relaxed);
+#endif
     // EXP-0030: drop the cached renderer context so a reload cannot read through it.
     uninstallTextureTable();
     // The injection created objects on the engine's device, so it has to let go of
@@ -1754,7 +1916,7 @@ ListSig const* sigAt(unsigned listCount, void* const* lists, unsigned index) {
 enum class TargetMatch : unsigned {
     None     = 0,
     Resolved = 1, ///< a shared RTV resolves (now) to one of the chain's back buffers
-    Handle   = 2, ///< same literal RTV handle in both lists, resolution unavailable
+    Handle   = 2, ///< same literal RTV handle in both lists, not positively chain-resolved
 };
 
 // Both lists must write the same swap-chain RTV. There are two layers of evidence, and
@@ -1764,9 +1926,9 @@ enum class TargetMatch : unsigned {
 // found no cut at all.
 //   * Resolved: a shared handle resolves to a chain buffer, or both sides resolve to the
 //     same resource through different views.
-//   * Handle:   the two lists name the same literal RTV handle and it cannot be resolved.
-//     Together with adjacency, the tail window and the draw counts that is the bind
-//     evidence for "these two lists write the same target".
+//   * Handle:   the two lists name the same literal RTV handle, whether or not its
+//     resource is positively admitted as a chain buffer. Together with adjacency, the
+//     tail window and draw counts, that is bind evidence for "these lists write one target".
 // Kept to the tail: resolving a handle means a cache lookup plus, when it misses, a
 // GetBuffer/Release round trip on the chain.
 TargetMatch sharedSwapChainTarget(ListSig const* left, ListSig const* right, std::uintptr_t* handleOut) {
@@ -1789,7 +1951,10 @@ TargetMatch sharedSwapChainTarget(ListSig const* left, ListSig const* right, std
                 *handleOut = handle;
                 return TargetMatch::Resolved;
             }
-            if (!resource && !unresolved) {
+            // The same literal view is evidence of the same target even when its
+            // resource cannot be positively admitted by isSwapChainBuffer (SL's fake
+            // chain makes that inventory incomplete). Resolved is an upgrade, not a veto.
+            if (!unresolved) {
                 unresolved = handle;
             }
         }
@@ -1899,7 +2064,8 @@ unsigned findPreUiSplit(void* const* lists, unsigned listCount) {
 
 } // namespace
 
-void onExecuteCommandLists(void* const* lists, unsigned listCount) {
+unsigned onExecuteCommandLists(void* const* lists, unsigned listCount) {
+    unsigned split = 0;
     auto const index = gSubmits.fetch_add(1, std::memory_order_relaxed) + 1;
     gSubmittedLists.fetch_add(listCount, std::memory_order_relaxed);
     // Which thread submits and how big each submission is, for the first frames
@@ -2014,8 +2180,10 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
             }
 #endif
             // F2: the hudless cut is read from this submission's shape, before the table
-            // below is reused by the next one.
-            gPreUiSplit.store(findPreUiSplit(lists, listCount), std::memory_order_release);
+            // below is reused by the next one. Return it directly as well: the global is
+            // diagnostic only and may be cleared by a concurrent short submission.
+            split = findPreUiSplit(lists, listCount);
+            gPreUiSplit.store(split, std::memory_order_release);
             // The per-frame list table is rebuilt from scratch on every engine
             // submission: lists are pooled by the engine, and a stale entry would make
             // the writer proof match a list that is not in this frame.
@@ -2037,6 +2205,7 @@ void onExecuteCommandLists(void* const* lists, unsigned listCount) {
                std::memory_order_relaxed
            )) {
     }
+    return split;
 }
 
 void onPresent() {
@@ -2388,6 +2557,85 @@ TaauDrawStats taauDrawStats() {
         gDrawHits.load(std::memory_order_relaxed),
         gDrawForwarded.load(std::memory_order_relaxed),
     };
+}
+
+BarrierStats barrierStats() {
+#ifdef TEST
+    // `ticket` is the next ticket, i.e. one past the newest record: the reader below
+    // starts there and walks down, and a caller can tell "nothing recorded" (0) from
+    // "records exist".
+    return BarrierStats{
+        gBarrierCalls.load(std::memory_order_relaxed),
+        gBarrierRecords.load(std::memory_order_relaxed),
+        gBarrierTicket.load(std::memory_order_acquire),
+    };
+#else
+    // A release build records nothing (src/neurodragon/Test.h): the counters stay 0 so
+    // the same call site can run everywhere without an #ifdef.
+    return BarrierStats{};
+#endif
+}
+
+unsigned barrierTrace(void const* resource, void* const* lists, unsigned count, BarrierTrace* out, unsigned max) {
+#ifdef TEST
+    if (!out || !max || (!lists && count)) {
+        return 0;
+    }
+    std::uint64_t const next = gBarrierTicket.load(std::memory_order_acquire);
+    // Tickets 0..next-1 have been handed out. Only the newest kBarrierSlots of them
+    // can still be in the ring - the older ones were overwritten by construction.
+    std::uint64_t const oldest = next > kBarrierSlots ? next - kBarrierSlots : 0;
+    unsigned            found  = 0;
+    for (std::uint64_t ticket = next; ticket > oldest && found < max;) {
+        --ticket;
+        BarrierSlot const& slot = gBarrierRing[ticket & (kBarrierSlots - 1)];
+        // Seqlock: an odd value is a record being written right now, and a committed
+        // value other than this ticket's means the slot already holds a newer record.
+        // Both are skipped - the reader never waits and never publishes a torn entry.
+        std::uint64_t const committed = slot.seq.load(std::memory_order_acquire);
+        if (!committed || (committed & 1) || committed != ticket * 2 + 2) {
+            continue;
+        }
+        BarrierEntry entry;
+        std::memcpy(&entry, &slot.entry, sizeof(entry));
+        if (slot.seq.load(std::memory_order_acquire) != committed) {
+            continue; // rewritten under us; the copy may be a mix of two records
+        }
+        if (resource && entry.resource != const_cast<void*>(resource)) {
+            continue;
+        }
+        // EXP-0178: a null resource wildcard enumerates the submission's resources;
+        // null lists instead look across submissions. The original two-filter form is
+        // unchanged, so a miss can now be attributed instead of merely staying silent.
+        if (lists && count) {
+            bool submitted = false;
+            for (unsigned i = 0; i < count && !submitted; ++i) {
+                submitted = lists[i] == entry.list;
+            }
+            if (!submitted) {
+                continue;
+            }
+        }
+        out[found++] = BarrierTrace{
+            entry.resource,
+            entry.list,
+            entry.type,
+            entry.flags,
+            entry.subresource,
+            entry.before,
+            entry.after,
+            ticket,
+        };
+    }
+    return found;
+#else
+    (void)resource;
+    (void)lists;
+    (void)count;
+    (void)out;
+    (void)max;
+    return 0;
+#endif
 }
 
 } // namespace neurodragon::probe::vv

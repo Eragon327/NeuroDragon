@@ -98,7 +98,10 @@
         },
         "fg": {
             "unavailable": "尚未接入",
-            "description": "后续将在这里提供帧生成开关、倍率和实时状态。当前版本仅预留界面位置，不会创建或修改 FG 功能。"
+            "enable": "启用 DLSS 帧生成",
+            "enableTip": "点“应用”切换固定 2x DLSS-G；菜单、加载、Resize 和输入无效时自动直通。",
+            "fixed2x": "固定 2x · DLSS-G + Reflex 低延迟",
+            "description": "使用已验证的 VV 深度、运动矢量、UI 前 hudless 颜色与 TAA 快照；关闭后立即恢复原始呈现。"
         },
         "stats": {
             "frames": "帧统计",
@@ -198,7 +201,7 @@
             "clean": "未修改",
             "dirty": "有未应用修改",
             "unsaved": "有未保存更改",
-            "dirtyAndUnsaved": "有未应用修改 · 有未保存更改",
+            "dirtyAndUnsaved": "未应用 · 未保存",
             "applied": "已应用",
             "appliedUnsaved": "已应用 · 未保存",
             "saved": "已保存为默认",

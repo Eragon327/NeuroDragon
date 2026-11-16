@@ -1,0 +1,26 @@
+EXP-0192 依据：Reflex sleep 缺失
+
+EXP-0191 结果（原始证据见 fg-colorinput-EXP-0191-session.log 与用户视频）
+- 去掉 HUDLessColor、让 DLSS-G 用最终 backbuffer 作颜色输入后，用户仍报告闪烁，FG off 不闪。
+- 视频分析：静止段相邻帧几乎相同（无清晰/模糊交替）；移动段生成帧略软/拖影；
+  热栏/UI 每帧都在，没有整帧缺 UI。⇒ 颜色输入与 UI tag 不是根因。
+- 退出崩溃：nvngx_dlssg 卸载期 0xC0000409，21:04 已有同形态，属既有问题。
+
+Streamline 契约（2.14.16 文档）
+- ProgrammingGuideReflex.md：Reflex 必须调用 slReflexSleep；"slReflexSleep and
+  slPCLSetMarker must always be called even when Reflex Low Latency mode is Off"。
+- ProgrammingGuideDLSS_G.md §8：DLSS-G 要求 sl.reflex 集成，present markers 的
+  帧号必须与 common constants 匹配（EXP-0190 已修）。
+- 本实现只调了 slReflexSetOptions 和 PCL present 标记，从未调用 slReflexSleep。
+
+本机参考实现
+- OptiScaler/hooks/FG_Hooks.cpp:1395-1399：FG 激活、Present 返回后先
+  slPCLSetMarker(ePresentEnd, token)，再 slReflexSleep(token)。
+- 我们的 presentMarker(false) 已在 origin()（引擎 flip → proxy Present）返回后调用，
+  ePresentEnd 的位置与参考一致；缺的只是紧随其后的 sleep。
+
+EXP-0192 唯一改动
+- 在 origin() 返回、presentMarker(false) 之后，仅当 FG 激活（dlssgOn()）且本帧 token
+  有效时调用 slReflexSleep(token)。不动颜色输入、tag、options、常量。
+- 判据：闪烁明显减轻/消失且 presented=2 保持 → 节奏是主因；若完全无变化 →
+  下一轮查 clipToPrevClip/mvec 重投影。

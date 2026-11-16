@@ -1,0 +1,41 @@
+EXP-0191 结果：换颜色输入后仍闪（附视频分析）
+
+用户原话
+"已完成，还是闪，FG关了好像不闪了。我录了视频"C:\Users\Eragon\Videos\NVIDIA\Minecraft\Minecraft 2026.11.15 - 23.56.18.01.mp4"，退出游戏崩溃"
+
+证据
+- session log：fg-colorinput-EXP-0191-session.log（23:55:40–23:57:17）
+- 视频：C:\Users\Eragon\Videos\NVIDIA\Minecraft\Minecraft 2026.11.15 - 23.56.18.01.mp4
+  sha256 bce7b92fb0880448d08b80a95c959e86b96de1ccc058d93451d7c3212c860c7b
+  49.43 s, 60 fps, 2560x1440（桌面捕获，含任务栏）
+- 关键帧：fg-flicker-EXP-0191-real.jpg / -generated.jpg
+- 退出崩溃：fg-exit-crash-EXP-0191-trace.log / .dmp
+
+日志
+- 23:56:04 eOn、23:56:30 eOff、23:56:48 eOn、23:57:15 eOff；eOn 内
+  23:56:18 与 23:57:01 采样 presented=2；无 missing common constants；无 PCL 失败。
+- 视频 t=30–49.4 是第二次 eOn（真实帧率约 25–35 fps）；t=12–30 是 eOff 对照。
+- 视频里静止段（相邻帧灰度差 0.00–0.05，持续数百毫秒）没有清晰/模糊交替；
+  移动段相邻帧差异 2–6。热栏在每一帧都存在且清晰，没有 UI 整帧缺失。
+- 生成帧在移动时比真帧略软/轻微拖影；静止时与真帧几乎一致。
+  ⇒ 颜色输入（hudless vs 最终 backbuffer）不是根因；缺 UI 也不是根因。
+  问题在“帧间运动数据/节奏”这一侧。
+- 本机参考：OptiScaler 在 FG 激活时于 Present 返回后调用
+  slPCLSetMarker(ePresentEnd) 然后 slReflexSleep(token)
+  （OptiScaler/hooks/FG_Hooks.cpp:1395-1399）；本实现只调了 ePresentEnd，
+  从未调用 slReflexSleep。Streamline 文档要求 Reflex LowLatency 下每帧 sleep。
+
+退出崩溃
+- 0xC0000409（fail-fast），栈：ucrtbase → VCRUNTIME → nvngx_dlssg.dll →
+  sl.dlss_g.dll → sl.common.dll → Minecraft.exe，发生在 23:57:15 禁用模组之后
+  的进程退出/卸载阶段（23:57:18.792），不是渲染线程。
+- 同形态崩溃在 21:04（crash/trace_2026-11-15_21-04-12.log）也出现过，
+  说明是 DLSS-G/SL 卸载期的既有时好时坏问题，不是 EXP-0191 的颜色改动引入。
+
+EXP-0192 假设（单变量）
+- 闪烁来自 FG 的帧节奏：Reflex LowLatency 已开启但没有 slReflexSleep，
+  2x 输出与显示刷新之间没有平滑 pacing。
+- 唯一改动：在 ePresentEnd 之后（origin() 返回后）调用 slReflexSleep(token)，
+  仅在 FG 激活时；其余不动。
+- 判据：闪烁明显减轻/消失，presented=2 保持；若完全无变化，则节奏不是根因，
+  下一轮查 clipToPrevClip/mvec 与生成帧重投影。

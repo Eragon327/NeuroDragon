@@ -1,0 +1,27 @@
+EXP-0199 结果与 EXP-0200 描述符隔离依据
+
+退出结果
+- 21:59:53.923 unload result=0；21:59:54.668 shutdown result=0；没有新Overlay/nvngx dump。
+- 命令队列hook保留并在gShuttingDown直通有效，EXP-0199按退出目标pass。
+
+新增性能证据
+- 用户：开FG非常卡；关FG后冻结和实时画面快速交替。
+- 21:59:08.754 frame time avg=111.37ms，220/600 presents为long。
+- 日志有 previous injection is still on the GPU 和 TAAU draw ran。
+- 单在飞只解决描述符覆写，不能满足FG帧节奏。
+
+为什么不能只恢复旧三槽
+- EXP-0157/0194 已证明旧三槽会产生1920x1080左上黑边。
+- 根因是CPU在后录帧覆写GPU尚未执行的描述符，而不是allocator/list数量不足。
+
+EXP-0200 的隔离设计
+- VvInject：3个allocator/list/fence槽，recordArg10传入当前槽号。
+- VvSr：一个39项CBV_SRV_UAV堆（3×13）和一个3项RTV堆；cpuAt/gpuAt/arg10Rtv按当前槽偏移。
+- NR：一个72项CBV_SRV_UAV堆（3×24）；writeDescriptors/gpuTable按当前槽偏移。
+- 当前槽由VvInject发布，NR在同一record路径读取；其他路径默认槽0。
+- 保留199退出hook直通、198先卸载再slShutdown、194有效jitter快照。
+
+判据
+- FG开关均不再出现冻结/实时交替或1920x1080左上黑边；FG段不再111ms级卡顿。
+- 每600注入skipped增量接近0；FG fence持续推进；退出result均0。
+- 若仍黑边，下一步检查共享纹理/运行时对象，不再只扩堆或槽位。

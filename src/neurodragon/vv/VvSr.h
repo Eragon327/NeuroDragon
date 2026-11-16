@@ -61,7 +61,7 @@ struct Diag {
 /// engine's arg10 with an RTV (no tonemap, no encode, no back-buffer copy).
 /// The resource is left in RENDER_TARGET; a missing DLSS evaluation fails instead
 /// of falling back to anything.
-[[nodiscard]] bool recordArg10(void* commandList, void* arg10);
+[[nodiscard]] bool recordArg10(void* commandList, void* arg10, unsigned descriptorSlot);
 
 /// Clears the DLSS temporal history over the next recorded frames. The panel's "reset"
 /// button uses it; the pipeline also resets by itself after a world or size change.
@@ -148,15 +148,16 @@ struct FrameSnapshot {
     float    current[16]{};   ///< TAAContext +0x200, camera-relative view-projection
     float    previous[16]{};  ///< TAAContext +0x240, the same for the previous frame
     float    camera[6]{};     ///< TAAContext +0x280: current xyz, then previous xyz
-    float    jitter[2]{};     ///< +0x1e4; recorded only, the FG constants pin jitter to 0
+    float    jitter[2]{};     ///< effective Jitter.Offset passed to DLSS-SR for this frame
 };
 
 /// Copy of the last published snapshot. False until a frame recorded successfully.
 [[nodiscard]] bool frameSnapshot(FrameSnapshot* out);
 
-/// What Jitter.Offset DLSS is told. Zero by default (EXP-0098: the engine value makes
-/// the picture wobble, zero is stable, and the value is already in DLSS's space -
-/// docs/research/2026-10-29-taau-jitter-dlss-contract.md).
+/// What Jitter.Offset DLSS is told. Engine is the persisted default requested by the
+/// user on 2026-11-15. Zero remains the previously verified stable value (EXP-0098:
+/// the engine value can wobble, zero is stable, and the value is already in DLSS's
+/// space - docs/research/2026-10-29-taau-jitter-dlss-contract.md).
 ///
 /// The other three are that document's §7 discrimination, and the panel offers all
 /// four so the A/B can be re-run without a rebuild:
@@ -167,7 +168,7 @@ struct FrameSnapshot {
 ///   Previous j(n-1)   - stable => the context value runs one frame ahead of the render
 ///
 /// Only applied inside a world (outside it the panorama is not rendered with the world
-/// jitter, EXP-0073); a value outside this enum is folded to Zero on the way in.
+/// jitter, EXP-0073); a value outside this enum is folded to Engine on the way in.
 enum class JitterSource : int { Zero = 0, Engine = 1, Negated = 2, Previous = 3 };
 
 void setJitterSource(JitterSource source);

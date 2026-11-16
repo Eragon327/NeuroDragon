@@ -1,0 +1,16 @@
+EXP-0151 证据复核（原始日志与 minidump）
+
+原始证据：
+- docs/agent/evidence/fg-f2-world-EXP-0151-full.log（sha256=632c4ebfe4aa5b09e842b7a1e069d13cd83f69acb7b7f05962b58a606561a5fa）
+- docs/agent/evidence/fg-f2-world-EXP-0151.dmp（sha256=e81b93d9e176f4eddee3372ce390e9050ec4647dfc86682cc45f7efed4c82a4d）
+
+已确认：
+1. 2026-11-12 与 2026-11-15 两次会话都在首个世界帧第一次 hudless copy 后数毫秒出现 0x887A002B，随后 Present 0x887A0005；该 HRESULT 是 ACCESS_DENIED，不是 DEVICE_HUNG。
+2. 两次均尚未发布 SR FrameSnapshot，也没有执行 SL constants/tag，因此矩阵与 tag 不在故障路径上。
+3. minidump 的 AV 是设备移除约一秒后的二次故障：游戏重建 swapchain 时 device=null，SL 错误通知路径经 sl.common/sl.dlss_g/sl.interposer 后在 d3d11.dll 写违例。dump 不包含首次设备移除的 GPU 现场。
+4. F1 在同一代理链上长期注入与拆分提交稳定；本轮新增的 GPU 可见动作是 hudless 对 fake backbuffer 的 barrier + CopyResource。
+5. agent2 已合入 main（merge bb6121d），但没有 FG 文件改动，不能解释或修复该故障。
+
+尚未证实：copy 是设备移除的必要条件；backbuffer 的真实 StateBefore 是否为 RENDER_TARGET；extra submission 与资源状态各自的作用。
+
+下一步单变量对照（EXP-0171）：保留 pre-UI 切点识别以及 GetBuffer/index/desc 诊断，但禁止 hudless barrier、CopyResource 和 copy-list 提交。新客户端进世界，若不出现 ACCESS_DENIED，则确认 copy 路径是必要条件；若仍崩溃，则 copy 无罪，转查世界切换与代理链。不得在同一轮恢复 copy。

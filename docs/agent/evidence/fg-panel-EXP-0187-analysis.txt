@@ -1,0 +1,10 @@
+EXP-0186 End 菜单回归证据与修复方向
+
+用户原话：end菜单打不开了，按了end之后操作已经被拦截，但是gui和鼠标光标没出现。
+
+原始日志：fg-f3-fixed2x-EXP-0186-full.log
+- proxy detour 在原始 Present 前执行 ui::renderForFg(self)。
+- 随后反复出现 `[sl] dlss_gEntry.cpp:438[slHookGetBuffer] Non-existent buffer was requested`。
+- 说明 proxy 尚未提供可绘制的 fake backbuffer，Overlay 的 drawOnWrappedBackBuffer 失败；输入捕获正常，但 GUI 没有生成。
+
+EXP-0187：解析 slGetNativeInterface，在 proxy detour 里将原生 swapchain 传给 renderForFg；noteSwapChain/onPresent 仍只执行一次，原生 Overlay Present 消费标记避免重复。先验证 End 菜单与光标恢复，再重测固定2x。

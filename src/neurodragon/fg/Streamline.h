@@ -22,6 +22,10 @@ bool upgradeFactory(void** factory);
 /// reaches Streamline; slSetD3DDevice still receives the native device.
 bool upgradeDevice(void** device);
 
+/// Return the native swap-chain behind an SL proxy, or the input on failure. Used by
+/// the F3 proxy Present path because the fake buffer is not ready for panel drawing yet.
+void* nativeInterface(void* proxy);
+
 /// Give Streamline the native device captured by D3D12CreateDevice.
 bool ensureDevice(void* device);
 
@@ -44,6 +48,8 @@ struct FrameFunctions {
     void* setConstants{};   ///< PFun_slSetConstants*
     void* setTagForFrame{}; ///< PFun_slSetTagForFrame*
     void* dlssgGetState{};  ///< PFun_slDLSSGGetState*
+    void* pclSetMarker{};   ///< PFun_slPCLSetMarker*
+    void* reflexSleep{};    ///< PFun_slReflexSleep*
 };
 
 /// True once the three per-frame exports exist. They arrive in two steps - the core
@@ -52,14 +58,25 @@ struct FrameFunctions {
 /// input fence is then simply not tracked.
 [[nodiscard]] bool frameFunctions(FrameFunctions* out);
 
-/// True when the DLSS-G options were accepted with `eOff` exactly once (never repeated).
+/// True when the last accepted DLSS-G mode is `eOff`.
 [[nodiscard]] bool dlssgOff();
+
+/// True only when DLSS-G and Reflex were both accepted with fixed-2x generation on.
+[[nodiscard]] bool dlssgOn();
+
+/// F3: change DLSS-G and Reflex modes only when the requested state differs from the
+/// last accepted one. This never repeats options frame-by-frame (EXP-0143).
+bool setDlssgEnabled(bool enabled);
 
 /// Log a non-S_OK removed reason for the native game device.
 void logDeviceRemovedReason(char const* when);
 
 /// Fallback for the swap-chain path: the queue's device via ID3D12CommandQueue::GetDevice.
 bool ensureDeviceFromQueue(void* queue);
+
+/// Unload DLSS-G, then shut down Streamline while its NGX instance manager is still
+/// alive. The interposer stays loaded for the proxy swapchain's remaining lifetime.
+bool unloadDlssg();
 
 /// slShutdown + unload. Processes that are exiting do not need it (the project keeps
 /// GPU-side objects for the process lifetime on purpose).

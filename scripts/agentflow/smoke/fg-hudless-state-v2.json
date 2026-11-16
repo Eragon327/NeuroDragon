@@ -1,0 +1,33 @@
+{
+  "name": "fg-hudless-state-v2",
+  "tier": "L2",
+  "timeout_s": 240,
+  "dwell_s": 10,
+  "why": "EXP-0178: keep ProbeOnly and zero custom GPU actions, but widen the read-only barrier query to display-sized resources and cross-submission matches. A barrier-display or barrier-state-any line with real before/after states is required; calls>0 alone is not success.",
+  "requires": [
+    "\\[fg\\] hudless: probe-only (?=[^\\r\\n]*\\bsplit=\\d+/\\d+)(?=[^\\r\\n]*\\bbuffer=0x[0-9a-f]+)(?=[^\\r\\n]*\\bindex=\\d+)(?=[^\\r\\n]*\\b\\d{2,5}x\\d{2,5}\\b)(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)",
+    "\\[fg\\] hudless: barrier-stats (?=[^\\r\\n]*\\bcalls=[1-9]\\d*\\b)(?=[^\\r\\n]*\\brecords=[1-9]\\d*\\b)",
+    "\\[fg\\] hudless: barrier-(?:display|state-any) (?=[^\\r\\n]*\\b(?:resource|buffer)=0x[0-9a-f]+)(?=[^\\r\\n]*\\blist=0x[0-9a-f]+)(?=[^\\r\\n]*\\bbefore=(?:0x[0-9a-f]+|\\d+|[a-z_][a-z0-9_]*)\\b)(?=[^\\r\\n]*\\bafter=(?:0x[0-9a-f]+|\\d+|[a-z_][a-z0-9_]*)\\b)",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*",
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless[^\\r\\n]*copy path ready",
+    "\\[fg\\] hudless[^\\r\\n]*copy split=\\d+/\\d+",
+    "\\[fg\\] hudless[^\\r\\n]*\\bCopyResource\\b",
+    "barrier-only",
+    "device objects ready",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+",
+    "0x887A002B",
+    "0x887A0005",
+    "device removed",
+    "cmdQ\\.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] hudless: probe-only (?=[^\\r\\n]*\\bsplit=\\d+/\\d+)(?=[^\\r\\n]*\\bbuffer=0x[0-9a-f]+)(?=[^\\r\\n]*\\bindex=\\d+)(?=[^\\r\\n]*\\b\\d{2,5}x\\d{2,5}\\b)(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)": 2,
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*": 2
+  }
+}

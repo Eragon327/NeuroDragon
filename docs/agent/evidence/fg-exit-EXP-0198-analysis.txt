@@ -1,0 +1,17 @@
+EXP-0197 结果与 EXP-0198 单变量依据
+
+已确认
+- 19:38:01.669 我们的 DLSS_G unload begin / result=0 均出现，未在 API 内挂起。
+- SL 同时记录 pluginManager.cpp:512 Feature 'kFeatureDLSS_G' unloaded。
+- 19:38:03 仍生成 dump，RIP 仍为 nvngx_dlssg+0x16c50，R15=0、RAX=8、读取0x48。
+- 导出与反汇编已证明该点是 NVSDK_NGX_D3D12_ReleaseFeature → DLSSGInstanceManager::ReleaseInstance。
+
+判定
+- slSetFeatureLoaded(false) 成功，但只改变 feature enabled 状态，没有在 NGX 管理器仍有效时完成最终的插件/实例销毁。
+- 不能继续重复 feature unload，也不能把它当成已完成的 ReleaseFeature。
+
+EXP-0198 的新前提与唯一改动
+- 旧 EXP-0131 的 slShutdown 挂起发生在 DLSS-G 仍加载、代理链存活时。
+- 现在已有新增证据：可以先成功卸载 DLSS-G 且立即返回，再进入完整 slShutdown。
+- 在 unloadDlssg() 的 result==eOk 分支中追加 g.shutdown() 的 begin/result 日志；保留 g.module，不调用 FreeLibrary。
+- 若 g.shutdown 挂起，日志会停在 shutdown begin；若仍崩，比较是否还是同一 ReleaseInstance 空表。除此调用外不改任何代码。

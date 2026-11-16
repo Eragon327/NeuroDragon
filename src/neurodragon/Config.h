@@ -127,6 +127,12 @@ struct Sr {
     // choice (the parameter object is reused across feature builds).
     int preset = 0;
 
+    // VV temporal jitter source: vv::sr::JitterSource (0 = zero, 1 = engine,
+    // 2 = negated, 3 = previous). Persisted like every other panel setting.
+    // Engine is the default requested by the user on 2026-11-15; EXP-0100 still
+    // identifies Zero as the previously verified stable value.
+    int jitterSource = 1;
+
     // RCAS sharpening of the frame the engine's DLSS produced (docs/K §2.2 ①,
     // docs/J §5: the DLSS "Sharpness" parameter is dead, so this is a real pass).
     // Runs after DLSS and before the engine's colour grading/UI, in a Reinhard-
@@ -138,6 +144,12 @@ struct Sr {
     // RCAS delta by 0..4x (see sr/SrSharpening.h), not only the lobe: the first
     // version scaled the lobe like TRP and measured 0.38/255 mean change.
     float sharpness = 0.672f;
+};
+
+struct Fg {
+    // DLSS-G fixed 2x. Changes apply to the running renderer; saving still requires
+    // the panel's "Save as default". Invalid or missing frame inputs pass through.
+    bool enabled = true;
 };
 
 struct Config;
@@ -166,9 +178,10 @@ struct Ui {
 };
 
 struct Config {
-    int version = 6;
+    int version = 8;
     Nr  nr{};
     Sr  sr{};
+    Fg  fg{};
     Ui  ui{};
 };
 

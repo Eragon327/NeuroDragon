@@ -1,0 +1,30 @@
+EXP-0196 退出崩溃静态定位与 EXP-0197 单变量依据
+
+实机边界
+- EXP-0196：用户进存档无闪动异常，单在飞画面修复通过；退出仍崩。
+- 19:27:48.886 DLSS_G eOff；19:27:49.934 SR disabled；19:27:51 nvngx_dlssg 0xC0000005 读取 0x78。
+
+导出与指令证据（nvngx_dlssg 310.9.16）
+- 导出表 ordinal 28 = NVSDK_NGX_D3D12_ReleaseFeature，RVA 0x13bb0；与崩溃栈第二帧一致。
+- 0x13ca3 调 DLSSGInstanceManager 单例，0x13cae 调 RVA 0x16b20（ReleaseInstance）。
+- 0x16c49 从 manager+0x60 读取实例表到 R15；0x16c50 执行 mov rcx,[r15+rax*8+0x08]。
+- dump 中 R15=0，RAX=14 ⇒ 读取 0x78。静态实例表已为空/已析构，而 SL 仍在调用 ReleaseFeature。
+- 相邻字符串明确为 DLSSGInstanceManager::ReleaseInstance / Invalid handle。
+- 原始反汇编：fg-exit-EXP-0197-manager.asm、release-feature.asm、release-instance.asm、strings.txt。
+
+结论
+- 不是 SR、jitter 或单在飞问题；是 DLSS-G feature 延迟到进程卸载期释放，晚于 NGX 静态实例管理器生命周期。
+- 需要在 disable 时显式提前卸载 DLSS-G，让 ReleaseFeature 在管理器仍有效时完成。
+
+为什么不是重复 EXP-0131
+- EXP-0131 证实在代理链仍存活时调用完整 slShutdown 会挂，因此当前不直接恢复该调用。
+- 本轮使用不同的公开 API：slSetFeatureLoaded(kFeatureDLSS_G,false)，只卸载 DLSS-G，不销毁整个 SL/interposer，也不 FreeLibrary。
+- 该 API 的契约正是显式卸载 feature；SL 头文件注明调用时不得有并行 DXGI/D3D/Vulkan API，故放在现有 disable 末尾：输入已关、Overlay/FG hooks已拆、SR资源已释放、probe已卸载之后。
+
+EXP-0197 唯一改动
+- 新增 streamline::unloadDlssg()，调用 g.setFeatureLoaded(kFeatureDLSS_G,false) 并记录返回值；在 NeuroDragon::disable 末尾调用。
+- 不调用 slShutdown，不释放 interposer，不改代理链、FG输入、SR或单在飞实现。
+
+判据
+- 日志出现 DLSS_G unload result=0；进程正常退出且没有新的 nvngx_dlssg ReleaseFeature dump。
+- 若挂起或仍崩：保留日志/新栈，区分卸载 API 本身等待与更晚的另一处释放；不叠加 slShutdown。

@@ -33,6 +33,9 @@ void normalizeOnLoad() {
     if (gConfig.nr.nrEncode != 0 && gConfig.nr.nrEncode != 1 && gConfig.nr.nrEncode != 3) {
         gConfig.nr.nrEncode = 3;
     }
+    if (gConfig.sr.jitterSource < 0 || gConfig.sr.jitterSource > 3) {
+        gConfig.sr.jitterSource = 1;
+    }
 }
 
 } // namespace

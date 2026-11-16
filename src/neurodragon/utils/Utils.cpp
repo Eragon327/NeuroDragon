@@ -54,7 +54,14 @@ using namespace ll::i18n_literals;
 
 namespace neurodragon::utils {
 
-ll::io::Logger& logger() { return ll::mod::NativeMod::current()->getLogger(); }
+ll::io::Logger& logger() {
+    // NativeMod::current() takes the ModManagerRegistry lock. disable() holds that
+    // lock while waiting for in-flight rendering, so a render/SL log call would
+    // deadlock the shutdown (EXP-0172 dump). The mod is pinned, so cache the logger
+    // on the first normal call and keep using it through disable.
+    static ll::io::Logger* cached = &ll::mod::NativeMod::current()->getLogger();
+    return *cached;
+}
 
 // Directory of the running executable, with a trailing separator.
 std::wstring applicationDirectory() {

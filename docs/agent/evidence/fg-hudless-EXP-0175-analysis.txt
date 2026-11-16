@@ -1,0 +1,10 @@
+EXP-0171 无 copy 对照结论（原始证据：fg-hudless-control-EXP-0171-session.log）
+
+- 首个世界帧连续获得 probe-only split=45/48；GetBuffer 返回已登记的 swapchain buffer，index 在 0/1 间交替。
+- 未创建/提交 hudless copy list 时，世界内 present/token 持续推进，未出现 0x887A002B、0x887A0005、device removed 或 cmdQ.pacer，退出正常。
+- 对照 EXP-0151 两次首个完整 copy 后 ACCESS_DENIED，确认 hudless GPU copy 路径是必要触发条件。
+- 尚未分离的是 backbuffer barrier 对、CopyResource 与独立 list 提交。F1 已在同一队列长期验证普通 SR 注入的独立提交。
+
+EXP-0175 只增加一个 GPU 可见动作：在独立 list 中记录 backbuffer RENDER_TARGET→COPY_SOURCE→RENDER_TARGET 两条 barrier 并提交；不执行 CopyResource、不创建/转换 hudless 目标、不发布 Frame。若仍 ACCESS_DENIED，病因收敛到 fake backbuffer 的 barrier/状态；若稳定，下一轮才考虑 CopyResource。不得在同行恢复完整 copy。
+
+EXP-0175 未运行即取消：仅为修正假设与 expect-pass 方向，不占实机。后续 EXP-0176 使用“barrier-only 可安全提交、完整故障还需要 CopyResource”作为可证伪假设；若 barrier-only 已崩，则该假设被证伪并把病因收敛到 barrier/状态。

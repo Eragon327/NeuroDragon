@@ -98,7 +98,10 @@
         },
         "fg": {
             "unavailable": "Not connected yet",
-            "description": "Frame-generation controls, multiplier and live status will live here. This build only reserves the UI location; it does not create or modify any FG feature."
+            "enable": "Enable DLSS Frame Generation",
+            "enableTip": "Apply to toggle fixed 2x DLSS-G. Menu, loading, resize and invalid-input frames pass through.",
+            "fixed2x": "Fixed 2x · DLSS-G + Reflex Low Latency",
+            "description": "Uses the verified VV depth, motion vectors, pre-UI hudless colour and TAA snapshot. Disable to restore the original Present path immediately."
         },
         "stats": {
             "frames": "Frame stats",
@@ -198,7 +201,7 @@
             "clean": "No changes",
             "dirty": "Unapplied changes",
             "unsaved": "Unsaved changes",
-            "dirtyAndUnsaved": "Unapplied changes · Unsaved changes",
+            "dirtyAndUnsaved": "Unapplied · Unsaved",
             "applied": "Applied",
             "appliedUnsaved": "Applied · Not saved",
             "saved": "Saved as default",

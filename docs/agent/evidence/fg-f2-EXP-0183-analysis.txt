@@ -1,0 +1,11 @@
+EXP-0182 有效会话与 preUiSplit 竞态
+
+用户明确：只有最后一次启动按 F11 再进世界，前三次是未完成实验。故仅 fg-hudless-gate-EXP-0182-session.log 用于本轮判断，前三次不作为完整 F2 证据。
+
+该轮存在 pre-UI cut 日志，但没有 gate/tracked-copy/published，FrameInputs 持续 no-hudless-copy。代码路径显示：
+1. Overlay 调 probe::vv::onExecuteCommandLists(lists,count)，后者把结果写全局 gPreUiSplit。
+2. 随后才调 fg::hudless::prepare，由它读取该全局值。
+3. 另一线程的短提交可在两步之间执行 onExecuteCommandLists 的 listCount<=8 分支，将 gPreUiSplit 清0。日志本来就有不同 tid 的1-list与48-list交错提交。
+因此“cut 已记录但 prepare 没看到”有确定的代码级竞态，不能再依赖全局值判断。
+
+EXP-0183 改为 onExecuteCommandLists 返回本次提交的 split，Overlay 将这个局部值直接传给 hudless::prepare。gPreUiSplit 不再参与生产输入选择。其他 GPU/SL/SR 行为不变；F11 后验证 tracked-copy/published 与完整 F2。

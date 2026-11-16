@@ -32,11 +32,9 @@ namespace neurodragon::probe::vv::inject {
 //
 // There is exactly one cut point and one action. The boundary is 1-based and counts
 // *lists*: "submit the first k engine lists, then our list, then the rest".
-// Three slots alternate: a slot is only re-recorded once its own fence has completed,
-// because VvSr and NR rewrite shared descriptor heaps during recording. A fence that
-// is merely late costs one skipped frame (the previous arg10 is presented unchanged)
-// rather than a blocked render thread; a fence that never completes is a stall
-// (EXP-0118) and rebuilds the injection instead of skipping forever.
+// Three slots rotate. Each slot has a separate VvSr/NR descriptor set, so a later
+// recording cannot overwrite descriptors still awaiting GPU execution. A fence that
+// never completes is a stall (EXP-0118) and rebuilds the injection.
 
 enum class Mode : int {
     Off   = 0, ///< forward every submission unchanged; also clears productArmed
@@ -111,6 +109,9 @@ unsigned prepare(void* queue, unsigned listCount, void* const* lists);
 
 /// Whether `list` is this module's own command list.
 [[nodiscard]] bool isOwnList(void* list);
+
+/// The active descriptor ring slot shared by VvSr and NR for this recording.
+[[nodiscard]] unsigned descriptorSlot();
 
 /// True while this module creates a resource view itself (arg10's RTV). Without it,
 /// one view per frame floods the probe's 4096-entry RTV map (EXP-0059: the arg10

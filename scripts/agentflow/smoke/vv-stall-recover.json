@@ -2,10 +2,10 @@
   "name": "vv-stall-recover",
   "tier": "L1",
   "timeout_s": 420,
-  "why": "EXP-0118/0123: one dropped Signal must not poison every later frame. Single in-flight recording protects the shared VvSr/NR descriptors; a persistent unfinished fence must still rebuild and recover.",
+  "why": "EXP-0118/0200: one dropped Signal must not poison every later frame. Per-slot VvSr/NR descriptors protect in-flight lists; a persistent unfinished fence must still rebuild and recover.",
   "requires": [
     "\\[vv\\] inject: TEST fault - dropped Signal",
-    "\\[vv\\] inject: the fence stayed at [0-9]+ of [0-9]+",
+    "\\[vv\\] inject: slot [0-9]+ stayed at [0-9]+ of [0-9]+",
     "\\[vv\\] inject: recovered after a rebuild \\(injected=[1-9]"
   ],
   "forbids": [

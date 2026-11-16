@@ -1,0 +1,35 @@
+EXP-0190 结果与 EXP-0191 依据
+
+EXP-0190 原始证据（fg-pcl-EXP-0190-session.log）
+- 本 session 没有出现 "missing common constants"（上一条在 23:30，属于 EXP-0189）。
+- 23:48:49 eOn；23:49:03 frame=10800 与 23:49:18 frame=11400 两次
+  `DLSS_G state ... presented=2`；同时 `inputs: ... fence=1/10396`、`fence=1/10799`，
+  输入完成 fence 值非 0。FG 确实在生成，PCL PresentStart/PresentEnd 标记修复了常量匹配。
+- 用户在 eOn 期间看到闪烁，并称“似乎出现了超分前的画面”，关 FG 即消失。
+- session 内无 PCL marker 失败、无设备错误、无 sr 失败；SR `arg10 eval=1` 正常。
+
+当前实现的静态事实
+- `setTagForFrame` 只 tag 了 Depth、MotionVectors、HUDLessColor；没有
+  UIColorAndAlpha 或 UIAlpha（全仓库没有 kBufferTypeUIColorAndAlpha/UIAlpha）。
+- hudless 拷贝点在 tonemap 之后、UI 之前，格式 R8G8B8A8，尺寸 2560x1369；
+  arg10（SR 写入点）在 list 26，hudless display 资源在 list 47，静态顺序上颜色是 post-SR。
+- Streamline 文档：Hudless 是“pre-UI 场景色”；缺 UI buffer 时生成帧没有 HUD/UI。
+  1 真帧 + 1 生成帧交替 → HUD/面板只在真帧出现，即为可见闪烁。
+  https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_G.md §5.1/§17
+- 文档同时说明：若只用最终 backbuffer 作唯一颜色输入，HUD/准星/文字可能插值变形或闪烁
+  （链路实验可接受）；正式路径要 Hudless + UI buffer。
+
+待区分的两个解释
+1) 闪烁 = 生成帧缺 UI（当前没有 UI tag）；世界颜色本身是 post-SR。
+2) 生成帧颜色其实是 pre-SR（hudless 内容或输出路径不对）。
+
+EXP-0191 唯一改动（区分实验）
+- 从每帧 tags 中移除 HUDLessColor，只保留 Depth 与 MotionVectors，让 DLSS-G 使用
+  自动截获的最终 backbuffer（含 UI）作颜色输入。hudless 拷贝代码保留但不 tag；
+  PCL 标记、options、常量、tag 生命周期不动。
+
+判据
+- 闪烁消失且 presented=2 保持 → 解释 1 成立；下一步再决定是补 UI alpha 还是接受
+  插值 UI。
+- 仍出现“超分前”画面 → 颜色输入不是根因，转查 hudless 内容/生成帧输出路径。
+- presented 不再为 2 → 去掉 hudless tag 破坏了 FG 输入链，需要回退并另找 UI 方案。

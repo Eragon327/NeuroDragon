@@ -1,0 +1,33 @@
+{
+  "name": "fg-hudless-state",
+  "tier": "L2",
+  "timeout_s": 240,
+  "dwell_s": 10,
+  "why": "EXP-0177 read-only state trace after EXP-0176: the barrier-only pair itself caused ACCESS_DENIED (0x887A002B after Present 0x887A0005), so this round adds no GPU action of ours at all. HudlessProbe is back to ProbeOnly (prepare returns 0, builds no list, transitions nothing, copies nothing, signals nothing) and the only new thing against the EXP-0171 control is a pure forwarder on the D3D12 command-list vtable slot 26 (ResourceBarrier): it copies POD fields into a fixed ring and forwards the call unchanged, no AddRef/GetDesc/log/allocation inside the hook, and reads are filtered to this submission's lists. The profile therefore asks the probe for three statements and nothing about frames: (1) `[fg] hudless: probe-only split=45/48 buffer=0x... index=1 size=2560x1440 fmt=28 swapchain=1` at least twice - the world anchor that the pre-UI cut is still recognised and the back buffer pointer/desc are still readable; split, buffer, index, the WxH size and the format are matched individually, and the size has to be a WxH pair (a 0x... pointer cannot stand in for it); (2) at least one `[fg] hudless: barrier-stats calls=<N> records=<M> ticket=<T>` with calls and records >= 1 - calls is the detour's cumulative invocation count since install, so `calls=[1-9]` is scored as a positive-integer prefix (any non-zero count, not a single digit): what matters is that slot 26 ran and the ring kept at least one transition; (3) at least one `[fg] hudless: barrier-state buffer=0x... list=0x... world=<0|1> flags=<f> sub=<s> before=0x<state> after=0x<state> seq=<n>`, printed only when the record set for this submission contains a barrier on the pointer GetBuffer answered with - i.e. a real, matched StateBefore/StateAfter, which is the value EXP-0176 had to guess. Both numeric states and D3D12_RESOURCE_STATE_* names are accepted. `world=0` is as good as `world=1`: the same pointer may be transitioned by a submission outside the world write list, and the question is the real state, not whose list carries it. Pointer identity between these lines cannot be cross-checked by the scorer (the two back buffers alternate, so a later state line legitimately names a different pointer than the nearest probe-only line), so the match itself is enforced by the probe: `barrier-state` is only printed when the filtered record set has a barrier on the pointer GetBuffer answered with. The two failure modes must stay distinguishable in the log: calls=0 prints no stats line with calls >= 1 (profile reads `missing barrier-stats`, so the fix is the hook or its coverage), while calls>0 with no record for this pointer prints `barrier-state buffer=0x... none` with no before=/after= fields (profile reads only `missing barrier-state`, so the fix is the filtering/lifetime); a `none` line beside a real match is not an error, which is why `none` is not forbidden. (4) `[fg] inputs: frame=.. token=.. skip=<1..9>..` twice plus `DLSS_G state ... result=0 mode=0` show presents and tokens still advancing while no hudless frame exists: ProbeOnly publishes nothing, so inputs must keep skipping and DLSS-G must stay eOff; the skip reason is left generic because it is not the question here. Deliberately not required: any const=/tag= success, any evidence that a hudless frame was published or tagged, the F11 RTV/DSV inventory, a [vvsr] sr pick line, and any particular state value - this round only proves the state is observable. Forbidden: the EXP-0151 copy path (copy path ready / copy split=WxH), the word CopyResource on a hudless line, the EXP-0176 barrier-only marker, `device objects ready` (that line is only reached when we own and submit a list/target), a valid `[fg] inputs: frame=.. token=.. size=WxH` frame (it cannot exist without a published copy - if it shows up the copy path came back), and the device-removal aftermath (0x887A002B, 0x887A0005, device removed, cmdQ.pacer, Unhandled exception, Panic:, Assertion failed). Trigger is a human step (launch, enter a world, stand still 10 s, quit normally); a run that never enters a world reads ABORTED because the probe-only/barrier lines are world-only. dwell_s keeps reading 10 s past the first fully-matched read so the absence assertions also see the frames after the first stats/state lines, not only the frames before them.",
+  "requires": [
+    "\\[fg\\] hudless: probe-only (?=[^\\r\\n]*\\bsplit=\\d+/\\d+)(?=[^\\r\\n]*\\bbuffer=0x[0-9a-f]+)(?=[^\\r\\n]*\\bindex=\\d+)(?=[^\\r\\n]*\\b\\d{2,5}x\\d{2,5}\\b)(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)",
+    "\\[fg\\] hudless: barrier-stats (?=[^\\r\\n]*\\bcalls=[1-9]\\d*\\b)(?=[^\\r\\n]*\\brecords=[1-9]\\d*\\b)",
+    "\\[fg\\] hudless: barrier-state (?=[^\\r\\n]*\\bbuffer=0x[0-9a-f]+)(?=[^\\r\\n]*\\blist=0x[0-9a-f]+)(?=[^\\r\\n]*\\bworld=[01]\\b)(?=[^\\r\\n]*\\bbefore=(?:0x[0-9a-f]+|\\d+|[a-z_][a-z0-9_]*)\\b)(?=[^\\r\\n]*\\bafter=(?:0x[0-9a-f]+|\\d+|[a-z_][a-z0-9_]*)\\b)",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*",
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless[^\\r\\n]*copy path ready",
+    "\\[fg\\] hudless[^\\r\\n]*copy split=\\d+/\\d+",
+    "\\[fg\\] hudless[^\\r\\n]*\\bCopyResource\\b",
+    "barrier-only",
+    "device objects ready",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+",
+    "0x887A002B",
+    "0x887A0005",
+    "device removed",
+    "cmdQ\\.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] hudless: probe-only (?=[^\\r\\n]*\\bsplit=\\d+/\\d+)(?=[^\\r\\n]*\\bbuffer=0x[0-9a-f]+)(?=[^\\r\\n]*\\bindex=\\d+)(?=[^\\r\\n]*\\b\\d{2,5}x\\d{2,5}\\b)(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)": 2,
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*": 2
+  }
+}

@@ -1,0 +1,9 @@
+EXP-0181 完整 F2 失败定位
+
+原始会话：docs/agent/evidence/fg-f2-inputs-EXP-0181-session.log
+- F11 后 SR eval/arg10 正常（ret=1，arg10 #1-3 eval=1，eval 持续至1800）。
+- pre-UI cut 在世界内仍为 split=45/48，尾部有世界写屏与UI list，切点未失效。
+- 但整段没有任何 tracked-copy/published，也没有 tracked-copy none/device objects ready/target allocation failed。
+- 因而 prepare 在 trackedDisplayResource 之前或 record 失败处早退；ensureDevice 对非 DIRECT queue 的分支当前静默，F11 又已知会重建/换队列，是首要待证项，但不能直接当根因。
+
+EXP-0182 只加诊断：前3个世界提交记录 split/mode，以及 ensureDevice 的 queue type/GetDevice/对象创建、takeSlot 全忙、resource none、record/Close/ensureTarget 失败。GPU 路径、TrackedFullCopy、FrameInputs 与 SL 完全不变。根据首个早退点修复，不重复盲试。

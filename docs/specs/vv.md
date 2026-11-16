@@ -285,7 +285,7 @@ hook `CreateCommittedResource` / `CreatePlacedResource` 之后，渲染分辨率
 | color | `R11G11B10_FLOAT`（渲染分辨率） | 需转 FP16 |
 | depth | `R24G8_TYPELESS` / `R32_FLOAT` | reversed-Z，`DepthInverted=true` |
 | MV | **自己重建**（depth + `TAAContext+0x200/+0x240`） | 像素单位 |
-| jitter | `UpscalingData.jitterIndex` → 引擎 jitter 表（Halton(2,3)−0.5，±0.5 渲染像素、y 向下） | 单位/坐标与 DLSS 的 `Jitter.Offset` 同空间，**不需要换算**。**2026-10-29 已确认（EXP-0100 几何测量）：颜色层没有按这个偏移光栅化** ⇒ 唯一真实值是 0，产品侧固定用 0；见 §37 |
+| jitter | `UpscalingData.jitterIndex` → 引擎 jitter 表（Halton(2,3)−0.5，±0.5 渲染像素、y 向下） | 单位/坐标与 DLSS 的 `Jitter.Offset` 同空间，**不需要换算**。**2026-10-29 已确认（EXP-0100 几何测量）：颜色层没有按这个偏移光栅化**，稳定值为 `Zero`。2026-11-15 用户决定默认 `Engine` 并持久化；见 §37 |
 | 输出 | 后缓冲（倒 4 之后写入） | 已是本 spec 的插入点 |
 
 > **2026-10-28 更正（静态已确认，取代上面「没有 MV 纹理」整段与 M6 表的 MV 行）**：
@@ -433,10 +433,10 @@ command list**。钩子可以把这个调用**拆成「前缀 + 我们自己的 
 - **我们自己的 list** 建在引擎设备上（allocator / list / fence / 1 个 RTV 描述符堆，需要时才建）：
   取 `GetCurrentBackBufferIndex()` 那块后缓冲，`PRESENT → RENDER_TARGET → ClearRenderTargetView(洋红) → PRESENT`，
   再 `Close`。同一队列三次提交，顺序就是 GPU 的执行顺序。
-- **生命周期**：后缓冲引用在提交后当场 `Release`（§9 第一条崩溃的成因）。只允许一条注入 list 在飞，
-  复用前等待其 fence 完成，避免常规 `FenceBusy` 直接切回 TAAU。VvSr 与 NR 在录制时会重写共享
-  SRV/UAV 描述符堆和 arg10 RTV，EXP-0122 证明只给 allocator/list 做四槽会让后录帧覆盖先录帧
-  尚未执行的描述符（75% 输入图贴左上的黑边帧）。持续 120 次提交仍未完成仍按 EXP-0118 的路径重建。
+- **生命周期**：后缓冲引用在提交后当场 `Release`（§9 第一条崩溃的成因）。三个 allocator/list/fence
+  槽轮转；VvSr 的 13 个 SRV/UAV、arg10 RTV 和 NR 的 24 个 pass 描述符也按同一槽号各保留三份，
+  防止后录帧覆盖先录帧尚未执行的描述符（EXP-0122 的 75% 输入图贴左上黑边）。目标槽持续 120 次提交
+  仍未完成仍按 EXP-0118 的路径重建。
 - **不污染探针读数**：`Close` 钩子会看到我们自己的 list，`isOwnList()` 把它排除，§3 的「每帧 49 次 Close」
   仍然是引擎的数字。
 
@@ -2666,8 +2666,9 @@ VV 的 `mvRg32` 已经是**渲染像素**（prep 里 `{-z,+w} * RenderResolution
 - `-j(n)` 幅度不变 ⇒ 这一帧确实没按它渲染 ⇒ 只能喂 0；想要亚像素采样增益就得在渲染侧自己施加 jitter（另一个工程）；
 - `j(n-1)` 稳 ⇒ 引擎 ctx 的 jitter 领先渲染一帧，属相位 bug，修 source。
 
-**顺序**：产品侧维持 jitter = 0（`VvSr` 的默认值）。面板保留**四档** `0 / j(n) / -j(n) / j(n-1)`
-（`JitterSource` 0..3，非法值在 `setJitterSource()` 折回 0；切换时照旧做一次两帧历史重置），
+**顺序**：EXP-0100 的证据仍支持 `Zero` 为稳定值。2026-11-15 用户决定把 `sr.jitterSource`
+持久化并将默认改为 `Engine`；这是偏好覆盖，不是新的几何证据。面板保留**四档** `0 / j(n) / -j(n) / j(n-1)`
+（`JitterSource` 0..3，非法值折回 `Engine`；切换时照旧做一次两帧历史重置），
 供随时复跑本节表格的判别：`Engine` 用当帧 `mv.jitterX/Y`，`Negated` 取其相反数，`Previous` 用
 上一帧保存的 `j(n-1)`（首帧还没保存过时安全回落 0，逐帧无条件保存当帧 jitter 供下一帧；
 只在世界内生效——菜单全景没有按世界 jitter 渲染，喂回去就是 EXP-0073 的上下抖）。

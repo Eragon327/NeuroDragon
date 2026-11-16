@@ -1,5 +1,6 @@
 #include "neurodragon/fg/SwapchainProbe.h"
 
+#include "neurodragon/fg/FrameInputs.h"
 #include "neurodragon/fg/Streamline.h"
 #include "neurodragon/utils/Utils.h"
 
@@ -76,6 +77,8 @@ using CreateForComposeFn = HRESULT(STDMETHODCALLTYPE*)(
 using ResizeBuffers1Fn   = HRESULT(STDMETHODCALLTYPE*)(
     IDXGISwapChain3*, UINT, UINT, UINT, DXGI_FORMAT, UINT, UINT const*, IUnknown* const*
 );
+using PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain*, UINT, UINT);
+using Present1Fn = HRESULT(STDMETHODCALLTYPE*)(IDXGISwapChain1*, UINT, UINT, DXGI_PRESENT_PARAMETERS const*);
 
 // IDXGIFactory / IDXGIFactory2 vtable slots. Every Windows 10+ factory implements
 // IDXGIFactory7, so all four slots exist on the object the game actually receives.
@@ -83,6 +86,8 @@ constexpr size_t kCreateSwapChainSlot      = 10;
 constexpr size_t kCreateForHwndSlot        = 15;
 constexpr size_t kCreateForCoreWindowSlot  = 16;
 constexpr size_t kCreateForCompositionSlot = 24;
+constexpr size_t kPresentSlot              = 8;
+constexpr size_t kPresent1Slot             = 22;
 constexpr size_t kResizeBuffers1Slot       = 39;
 
 // One original per hooked entry point: MH_CreateHook stores the trampoline through
@@ -97,6 +102,8 @@ CreateForHwndFn    gCreateForHwnd{};
 CreateForWindowFn  gCreateForWindow{};
 CreateForComposeFn gCreateForComposition{};
 ResizeBuffers1Fn   gProxyResizeBuffers1{};
+PresentFn          gProxyPresent{};
+Present1Fn         gProxyPresent1{};
 
 std::atomic_bool gInstalled{};
 std::atomic_bool gFactoryHooked{};
@@ -583,6 +590,32 @@ HRESULT STDMETHODCALLTYPE createForCompositionDetour(
     return hr;
 }
 
+HRESULT STDMETHODCALLTYPE proxyPresentDetour(IDXGISwapChain* self, UINT interval, UINT flags) {
+    // EXP-0188 fallback: the native Overlay Present draws the panel. No usable
+    // backbuffer exists at this earlier proxy boundary, so do not draw or count twice.
+    // Streamline's proxy Present itself performs DLSS-G when the frame is ready.
+    bool const generate = inputs::frameReady();
+    if (generate) {
+        interval = 0;
+    }
+    return gProxyPresent ? gProxyPresent(self, interval, flags) : E_FAIL;
+}
+
+HRESULT STDMETHODCALLTYPE proxyPresent1Detour(
+    IDXGISwapChain1* self,
+    UINT interval,
+    UINT flags,
+    DXGI_PRESENT_PARAMETERS const* parameters
+) {
+    // EXP-0188 fallback: the native Overlay Present draws the panel. No usable
+    // backbuffer exists at this earlier proxy boundary, so do not draw or count twice.
+    bool const generate = inputs::frameReady();
+    if (generate) {
+        interval = 0;
+    }
+    return gProxyPresent1 ? gProxyPresent1(self, interval, flags, parameters) : E_FAIL;
+}
+
 HRESULT STDMETHODCALLTYPE proxyResizeBuffers1Detour(
     IDXGISwapChain3* self,
     UINT             bufferCount,
@@ -619,7 +652,19 @@ void installSwapChainHook(void* swapChain) {
         return;
     }
     void** vtbl = *reinterpret_cast<void***>(chain3);
-    bool const ok = hookTarget(
+    bool ok = hookTarget(
+        "SL proxy IDXGISwapChain::Present",
+        vtbl[kPresentSlot],
+        reinterpret_cast<void*>(&proxyPresentDetour),
+        reinterpret_cast<void**>(&gProxyPresent)
+    );
+    ok &= hookTarget(
+        "SL proxy IDXGISwapChain1::Present1",
+        vtbl[kPresent1Slot],
+        reinterpret_cast<void*>(&proxyPresent1Detour),
+        reinterpret_cast<void**>(&gProxyPresent1)
+    );
+    ok &= hookTarget(
         "SL proxy IDXGISwapChain3::ResizeBuffers1",
         vtbl[kResizeBuffers1Slot],
         reinterpret_cast<void*>(&proxyResizeBuffers1Detour),

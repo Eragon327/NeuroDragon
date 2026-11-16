@@ -1,0 +1,26 @@
+EXP-0189 实机结果（2026-11-15 23:29–23:31，main 检出，实例 E:\LeviLauncher\versions\1.26.51.01）
+
+构建与加载
+- 部署记录 dll_sha256=a44cf1c05e43…；运行后 mods/NeuroDragon/NeuroDragon.dll 的 sha256 与之一致。
+- 本 session 起始：latest.log 行 40032（23:29:53 [fg] streamline: slInit）；结束：行 44505（23:31:06）。
+- 改动生效：FrameInputs.cpp 每帧 slGetNewFrameToken(token, nullptr)，token 全部来自 SL（日志 token= 与 frame 同步递增，无 token 失败）。
+
+结果（已确认，原始日志）
+- 23:30:14.711 第一次 eOn：options=0 reflex=0 accepted=1，同一毫秒出现
+  "missing common constants - Frame Generation will be disabled for the frame"；
+  23:30:14.997 第二次 present 再次同样告警。与 EXP-0188 的现象相同。
+- 全 session 没有任何 `DLSS_G state … mode=1`（0 次），也没有 `presented=2`（0 次）。
+  状态采样：23:30:21/23:30:35（第一次 eOn 内）mode=0 presented=1；
+  23:30:56（第二次 eOn 后 3.7 s）mode=0 presented=1。
+- 本构建每帧在 $flip 前调用 slDLSSGGetState，presented 是“自上次 GetState 后呈现帧数”；
+  FG 生效时该区间应有真实帧+生成帧=2。持续为 1 → 无生成帧。
+- 第二次 eOn（23:30:53）不再出现 missing constants 告警，但 presented 仍=1，说明告警消失不等于生成生效。
+- 无设备错误、无 token 失败、无崩溃；用户只说“已完成”，无可见异常。
+
+结论
+- 假设“token 序号与 proxy Present 不对应”被证伪：SL 内部分配 token 后，missing common constants 仍出现在 eOn 时刻。
+- 告警只在 eOn 后的前两次 present 出现，之后消失；因此“告警次数”不能当作常量已正确消费的判据。
+- 待验证假设（下一条诊断路径）：slSetConstants 关联的 token 与 DLSS-G Present 实际消费的帧不是同一帧——
+  我们的 setConstants/setTagForFrame 在 $flip 钩子（RenderContextD3D12::$flip）里调用，
+  而 slDLSSGSetOptions 与 SL proxy Present 的线程/时机可能不同（日志中 Present() 线程会变化）。
+  下一步先静态确认 $flip 线程与 proxy Present 线程及 swapchain 是否一致，再决定单变量实验。

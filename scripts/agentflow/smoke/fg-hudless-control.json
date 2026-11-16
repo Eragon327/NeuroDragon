@@ -1,0 +1,28 @@
+{
+  "name": "fg-hudless-control",
+  "tier": "L2",
+  "timeout_s": 240,
+  "dwell_s": 10,
+  "why": "EXP-0171 single-variable control for EXP-0151: hudless::prepare still identifies the pre-UI split and still reads this world frame's back buffer index and desc, but records no copy list, barriers nothing and submits nothing extra, so the only thing removed against EXP-0151 is the hudless copy path. The probe line is the world anchor (prepare declines outside a world) and must appear at least twice, with the split/desc fields matched individually rather than as free text; the optional word before the colon is tolerated because the line is a rewrite of 'hudless: copy ...', and a line that still carries the word copy cannot count as the probe diagnostic. `inputs: ... skip=` (twice) plus `DLSS_G state ... mode=0` show presents and tokens still advancing and DLSS-G still eOff. Deliberately not required: const=0/tag=0 (nothing is submitted in this round) and any evidence that a hudless frame was published or tagged, because the point is that there is none; the skip reason is left generic since EXP-0151's first world frame read skip=3 no-sr-snapshot before skip=4 no-hudless-copy. A valid inputs frame (size=WxH) cannot exist without a published copy, so it is forbidden: if it shows up, the copy path came back. Trigger is a human step (launch, enter a world, stand still); a run that never enters a world reads ABORTED because the probe line is world-only. The current line reads `[fg] hudless: probe-only split=45/48 buffer=0x1be08c00 index=1 size=2560x1440 fmt=28 swapchain=1` and is gated to the first three world frames, which is why two occurrences are required; the regex asks for the split, the desc size and the format fields separately and refuses any line carrying the word copy, so the EXP-0151 copy line cannot stand in for it.",
+  "requires": [
+    "\\[fg\\] hudless(?: [A-Za-z][\\w-]*)?: (?![^\\r\\n]*\\bcopy\\b)(?=[^\\r\\n]*\\bsplit=\\d+/\\d+)(?=[^\\r\\n]*(?:\\b\\d+x\\d+\\b|\\bw(?:idth|id)?=\\d+\\b.*\\bh(?:eight|ei)?=\\d+\\b))(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*",
+    "\\[fg\\] streamline: DLSS_G state frame=\\d+ result=0 mode=0\\b"
+  ],
+  "forbids": [
+    "\\[fg\\] hudless.*copy path ready",
+    "\\[fg\\] hudless.*copy split=\\d+/\\d+",
+    "0x887A002B",
+    "0x887A0005",
+    "device removed",
+    "cmdQ\\.pacer",
+    "Unhandled exception",
+    "Panic:",
+    "Assertion failed",
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ size=\\d+x\\d+"
+  ],
+  "min_occurrences": {
+    "\\[fg\\] hudless(?: [A-Za-z][\\w-]*)?: (?![^\\r\\n]*\\bcopy\\b)(?=[^\\r\\n]*\\bsplit=\\d+/\\d+)(?=[^\\r\\n]*(?:\\b\\d+x\\d+\\b|\\bw(?:idth|id)?=\\d+\\b.*\\bh(?:eight|ei)?=\\d+\\b))(?=[^\\r\\n]*\\b(?:fmt|format)=\\d+)": 2,
+    "\\[fg\\] inputs: frame=\\d+ token=\\d+ skip=[1-9]\\d* reason=[a-z][a-z0-9-]*": 2
+  }
+}
